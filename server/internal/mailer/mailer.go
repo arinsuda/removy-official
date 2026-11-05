@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"html"
 	"io"
 	"log"
 	"net/http"
@@ -38,6 +39,20 @@ func (m *Mailer) IsEnabled() bool {
 func (m *Mailer) SendVerificationEmail(toEmail, username, verifyURL string) error {
 	subject := "ยืนยันอีเมลของคุณ — REMOVY"
 	body := buildVerifyEmailBody(username, verifyURL)
+	return m.send(toEmail, username, subject, body)
+}
+
+// SendLinkCodeEmail sends a 6-digit code used to confirm linking a PLANZI account.
+func (m *Mailer) SendLinkCodeEmail(toEmail, username, code string) error {
+	subject := "รหัสยืนยันการเชื่อมบัญชี — REMOVY"
+	body := fmt.Sprintf(`<!DOCTYPE html><html><body style="margin:0;padding:32px 16px;background:#050505;font-family:'Helvetica Neue',Arial,sans-serif;">
+<div style="max-width:440px;margin:0 auto;background:#0f0f0f;border:1px solid #1c1c1c;border-radius:4px;padding:40px;text-align:center;">
+<div style="font-size:18px;font-weight:700;letter-spacing:4px;color:#fff;">REMOVY</div>
+<p style="color:#fff;font-size:16px;margin:24px 0 8px;">สวัสดี %s</p>
+<p style="color:#8f8f8f;font-size:14px;line-height:1.7;">ใช้รหัสนี้เพื่อยืนยันการเชื่อมบัญชี PLANZI กับ REMOVY</p>
+<p style="color:#fff;font-size:32px;font-weight:700;letter-spacing:8px;margin:24px 0;">%s</p>
+<p style="color:#666;font-size:12px;">รหัสมีอายุ 10 นาที หากคุณไม่ได้ร้องขอ กรุณาเพิกเฉยต่ออีเมลนี้</p>
+</div></body></html>`, html.EscapeString(username), html.EscapeString(code))
 	return m.send(toEmail, username, subject, body)
 }
 

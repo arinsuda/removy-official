@@ -2,8 +2,10 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -18,7 +20,18 @@ type Config struct {
 	Cookie     CookieConfig
 	MinIO      MinIOConfig
 	Google     GoogleConfig
+	Link       LinkConfig
 }
+
+// LinkConfig configures PLANZI <-> REMOVY account linking. Empty Secrets disables the feature.
+type LinkConfig struct {
+	Secrets      []string // first signs, all verify
+	RemoteAPIURL string
+	RemoteWebURL string
+	SelfPlatform string
+}
+
+func (l LinkConfig) Enabled() bool { return len(l.Secrets) > 0 }
 
 type GoogleConfig struct {
 	Enabled            bool
@@ -135,6 +148,12 @@ func Load() (*Config, error) {
 			FrontendSuccessURL: getEnv("GOOGLE_FRONTEND_SUCCESS_URL", "http://localhost:5173/"),
 			FrontendErrorURL:   getEnv("GOOGLE_FRONTEND_ERROR_URL", "http://localhost:5173/login"),
 		},
+		Link: LinkConfig{
+			Secrets:      splitSecrets(getEnv("LINK_SHARED_SECRET", "")),
+			RemoteAPIURL: strings.TrimRight(getEnv("LINK_REMOTE_API_URL", ""), "/"),
+			RemoteWebURL: strings.TrimRight(getEnv("LINK_REMOTE_WEB_URL", ""), "/"),
+			SelfPlatform: getEnv("LINK_SELF_PLATFORM", "removy"),
+		},
 	}
 
 	if cfg.Google.Enabled {
@@ -174,4 +193,21 @@ func requireEnv(key string) string {
 		panic(fmt.Sprintf("required environment variable %q is not set", key))
 	}
 	return v
+}
+
+func splitSecrets(raw string) []string {
+	var out []string
+	for _, p := range strings.Split(raw, ",") {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		if len(p) < 32 {
+			// secrets shorter than 32 bytes are rejected; none left => feature disabled
+			log.Println("WARN: LINK_SHARED_SECRET entry shorter than 32 bytes ignored")
+			continue
+		}
+		out = append(out, p)
+	}
+	return out
 }

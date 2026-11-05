@@ -17,5 +17,33 @@
   "movie": "Movie",
   "series": "Series",
   "adminMode": "Admin Mode",
-  "exitAdmin": "Exit Admin Mode"
+  "exitAdmin": "Exit Admin Mode",
+  "switchToPlanzi": "Switch to PLANZI",
+  "link": {
+    "title": "Linked accounts",
+    "planziLinked": "PLANZI account linked",
+    "planziNotLinked": "PLANZI account not linked",
+    "linkedAt": "Linked on {date}",
+    "unlink": "Unlink",
+    "unlinkConfirm": "Unlink your PLANZI account?",
+    "unlinkFailed": "Failed to unlink account.",
+    "switchFailed": "Could not switch to PLANZI. Please try again.",
+    "linkHint": "Use \"Switch to PLANZI\" from the user menu to link accounts.",
+    "handoff": {
+      "title": "Linking account",
+      "working": "Signing you in...",
+      "failed": "The link is invalid or has expired. Please go back and try again.",
+      "backToLogin": "Back to login",
+      "confirmTitle": "Confirm it's you",
+      "confirmDesc": "An account with {email} already exists on REMOVY. Confirm ownership to link it with PLANZI.",
+      "password": "REMOVY password",
+      "confirmPassword": "Confirm with password",
+      "sendCode": "Send code to my email",
+      "codeSent": "We sent a 6-digit code to your email.",
+      "code": "6-digit code",
+      "confirmCode": "Confirm with code",
+      "wrong": "Incorrect credentials or too many attempts.",
+      "tooMany": "Too many requests. Please wait and try again."
+    }
+  }
 }

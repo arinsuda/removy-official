@@ -357,16 +357,21 @@ func (h *Handler) buildErrorRedirectURL(errCode string, returnPath string) strin
 }
 
 func (h *Handler) setTokenCookies(c fiber.Ctx, pair *TokenPair) {
-	sameSite := h.cfg.Cookie.SameSite
+	SetTokenCookies(c, h.cfg, pair)
+}
+
+// SetTokenCookies writes the access/refresh cookies for a freshly issued session.
+func SetTokenCookies(c fiber.Ctx, cfg *config.Config, pair *TokenPair) {
+	sameSite := cfg.Cookie.SameSite
 
 	c.Cookie(&fiber.Cookie{
 		Name:     "access_token",
 		Value:    pair.AccessToken,
 		HTTPOnly: true,
-		Secure:   h.cfg.Cookie.Secure,
+		Secure:   cfg.Cookie.Secure,
 		SameSite: sameSite,
-		Domain:   h.cfg.Cookie.Domain,
-		MaxAge:   int(h.cfg.JWT.AccessTTL.Seconds()),
+		Domain:   cfg.Cookie.Domain,
+		MaxAge:   int(cfg.JWT.AccessTTL.Seconds()),
 		Path:     "/",
 	})
 
@@ -374,10 +379,10 @@ func (h *Handler) setTokenCookies(c fiber.Ctx, pair *TokenPair) {
 		Name:     "refresh_token",
 		Value:    pair.RefreshToken,
 		HTTPOnly: true,
-		Secure:   h.cfg.Cookie.Secure,
+		Secure:   cfg.Cookie.Secure,
 		SameSite: sameSite,
-		Domain:   h.cfg.Cookie.Domain,
-		MaxAge:   int(h.cfg.JWT.RefreshTTL.Seconds()),
+		Domain:   cfg.Cookie.Domain,
+		MaxAge:   int(cfg.JWT.RefreshTTL.Seconds()),
 		Path:     "/",
 	})
 }
@@ -424,6 +429,8 @@ func (h *Handler) handleServiceError(c fiber.Ctx, err error) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal server error"})
 	}
 }
+
+func ToUserResponse(u *user_module.User) UserResponse { return toUserResponse(u) }
 
 func toUserResponse(u *user_module.User) UserResponse {
 	return UserResponse{

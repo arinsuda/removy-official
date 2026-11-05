@@ -3,7 +3,7 @@ import { ref, computed } from "vue"
 
 import { authApi, userApi } from "@/api/api"
 
-import type { AuthUser, LoginRequest, RegisterRequest } from "@/types"
+import type { AuthResponse, AuthUser, LoginRequest, RegisterRequest } from "@/types"
 
 export type InitErrorKind = "unauthenticated" | "network" | "server" | null
 
@@ -84,6 +84,16 @@ export const useAuthStore = defineStore("auth", () => {
     } finally {
       isLoading.value = false
     }
+  }
+
+  /** Adopt a session issued by the server outside the login form (e.g. account handoff). */
+  function applySession(data: AuthResponse) {
+    if (data.access_token) localStorage.setItem("access_token", data.access_token)
+    if (data.refresh_token) localStorage.setItem("refresh_token", data.refresh_token)
+    _generation++
+    setUser(data.user)
+    isInitialized.value = true
+    initError.value = null
   }
 
   async function logout() {
@@ -214,6 +224,7 @@ export const useAuthStore = defineStore("auth", () => {
     clearUser,
     login,
     register,
+    applySession,
     logout,
     fetchMe,
     initialize,

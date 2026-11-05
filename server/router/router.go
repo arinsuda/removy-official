@@ -19,6 +19,7 @@ import (
 	"github.com/arinsuda/movie-hub/internal/follow_module"
 	"github.com/arinsuda/movie-hub/internal/library_module"
 	"github.com/arinsuda/movie-hub/internal/like_module"
+	"github.com/arinsuda/movie-hub/internal/link_module"
 	"github.com/arinsuda/movie-hub/internal/mailer"
 	"github.com/arinsuda/movie-hub/internal/media_stats_module"
 	"github.com/arinsuda/movie-hub/internal/movie_module"
@@ -77,6 +78,8 @@ func Register(app *fiber.App, db *gorm.DB, cfg *config.Config, m *mailer.Mailer)
 	api.Get("/share/proxy-image", shareImageProxyHandler(cfg))
 
 	authSvc := auth_module.RegisterRoutes(api, db, cfg, m, mc, notifSvc)
+
+	link_module.RegisterRoutes(api, db, cfg, m, authSvc)
 
 	mw := middleware.NewAuthMiddleware(cfg)
 	protected := api.Group("/", mw.RequireAuth)

@@ -199,6 +199,9 @@
                 </button>
               </template>
               <div class="dropdown-divider" />
+              <button class="dropdown-item" @click="handleSwitchToPlanzi">
+                <ArrowLeftRight :size="14" />{{ $t("navigation.switchToPlanzi") }}
+              </button>
               <button
                 class="dropdown-item dropdown-item--danger"
                 @click="handleLogout"
@@ -314,6 +317,12 @@
               <Shield :size="16" />{{ $t("navigation.adminMode") }}
             </button>
             <button
+              class="mobile-nav-link mobile-nav-link--sub"
+              @click="handleSwitchToPlanzi"
+            >
+              <ArrowLeftRight :size="16" />{{ $t("navigation.switchToPlanzi") }}
+            </button>
+            <button
               class="mobile-nav-link mobile-nav-link--sub mobile-nav-link--danger"
               @click="handleLogout"
             >
@@ -340,10 +349,11 @@ import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useAdminStore } from "@/stores/admin";
 import { useNotificationStore } from "@/stores/notification";
-import { useLocale } from "@/i18n";
+import { useLocale, i18n } from "@/i18n";
 import ToastContainer from "@/components/common/ToastContainer.vue";
 import NotificationPanel from "@/components/common/NotificationPanel.vue";
 import { movieApi } from "@/api/endpoints/movie";
+import { linkApi } from "@/api/endpoints/link";
 import { getTmdbImageUrl } from "@/utils/image";
 import type { Movie, TVSeries } from "@/types";
 import {
@@ -358,6 +368,7 @@ import {
   Star,
   X,
   Shield,
+  ArrowLeftRight,
 } from "lucide-vue-next";
 
 interface SearchSuggestion {
@@ -405,6 +416,17 @@ function mapSeries(s: TVSeries): SearchSuggestion {
     poster_path: s.poster_path ? getTmdbImageUrl(s.poster_path) : null,
     rating: s.vote_average,
   };
+}
+
+async function handleSwitchToPlanzi() {
+  userMenuOpen.value = false;
+  mobileMenuOpen.value = false;
+  try {
+    const { data } = await linkApi.createHandoff("planzi");
+    window.location.href = data.redirect_url;
+  } catch {
+    window.alert(i18n.global.t("navigation.link.switchFailed"));
+  }
 }
 
 function toggleNotificationPanel() {

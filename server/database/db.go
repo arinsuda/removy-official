@@ -383,6 +383,10 @@ func runSQLMigrations(db *gorm.DB, cfg *config.Config) error {
 		return err
 	}
 
+	if err := runMigrationWithHistoryTx(db, "20261106_account_links", cfg.DB.MigrationLockTimeoutMs, cfg.DB.MigrationStatementTimeoutMs, migrateAccountLinks); err != nil {
+		return err
+	}
+
 	log.Println("SQL migrations completed")
 	return nil
 }
@@ -435,4 +439,39 @@ func seedInitialData(db *gorm.DB) error {
 		}
 	}
 	return nil
+}
+
+func migrateAccountLinks(tx *gorm.DB) error {
+	return tx.Exec(`
+		CREATE TABLE IF NOT EXISTS account_links (
+			local_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			remote_platform VARCHAR(16) NOT NULL,
+			remote_user_id VARCHAR(64) NOT NULL,
+			linked_via VARCHAR(32) NOT NULL,
+			linked_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+			PRIMARY KEY (local_user_id, remote_platform),
+			UNIQUE (remote_platform, remote_user_id)
+		);
+		CREATE TABLE IF NOT EXISTS link_handoff_tokens (
+			token_hash CHAR(64) PRIMARY KEY,
+			user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			target_platform VARCHAR(16) NOT NULL,
+			expires_at TIMESTAMPTZ NOT NULL,
+			used_at TIMESTAMPTZ,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+		);
+		CREATE INDEX IF NOT EXISTS idx_link_handoff_tokens_expires_at ON link_handoff_tokens(expires_at);
+		CREATE TABLE IF NOT EXISTS link_pending (
+			id UUID PRIMARY KEY,
+			local_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			remote_platform VARCHAR(16) NOT NULL,
+			remote_user_id VARCHAR(64) NOT NULL,
+			remote_email VARCHAR(255) NOT NULL,
+			attempts INT NOT NULL DEFAULT 0,
+			code_hash CHAR(64),
+			code_expires_at TIMESTAMPTZ,
+			expires_at TIMESTAMPTZ NOT NULL,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+		);
+	`).Error
 }

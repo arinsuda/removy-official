@@ -475,6 +475,7 @@
         </div>
       </transition>
       <!-- ─────────────────────────────────────────────────────── -->
+      <LinkedAccounts />
     </form>
 
     <div class="edit-footer">
@@ -526,6 +527,7 @@ import {
 import type { UserProfile } from "@/types/user";
 import { authApi, userApi } from "@/api/api";
 import { useAuthStore } from "@/stores/auth";
+import LinkedAccounts from "@/components/profile/LinkedAccounts.vue";
 import ConfirmModal from "@/components/profile/components/ConfirmModal.vue";
 
 const props = defineProps<{ user: UserProfile | null }>();

@@ -56,6 +56,13 @@ const router = createRouter({
       meta: { guestOnly: true, titleKey: "auth.resetPassword.title" }
     },
 
+    {
+      path: "/auth/handoff",
+      name: "auth-handoff",
+      component: () => import("@/views/auth/HandoffView.vue"),
+      meta: { titleKey: "navigation.link.handoff.title" }
+    },
+
     // ── Onboarding (protected, no MainLayout/Navbar) ───────────
     {
       path: "/onboarding",

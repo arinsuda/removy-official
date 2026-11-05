@@ -42,6 +42,18 @@ type Service struct {
 	db             *gorm.DB
 	oauthStore     OAuthTransactionStore
 	googleProvider GoogleOAuthProvider
+	loginFallback  LoginFallback
+}
+
+// LoginFallback lets the account-linking module provision a local user whose
+// credentials were proven against the remote platform. It returns (nil, nil)
+// when the fallback does not apply or the credentials are not valid remotely.
+type LoginFallback interface {
+	LoginViaRemote(email, password string) (*user_module.User, error)
+}
+
+func (s *Service) SetLoginFallback(f LoginFallback) {
+	s.loginFallback = f
 }
 
 type UserPasswordService interface {
@@ -124,7 +136,17 @@ func (s *Service) Login(req LoginRequest, userAgent, ip string) (*TokenPair, *us
 	if err != nil {
 		user, err = s.repo.FindByUsername(req.Identifier)
 		if err != nil {
-			return nil, nil, ErrUserNotFound
+			// No local user: try the linked remote platform (provisions + links on success).
+			// Any remote failure is treated as invalid credentials.
+			if s.loginFallback == nil || !strings.Contains(req.Identifier, "@") {
+				return nil, nil, ErrUserNotFound
+			}
+			fbUser, fbErr := s.loginFallback.LoginViaRemote(req.Identifier, req.Password)
+			if fbErr != nil || fbUser == nil || !fbUser.IsActive {
+				return nil, nil, ErrUserNotFound
+			}
+			user = fbUser
+			return s.finishLogin(user, userAgent, ip)
 		}
 	}
 
@@ -144,13 +166,17 @@ func (s *Service) Login(req LoginRequest, userAgent, ip string) (*TokenPair, *us
 		return nil, nil, ErrEmailUnverified
 	}
 
+	return s.finishLogin(user, userAgent, ip)
+}
+
+func (s *Service) finishLogin(user *user_module.User, userAgent, ip string) (*TokenPair, *user_module.User, error) {
 	if user.AvatarURL != nil && strings.HasPrefix(*user.AvatarURL, "avatars/") {
 		if url, err := s.minio.PresignURL(context.Background(), *user.AvatarURL); err == nil {
 			user.AvatarURL = &url
 		}
 	}
 
-	pair, err := s.issueAndStoreTokens(user, userAgent, ip)
+	pair, err := s.IssueAndStoreTokens(user, userAgent, ip)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -559,7 +585,7 @@ func (s *Service) importGoogleAvatar(ctx context.Context, pictureURL string, use
 	}
 }
 
-func (s *Service) issueAndStoreTokens(user *user_module.User, userAgent, ip string) (*TokenPair, error) {
+func (s *Service) IssueAndStoreTokens(user *user_module.User, userAgent, ip string) (*TokenPair, error) {
 	return s.issueAndStoreTokensTx(s.db, user, userAgent, ip)
 }
 
@@ -621,7 +647,7 @@ func (s *Service) Refresh(rawRefresh, userAgent, ip string) (*TokenPair, *user_m
 
 	_ = s.repo.DeleteRefreshToken(hashed)
 
-	newPair, err := s.issueAndStoreTokens(user, userAgent, ip)
+	newPair, err := s.IssueAndStoreTokens(user, userAgent, ip)
 	if err != nil {
 		return nil, nil, err
 	}
