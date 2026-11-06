@@ -8,6 +8,7 @@
       </div>
     </Transition>
   </RouterView>
+  <ToastContainer />
 </template>
 
 <script setup lang="ts">
@@ -15,6 +16,7 @@ import LoadingBar from "@/components/ui/LoadingBar.vue"
   import { computed } from "vue"
   import { RouterView } from "vue-router"
   import { useAuthStore } from "@/stores/auth"
+  import ToastContainer from "@/components/common/ToastContainer.vue"
   import SessionBootstrapView from "@/components/common/SessionBootstrapView.vue"
 
   const authStore = useAuthStore()
