@@ -2,6 +2,7 @@ package tmdbmodule
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -60,6 +61,11 @@ func get(path string, params url.Values, target any) error {
 
 	resp, err := c.http.Get(fullURL)
 	if err != nil {
+		// *url.Error embeds the full request URL, including api_key; keep only the cause.
+		var urlErr *url.Error
+		if errors.As(err, &urlErr) {
+			err = urlErr.Err
+		}
 		return fmt.Errorf("tmdb: GET %s: %w", path, err)
 	}
 	defer resp.Body.Close()
