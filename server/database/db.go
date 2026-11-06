@@ -405,6 +405,14 @@ func runSQLMigrations(db *gorm.DB, cfg *config.Config) error {
 		return err
 	}
 
+	// Additive only: new nullable or defaulted columns, no data is rewritten.
+	// Their model fields carry gorm:"-:migration" so AutoMigrate cannot add them first without lock_timeout.
+	if err := runSchemaMigrationTx(db, "20261107_account_security_columns", cfg.DB.MigrationLockTimeoutMs, cfg.DB.MigrationStatementTimeoutMs, func(tx *gorm.DB) error {
+		return tx.Exec(migrate.AccountSecurityColumns).Error
+	}); err != nil {
+		return err
+	}
+
 	log.Println("SQL migrations completed")
 	return nil
 }

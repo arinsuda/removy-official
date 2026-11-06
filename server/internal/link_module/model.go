@@ -49,6 +49,7 @@ type LinkPending struct {
 	Attempts       int
 	CodeHash       *string
 	CodeExpiresAt  *time.Time
+	CodeEmail      *string // address the code was mailed to; the code only counts while it is still the user's email
 	ExpiresAt      time.Time
 	CreatedAt      time.Time
 }

@@ -63,6 +63,11 @@ type User struct {
 	IsPrivate       bool       `gorm:"default:false"`
 	IsActive        bool       `gorm:"default:true"`
 	FirstLoginAt    *time.Time `gorm:"default:null"`
+
+	// Read-only for GORM: written only through the identity policy (raw SQL).
+	// -:migration keeps AutoMigrate from adding them; migration 20261107_account_security_columns does.
+	TokenVersion    int        `gorm:"->;-:migration;column:token_version"`
+	IdentityResetAt *time.Time `gorm:"->;-:migration;column:identity_reset_at"`
 }
 
 type EmailVerification struct {
@@ -72,6 +77,8 @@ type EmailVerification struct {
 	Token     string    `gorm:"type:varchar(64);uniqueIndex;not null"`
 	ExpiresAt time.Time `gorm:"not null"`
 	CreatedAt time.Time
+	// Email is the address the token was mailed to; NULL on rows from before the column existed.
+	Email *string `gorm:"-:migration;type:varchar(100)"`
 }
 
 func (e *EmailVerification) IsExpired() bool {
@@ -102,6 +109,8 @@ type EmailChangeRequest struct {
 	ExpiresAt    time.Time `gorm:"not null"`
 	AttemptCount int       `gorm:"default:0"`
 	CreatedAt    time.Time
+	// NewOTPHash proves the new address; NULL on rows created before two-OTP email change.
+	NewOTPHash *string `gorm:"-:migration;type:varchar(255)"`
 }
 
 func (e *EmailChangeRequest) IsExpired() bool {
@@ -115,6 +124,8 @@ type PasswordResetToken struct {
 	HashedToken string    `gorm:"type:varchar(255);not null"`
 	ExpiresAt   time.Time `gorm:"not null"`
 	CreatedAt   time.Time
+	// Email is the address the token was mailed to; NULL on rows from before the column existed.
+	Email *string `gorm:"-:migration;type:varchar(100)"`
 }
 
 func (p *PasswordResetToken) IsExpired() bool {

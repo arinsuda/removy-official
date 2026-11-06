@@ -15,6 +15,30 @@ func runMigrationWithHistoryTx(
 	statementTimeoutMs int,
 	migrate func(tx *gorm.DB) error,
 ) error {
+	return runVersionedMigrationTx(db, migrationName, lockTimeoutMs, statementTimeoutMs, true, migrate)
+}
+
+// runSchemaMigrationTx is runMigrationWithHistoryTx without the reviews table
+// lock, for migrations that touch other tables. lock_timeout makes it fail the
+// boot instead of queueing behind a long-running transaction.
+func runSchemaMigrationTx(
+	db *gorm.DB,
+	migrationName string,
+	lockTimeoutMs int,
+	statementTimeoutMs int,
+	migrate func(tx *gorm.DB) error,
+) error {
+	return runVersionedMigrationTx(db, migrationName, lockTimeoutMs, statementTimeoutMs, false, migrate)
+}
+
+func runVersionedMigrationTx(
+	db *gorm.DB,
+	migrationName string,
+	lockTimeoutMs int,
+	statementTimeoutMs int,
+	lockReviews bool,
+	migrate func(tx *gorm.DB) error,
+) error {
 	var applied bool
 	err := db.Transaction(func(tx *gorm.DB) error {
 		// 1. Session-level advisory lock using FNV-1a hash of the name
@@ -40,8 +64,10 @@ func runMigrationWithHistoryTx(
 		}
 
 		// 4. SHARE ROW EXCLUSIVE table lock on reviews (blocks writes, allows reads)
-		if err := tx.Exec(`LOCK TABLE reviews IN SHARE ROW EXCLUSIVE MODE`).Error; err != nil {
-			return fmt.Errorf("failed to lock reviews table: %w", err)
+		if lockReviews {
+			if err := tx.Exec(`LOCK TABLE reviews IN SHARE ROW EXCLUSIVE MODE`).Error; err != nil {
+				return fmt.Errorf("failed to lock reviews table: %w", err)
+			}
 		}
 
 		// 5. Run migration callback

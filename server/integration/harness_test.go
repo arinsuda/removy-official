@@ -60,6 +60,16 @@ func randomSuffix() string {
 // migration entry point and drops it on cleanup.
 func newTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
+	db := newBareDB(t)
+	if err := database.Migrate(db, testConfig()); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+	return db
+}
+
+// newBareDB creates an empty throwaway database (no schema).
+func newBareDB(t *testing.T) *gorm.DB {
+	t.Helper()
 	raw := strings.TrimSpace(os.Getenv("TEST_DATABASE_URL"))
 	if raw == "" {
 		t.Skip("TEST_DATABASE_URL not set")
@@ -98,9 +108,6 @@ func newTestDB(t *testing.T) *gorm.DB {
 		}
 	})
 
-	if err := database.Migrate(db, testConfig()); err != nil {
-		t.Fatalf("migrate: %v", err)
-	}
 	return db
 }
 
