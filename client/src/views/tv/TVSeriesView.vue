@@ -443,7 +443,7 @@ import SkeletonGrid from "@/components/ui/skeleton/SkeletonGrid.vue"
     margin: 0 auto;
   }
   .page-title {
-    font-family: "Noto Sans Thai", "Arial Black", sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.75rem;
     font-weight: 900;
     letter-spacing: 2px;

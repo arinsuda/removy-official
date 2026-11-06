@@ -456,7 +456,7 @@ import SkeletonBlock from "@/components/ui/skeleton/SkeletonBlock.vue"
   }
 
   .brand-logo {
-    font-family: "Noto Sans Thai", "Arial Black", sans-serif;
+    font-family: var(--font-sans);
     font-size: 2rem;
     font-weight: 900;
     margin-bottom: 1rem;
@@ -713,7 +713,7 @@ import SkeletonBlock from "@/components/ui/skeleton/SkeletonBlock.vue"
     color: #fff;
     border: none;
     border-radius: 9999px;
-    font-family: "Noto Sans Thai", "Arial Black", sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.1rem;
     font-weight: 900;
     letter-spacing: 2px;

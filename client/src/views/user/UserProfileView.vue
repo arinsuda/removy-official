@@ -417,12 +417,8 @@ import SkeletonProfile from "@/components/ui/skeleton/SkeletonProfile.vue"
     --c-text: #f0f0f0;
     --c-sub: #8a8a8e;
     --c-muted: #3a3a3c;
-    --font-display:
-      "Geist", "Inter", "Noto Sans Thai", -apple-system, BlinkMacSystemFont,
-      "Segoe UI", sans-serif;
-    --font-ui:
-      "Inter", "Noto Sans Thai", -apple-system, BlinkMacSystemFont,
-      "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
+    --font-display: var(--font-sans);
+    --font-ui: var(--font-sans);
     --radius: 10px;
     --ease: cubic-bezier(0.16, 1, 0.3, 1);
     --profile-gutter: 24px;
@@ -433,7 +429,7 @@ import SkeletonProfile from "@/components/ui/skeleton/SkeletonProfile.vue"
     overflow-x: hidden;
     background: var(--c-bg);
     color: var(--c-text);
-    font-family: var(--font-ui);
+    font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -599,7 +595,7 @@ import SkeletonProfile from "@/components/ui/skeleton/SkeletonProfile.vue"
   }
 
   .display-name {
-    font-family: var(--font-display);
+    font-family: var(--font-sans);
     font-size: 2rem;
     font-weight: 700;
     color: #fff;
@@ -641,7 +637,7 @@ import SkeletonProfile from "@/components/ui/skeleton/SkeletonProfile.vue"
     gap: 2px;
   }
   .hstat-val {
-    font-family: var(--font-display);
+    font-family: var(--font-sans);
     font-size: 1.1rem;
     font-weight: 700;
     color: #fff;
@@ -675,7 +671,7 @@ import SkeletonProfile from "@/components/ui/skeleton/SkeletonProfile.vue"
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    font-family: var(--font-ui);
+    font-family: var(--font-sans);
     font-size: 0.78rem;
     font-weight: 500;
     padding: 9px 18px;
@@ -753,7 +749,7 @@ import SkeletonProfile from "@/components/ui/skeleton/SkeletonProfile.vue"
     border-radius: 7px;
     border: none;
     background: none;
-    font-family: var(--font-ui);
+    font-family: var(--font-sans);
     font-size: 0.8rem;
     color: var(--c-sub);
     cursor: pointer;

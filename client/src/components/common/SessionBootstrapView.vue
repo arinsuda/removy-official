@@ -82,7 +82,7 @@ import LoadingBar from "@/components/ui/LoadingBar.vue"
     justify-content: center;
     background: #0a0a0a;
     color: #ffffff;
-    font-family: inherit;
+    font-family: var(--font-sans);
     padding: 1.5rem;
   }
 

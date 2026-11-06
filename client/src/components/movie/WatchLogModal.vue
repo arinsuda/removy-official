@@ -122,7 +122,7 @@ onBeforeUnmount(() => { document.body.style.overflow = '' })
   width: 100%;
   max-width: 400px;
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
-  font-family: -apple-system, system-ui, sans-serif;
+  font-family: var(--font-sans);
 }
 .modal-header {
   display: flex;

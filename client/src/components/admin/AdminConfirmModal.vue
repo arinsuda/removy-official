@@ -344,7 +344,7 @@ onBeforeUnmount(() => {
   min-height: 54px;
   box-sizing: border-box;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
-  font-family: inherit;
+  font-family: var(--font-sans);
 }
 
 .reason-textarea:focus {

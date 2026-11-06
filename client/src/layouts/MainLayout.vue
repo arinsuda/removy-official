@@ -636,7 +636,7 @@ onUnmounted(() => {
 }
 
 .nav-logo {
-  font-family: "Noto Sans Thai", "Arial Black", sans-serif;
+  font-family: var(--font-sans);
   font-size: 1.5rem;
   font-weight: 900;
   text-decoration: none;

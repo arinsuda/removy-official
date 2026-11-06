@@ -229,16 +229,14 @@
     color: #f0f0f0;
     margin: 0;
     letter-spacing: -0.01em;
-    font-family:
-      -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    font-family: var(--font-sans);
   }
   .modal-desc {
     font-size: 0.82rem;
     color: #8a8a8e;
     margin: 0;
     line-height: 1.5;
-    font-family:
-      -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    font-family: var(--font-sans);
   }
   .item-name {
     color: #d0d0d0;
@@ -263,8 +261,7 @@
     font-weight: 600;
     cursor: pointer;
     transition: background-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
-    font-family:
-      -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    font-family: var(--font-sans);
     letter-spacing: 0.01em;
   }
 

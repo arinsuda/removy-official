@@ -429,7 +429,7 @@ import SkeletonList from "@/components/ui/skeleton/SkeletonList.vue"
     flex-direction: column;
     gap: 1.5rem;
     margin-top: 0.5rem;
-    font-family: "Noto Sans Thai", sans-serif;
+    font-family: var(--font-sans);
   }
 
   .write-review-box {
@@ -446,7 +446,7 @@ import SkeletonList from "@/components/ui/skeleton/SkeletonList.vue"
     border-radius: 8px;
     padding: 0.75rem;
     color: #fff;
-    font-family: inherit;
+    font-family: var(--font-sans);
     font-size: 0.9rem;
     resize: none;
     outline: none;
@@ -802,7 +802,7 @@ import SkeletonList from "@/components/ui/skeleton/SkeletonList.vue"
     border-radius: 6px;
     padding: 0.4rem 0.7rem 0.4rem 2.2rem;
     color: #fff;
-    font-family: inherit;
+    font-family: var(--font-sans);
     font-size: 0.8rem;
     min-height: unset;
     width: 150px;
@@ -1128,7 +1128,7 @@ import SkeletonList from "@/components/ui/skeleton/SkeletonList.vue"
     border-radius: 16px;
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
     padding: 0.5rem;
-    font-family: inherit;
+    font-family: var(--font-sans);
     --dp-primary-color: var(--color-brand);
     --dp-primary-text-color: #fff;
     --dp-border-color: transparent;

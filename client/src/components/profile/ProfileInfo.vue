@@ -76,11 +76,9 @@
     --c-text: #f0f0f0;
     --c-sub: #8a8a8e;
     --c-muted: #3a3a3c;
-    --font:
-      "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui,
-      sans-serif;
+    --font: var(--font-sans);
     --ease: cubic-bezier(0.16, 1, 0.3, 1);
-    font-family: var(--font);
+    font-family: var(--font-sans);
     color: var(--c-text);
   }
 

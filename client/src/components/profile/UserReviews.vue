@@ -512,11 +512,9 @@ onMounted(fetchReviews);
   --c-muted: #3a3a3c;
   --c-star: #fbbf24;
   --c-green: #34c759;
-  --font:
-    "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui,
-    sans-serif;
+  --font: var(--font-sans);
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
-  font-family: var(--font);
+  font-family: var(--font-sans);
   color: var(--c-text);
 }
 
@@ -564,7 +562,7 @@ onMounted(fetchReviews);
   gap: 6px;
 }
 .filter-pill {
-  font-family: var(--font);
+  font-family: var(--font-sans);
   font-size: 0.75rem;
   font-weight: 500;
   color: var(--c-sub);
@@ -640,7 +638,7 @@ onMounted(fetchReviews);
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--c-border);
   color: var(--c-sub);
-  font-family: var(--font);
+  font-family: var(--font-sans);
   font-size: 0.7rem;
   font-weight: 500;
   cursor: pointer;
@@ -707,7 +705,7 @@ onMounted(fetchReviews);
 .date-input {
   flex: 1;
   min-width: 0;
-  font-family: var(--font);
+  font-family: var(--font-sans);
   font-size: 0.7rem;
   color: var(--c-text);
   background: rgba(255, 255, 255, 0.04);
@@ -985,7 +983,7 @@ onMounted(fetchReviews);
   width: 100%;
   padding: 7px 10px;
   border-radius: 5px;
-  font-family: var(--font);
+  font-family: var(--font-sans);
   font-size: 0.75rem;
   font-weight: 500;
   color: var(--c-sub);

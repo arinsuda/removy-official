@@ -101,11 +101,10 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
     --c-sub: #8a8a8e;
     --c-muted: #3a3a3c;
     --c-red: #e1251b;
-    --font:
-      -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    --font: var(--font-sans);
     --ease: cubic-bezier(0.16, 1, 0.3, 1);
 
-    font-family: var(--font);
+    font-family: var(--font-sans);
     background: #161616;
     border: 1px solid var(--c-border);
     border-radius: 14px;
@@ -161,7 +160,7 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
 
   .btn {
     flex: 1;
-    font-family: var(--font);
+    font-family: var(--font-sans);
     font-size: 0.78rem;
     font-weight: 600;
     padding: 9px 0;

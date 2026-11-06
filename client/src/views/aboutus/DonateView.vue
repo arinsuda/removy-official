@@ -184,7 +184,7 @@ const copyAccountNumber = async () => {
 <style scoped>
 
 .donate-page {
-  font-family: 'Inter', 'Noto Sans Thai', sans-serif;
+  font-family: var(--font-sans);
   min-height: 100vh;
   background-color: #0a0a0a;
   color: #f5f5f5;
@@ -549,7 +549,7 @@ const copyAccountNumber = async () => {
   font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: 0.05em;
-  font-family: monospace;
+  font-family: var(--font-sans);
 }
 
 .separator {

@@ -204,7 +204,7 @@ const headerGlowStyle = computed(() => {
     radial-gradient(at 0% 0%, rgba(30, 20, 50, 0.8) 0px, transparent 50%),
     radial-gradient(at 100% 100%, rgba(20, 15, 35, 0.8) 0px, transparent 50%);
   color: #ffffff;
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-sans);
   position: relative;
   display: flex;
   flex-direction: column;

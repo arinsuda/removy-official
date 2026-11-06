@@ -915,16 +915,14 @@ watch(
   --c-text: #f0f0f0;
   --c-sub: #8a8a8e;
   --c-muted: #3a3a3c;
-  --font:
-    "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
-    system-ui, sans-serif;
+  --font: var(--font-sans);
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   padding: 24px;
   display: flex;
   flex-direction: column;
   max-height: 90vh;
   overflow: hidden;
-  font-family: var(--font);
+  font-family: var(--font-sans);
   color: var(--c-text);
   background: var(--c-surface);
   border-radius: 14px;
@@ -1061,7 +1059,7 @@ watch(
   border: 1px solid var(--c-border);
   border-radius: 8px;
   padding: 10px 14px;
-  font-family: var(--font);
+  font-family: var(--font-sans);
   font-size: 0.875rem;
   color: var(--c-text);
   outline: none;
@@ -1124,7 +1122,7 @@ watch(
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-family: var(--font);
+  font-family: var(--font-sans);
   font-size: 0.72rem;
   font-weight: 600;
   white-space: nowrap;
@@ -1218,7 +1216,7 @@ watch(
   gap: 12px;
 }
 .resend-btn {
-  font-family: var(--font);
+  font-family: var(--font-sans);
   font-size: 0.7rem;
   color: var(--c-sub);
   background: none;
@@ -1406,7 +1404,7 @@ watch(
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-family: var(--font);
+  font-family: var(--font-sans);
   font-size: 0.8rem;
   font-weight: 600;
   padding: 9px 18px;
@@ -1543,7 +1541,7 @@ watch(
   flex-shrink: 0;
 }
 .footer-btn {
-  font-family: var(--font);
+  font-family: var(--font-sans);
   font-size: 0.82rem;
   font-weight: 500;
   padding: 9px 18px;

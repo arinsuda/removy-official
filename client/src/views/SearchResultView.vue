@@ -409,7 +409,7 @@ onMounted(() => {
   min-height: calc(100vh - 64px);
   background: #141414;
   color: #f0f0f0;
-  font-family: "Noto Sans Thai", sans-serif;
+  font-family: var(--font-sans);
 }
 
 .search-page__inner {

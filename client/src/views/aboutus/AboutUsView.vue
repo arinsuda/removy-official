@@ -260,7 +260,7 @@
     --radius-sm: 10px;
     --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
-    font-family: "Inter", "Noto Sans Thai", -apple-system, sans-serif;
+    font-family: var(--font-sans);
     color: var(--c-text);
     max-width: 960px;
     margin: 0 auto;

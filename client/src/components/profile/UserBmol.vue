@@ -971,8 +971,8 @@ onMounted(async () => {
   --c-text: #f0f0f0;
   --c-sub: #8a8a8e;
   --c-muted: #3a3a3c;
-  --font: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
-  font-family: var(--font);
+  --font: var(--font-sans);
+  font-family: var(--font-sans);
   color: var(--c-text);
   display: flex;
   flex-direction: column;

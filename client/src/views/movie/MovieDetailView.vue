@@ -801,7 +801,7 @@ import SkeletonMediaDetail from "@/components/ui/skeleton/SkeletonMediaDetail.vu
     --text: #f0f0f0;
     --muted: #8a8a8a;
 
-    font-family: "Noto Sans Thai", sans-serif;
+    font-family: var(--font-sans);
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;

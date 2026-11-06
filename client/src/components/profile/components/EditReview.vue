@@ -223,11 +223,10 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
     --c-muted: #3a3a3c;
     --c-star: #fbbf24;
     --c-red: #e1251b;
-    --font:
-      -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    --font: var(--font-sans);
     --ease: cubic-bezier(0.16, 1, 0.3, 1);
 
-    font-family: var(--font);
+    font-family: var(--font-sans);
     background: #161616;
     border: 1px solid var(--c-border);
     border-radius: 14px;
@@ -395,7 +394,7 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
 
   /* Textarea */
   .textarea {
-    font-family: var(--font);
+    font-family: var(--font-sans);
     font-size: 0.82rem;
     color: #e0e0e0;
     background: rgba(255, 255, 255, 0.03);
@@ -430,7 +429,7 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
     margin-top: 4px;
   }
   .btn {
-    font-family: var(--font);
+    font-family: var(--font-sans);
     font-size: 0.78rem;
     font-weight: 600;
     padding: 8px 18px;

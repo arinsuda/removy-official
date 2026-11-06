@@ -314,7 +314,7 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
     text-align: center;
   }
   .brand-logo {
-    font-family: "Noto Sans Thai", "Arial Black", sans-serif;
+    font-family: var(--font-sans);
     font-size: 3.5rem;
     font-weight: 900;
     letter-spacing: -1px;
@@ -383,7 +383,7 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
     color: #a3a3a3;
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 9999px;
-    font-family: "Noto Sans Thai", "Arial Black", sans-serif;
+    font-family: var(--font-sans);
     font-size: 0.9rem;
     font-weight: 700;
     letter-spacing: 1px;
@@ -411,7 +411,7 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
 
   /* ── form ── */
   .auth-title {
-    font-family: "Noto Sans Thai", "Arial Black", sans-serif;
+    font-family: var(--font-sans);
     font-size: 2rem;
     font-weight: 900;
     letter-spacing: 3px;
@@ -605,7 +605,7 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
     color: #fff;
     border: none;
     border-radius: 9999px;
-    font-family: "Noto Sans Thai", "Arial Black", sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.1rem;
     font-weight: 900;
     letter-spacing: 2px;

@@ -547,7 +547,7 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
     --muted: #5a5a5a;
     --muted2: #8a8a8a;
 
-    font-family: "Noto Sans Thai", sans-serif;
+    font-family: var(--font-sans);
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
@@ -806,7 +806,7 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
     font-size: 1.35rem;
     font-weight: 700;
     color: #fff;
-    font-family: monospace;
+    font-family: var(--font-sans);
     line-height: 1.1;
   }
   .countdown-num--sec {
