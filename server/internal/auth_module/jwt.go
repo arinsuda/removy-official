@@ -62,12 +62,19 @@ func (j *jwtManager) ParseRefresh(tokenStr string) (*Claims, error) {
 }
 
 func (j *jwtManager) sign(userID uint, role string, tokenType TokenType, ttl time.Duration, secret string) (string, error) {
+	// A random ID keeps tokens unique when one user gets several in the same second;
+	// refresh tokens are stored under a unique hash.
+	idBytes := make([]byte, 16)
+	if _, err := rand.Read(idBytes); err != nil {
+		return "", fmt.Errorf("jwt: generate id: %w", err)
+	}
 	now := time.Now()
 	claims := Claims{
 		UserID: userID,
 		Role:   role,
 		Type:   tokenType,
 		RegisteredClaims: jwt.RegisteredClaims{
+			ID:        hex.EncodeToString(idBytes),
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(ttl)),
 		},

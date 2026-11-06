@@ -1,7 +1,6 @@
 package notification_module
 
 import (
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -40,7 +39,6 @@ func NewHub(verifier TokenVerifier, allowedOrigins []string) *Hub {
 
 	io.On("connection", func(clients ...any) {
 		client := clients[0].(*socket.Socket)
-		log.Printf("DEBUG handshake headers: %+v", client.Handshake().Headers)
 
 		token := extractAccessTokenFromRequest(client.Handshake())
 		if token == "" {

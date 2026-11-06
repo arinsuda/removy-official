@@ -111,7 +111,7 @@ function errorFor(err: unknown): string {
 onMounted(async () => {
   const token = readToken()
   // never leave the one-time token in the address bar / history
-  history.replaceState(null, "", window.location.pathname)
+  history.replaceState(history.state, "", window.location.pathname)
   if (!token) {
     state.value = "failed"
     void playPlatformEnter()
