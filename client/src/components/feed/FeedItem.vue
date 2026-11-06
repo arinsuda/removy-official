@@ -5,10 +5,18 @@
     <!-- Actor Avatar -->
     <RouterLink :to="actorLink" class="shrink-0">
       <img
-        :src="item.actor.avatar_url || defaultAvatar"
+        v-if="item.actor.avatar_url"
+        :src="item.actor.avatar_url"
         :alt="item.actor.username"
         class="h-10 w-10 rounded-full object-cover ring-2 ring-white/5 transition-all duration-300 group-hover:ring-white/20"
       />
+      <div
+        v-else
+        data-testid="actor-avatar-fallback"
+        class="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-800 text-neutral-400 ring-2 ring-white/5"
+      >
+        <UserIcon :size="20" />
+      </div>
     </RouterLink>
 
     <div class="min-w-0 flex-1">
@@ -149,10 +157,18 @@
         class="mt-4 flex items-center gap-4 rounded-xl border border-white/5 bg-white/[0.01] p-3 transition-all duration-300 hover:border-white/10 hover:bg-white/[0.03] shadow-sm group/target"
       >
         <img
-          :src="item.target_user.avatar_url || defaultAvatar"
+          v-if="item.target_user.avatar_url"
+          :src="item.target_user.avatar_url"
           :alt="item.target_user.username"
           class="h-10 w-10 shrink-0 rounded-full object-cover ring-2 ring-white/5 transition-transform duration-300 group-hover/target:scale-105"
         />
+        <div
+          v-else
+          data-testid="target-avatar-fallback"
+          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-neutral-800 text-neutral-400 ring-2 ring-white/5"
+        >
+          <UserIcon :size="20" />
+        </div>
         <div class="min-w-0 flex-1">
           <p class="truncate text-sm font-semibold text-white group-hover/target:text-red-400 transition-colors">
             {{ item.target_user.display_name || item.target_user.username }}
@@ -172,7 +188,7 @@ import type { FeedItemResponse } from "@/types/feed";
 import { getActivityMeta, mediaRoutePrefix } from "@/utils/feedActivity";
 import { formatRelativeTime } from "@/utils/relativeTime";
 import { useClickOutside } from "@/composables/useClickOutside";
-import { Globe, Users, Lock, Compass, Trash2, Star } from "lucide-vue-next";
+import { Globe, Users, Lock, Compass, Trash2, Star, User as UserIcon } from "lucide-vue-next";
 
 const props = defineProps<{
   item: FeedItemResponse;
@@ -187,7 +203,6 @@ const emit = defineEmits<{
   "delete-activity": [id: number];
 }>();
 
-const defaultAvatar = "/images/default-avatar.png";
 const isMenuOpen = ref(false);
 const menuRef = ref<HTMLElement | null>(null);
 const isExpanded = ref(false);
