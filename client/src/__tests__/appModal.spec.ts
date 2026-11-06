@@ -217,6 +217,23 @@ describe("AppModal", () => {
     void upper
   })
 
+  it("does not pull focus into a lower modal when its control is disabled while focus is on body", async () => {
+    mountModal({ showClose: false, title: "Lower" }, { default: '<button id="low-btn">Low</button>' })
+    mountModal({ showClose: false, title: "Upper" })
+    await nextTick()
+    await nextTick()
+    const lowBtn = document.getElementById("low-btn") as HTMLButtonElement
+    const lowerPanel = Array.from(document.body.querySelectorAll<HTMLElement>('[aria-modal="true"]'))[0]!
+    ;(document.activeElement as HTMLElement).blur()
+    expect(document.activeElement).toBe(document.body)
+
+    lowBtn.disabled = true
+    await nextTick()
+    await waitMacrotask()
+    expect(document.activeElement).not.toBe(lowerPanel)
+    expect(lowerPanel.contains(document.activeElement)).toBe(false)
+  })
+
   it("closes on Escape with a reason", async () => {
     const wrapper = mountModal()
     key(document.getElementById("first")!, "Escape")
