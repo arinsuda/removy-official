@@ -1,12 +1,16 @@
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { defineComponent, h, nextTick, ref } from "vue"
 import { mount, type VueWrapper } from "@vue/test-utils"
 import AppModal from "@/components/ui/AppModal.vue"
-import { focusablesIn, setFocusableVisibilityCheck } from "@/composables/useDialogFocus"
+import { focusablesIn } from "@/composables/useDialogFocus"
 import { useRealI18n } from "./helpers/realI18n"
 
 const i18n = useRealI18n()
 const wrappers: VueWrapper[] = []
+const origGetClientRects = HTMLElement.prototype.getClientRects
+const waitMacrotask = () => new Promise((r) => setTimeout(r, 0))
 
 function mountModal(props: Record<string, unknown> = {}, slots: Record<string, string> = {}) {
   const wrapper = mount(AppModal, {
@@ -20,23 +24,23 @@ function mountModal(props: Record<string, unknown> = {}, slots: Record<string, s
 }
 
 const panel = () => document.body.querySelector<HTMLElement>('[aria-modal="true"]')
-const panels = () => Array.from(document.body.querySelectorAll<HTMLElement>('[aria-modal="true"]'))
 const key = (target: EventTarget, k: string, init: KeyboardEventInit = {}) =>
   target.dispatchEvent(new KeyboardEvent("keydown", { key: k, bubbles: true, cancelable: true, ...init }))
 
 beforeEach(() => {
-  // happy-dom has no layout engine (getClientRects() is empty unless overridden);
-  // treat connected elements without `hidden` or `display: none` as visible.
-  setFocusableVisibilityCheck(
-    (el) => el.isConnected && !el.hidden && el.style.display !== "none" && el.style.visibility !== "hidden",
-  )
+  // happy-dom has no layout engine (getClientRects() is empty unless stubbed);
+  // stub HTMLElement.prototype.getClientRects so the production filter is exercised.
+  HTMLElement.prototype.getClientRects = function (this: HTMLElement) {
+    const visible = this.isConnected && !this.hidden && this.style.display !== "none" && this.style.visibility !== "hidden"
+    return (visible ? [{ width: 1, height: 1 }] : []) as unknown as DOMRectList
+  }
 })
 
 afterEach(() => {
   wrappers.splice(0).forEach((w) => w.unmount())
   document.body.innerHTML = ""
   document.body.style.overflow = ""
-  setFocusableVisibilityCheck((el) => el.getClientRects().length > 0)
+  HTMLElement.prototype.getClientRects = origGetClientRects
 })
 
 describe("AppModal", () => {
@@ -55,13 +59,17 @@ describe("AppModal", () => {
     expect(panel()!.getAttribute("aria-labelledby")).toBeNull()
   })
 
-  it("omits aria-labelledby when neither title nor header slot is given and warns in dev", () => {
+  it("omits aria-labelledby when neither title nor header slot is given, falls back to attr aria-labelledby, and warns in dev", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
     mountModal({ title: undefined })
     expect(panel()!.getAttribute("aria-labelledby")).toBeNull()
     expect(warn).toHaveBeenCalledOnce()
     warn.mockClear()
     mountModal({ title: undefined, ariaLabel: "Custom" })
+    expect(warn).not.toHaveBeenCalled()
+    document.body.innerHTML = ""
+    mountModal({ title: undefined, "aria-labelledby": "ext-heading" })
+    expect(panel()!.getAttribute("aria-labelledby")).toBe("ext-heading")
     expect(warn).not.toHaveBeenCalled()
     warn.mockRestore()
   })
@@ -121,21 +129,14 @@ describe("AppModal", () => {
   })
 
   it("filters out negative-tabindex, disabled, and zero-rect elements from focusables", () => {
-    setFocusableVisibilityCheck((el) => el.getClientRects().length > 0)
     const root = document.createElement("div")
     root.innerHTML = [
       '<button id="ok">OK</button>',
       '<div id="neg" tabindex="-2">Neg</div>',
       '<button id="disabled-tabindex" disabled tabindex="0">Disabled</button>',
-      '<button id="hidden">Hidden</button>',
+      '<button id="hidden" style="display: none">Hidden</button>',
     ].join("")
     document.body.appendChild(root)
-    const rect = () => ({ length: 1 }) as unknown as DOMRectList
-    const emptyRect = () => ({ length: 0 }) as unknown as DOMRectList
-    root.querySelector<HTMLElement>("#ok")!.getClientRects = rect
-    root.querySelector<HTMLElement>("#neg")!.getClientRects = rect
-    root.querySelector<HTMLElement>("#disabled-tabindex")!.getClientRects = rect
-    root.querySelector<HTMLElement>("#hidden")!.getClientRects = emptyRect
     expect(focusablesIn(root).map((el) => el.id)).toEqual(["ok"])
   })
 
@@ -153,32 +154,67 @@ describe("AppModal", () => {
     expect(document.activeElement?.id).toBe("last")
   })
 
-  it("wraps Tab between the last and first focusable, and pulls Tab from body into the top panel", async () => {
-    mountModal()
+  it("wraps Tab, pulls Tab and Shift+Tab from body or outside elements into the top panel, and ignores teleported menus", async () => {
+    const outside = document.createElement("button")
+    outside.id = "outside"
+    document.body.appendChild(outside)
+    const dpMenu = document.createElement("div")
+    dpMenu.className = "dp--menu-wrapper"
+    const dpBtn = document.createElement("button")
+    dpMenu.appendChild(dpBtn)
+    document.body.appendChild(dpMenu)
+
+    mountModal({ showClose: false })
     await nextTick()
     await nextTick()
+    const first = document.getElementById("first")!
     const last = document.getElementById("last")!
     last.focus()
-    const first = panel()!.querySelector<HTMLElement>("button")!
     key(last, "Tab")
     expect(document.activeElement).toBe(first)
     key(first, "Tab", { shiftKey: true })
     expect(document.activeElement).toBe(last)
+
     document.body.focus()
     key(document.body, "Tab")
     expect(document.activeElement).toBe(first)
+
+    document.body.focus()
+    key(document.body, "Tab", { shiftKey: true })
+    expect(document.activeElement).toBe(last)
+
+    outside.focus()
+    key(outside, "Tab")
+    expect(document.activeElement).toBe(first)
+
+    dpBtn.focus()
+    key(dpBtn, "Tab")
+    expect(document.activeElement).toBe(dpBtn)
   })
 
-  it("keeps focus inside the panel when the focused button becomes disabled", async () => {
-    mountModal({ showClose: false })
+  it("focuses the panel when the focused button becomes disabled on the top modal only", async () => {
+    const lower = mountModal({ showClose: false, title: "Lower" }, { default: '<button id="low-btn">Low</button>' })
+    const upper = mountModal({ showClose: false, title: "Upper" })
     await nextTick()
     await nextTick()
     const first = document.getElementById("first") as HTMLButtonElement
     expect(document.activeElement).toBe(first)
+
+    // Disabling a control inside the non-top modal does not steal focus from the top modal.
+    const lowBtn = document.getElementById("low-btn") as HTMLButtonElement
+    lowBtn.disabled = true
+    await nextTick()
+    await waitMacrotask()
+    expect(document.activeElement).toBe(first)
+
+    // Disabling the focused control inside the top modal moves focus to the top panel itself.
     first.disabled = true
     await nextTick()
-    await new Promise((r) => setTimeout(r, 0))
-    expect(document.activeElement?.id).toBe("last")
+    await waitMacrotask()
+    const upperPanel = Array.from(document.body.querySelectorAll<HTMLElement>('[aria-modal="true"]'))[1]!
+    expect(document.activeElement).toBe(upperPanel)
+    void lower
+    void upper
   })
 
   it("closes on Escape with a reason", async () => {
@@ -216,23 +252,48 @@ describe("AppModal", () => {
   })
 
   it("assigns increasing z-index by open order, including when a lower modal reopens on top", async () => {
-    const a = mountModal({ title: "A" })
-    const b = mountModal({ title: "B" })
-    const zOfTitle = (title: string) => {
+    const a = mountModal({ title: "A", showClose: false }, { default: '<button id="a-btn">A</button>' })
+    await nextTick()
+    await nextTick()
+    const b = mountModal({ title: "B", showClose: false }, { default: '<button id="b-btn">B</button>' })
+    await nextTick()
+    await nextTick()
+    const offsetOfTitle = (title: string) => {
       const m = Array.from(document.body.querySelectorAll<HTMLElement>(".app-modal")).find((el) =>
         el.textContent?.includes(title),
       )!
-      return Number(m.style.zIndex)
+      const match = m.style.zIndex.match(/\+\s*(\d+)/)
+      return match ? Number(match[1]) : 0
     }
-    expect(zOfTitle("A")).toBeGreaterThan(99999)
-    expect(zOfTitle("B")).toBeGreaterThan(zOfTitle("A"))
+    expect(offsetOfTitle("B")).toBeGreaterThan(offsetOfTitle("A"))
+    expect(document.activeElement?.id).toBe("b-btn")
+
+    // Closing the lower modal `a` while `b` is on top must not steal focus from `b`.
     await a.setProps({ modelValue: false })
+    await nextTick()
+    expect(document.activeElement?.id).toBe("b-btn")
+
     await a.setProps({ modelValue: true })
     await nextTick()
-    expect(zOfTitle("A")).toBeGreaterThan(zOfTitle("B"))
+    await nextTick()
+    expect(offsetOfTitle("A")).toBeGreaterThan(offsetOfTitle("B"))
+    expect(document.activeElement?.id).toBe("a-btn")
     key(document.body, "Escape")
     expect(a.emitted("close")).toHaveLength(1)
     expect(b.emitted("close")).toBeUndefined()
+  })
+
+  it("defines shared z-index tokens in order: legacy (99999) < modal < popover < toast", () => {
+    const css = readFileSync(join(import.meta.dirname, "../assets/styles/main.css"), "utf8")
+    const token = (name: string) => Number(css.match(new RegExp(`${name}:\\s*(\\d+)`))?.[1])
+    const modalBase = token("--z-modal-base")
+    const popover = token("--z-popover")
+    const toast = token("--z-toast")
+    expect(modalBase).toBeGreaterThan(99999)
+    expect(popover).toBeGreaterThan(modalBase)
+    expect(toast).toBeGreaterThan(popover)
+    expect(css).toMatch(/body\s+\.dp--menu-wrapper\s*\{[^}]*z-index:\s*var\(--z-popover\)/)
+    expect(css).not.toContain(".dp--menu-index")
   })
 
   it("does not emit close twice when dismissed during leave after modelValue turns false", async () => {
@@ -242,6 +303,8 @@ describe("AppModal", () => {
       attachTo: document.body,
     })
     wrappers.push(wrapper)
+    await nextTick()
+    await waitMacrotask()
     const closeBtn = document.body.querySelector<HTMLButtonElement>(".app-modal__header button")!
     closeBtn.click()
     expect(wrapper.emitted("close")).toHaveLength(1)
@@ -259,7 +322,7 @@ describe("AppModal", () => {
     expect(b.emitted("close")).toBeUndefined()
   })
 
-  it("closes on primary-button backdrop click only, keeping focus on mousedown", () => {
+  it("closes on primary-button backdrop click only, keeping focus on mousedown and rejecting mixed buttons", () => {
     const wrapper = mountModal({ showClose: false })
     const backdrop = panel()!.parentElement!
     const down = (t: Element, button = 0) =>
@@ -274,6 +337,16 @@ describe("AppModal", () => {
     expect(wrapper.emitted("close")).toBeUndefined()
     down(backdrop, 2)
     up(backdrop, 2)
+    expect(wrapper.emitted("close")).toBeUndefined()
+    // Secondary mousedown followed by primary mouseup must not close.
+    down(backdrop, 2)
+    up(backdrop, 0)
+    expect(wrapper.emitted("close")).toBeUndefined()
+    // Primary mousedown followed by secondary mouseup must not close, and resets pressed state.
+    down(backdrop, 0)
+    up(backdrop, 2)
+    expect(wrapper.emitted("close")).toBeUndefined()
+    up(backdrop, 0)
     expect(wrapper.emitted("close")).toBeUndefined()
     const prevented = !down(backdrop, 0)
     expect(prevented).toBe(true)
@@ -291,6 +364,8 @@ describe("AppModal", () => {
 
   it("closes from the close button, and disables it when dismissDisabled", async () => {
     const wrapper = mountModal()
+    await nextTick()
+    await waitMacrotask()
     document.body.querySelector<HTMLButtonElement>(".app-modal__header button")!.click()
     expect(wrapper.emitted("close")![0]).toEqual(["close-button"])
     await wrapper.setProps({ dismissDisabled: true })
@@ -304,6 +379,16 @@ describe("AppModal", () => {
     await b.setProps({ modelValue: false })
     expect(document.body.style.overflow).toBe("hidden")
     await a.setProps({ modelValue: false })
+    expect(document.body.style.overflow).toBe("")
+  })
+
+  it("leaves the page scrollable when a legacy writer locks before AppModal and clears before AppModal closes", async () => {
+    document.body.style.overflow = "hidden"
+    const modal = mountModal()
+    expect(document.body.style.overflow).toBe("hidden")
+    // Legacy modal closes and clears overflow directly while AppModal is still open.
+    document.body.style.overflow = ""
+    await modal.setProps({ modelValue: false })
     expect(document.body.style.overflow).toBe("")
   })
 

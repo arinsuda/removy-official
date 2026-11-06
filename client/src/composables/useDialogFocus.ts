@@ -3,30 +3,23 @@ import { nextTick, onBeforeUnmount, watch, type Ref } from "vue"
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
-export type VisibilityCheck = (el: HTMLElement) => boolean
-
-let isVisible: VisibilityCheck = (el) => el.getClientRects().length > 0
-
-/** Override layout visibility check in non-layout test environments (e.g. happy-dom). */
-export function setFocusableVisibilityCheck(fn: VisibilityCheck) {
-  isVisible = fn
-}
-
 export function focusablesIn(root: HTMLElement): HTMLElement[] {
   return Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
-    (el) => el.tabIndex >= 0 && !el.matches(":disabled") && isVisible(el),
+    (el) => el.tabIndex >= 0 && !el.matches(":disabled") && el.getClientRects().length > 0,
   )
 }
 
 /**
  * Focus management for a dialog panel: moves focus in when `active` turns on,
- * returns it to the opener when it turns off, and wraps Tab inside the panel.
- * Bind `onKeydown` to the panel (and call it for document Tab when focus lands on body).
+ * returns it to the opener when it turns off (only when `isTop` is true), and
+ * wraps Tab inside the panel. Bind `onKeydown` to the panel (and call it for
+ * document Tab when focus lands outside the panel).
  */
 export function useDialogFocus(
   panel: Ref<HTMLElement | null>,
   active: Ref<boolean>,
   initialFocus?: Ref<string | HTMLElement | undefined>,
+  isTop: () => boolean = () => true,
 ) {
   let opener: HTMLElement | null = null
   let observer: MutationObserver | null = null
@@ -37,10 +30,6 @@ export function useDialogFocus(
     return target ?? null
   }
 
-  function focusFirst(root: HTMLElement) {
-    ;(focusablesIn(root)[0] ?? root).focus()
-  }
-
   function stopObserver() {
     observer?.disconnect()
     observer = null
@@ -48,7 +37,7 @@ export function useDialogFocus(
 
   function restoreFocus() {
     stopObserver()
-    if (opener?.isConnected) opener.focus()
+    if (isTop() && opener?.isConnected) opener.focus()
     opener = null
   }
 
@@ -65,10 +54,10 @@ export function useDialogFocus(
         stopObserver()
         observer = new MutationObserver(() => {
           const r = panel.value
-          if (!r || !active.value) return
+          if (!r || !active.value || !isTop()) return
           const cur = document.activeElement
           if (cur === document.body || (cur instanceof HTMLElement && r.contains(cur) && cur.matches(":disabled"))) {
-            focusFirst(r)
+            r.focus()
           }
         })
         observer.observe(root, { attributes: true, subtree: true, attributeFilter: ["disabled"] })

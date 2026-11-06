@@ -94,4 +94,20 @@ describe("AppButton", () => {
     await wrapper.trigger("click")
     expect(onClick).toHaveBeenCalledOnce()
   })
+
+  it("renders an enabled router link (`to`) as a navigable anchor with href", async () => {
+    const onClick = vi.fn()
+    const wrapper = mount(AppButton, {
+      props: { to: "/movies" },
+      attrs: { onClick },
+      global: { stubs: { RouterLink: RouterLinkStub } },
+    })
+    expect(wrapper.element.tagName).toBe("A")
+    expect(wrapper.attributes("href")).toBe("/movies")
+    expect(wrapper.attributes("role")).toBeUndefined()
+    expect(wrapper.attributes("aria-disabled")).toBeUndefined()
+    expect(wrapper.attributes("tabindex")).toBeUndefined()
+    await wrapper.trigger("click")
+    expect(onClick).toHaveBeenCalledOnce()
+  })
 })

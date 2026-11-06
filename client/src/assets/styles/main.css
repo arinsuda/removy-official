@@ -109,12 +109,8 @@
   --z-toast: 400000;
 }
 
-/* The datepicker hard-codes z-index 99999/999999, which would sit under an AppModal. */
-body .dp--menu-wrapper,
-body .dp--menu-index,
-body .dp--overlay,
-body .dp--marker-tooltip,
-body .dp--menu-unclickable {
+/* The datepicker hard-codes z-index 99999, which would sit under an AppModal. */
+body .dp--menu-wrapper {
   z-index: var(--z-popover);
 }
 

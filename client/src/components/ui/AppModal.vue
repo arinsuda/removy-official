@@ -4,7 +4,7 @@
       <div
         v-if="modelValue"
         class="app-modal"
-        :style="{ zIndex: modalZIndex }"
+        :style="{ zIndex: `calc(var(--z-modal-base) + ${modalZOffset})` }"
         @mousedown="onBackdropDown"
         @mouseup="onBackdropUp"
       >
@@ -16,7 +16,7 @@
           :role="role"
           aria-modal="true"
           :aria-label="ariaLabel"
-          :aria-labelledby="ariaLabel ? undefined : hasTitleSlot ? titleId : undefined"
+          :aria-labelledby="ariaLabel ? undefined : hasTitleSlot ? titleId : ($attrs['aria-labelledby'] as string | undefined)"
           tabindex="-1"
           @keydown="onKeydown"
         >
@@ -52,7 +52,6 @@ export type AppModalCloseReason = "escape" | "backdrop" | "close-button"
 // Shared by every open modal: the stack decides z-order and which modal owns Escape.
 const openModals: symbol[] = []
 let nextZOrder = 0
-const Z_MODAL_BASE = 100000
 const Z_MODAL_STEP = 10
 </script>
 
@@ -101,34 +100,15 @@ const attrs = useAttrs()
 const titleId = useId()
 const panel = ref<HTMLElement | null>(null)
 const hasTitleSlot = computed(() => Boolean(props.title || slots.header))
-const { onKeydown } = useDialogFocus(panel, toRef(props, "modelValue"), toRef(props, "initialFocus"))
-
 const token = Symbol("app-modal")
-const modalZIndex = ref(Z_MODAL_BASE)
+const modalZOffset = ref(0)
 
 function isTop(): boolean {
-  return openModals[openModals.length - 1] === token
+  const len = openModals.length
+  return len === 0 || openModals[len - 1] === token
 }
 
-function dismiss(reason: AppModalCloseReason) {
-  if (!props.modelValue || props.dismissDisabled) return
-  emit("close", reason)
-  emit("update:modelValue", false)
-}
-
-function onDocumentKeydown(event: KeyboardEvent) {
-  if (event.defaultPrevented || !isTop()) return
-  const target = event.target as Node | null
-  if (event.key === "Tab" && target === document.body) {
-    onKeydown(event)
-    return
-  }
-  if (event.key !== "Escape" || !props.closeOnEscape) return
-  // Ignore Escape from elsewhere, such as a menu teleported to body.
-  if (target !== document.body && !panel.value?.contains(target)) return
-  event.preventDefault()
-  dismiss("escape")
-}
+const { onKeydown } = useDialogFocus(panel, toRef(props, "modelValue"), toRef(props, "initialFocus"), isTop)
 
 watch(
   () => props.modelValue,
@@ -145,7 +125,7 @@ watch(
       }
       if (!openModals.includes(token)) {
         openModals.push(token)
-        modalZIndex.value = Z_MODAL_BASE + nextZOrder++ * Z_MODAL_STEP
+        modalZOffset.value = nextZOrder++ * Z_MODAL_STEP
         lockScroll()
         document.addEventListener("keydown", onDocumentKeydown)
       }
@@ -155,6 +135,32 @@ watch(
   },
   { immediate: true },
 )
+
+function dismiss(reason: AppModalCloseReason) {
+  if (!props.modelValue || props.dismissDisabled) return
+  emit("close", reason)
+  emit("update:modelValue", false)
+}
+
+function isInsideTeleportedMenu(target: Node | null): boolean {
+  return target instanceof Element && Boolean(target.closest(".dp--menu-wrapper, [role='menu'], [role='listbox']"))
+}
+
+function onDocumentKeydown(event: KeyboardEvent) {
+  if (event.defaultPrevented || !isTop()) return
+  const target = event.target as Node | null
+  if (event.key === "Tab") {
+    if (!panel.value?.contains(target) && !isInsideTeleportedMenu(target)) {
+      onKeydown(event)
+    }
+    return
+  }
+  if (event.key !== "Escape" || !props.closeOnEscape) return
+  // Ignore Escape from elsewhere, such as a menu teleported to body.
+  if (target !== document.body && !panel.value?.contains(target)) return
+  event.preventDefault()
+  dismiss("escape")
+}
 
 function release() {
   const index = openModals.indexOf(token)
@@ -190,7 +196,7 @@ function onBackdropUp(event: MouseEvent) {
 .app-modal {
   position: fixed;
   inset: 0;
-  z-index: var(--z-modal-base, 100000);
+  z-index: var(--z-modal-base);
   display: flex;
   align-items: center;
   justify-content: center;
