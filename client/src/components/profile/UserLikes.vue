@@ -46,14 +46,6 @@
             <X :size="11" />
           </button>
 
-          <ConfirmModal
-            v-model="showModal"
-            :list-type="listType"
-            :item-name="selectedItem?.title"
-            @confirm="doRemove"
-            @cancel="showModal = false"
-          />
-
           <div class="poster-overlay">
             <p class="overlay-name">{{ item.title }}</p>
             <span class="overlay-genre">{{
@@ -77,6 +69,13 @@
         </div>
       </div>
     </div>
+    <ConfirmModal
+      v-model="showModal"
+      :list-type="listType"
+      :item-name="selectedItem?.title"
+      @confirm="doRemove"
+      @cancel="showModal = false"
+    />
   </div>
 </template>
 
