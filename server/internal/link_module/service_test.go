@@ -39,7 +39,11 @@ func TestDecide(t *testing.T) {
 		want                   Decision
 	}{
 		{true, true, true, true, DecisionLoginLinked},
-		{false, false, false, false, DecisionProvision},
+		{true, true, true, false, DecisionLoginLinked},
+		{true, true, false, true, DecisionConfirm}, // linked but the local account never proved its email
+		{true, true, false, false, DecisionConfirm},
+		{false, false, false, true, DecisionProvision},
+		{false, false, false, false, DecisionReject}, // unverified remote email proves nothing
 		{false, true, true, true, DecisionAutoLink},
 		{false, true, true, false, DecisionConfirm},
 		{false, true, false, true, DecisionConfirm},

@@ -14,14 +14,22 @@ const (
 	DecisionProvision
 	DecisionAutoLink
 	DecisionConfirm
+	DecisionReject
 )
 
 // Decide picks the redeem action. localExists/localVerified describe the local
-// user matched by email (case-insensitive); alreadyLinked is a remote_user_id hit.
+// user matched by email (case-insensitive) or by the link; alreadyLinked is a
+// remote_user_id hit. A remote email that is not verified proves nothing, and a
+// local account without a proven email is not the person behind the link: both
+// need the owner to prove the mailbox before a session is issued.
 func Decide(alreadyLinked, localExists, localVerified, remoteVerified bool) Decision {
 	switch {
-	case alreadyLinked:
+	case alreadyLinked && localVerified:
 		return DecisionLoginLinked
+	case alreadyLinked:
+		return DecisionConfirm
+	case !localExists && !remoteVerified:
+		return DecisionReject
 	case !localExists:
 		return DecisionProvision
 	case localVerified && remoteVerified:

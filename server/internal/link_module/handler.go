@@ -182,6 +182,8 @@ func (h *Handler) fail(c fiber.Ctx, err error) error {
 		return errJSON(c, fiber.StatusBadRequest, err.Error())
 	case errors.Is(err, ErrUserInactive):
 		return errJSON(c, fiber.StatusForbidden, err.Error())
+	case errors.Is(err, ErrRemoteUnverified):
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"code": "REMOTE_EMAIL_UNVERIFIED", "error": err.Error()})
 	case errors.Is(err, ErrLinkConflict), errors.Is(err, ErrEmailNotAllowed):
 		return errJSON(c, fiber.StatusConflict, err.Error())
 	case errors.Is(err, ErrNotLinked):

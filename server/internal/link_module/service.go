@@ -37,6 +37,8 @@ var (
 	ErrNotLinked       = errors.New("not linked")
 	ErrEmailNotAllowed = errors.New("email taken")
 	ErrSessionStale    = errors.New("session is no longer valid")
+	// ErrRemoteUnverified: the other platform has not verified this email, so no local account is created for it.
+	ErrRemoteUnverified = errors.New("remote email is not verified")
 )
 
 // ConfirmRequiredError is returned by Redeem when the user must prove ownership.
@@ -114,33 +116,66 @@ func (s *Service) toRemoteUser(u *user_module.User) *RemoteUser {
 	if u.Password != nil {
 		ru.PasswordHash = *u.Password
 	}
+	ru.IdentityResetAt = u.IdentityResetAt
 	return ru
 }
 
 // ---- internal (server-to-server) endpoints ----
 
 // Introspect atomically consumes a handoff token minted for the remote platform.
+// It share-locks the user first, so a claim in flight (ProveEmail deletes the
+// user's handoff tokens) finishes before the token is looked at, and only hands
+// out accounts whose email is proven.
 func (s *Service) Introspect(token string) (*RemoteUser, error) {
 	if token == "" {
 		return nil, ErrInvalidToken
 	}
-	var uid uint
-	res := s.db.Raw(`UPDATE link_handoff_tokens SET used_at = ? WHERE token_hash = ? AND used_at IS NULL AND expires_at > ? AND target_platform = ? RETURNING user_id`,
-		time.Now(), hashHex(token), time.Now(), s.remotePlatform()).Scan(&uid)
-	if res.Error != nil || res.RowsAffected == 0 {
+	var ru *RemoteUser
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		var uid uint
+		res := tx.Raw(`SELECT user_id FROM link_handoff_tokens WHERE token_hash = ? AND target_platform = ?`,
+			hashHex(token), s.remotePlatform()).Scan(&uid)
+		if res.Error != nil || res.RowsAffected == 0 {
+			return ErrInvalidToken
+		}
+		st, found, err := identity_policy.LockSession(tx, uid, false)
+		if err != nil {
+			return err
+		}
+		if !found || !st.Active {
+			return ErrInvalidToken
+		}
+		var consumed uint
+		res = tx.Raw(`UPDATE link_handoff_tokens SET used_at = ? WHERE token_hash = ? AND used_at IS NULL AND expires_at > ? AND target_platform = ? RETURNING user_id`,
+			time.Now(), hashHex(token), time.Now(), s.remotePlatform()).Scan(&consumed)
+		if res.Error != nil || res.RowsAffected == 0 {
+			return ErrInvalidToken
+		}
+		if !st.Verified {
+			return ErrInvalidToken
+		}
+		var u user_module.User
+		if err := tx.Preload("Role").First(&u, uid).Error; err != nil {
+			return ErrInvalidToken
+		}
+		ru = s.toRemoteUser(&u)
+		return nil
+	})
+	if err != nil {
+		if errors.Is(err, ErrInvalidToken) {
+			return nil, ErrInvalidToken
+		}
+		log.Printf("ERROR link: introspect: %v", err)
 		return nil, ErrInvalidToken
 	}
-	u, err := s.loadUser(uid)
-	if err != nil || !u.IsActive {
-		return nil, ErrInvalidToken
-	}
-	return s.toRemoteUser(u), nil
+	return ru, nil
 }
 
-// VerifyPassword checks email+password of an active local user (verification not required).
+// VerifyPassword checks email+password of an active, verified local user. An
+// unverified account's password was set by whoever registered the address first.
 func (s *Service) VerifyPassword(email, password string) (*RemoteUser, bool) {
 	u, err := s.findUserByEmail(s.db, email)
-	if err != nil || !u.IsActive || u.Password == nil || *u.Password == "" {
+	if err != nil || !u.IsActive || u.VerifiedEmailAt == nil || u.Password == nil || *u.Password == "" {
 		return nil, false
 	}
 	if bcrypt.CompareHashAndPassword([]byte(*u.Password), []byte(password)) != nil {
@@ -218,28 +253,37 @@ func (s *Service) Redeem(ctx context.Context, token string) (*Result, error) {
 }
 
 func (s *Service) resolveRemoteUser(ru *RemoteUser) (*Result, error) {
+	ru.Email = strings.ToLower(strings.TrimSpace(ru.Email))
 	if ru.Email == "" || ru.UserID == "" {
 		return nil, ErrInvalidToken
 	}
 	link, linkErr := s.findLinkByRemote(ru.UserID)
 	alreadyLinked := linkErr == nil
 
+	var local *user_module.User
 	if alreadyLinked {
 		u, err := s.loadUser(link.LocalUserID)
 		if err != nil || !u.IsActive {
 			return nil, ErrUserInactive
 		}
-		return &Result{User: u}, nil
+		local = u
+	} else {
+		u, lerr := s.findUserByEmail(s.db, ru.Email)
+		if lerr == nil {
+			if !u.IsActive {
+				return nil, ErrUserInactive
+			}
+			local = u
+		}
 	}
-
-	local, lerr := s.findUserByEmail(s.db, ru.Email)
-	localExists := lerr == nil
-	if localExists && !local.IsActive {
-		return nil, ErrUserInactive
-	}
+	localExists := local != nil
 	localVerified := localExists && local.VerifiedEmailAt != nil
 
-	switch Decide(false, localExists, localVerified, ru.EmailVerified) {
+	switch Decide(alreadyLinked, localExists, localVerified, ru.EmailVerified) {
+	case DecisionLoginLinked:
+		return &Result{User: local}, nil
+	case DecisionReject:
+		return nil, ErrRemoteUnverified
 	case DecisionProvision:
 		u, err := s.provision(ru)
 		if err != nil {
@@ -252,7 +296,9 @@ func (s *Service) resolveRemoteUser(ru *RemoteUser) (*Result, error) {
 		}
 		return &Result{User: local}, nil
 	default:
-		if s.hasLinkTo(local.ID) {
+		// A link that already points at this local account is not a conflict; proving the
+		// mailbox replaces it. Any other existing link to this account is.
+		if !alreadyLinked && s.hasLinkTo(local.ID) {
 			return nil, ErrLinkConflict
 		}
 		p := &LinkPending{
@@ -300,6 +346,9 @@ func (s *Service) createLink(db *gorm.DB, localUserID uint, remoteUserID, via st
 
 // provision creates a local user from the remote one and links it. Never grants admin.
 func (s *Service) provision(ru *RemoteUser) (*user_module.User, error) {
+	if !ru.EmailVerified {
+		return nil, ErrRemoteUnverified // defence in depth: Decide already rejects this
+	}
 	hash := ru.PasswordHash
 	if !strings.HasPrefix(hash, "$2") {
 		raw := make([]byte, 32)
@@ -321,7 +370,7 @@ func (s *Service) provision(ru *RemoteUser) (*user_module.User, error) {
 		})
 		u := &user_module.User{
 			Username: username,
-			Email:    strings.TrimSpace(ru.Email),
+			Email:    strings.ToLower(strings.TrimSpace(ru.Email)),
 			Password: &hash,
 			RoleID:   2,
 			IsActive: true,
@@ -367,7 +416,8 @@ func (s *Service) LoginViaRemote(email, password string) (*user_module.User, err
 		log.Printf("WARN link: remote verify-password failed: %v", err)
 		return nil, nil
 	}
-	if ru == nil {
+	if ru == nil || !ru.EmailVerified {
+		// An unverified remote account proves nothing: the same as wrong credentials.
 		return nil, nil
 	}
 	// Never auto-link/sign into an existing local account via login fallback:

@@ -64,4 +64,7 @@ type RemoteUser struct {
 	DisplayName   string `json:"display_name"`
 	EmailVerified bool   `json:"email_verified"`
 	PasswordHash  string `json:"password_hash"`
+	// IdentityResetAt is set when the owner of this account changed since it may have been linked
+	// (planted credentials wiped on proof of the mailbox). Additive: older peers ignore it.
+	IdentityResetAt *time.Time `json:"identity_reset_at,omitempty"`
 }
