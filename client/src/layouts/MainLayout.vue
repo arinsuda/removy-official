@@ -354,6 +354,7 @@ import ToastContainer from "@/components/common/ToastContainer.vue";
 import NotificationPanel from "@/components/common/NotificationPanel.vue";
 import { movieApi } from "@/api/endpoints/movie";
 import { linkApi } from "@/api/endpoints/link";
+import { playPlatformExit } from "@/utils/platformTransition";
 import { getTmdbImageUrl } from "@/utils/image";
 import type { Movie, TVSeries } from "@/types";
 import {
@@ -423,6 +424,7 @@ async function handleSwitchToPlanzi() {
   mobileMenuOpen.value = false;
   try {
     const { data } = await linkApi.createHandoff("planzi");
+    await playPlatformExit();
     window.location.href = data.redirect_url;
   } catch {
     window.alert(i18n.global.t("navigation.link.switchFailed"));

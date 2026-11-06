@@ -77,6 +77,7 @@ import { useI18n } from "vue-i18n"
 import { linkApi } from "@/api/endpoints/link"
 import type { LinkConfirmRequired, LinkSessionResponse } from "@/api/endpoints/link"
 import { useAuthStore } from "@/stores/auth"
+import { playPlatformEnter } from "@/utils/platformTransition"
 
 const { t } = useI18n()
 const router = useRouter()
@@ -92,7 +93,7 @@ const errorMsg = ref("")
 
 function done(data: LinkSessionResponse) {
   authStore.applySession(data)
-  router.replace({ name: "home" })
+  void router.replace({ name: "home" }).finally(() => void playPlatformEnter())
 }
 
 function readToken(): string {
@@ -113,12 +114,17 @@ onMounted(async () => {
   history.replaceState(null, "", window.location.pathname)
   if (!token) {
     state.value = "failed"
+    void playPlatformEnter()
     return
   }
+  // Reveal this page if redeeming is slow; otherwise the destination slides in.
+  const slowReveal = window.setTimeout(() => void playPlatformEnter(), 800)
   try {
     const res = await linkApi.redeem(token)
+    window.clearTimeout(slowReveal)
     done(res.data)
   } catch (err: unknown) {
+    window.clearTimeout(slowReveal)
     const resp = (err as { response?: { status?: number; data?: LinkConfirmRequired } }).response
     if (resp?.status === 409 && resp.data?.code === "LINK_CONFIRM_REQUIRED") {
       pending.value = resp.data
@@ -126,6 +132,7 @@ onMounted(async () => {
     } else {
       state.value = "failed"
     }
+    void playPlatformEnter()
   }
 })
 
