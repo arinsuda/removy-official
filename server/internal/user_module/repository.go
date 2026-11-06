@@ -129,6 +129,7 @@ func (r *repository) UpsertEmailChangeRequest(req *EmailChangeRequest) error {
 		Assign(EmailChangeRequest{
 			NewEmail:     req.NewEmail,
 			OTPHash:      req.OTPHash,
+			NewOTPHash:   req.NewOTPHash,
 			ExpiresAt:    req.ExpiresAt,
 			AttemptCount: 0,
 		}).
@@ -157,7 +158,7 @@ func (r *repository) DeleteEmailChangeRequest(userID uint) error {
 func (r *repository) IsEmailTaken(email string, excludeUserID uint) (bool, error) {
 	var count int64
 	err := r.db.Model(&User{}).
-		Where("email = ? AND id != ? AND is_active = true", email, excludeUserID).
+		Where("lower(email) = lower(?) AND id != ? AND is_active = true", email, excludeUserID).
 		Count(&count).Error
 	return count > 0, err
 }

@@ -40,7 +40,10 @@ export interface RequestEmailChangeRequest {
 }
 
 export interface VerifyEmailChangeRequest {
+  /** code mailed to the current address */
   otp: string
+  /** code mailed to the new address */
+  new_email_otp: string
 }
 
 export interface ChangePassword {

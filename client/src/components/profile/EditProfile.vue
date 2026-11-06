@@ -155,23 +155,36 @@
         <transition name="otp-slide">
           <div v-if="emailStep === 'otp'" class="otp-box">
             <p class="otp-hint">
-              Enter the 6-digit code sent to
-              <strong>{{ props.user?.email }}</strong>
+              {{ t("profile.editProfile.emailChange.currentCodeHint", { email: props.user?.email }) }}
+            </p>
+            <input
+              v-model="otpValue"
+              type="text"
+              inputmode="numeric"
+              maxlength="6"
+              class="field-input otp-input"
+              placeholder="000000"
+              :aria-label="t('profile.editProfile.emailChange.currentCodeLabel')"
+              @input="otpValue = otpValue.replace(/\D/g, '')"
+            />
+            <p class="otp-hint">
+              {{ t("profile.editProfile.emailChange.newCodeHint", { email: form.email }) }}
             </p>
             <div class="otp-row">
               <input
-                v-model="otpValue"
+                v-model="newOtpValue"
                 type="text"
                 inputmode="numeric"
                 maxlength="6"
                 class="field-input otp-input"
                 placeholder="000000"
-                @input="otpValue = otpValue.replace(/\D/g, '')"
+                :aria-label="t('profile.editProfile.emailChange.newCodeLabel')"
+                @input="newOtpValue = newOtpValue.replace(/\D/g, '')"
               />
               <button
                 type="button"
                 class="email-action-btn email-action-btn--confirm"
-                :disabled="otpValue.length !== 6 || otpConfirming"
+                :disabled="otpValue.length !== 6 || newOtpValue.length !== 6 || otpConfirming"
                 @click="handleVerifyOTP"
               >
                 <AppSpinner v-if="otpConfirming" /><span v-else
@@ -204,9 +217,8 @@
         </transition>
 
         <p v-if="emailStep === 'input'" class="email-hint">
-          <Info :size="11" /> Enter your new email, then we'll send a 6-digit
-          code to your current email ({{ props.user?.email }}) to confirm it's
-          you.
+          <Info :size="11" />
+          {{ t("profile.editProfile.emailChange.inputHint", { current: props.user?.email }) }}
         </p>
       </div>
       <!-- ─────────────────────────────────────────────────────── -->
@@ -511,6 +523,7 @@
 <script setup lang="ts">
 import AppSpinner from "@/components/ui/AppSpinner.vue"
 import { reactive, ref, computed, onMounted, onUnmounted, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import {
   X,
   Upload,
@@ -531,6 +544,7 @@ import { useAuthStore } from "@/stores/auth";
 import LinkedAccounts from "@/components/profile/LinkedAccounts.vue";
 import ConfirmModal from "@/components/profile/components/ConfirmModal.vue";
 
+const { t } = useI18n();
 const props = defineProps<{ user: UserProfile | null }>();
 const emit = defineEmits<{ close: [] }>();
 
@@ -539,10 +553,9 @@ const authStore = useAuthStore();
 // ── email step machine ────────────────────────────────────────────────
 // idle     -> nothing happening, showing current email
 // input    -> user is typing the new email
-// otp      -> OTP sent to CURRENT email, waiting for user to enter it
-// waiting  -> OTP verified, email swapped on BE, verification link sent
-//             to the NEW email, waiting for user to click it
-// done     -> new email verified (detected via polling)
+// otp      -> codes sent to the CURRENT and the NEW email, waiting for both
+// waiting  -> legacy step (email change used to need a verification link); unused
+// done     -> codes verified, email swapped on BE and still verified
 type EmailStep = "idle" | "input" | "otp" | "waiting" | "done";
 const emailStep = ref<EmailStep>("idle");
 const emailError = ref("");
@@ -553,6 +566,7 @@ const avatarFile = ref<File | null>(null);
 const emailSaving = ref(false);
 const showEmailConfirmModal = ref(false);
 const otpValue = ref("");
+const newOtpValue = ref("");
 const otpError = ref("");
 const otpConfirming = ref(false);
 
@@ -729,6 +743,7 @@ function resetEmailFlow() {
   stopPolling();
   emailStep.value = "idle";
   otpValue.value = "";
+  newOtpValue.value = "";
   otpError.value = "";
   emailError.value = "";
   form.email = initialForm.email;
@@ -803,6 +818,7 @@ async function confirmRequestOTP() {
     });
     emailStep.value = "otp";
     otpValue.value = "";
+    newOtpValue.value = "";
   } catch (err: any) {
     const msg = err?.response?.data?.error;
     emailError.value =
@@ -814,21 +830,23 @@ async function confirmRequestOTP() {
   }
 }
 
-// Step 4: user enters OTP -> PUT /users/:id/email { otp }
-// BE verifies OTP, swaps email to the pending new_email, sets
-// verified_email_at = null, then sends a verification link to the NEW email.
+// Step 4: user enters both codes -> PUT /users/:id/email { otp, new_email_otp }
+// BE verifies both, then swaps the email and keeps it verified in one transaction.
 async function handleVerifyOTP() {
-  if (!props.user?.id || otpValue.value.length !== 6) return;
+  if (!props.user?.id || otpValue.value.length !== 6 || newOtpValue.value.length !== 6) return;
   otpConfirming.value = true;
   otpError.value = "";
   try {
     const { data } = await userApi.verifyEmailChange(props.user.id, {
       otp: otpValue.value,
+      new_email_otp: newOtpValue.value,
     });
     form.email = data.user.email;
     await authStore.fetchMe();
-    emailStep.value = "waiting";
-    startPolling(data.user.email);
+    emailStep.value = "done";
+    setTimeout(() => {
+      emailStep.value = "idle";
+    }, 2500);
   } catch (err: any) {
     otpError.value = err?.response?.data?.error ?? "Invalid OTP.";
   } finally {

@@ -164,6 +164,9 @@ func (s *Service) UpdateFavoriteGenres(targetUserID, requesterID uint, genres []
 	return s.GetProfile(targetUserID, requesterID)
 }
 
+// RequestEmailChange mails one code to the current address and one to the new
+// address. Both are needed to finish: the old one shows the session owner still
+// controls the account, the new one proves the new address belongs to them.
 func (s *Service) RequestEmailChange(targetUserID, requesterID uint, newEmail string) error {
 	if targetUserID != requesterID {
 		return ErrForbidden
@@ -191,28 +194,32 @@ func (s *Service) RequestEmailChange(targetUserID, requesterID uint, newEmail st
 		return ErrEmailAlreadyInUse
 	}
 
-	otp, err := generateOTP()
+	currentOTP, currentHash, err := newOTPWithHash()
 	if err != nil {
 		return err
 	}
-
-	otpHash, err := bcrypt.GenerateFromPassword([]byte(otp), bcrypt.DefaultCost)
+	newOTP, newHash, err := newOTPWithHash()
 	if err != nil {
 		return err
 	}
 
 	changeReq := &EmailChangeRequest{
-		UserID:    targetUserID,
-		NewEmail:  newEmail,
-		OTPHash:   string(otpHash),
-		ExpiresAt: time.Now().Add(15 * time.Minute),
+		UserID:     targetUserID,
+		NewEmail:   newEmail,
+		OTPHash:    currentHash,
+		NewOTPHash: &newHash,
+		ExpiresAt:  time.Now().Add(15 * time.Minute),
 	}
 
 	if err := s.repo.UpsertEmailChangeRequest(changeReq); err != nil {
 		return err
 	}
 
-	if err := s.mailer.SendOTP(user.Email, otp); err != nil {
+	if err := s.mailer.SendOTP(user.Email, currentOTP); err != nil {
+		_ = s.repo.DeleteEmailChangeRequest(targetUserID)
+		return errors.New("failed to send OTP email")
+	}
+	if err := s.mailer.SendOTP(newEmail, newOTP); err != nil {
 		_ = s.repo.DeleteEmailChangeRequest(targetUserID)
 		return errors.New("failed to send OTP email")
 	}
@@ -220,59 +227,123 @@ func (s *Service) RequestEmailChange(targetUserID, requesterID uint, newEmail st
 	return nil
 }
 
+func newOTPWithHash() (otp, hash string, err error) {
+	otp, err = generateOTP()
+	if err != nil {
+		return "", "", err
+	}
+	h, err := bcrypt.GenerateFromPassword([]byte(otp), bcrypt.DefaultCost)
+	if err != nil {
+		return "", "", err
+	}
+	return otp, string(h), nil
+}
+
 const maxOTPAttempts = 5
 
+// VerifyEmailChange completes the change in one transaction: both codes must match,
+// then the email and its proof are written together, so the account never passes
+// through an unverified state and no stale token can outlive the old address.
 func (s *Service) VerifyEmailChange(
 	targetUserID, requesterID uint,
-	otp string,
+	sessionVersion int,
+	otp, newEmailOTP string,
 ) (*UserProfileResponse, error) {
 	if targetUserID != requesterID {
 		return nil, ErrForbidden
 	}
 
-	req, err := s.repo.FindEmailChangeRequest(targetUserID)
+	var codeErr error
+	err := s.repo.db.Transaction(func(tx *gorm.DB) error {
+		// A request that passed RequireAuth just before a claim must not write after it.
+		if err := identity_policy.EnsureSession(tx, targetUserID, sessionVersion, true); err != nil {
+			if errors.Is(err, identity_policy.ErrSessionStale) {
+				return ErrSessionStale
+			}
+			return err
+		}
+
+		var req EmailChangeRequest
+		if err := tx.Where("user_id = ?", targetUserID).First(&req).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrOTPNotFound
+			}
+			return err
+		}
+
+		if req.IsExpired() {
+			codeErr = ErrOTPExpired
+			return tx.Where("user_id = ?", targetUserID).Delete(&EmailChangeRequest{}).Error
+		}
+		if req.AttemptCount >= maxOTPAttempts {
+			codeErr = ErrOTPMaxAttempts
+			return tx.Where("user_id = ?", targetUserID).Delete(&EmailChangeRequest{}).Error
+		}
+		if strings.TrimSpace(req.NewEmail) == "" {
+			codeErr = ErrPendingEmailMissing
+			return tx.Where("user_id = ?", targetUserID).Delete(&EmailChangeRequest{}).Error
+		}
+		// A request made before the second code existed cannot prove the new address.
+		if req.NewOTPHash == nil {
+			codeErr = ErrOTPNotFound
+			return tx.Where("user_id = ?", targetUserID).Delete(&EmailChangeRequest{}).Error
+		}
+
+		if bcrypt.CompareHashAndPassword([]byte(req.OTPHash), []byte(otp)) != nil ||
+			bcrypt.CompareHashAndPassword([]byte(*req.NewOTPHash), []byte(newEmailOTP)) != nil {
+			codeErr = ErrOTPInvalid // committed below so the attempt counts
+			return tx.Model(&EmailChangeRequest{}).Where("id = ?", req.ID).
+				UpdateColumn("attempt_count", gorm.Expr("attempt_count + 1")).Error
+		}
+
+		var taken int64
+		if err := tx.Model(&User{}).
+			Where("lower(email) = lower(?) AND id != ? AND deleted_at IS NULL", req.NewEmail, targetUserID).
+			Count(&taken).Error; err != nil {
+			return err
+		}
+		if taken > 0 {
+			return ErrEmailAlreadyInUse
+		}
+
+		// Both codes matched: the new address is proven, write it verified. Never NULL.
+		if err := tx.Exec(`UPDATE users SET email = ?, verified_email_at = now(), updated_at = now() WHERE id = ?`,
+			req.NewEmail, targetUserID).Error; err != nil {
+			if isUniqueViolation(err) {
+				return ErrEmailAlreadyInUse
+			}
+			return err
+		}
+		// Anything minted for the old address must not outlive it.
+		for _, t := range []struct{ table, column string }{
+			{"email_change_requests", "user_id"},
+			{"link_pending", "local_user_id"},
+			{"link_handoff_tokens", "user_id"},
+			{"password_reset_tokens", "user_id"},
+			{"email_verifications", "user_id"},
+		} {
+			if err := tx.Exec(`DELETE FROM `+t.table+` WHERE `+t.column+` = ?`, targetUserID).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
-
-	if req.IsExpired() {
-		_ = s.repo.DeleteEmailChangeRequest(targetUserID)
-		return nil, ErrOTPExpired
-	}
-
-	if req.AttemptCount >= maxOTPAttempts {
-		_ = s.repo.DeleteEmailChangeRequest(targetUserID)
-		return nil, ErrOTPMaxAttempts
-	}
-
-	if strings.TrimSpace(req.NewEmail) == "" {
-		_ = s.repo.DeleteEmailChangeRequest(targetUserID)
-		return nil, ErrPendingEmailMissing
-	}
-
-	if err := bcrypt.CompareHashAndPassword([]byte(req.OTPHash), []byte(otp)); err != nil {
-		_ = s.repo.IncrementOTPAttempt(req.ID)
-		return nil, ErrOTPInvalid
-	}
-
-	if err := s.repo.UpdateProfile(targetUserID, map[string]any{
-		"email":             req.NewEmail,
-		"verified_email_at": nil,
-	}); err != nil {
-		return nil, err
-	}
-
-	if err := s.repo.DeleteEmailChangeRequest(targetUserID); err != nil {
-		return nil, err
-	}
-
-	if s.emailVerifier != nil {
-		defer func() {
-			_ = s.emailVerifier.SendVerification(targetUserID, req.NewEmail)
-		}()
+	if codeErr != nil {
+		return nil, codeErr
 	}
 
 	return s.GetProfile(targetUserID, requesterID)
+}
+
+func isUniqueViolation(err error) bool {
+	if errors.Is(err, gorm.ErrDuplicatedKey) {
+		return true
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "duplicate key") || strings.Contains(msg, "23505")
 }
 
 func (s *Service) ChangePassword(targetUserID, requesterID uint, sessionVersion int, req ChangePasswordRequest) error {

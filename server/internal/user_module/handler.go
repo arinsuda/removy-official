@@ -98,7 +98,7 @@ func (h *Handler) RequestEmailChange(c fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"message": "OTP has been sent to your current email address",
+		"message": "OTPs have been sent to your current and new email addresses",
 	})
 }
 
@@ -151,11 +151,11 @@ func (h *Handler) VerifyEmailChange(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
 	}
 
-	if req.OTP == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "otp is required"})
+	if req.OTP == "" || req.NewEmailOTP == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "otp and new_email_otp are required"})
 	}
 
-	profile, err := h.svc.VerifyEmailChange(targetID, claims.UserID, req.OTP)
+	profile, err := h.svc.VerifyEmailChange(targetID, claims.UserID, claims.TokenVersion, req.OTP, req.NewEmailOTP)
 	if err != nil {
 		return handleEmailChangeError(c, err)
 	}
@@ -229,6 +229,8 @@ func handleEmailChangeError(c fiber.Ctx, err error) error {
 		return c.Status(fiber.StatusGone).JSON(fiber.Map{"error": "otp has expired, please request a new one"})
 	case errors.Is(err, ErrOTPInvalid):
 		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{"error": "invalid otp"})
+	case errors.Is(err, ErrSessionStale):
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
 	case errors.Is(err, ErrOTPMaxAttempts):
 		return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{"error": "too many failed attempts, please request a new otp"})
 	default:
