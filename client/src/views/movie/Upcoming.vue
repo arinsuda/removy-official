@@ -538,8 +538,8 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
     --gold: #f5c518;
     --green: #22c55e;
     --bg: var(--color-surface);
-    --surface: #101010;
-    --surface2: #181818;
+    --surface: var(--color-surface-2);
+    --surface2: var(--color-surface-3);
     --surface3: #202020;
     --border: rgba(255, 255, 255, 0.07);
     --border-md: rgba(255, 255, 255, 0.12);

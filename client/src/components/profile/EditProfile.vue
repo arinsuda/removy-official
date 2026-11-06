@@ -905,16 +905,16 @@ watch(
 
 <style scoped>
 .edit-root {
-  --c-surface: #111111;
-  --c-card: #161616;
-  --c-border: rgba(255, 255, 255, 0.07);
-  --c-border-h: rgba(255, 255, 255, 0.14);
-  --c-red: #e1251b;
-  --c-green: #30d158;
-  --c-yellow: #ffd60a;
-  --c-text: #f0f0f0;
-  --c-sub: #8a8a8e;
-  --c-muted: #3a3a3c;
+  --c-surface: var(--color-surface-2);
+  --c-card: var(--color-surface-2);
+  --c-border: var(--color-border);
+  --c-border-h: var(--color-border-strong);
+  --c-red: var(--color-brand);
+  --c-green: var(--color-success);
+  --c-yellow: var(--color-warning);
+  --c-text: var(--color-text-primary);
+  --c-sub: var(--color-text-secondary);
+  --c-muted: var(--color-text-muted);
   --font: var(--font-sans);
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   padding: 24px;
@@ -1506,7 +1506,7 @@ watch(
   height: 24px;
   border-radius: 99px;
   border: none;
-  background: var(--c-muted);
+  background: var(--color-surface-3);
   cursor: pointer;
   position: relative;
   transition: background 0.2s;

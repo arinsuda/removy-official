@@ -96,11 +96,11 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
   }
 
   .modal {
-    --c-border: rgba(255, 255, 255, 0.08);
-    --c-border-h: rgba(255, 255, 255, 0.14);
-    --c-sub: #8a8a8e;
-    --c-muted: #3a3a3c;
-    --c-red: #e1251b;
+    --c-border: var(--color-border);
+    --c-border-h: var(--color-border-strong);
+    --c-sub: var(--color-text-secondary);
+    --c-muted: var(--color-text-muted);
+    --c-red: var(--color-danger);
     --font: var(--font-sans);
     --ease: cubic-bezier(0.16, 1, 0.3, 1);
 

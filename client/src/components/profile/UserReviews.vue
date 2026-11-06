@@ -503,15 +503,15 @@ onMounted(fetchReviews);
 
 <style scoped>
 .reviews-root {
-  --c-card: #161616;
-  --c-border: rgba(255, 255, 255, 0.06);
-  --c-border-h: rgba(255, 255, 255, 0.12);
-  --c-red: #e1251b;
-  --c-text: #f0f0f0;
-  --c-sub: #8a8a8e;
-  --c-muted: #3a3a3c;
-  --c-star: #fbbf24;
-  --c-green: #34c759;
+  --c-card: var(--color-surface-2);
+  --c-border: var(--color-border);
+  --c-border-h: var(--color-border-strong);
+  --c-red: var(--color-brand);
+  --c-text: var(--color-text-primary);
+  --c-sub: var(--color-text-secondary);
+  --c-muted: var(--color-text-muted);
+  --c-star: var(--color-rating);
+  --c-green: var(--color-success);
   --font: var(--font-sans);
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   font-family: var(--font-sans);

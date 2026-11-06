@@ -407,16 +407,16 @@ import SkeletonProfile from "@/components/ui/skeleton/SkeletonProfile.vue"
 
 <style scoped>
   .profile-root {
-    --c-bg: #0d0d11;
-    --c-surface: #141419;
-    --c-card: #141419;
-    --c-border: rgba(255, 255, 255, 0.07);
-    --c-border-h: rgba(255, 255, 255, 0.15);
-    --c-red: #e1251b;
-    --c-red-dim: rgba(225, 37, 27, 0.08);
-    --c-text: #f0f0f0;
-    --c-sub: #8a8a8e;
-    --c-muted: #3a3a3c;
+    --c-bg: var(--color-surface);
+    --c-surface: var(--color-surface-2);
+    --c-card: var(--color-surface-2);
+    --c-border: var(--color-border);
+    --c-border-h: var(--color-border-strong);
+    --c-red: var(--color-brand);
+    --c-red-dim: color-mix(in srgb, var(--color-brand) 8%, transparent);
+    --c-text: var(--color-text-primary);
+    --c-sub: var(--color-text-secondary);
+    --c-muted: var(--color-text-muted);
     --font-display: var(--font-sans);
     --font-ui: var(--font-sans);
     --radius: 10px;
