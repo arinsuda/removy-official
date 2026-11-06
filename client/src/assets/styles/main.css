@@ -96,6 +96,28 @@
   }
 }
 
+/*
+ * Shared z-index scale for layers that must stack across components.
+ *   header 100 < legacy modals 9999-99999 < AppModal (--z-modal-base + 10 per open modal)
+ *   < popovers teleported to body (datepicker menus) < toasts.
+ * AppModal stays above the legacy 99999 modals on purpose. Legacy modals have
+ * not migrated yet; do not add new hard-coded z-index values above 1000.
+ */
+:root {
+  --z-modal-base: 100000;
+  --z-popover: 300000;
+  --z-toast: 400000;
+}
+
+/* The datepicker hard-codes z-index 99999/999999, which would sit under an AppModal. */
+body .dp--menu-wrapper,
+body .dp--menu-index,
+body .dp--overlay,
+body .dp--marker-tooltip,
+body .dp--menu-unclickable {
+  z-index: var(--z-popover);
+}
+
 .dp__theme_dark {
   --dp-background-color: var(--color-surface-2);
   --dp-text-color: var(--color-text-primary);

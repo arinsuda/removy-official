@@ -1,4 +1,5 @@
 <template>
+  <Teleport to="body">
   <div class="toast-container">
     <TransitionGroup name="toast-list">
       <div
@@ -25,6 +26,7 @@
       </div>
     </TransitionGroup>
   </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -92,11 +94,13 @@
 <style scoped>
   /* Container วางตำแหน่งอยู่ภายใต้ปุ่มกระดิ่งแบบ Absolute */
   .toast-container {
-    position: absolute;
-    top: calc(100% + 12px);
-    right: -10px; /* ขยับเยื้องให้บาลานซ์กับขอบมุมขวาของจอ */
+    /* Teleported to body: inside the fixed navbar it could never rise above a modal. */
+    position: fixed;
+    top: 76px;
+    right: 16px;
     width: 320px;
-    z-index: 110; /* สูงกว่า Navbar เล็กน้อย */
+    max-width: calc(100vw - 32px);
+    z-index: var(--z-toast);
     display: flex;
     flex-direction: column;
     gap: 0.5rem;

@@ -4,22 +4,24 @@
       <div
         v-if="modelValue"
         class="app-modal"
+        :style="{ zIndex: modalZIndex }"
         @mousedown="onBackdropDown"
         @mouseup="onBackdropUp"
       >
         <div
           ref="panel"
+          v-bind="$attrs"
           class="app-modal__panel"
           :class="`app-modal__panel--${size}`"
           :role="role"
           aria-modal="true"
           :aria-label="ariaLabel"
-          :aria-labelledby="ariaLabel ? undefined : titleId"
+          :aria-labelledby="ariaLabel ? undefined : hasTitleSlot ? titleId : undefined"
           tabindex="-1"
           @keydown="onKeydown"
         >
-          <header v-if="title || $slots.header || showClose" class="app-modal__header">
-            <div :id="titleId" class="app-modal__title">
+          <header v-if="hasTitleSlot || showClose" class="app-modal__header">
+            <div v-if="hasTitleSlot" :id="titleId" class="app-modal__title">
               <slot name="header">
                 <h2 v-if="title">{{ title }}</h2>
               </slot>
@@ -45,32 +47,24 @@
 </template>
 
 <script lang="ts">
-// Shared by every open modal: the stack decides which one owns Escape, and the
-// counter keeps the page locked until the last modal closes.
+export type AppModalCloseReason = "escape" | "backdrop" | "close-button"
+
+// Shared by every open modal: the stack decides z-order and which modal owns Escape.
 const openModals: symbol[] = []
-let scrollLocks = 0
-let previousOverflow = ""
-
-function lockScroll() {
-  if (scrollLocks++ === 0) {
-    previousOverflow = document.body.style.overflow
-    document.body.style.overflow = "hidden"
-  }
-}
-
-function unlockScroll() {
-  if (scrollLocks > 0 && --scrollLocks === 0) document.body.style.overflow = previousOverflow
-}
+let nextZOrder = 0
+const Z_MODAL_BASE = 100000
+const Z_MODAL_STEP = 10
 </script>
 
 <script setup lang="ts">
 import AppButton from "@/components/ui/AppButton.vue"
+import { lockScroll, unlockScroll } from "@/composables/scrollLock"
 import { useDialogFocus } from "@/composables/useDialogFocus"
 import { X } from "lucide-vue-next"
-import { computed, onBeforeUnmount, ref, toRef, useId, watch } from "vue"
+import { computed, onBeforeUnmount, ref, toRef, useAttrs, useId, useSlots, watch } from "vue"
 import { useI18n } from "vue-i18n"
 
-export type AppModalCloseReason = "escape" | "backdrop" | "close-button"
+defineOptions({ inheritAttrs: false })
 
 const props = withDefaults(
   defineProps<{
@@ -80,6 +74,12 @@ const props = withDefaults(
     size?: "sm" | "md" | "lg"
     role?: "dialog" | "alertdialog"
     closeOnBackdrop?: boolean
+    /**
+     * When embedding `@vuepic/vue-datepicker` inside the modal, its menu keeps
+     * focus on the input inside the panel. Bind `:close-on-escape="!menuOpen"`
+     * driven by the picker's `@open` / `@closed` events so Escape closes the
+     * menu first instead of dismissing the modal.
+     */
     closeOnEscape?: boolean
     /** Blocks every user dismissal (e.g. while a request is saving). */
     dismissDisabled?: boolean
@@ -96,23 +96,35 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const slots = useSlots()
+const attrs = useAttrs()
 const titleId = useId()
 const panel = ref<HTMLElement | null>(null)
+const hasTitleSlot = computed(() => Boolean(props.title || slots.header))
 const { onKeydown } = useDialogFocus(panel, toRef(props, "modelValue"), toRef(props, "initialFocus"))
 
+const token = Symbol("app-modal")
+const modalZIndex = ref(Z_MODAL_BASE)
+
+function isTop(): boolean {
+  return openModals[openModals.length - 1] === token
+}
+
 function dismiss(reason: AppModalCloseReason) {
-  if (props.dismissDisabled) return
+  if (!props.modelValue || props.dismissDisabled) return
   emit("close", reason)
   emit("update:modelValue", false)
 }
 
-const token = Symbol("app-modal")
-const isTop = computed(() => openModals[openModals.length - 1] === token)
-
 function onDocumentKeydown(event: KeyboardEvent) {
-  if (event.key !== "Escape" || !props.closeOnEscape || !isTop.value) return
-  // Ignore Escape from elsewhere, such as a date menu teleported to body.
+  if (event.defaultPrevented || !isTop()) return
   const target = event.target as Node | null
+  if (event.key === "Tab" && target === document.body) {
+    onKeydown(event)
+    return
+  }
+  if (event.key !== "Escape" || !props.closeOnEscape) return
+  // Ignore Escape from elsewhere, such as a menu teleported to body.
   if (target !== document.body && !panel.value?.contains(target)) return
   event.preventDefault()
   dismiss("escape")
@@ -122,9 +134,21 @@ watch(
   () => props.modelValue,
   (open) => {
     if (open) {
-      openModals.push(token)
-      lockScroll()
-      document.addEventListener("keydown", onDocumentKeydown)
+      if (
+        import.meta.env.DEV &&
+        !props.title &&
+        !props.ariaLabel &&
+        !slots.header &&
+        !attrs["aria-labelledby"]
+      ) {
+        console.warn("[AppModal] dialogs need an accessible name via title, ariaLabel, or the header slot.")
+      }
+      if (!openModals.includes(token)) {
+        openModals.push(token)
+        modalZIndex.value = Z_MODAL_BASE + nextZOrder++ * Z_MODAL_STEP
+        lockScroll()
+        document.addEventListener("keydown", onDocumentKeydown)
+      }
     } else {
       release()
     }
@@ -136,6 +160,7 @@ function release() {
   const index = openModals.indexOf(token)
   if (index === -1) return
   openModals.splice(index, 1)
+  if (openModals.length === 0) nextZOrder = 0
   unlockScroll()
   document.removeEventListener("keydown", onDocumentKeydown)
 }
@@ -146,11 +171,16 @@ onBeforeUnmount(release)
 let pressedBackdrop = false
 
 function onBackdropDown(event: MouseEvent) {
-  pressedBackdrop = event.target === event.currentTarget
+  if (event.button !== 0 || event.target !== event.currentTarget) {
+    pressedBackdrop = false
+    return
+  }
+  event.preventDefault()
+  pressedBackdrop = true
 }
 
 function onBackdropUp(event: MouseEvent) {
-  const clicked = pressedBackdrop && event.target === event.currentTarget
+  const clicked = pressedBackdrop && event.button === 0 && event.target === event.currentTarget
   pressedBackdrop = false
   if (clicked && props.closeOnBackdrop) dismiss("backdrop")
 }
@@ -160,7 +190,7 @@ function onBackdropUp(event: MouseEvent) {
 .app-modal {
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  z-index: var(--z-modal-base, 100000);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -199,6 +229,10 @@ function onBackdropUp(event: MouseEvent) {
   justify-content: space-between;
   gap: 12px;
   padding: 16px 16px 0 20px;
+}
+
+.app-modal__header:not(:has(.app-modal__title)) {
+  justify-content: flex-end;
 }
 
 .app-modal__title {

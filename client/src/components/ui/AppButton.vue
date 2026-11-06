@@ -1,8 +1,9 @@
 <template>
   <component
     :is="tag"
-    :to="to"
-    v-bind="href ? { href } : {}"
+    :to="isRouterLink ? to : undefined"
+    v-bind="linkHref ? { href: linkHref } : {}"
+    :role="!isNativeButton && isInert ? 'link' : undefined"
     :type="isNativeButton ? type : undefined"
     :disabled="isNativeButton ? isInert : undefined"
     :aria-disabled="!isNativeButton && isInert ? 'true' : undefined"
@@ -42,9 +43,14 @@ const props = withDefaults(
   { variant: "primary", size: "md", type: "button" },
 )
 
-const tag = computed(() => (props.to ? RouterLink : props.href ? "a" : "button"))
-const isNativeButton = computed(() => tag.value === "button")
+const isLink = computed(() => Boolean(props.to || props.href))
 const isInert = computed(() => props.disabled || props.loading)
+// An inert link drops its href (RouterLink would always render one), so it is
+// no longer a navigable target for middle-click, drag, or "open in new tab".
+const isRouterLink = computed(() => Boolean(props.to) && !isInert.value)
+const linkHref = computed(() => (isInert.value ? undefined : props.href))
+const tag = computed(() => (isRouterLink.value ? RouterLink : isLink.value ? "a" : "button"))
+const isNativeButton = computed(() => !isLink.value)
 const attrs = useAttrs()
 
 // Links have no disabled attribute, so block activation by hand.

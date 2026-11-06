@@ -1,6 +1,14 @@
 import { describe, expect, it, vi } from "vitest"
+import { defineComponent, h } from "vue"
 import { mount } from "@vue/test-utils"
 import AppButton from "@/components/ui/AppButton.vue"
+
+const RouterLinkStub = defineComponent({
+  props: { to: { type: [String, Object], required: true } },
+  setup(props, { slots }) {
+    return () => h("a", { href: typeof props.to === "string" ? props.to : "/stub" }, slots.default?.())
+  },
+})
 
 describe("AppButton", () => {
   it("renders a native button that defaults to type=button", () => {
@@ -47,12 +55,30 @@ describe("AppButton", () => {
     warn.mockRestore()
   })
 
-  it("marks a disabled link inert and blocks its click", async () => {
+  it("marks a disabled link inert, removes href, and blocks its click", async () => {
     const onClick = vi.fn()
     const wrapper = mount(AppButton, {
       props: { href: "https://example.com", disabled: true },
       attrs: { onClick },
     })
+    expect(wrapper.attributes("href")).toBeUndefined()
+    expect(wrapper.attributes("role")).toBe("link")
+    expect(wrapper.attributes("aria-disabled")).toBe("true")
+    expect(wrapper.attributes("tabindex")).toBe("-1")
+    await wrapper.trigger("click")
+    expect(onClick).not.toHaveBeenCalled()
+  })
+
+  it("marks an inert router link (`to`) as a non-navigable anchor without href", async () => {
+    const onClick = vi.fn()
+    const wrapper = mount(AppButton, {
+      props: { to: "/movies", disabled: true },
+      attrs: { onClick },
+      global: { stubs: { RouterLink: RouterLinkStub } },
+    })
+    expect(wrapper.element.tagName).toBe("A")
+    expect(wrapper.attributes("href")).toBeUndefined()
+    expect(wrapper.attributes("role")).toBe("link")
     expect(wrapper.attributes("aria-disabled")).toBe("true")
     expect(wrapper.attributes("tabindex")).toBe("-1")
     await wrapper.trigger("click")
@@ -62,6 +88,7 @@ describe("AppButton", () => {
   it("lets an enabled link click through", async () => {
     const onClick = vi.fn()
     const wrapper = mount(AppButton, { props: { href: "https://example.com" }, attrs: { onClick } })
+    expect(wrapper.attributes("href")).toBe("https://example.com")
     expect(wrapper.attributes("aria-disabled")).toBeUndefined()
     expect(wrapper.attributes("tabindex")).toBeUndefined()
     await wrapper.trigger("click")
