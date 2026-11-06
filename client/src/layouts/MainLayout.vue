@@ -1192,7 +1192,7 @@ onUnmounted(() => {
     gap: 0;
   }
   .user-trigger .rotate-180,
-  .user-trigger svg:last-child {
+  .user-trigger > svg:last-child {
     display: none;
   }
   .dropdown-menu {
