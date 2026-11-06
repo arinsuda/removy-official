@@ -200,7 +200,7 @@
               </template>
               <div class="dropdown-divider" />
               <button class="dropdown-item" @click="handleSwitchToPlanzi">
-                <ArrowLeftRight :size="14" />{{ $t("navigation.switchToPlanzi") }}
+                <img src="/planzi-icon-192.png" alt="" class="switch-platform-icon" :width="14" :height="14" />{{ $t("navigation.switchToPlanzi") }}
               </button>
               <button
                 class="dropdown-item dropdown-item--danger"
@@ -320,7 +320,7 @@
               class="mobile-nav-link mobile-nav-link--sub"
               @click="handleSwitchToPlanzi"
             >
-              <ArrowLeftRight :size="16" />{{ $t("navigation.switchToPlanzi") }}
+              <img src="/planzi-icon-192.png" alt="" class="switch-platform-icon" :width="16" :height="16" />{{ $t("navigation.switchToPlanzi") }}
             </button>
             <button
               class="mobile-nav-link mobile-nav-link--sub mobile-nav-link--danger"
@@ -369,8 +369,7 @@ import {
   Star,
   X,
   Shield,
-  ArrowLeftRight,
-} from "lucide-vue-next";
+  } from "lucide-vue-next";
 
 interface SearchSuggestion {
   id: number;
@@ -620,6 +619,11 @@ onUnmounted(() => {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-color: rgba(255, 255, 255, 0.06);
+}
+
+.switch-platform-icon {
+  flex-shrink: 0;
+  object-fit: contain;
 }
 
 .nav-logo-icon {
