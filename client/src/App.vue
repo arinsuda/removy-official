@@ -58,7 +58,7 @@ import LoadingBar from "@/components/ui/LoadingBar.vue"
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #0a0a0a;
+    background: var(--color-surface);
   }
 
   </style>

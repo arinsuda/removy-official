@@ -77,7 +77,7 @@ const isInert = computed(() => props.disabled || props.loading)
 
 .app-btn--outline {
   background: transparent;
-  border-color: var(--color-surface-3);
+  border-color: var(--color-border-strong);
   color: var(--color-text-primary);
 }
 

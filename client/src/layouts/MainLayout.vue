@@ -591,7 +591,7 @@ onUnmounted(() => {
 <style scoped>
 .app-shell {
   min-height: 100vh;
-  background: #141414;
+  background: var(--color-surface);
 }
 
 /* ── Navbar ─────────────────────────────────────────── */
