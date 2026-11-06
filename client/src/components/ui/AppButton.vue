@@ -2,7 +2,7 @@
   <component
     :is="tag"
     :to="to"
-    :href="href"
+    v-bind="href ? { href } : {}"
     :type="isNativeButton ? type : undefined"
     :disabled="isNativeButton ? isInert : undefined"
     :aria-busy="loading || undefined"
