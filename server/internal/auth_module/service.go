@@ -801,12 +801,19 @@ func (s *Service) SendVerification(userID uint, email string) error {
 	return s.sendVerificationEmail(user)
 }
 
+// VerifyResult tells the client what the proof left behind.
+type VerifyResult struct {
+	// PasswordResetRequired: the address is proven but the current password was not,
+	// so the account has no password until the owner sets one through a reset link.
+	PasswordResetRequired bool
+}
+
 // VerifyEmail consumes a verification token and proves the address it was
 // mailed to. password is the current password, when the person typed one: a
 // match keeps the account intact, otherwise planted credentials are wiped.
-func (s *Service) VerifyEmail(token string, password *string) error {
+func (s *Service) VerifyEmail(token string, password *string) (VerifyResult, error) {
 	if token == "" {
-		return ErrInvalidToken
+		return VerifyResult{}, ErrInvalidToken
 	}
 	var out identity_policy.Outcome
 	var userID uint
@@ -837,10 +844,10 @@ func (s *Service) VerifyEmail(token string, password *string) error {
 		return nil
 	})
 	if err != nil {
-		return err
+		return VerifyResult{}, err
 	}
 	out.Publish(userID)
-	return nil
+	return VerifyResult{PasswordResetRequired: out.CredentialsWiped}, nil
 }
 
 func (s *Service) ResendVerification(email string) error {

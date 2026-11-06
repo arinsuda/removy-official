@@ -15,6 +15,12 @@ export interface GoogleStatusResponse {
   google_email?: string
 }
 
+export interface VerifyEmailResponse {
+  message: string
+  /** true when the password was not proven: the account has no password until a reset */
+  password_reset_required: boolean
+}
+
 export const authApi = {
   login: (data: LoginRequest) => api.post<AuthResponse>("/auth/login", data),
 
@@ -25,7 +31,9 @@ export const authApi = {
 
   logout: () => api.post("/auth/logout"),
 
-  verifyEmail: (token: string) => api.get(`/auth/verify-email?token=${token}`),
+  // POST, never GET: link scanners must not be able to verify an address.
+  verifyEmail: (token: string, password?: string) =>
+    api.post<VerifyEmailResponse>("/auth/verify-email", { token, password }),
 
   resendVerification: (email: string) =>
     api.post("/auth/resend-verification", { email }),

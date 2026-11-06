@@ -82,7 +82,7 @@ func TestT1_PreDeployTokenDeadAfterVictimProof(t *testing.T) {
 	if code, _ := e.do("GET", "/api/ping", nil, old); code != 401 {
 		t.Fatalf("unverified account must not hold a session, got %d", code)
 	}
-	if err := e.auth.VerifyEmail(e.mail.last(t, victim, reVerifyToken), nil); err != nil {
+	if err := e.verify(e.mail.last(t, victim, reVerifyToken), nil); err != nil {
 		t.Fatal(err)
 	}
 	if code, _ := e.do("GET", "/api/ping", nil, old); code != 401 {

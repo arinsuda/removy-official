@@ -316,3 +316,9 @@ func (e *env) googleLogin() (*auth_module.TokenPair, *user_module.User, error) {
 }
 
 func modelWithID(id uint) gorm.Model { return gorm.Model{ID: id} }
+
+// verify submits a verification token the way POST /auth/verify-email does.
+func (e *env) verify(token string, password *string) error {
+	_, err := e.auth.VerifyEmail(token, password)
+	return err
+}

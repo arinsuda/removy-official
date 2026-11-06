@@ -105,17 +105,44 @@ func (h *Handler) LogoutAll(c fiber.Ctx) error {
 	return c.JSON(MessageResponse{Message: "logged out from all devices"})
 }
 
+// VerifyEmailLink answers GET /auth/verify-email without changing anything: mail
+// scanners and link previews fetch URLs, and verification must be a deliberate POST.
+func (h *Handler) VerifyEmailLink(c fiber.Ctx) error {
+	return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+		"code":  "VERIFY_EMAIL_REQUIRES_POST",
+		"error": "open the verification link in the app to confirm your email",
+	})
+}
+
+// VerifyEmail proves the mailbox. The optional password is the account's current
+// password: a match keeps the account intact, otherwise planted credentials are wiped
+// and the client is told to send the owner through password reset.
 func (h *Handler) VerifyEmail(c fiber.Ctx) error {
-	token := c.Query("token")
-	if token == "" {
+	var req struct {
+		Token    string `json:"token"`
+		Password string `json:"password"`
+	}
+	if err := c.Bind().JSON(&req); err != nil || req.Token == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "missing token"})
 	}
 
-	if err := h.svc.VerifyEmail(token, nil); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid or expired token"})
+	var password *string
+	if req.Password != "" {
+		password = &req.Password
+	}
+	res, err := h.svc.VerifyEmail(req.Token, password)
+	if err != nil {
+		if errors.Is(err, ErrInvalidToken) {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid or expired token"})
+		}
+		log.Printf("ERROR verify email: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal server error"})
 	}
 
-	return c.JSON(MessageResponse{Message: "email verified successfully"})
+	return c.JSON(fiber.Map{
+		"message":                 "email verified successfully",
+		"password_reset_required": res.PasswordResetRequired,
+	})
 }
 
 func (h *Handler) ResendVerification(c fiber.Ctx) error {

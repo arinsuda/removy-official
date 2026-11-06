@@ -55,7 +55,7 @@ func TestT4_VictimVerifiesSquattedAccount_PlantedCredentialsWiped(t *testing.T) 
 	}
 
 	tok := e.mail.last(t, victim, reVerifyToken)
-	if err := e.auth.VerifyEmail(tok, nil); err != nil {
+	if err := e.verify(tok, nil); err != nil {
 		t.Fatalf("victim verify: %v", err)
 	}
 
@@ -88,7 +88,7 @@ func TestT2_LeftoverResetTokenRejectedAfterClaim(t *testing.T) {
 		}
 		leftover := e.mail.last(t, victim, reResetToken)
 
-		if err := e.auth.VerifyEmail(e.mail.last(t, victim, reVerifyToken), nil); err != nil {
+		if err := e.verify(e.mail.last(t, victim, reVerifyToken), nil); err != nil {
 			t.Fatal(err)
 		}
 		err := e.auth.ResetPassword(uid, leftover, user_module.ResetPasswordRequest{NewPassword: "attacker-new1", ConfirmPassword: "attacker-new1"})
@@ -179,7 +179,7 @@ func TestT9_PasswordlessUserProvesThenRecoversByReset(t *testing.T) {
 	if err := e.auth.SendVerification(uid, "gsuite@corp.test"); err != nil {
 		t.Fatal(err)
 	}
-	if err := e.auth.VerifyEmail(e.mail.last(t, "gsuite@corp.test", reVerifyToken), nil); err != nil {
+	if err := e.verify(e.mail.last(t, "gsuite@corp.test", reVerifyToken), nil); err != nil {
 		t.Fatal(err)
 	}
 	if err := e.login("gsuite@corp.test", "anything-123"); !errors.Is(err, auth_module.ErrWrongPassword) {
@@ -205,7 +205,7 @@ func TestN5_VerificationTokenBoundToItsAddress(t *testing.T) {
 	// ...while the email changed to the victim's address.
 	e.db.Exec(`UPDATE users SET email = ? WHERE id = ?`, victim, uid)
 
-	if err := e.auth.VerifyEmail(tok, nil); !errors.Is(err, auth_module.ErrInvalidToken) {
+	if err := e.verify(tok, nil); !errors.Is(err, auth_module.ErrInvalidToken) {
 		t.Fatalf("token for the old address must not verify the new one, got %v", err)
 	}
 	if _, _, verified, _ := e.userRow(uid); verified {
@@ -218,7 +218,7 @@ func TestLegacyVerificationTokenWithoutEmailRejected(t *testing.T) {
 	e := newEnv(t)
 	uid := seedUser(t, e.db, "old@x.test", false, "pw-oldoldold")
 	e.db.Exec(`INSERT INTO email_verifications (user_id, token, expires_at, created_at) VALUES (?, 'legacy', now() + interval '1 hour', now())`, uid)
-	if err := e.auth.VerifyEmail("legacy", nil); !errors.Is(err, auth_module.ErrInvalidToken) {
+	if err := e.verify("legacy", nil); !errors.Is(err, auth_module.ErrInvalidToken) {
 		t.Fatalf("got %v", err)
 	}
 }

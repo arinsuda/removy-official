@@ -13,7 +13,27 @@
       </div>
       <div class="auth-divider" ref="dividerRef" />
       <div class="auth-form-panel" ref="formPanelRef">
-        <template v-if="status === 'loading'">
+        <template v-if="status === 'form'">
+          <h1 class="auth-title">{{ t("auth.verifyEmail.title") }}</h1>
+          <form class="status-content" @submit.prevent="submit(password)">
+            <p class="status-text form-item">{{ t("auth.verifyEmail.passwordPrompt") }}</p>
+            <AuthField
+              v-model="password"
+              :label="t('auth.verifyEmail.passwordLabel')"
+              type="password"
+              :icon="IconLock"
+              autocomplete="current-password"
+            />
+            <AppButton type="submit" size="lg" block class="form-item" :disabled="!password">
+              {{ t("auth.verifyEmail.confirm") }}
+            </AppButton>
+            <button type="button" class="link-muted form-item" @click="submit()">
+              {{ t("auth.verifyEmail.skipPassword") }}
+            </button>
+          </form>
+        </template>
+
+        <template v-else-if="status === 'loading'">
           <h1 class="auth-title">VERIFYING</h1>
           <div class="status-content form-item">
             <div class="status-icon status-icon--loading">
@@ -30,11 +50,17 @@
               <IconCircleCheck :size="48" />
             </div>
             <h2 class="status-subtitle">ยืนยันอีเมลสำเร็จ!</h2>
-            <p class="status-text">
+            <p v-if="passwordResetRequired" class="status-text">
+              {{ t("auth.verifyEmail.resetRequired") }}
+            </p>
+            <p v-else class="status-text">
               บัญชีของคุณพร้อมใช้งานแล้ว สามารถเข้าสู่ระบบได้ทันที
             </p>
 
-            <RouterLink to="/login" class="btn-primary w-full mt-4">
+            <RouterLink v-if="passwordResetRequired" to="/forgot-password" class="btn-primary w-full mt-4">
+              {{ t("auth.verifyEmail.resetCta") }}
+            </RouterLink>
+            <RouterLink v-else to="/login" class="btn-primary w-full mt-4">
               LOGIN NOW
             </RouterLink>
           </div>
@@ -76,21 +102,29 @@
 
 <script setup lang="ts">
 import AppSpinner from "@/components/ui/AppSpinner.vue"
+  import AppButton from "@/components/ui/AppButton.vue"
+  import AuthField from "@/components/auth/AuthField.vue"
   import { ref, onMounted } from "vue"
   import { useRoute, RouterLink } from "vue-router"
+  import { useI18n } from "vue-i18n"
   import { authApi } from "@/api/api"
   import { gsap } from "gsap"
   import {
     CircleCheck as IconCircleCheck,
     AlertCircle as IconAlertCircle,
+    Lock as IconLock,
   } from "lucide-vue-next"
 
   const route = useRoute()
+  const { t } = useI18n()
 
-  type Status = "loading" | "success" | "error"
+  type Status = "form" | "loading" | "success" | "error"
   type ResendStatus = "idle" | "sending" | "sent" | "failed"
 
-  const status = ref<Status>("loading")
+  const status = ref<Status>("form")
+  const password = ref("")
+  const token = ref("")
+  const passwordResetRequired = ref(false)
   const resendStatus = ref<ResendStatus>("idle")
   const email = ref("")
 
@@ -118,22 +152,24 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
       )
   }
 
-  onMounted(async () => {
+  onMounted(() => {
     runAnimation()
-    const token = route.query.token as string
+    token.value = (route.query.token as string) || ""
+    // Opening the link must not verify anything by itself; the person confirms below.
+    if (!token.value) status.value = "error"
+  })
 
-    if (!token) {
-      status.value = "error"
-      return
-    }
-
+  // password is the account's current password; without it planted credentials are wiped.
+  async function submit(currentPassword?: string) {
+    status.value = "loading"
     try {
-      await authApi.verifyEmail(token)
+      const { data } = await authApi.verifyEmail(token.value, currentPassword)
+      passwordResetRequired.value = data.password_reset_required
       status.value = "success"
     } catch {
       status.value = "error"
     }
-  })
+  }
 
   async function resend() {
     if (!email.value) {
