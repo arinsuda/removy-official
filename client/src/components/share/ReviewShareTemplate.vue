@@ -99,9 +99,9 @@
       <div class="brand-divider" />
       <span class="reviewed-label">REVIEWED ON</span>
       <div class="brand-logo">
-        <span class="logo-re">RE</span><span class="logo-mov">MOVY</span>
+        <span class="logo-re">POP</span><span class="logo-mov">CORN</span>
       </div>
-      <span class="brand-handle">removy.app</span>
+      <span class="brand-handle">POPCORN</span>
     </div>
   </div>
 </template>
@@ -386,7 +386,7 @@
   }
 
   .quote-mark {
-    color: rgba(229, 9, 20, 0.4);
+    color: rgba(245, 67, 44, 0.4);
     font-size: 64px;
     font-weight: 800;
     line-height: 1;
@@ -457,7 +457,7 @@
   }
 
   .logo-mov {
-    color: #e50914;
+    color: #f5432c;
   }
 
   .brand-handle {

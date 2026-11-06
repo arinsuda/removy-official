@@ -910,15 +910,15 @@
   }
 
   .btn--primary {
-    background: #e50914;
+    background: var(--color-brand);
     color: #ffffff;
-    box-shadow: 0 4px 14px rgba(229, 9, 20, 0.4);
+    box-shadow: 0 4px 14px rgba(245, 67, 44, 0.4);
   }
 
   .btn--primary:hover {
-    background: #f40612;
+    background: var(--color-brand-hover);
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(229, 9, 20, 0.6);
+    box-shadow: 0 6px 20px rgba(245, 67, 44, 0.6);
   }
 
   .btn--secondary {
@@ -967,7 +967,7 @@
 
   .hero__dot--active {
     width: 36px;
-    background: #e50914;
+    background: var(--color-brand);
   }
 
   .hero-fade-enter-active,
@@ -1015,11 +1015,11 @@
   }
 
   .category-chip:hover {
-    background: rgba(229, 9, 20, 0.18);
-    border-color: rgba(229, 9, 20, 0.45);
+    background: rgba(245, 67, 44, 0.18);
+    border-color: rgba(245, 67, 44, 0.45);
     color: #ffffff;
     transform: translateY(-2px);
-    box-shadow: 0 4px 14px rgba(229, 9, 20, 0.25);
+    box-shadow: 0 4px 14px rgba(245, 67, 44, 0.25);
   }
 
   .category-chip:active {
@@ -1027,7 +1027,7 @@
   }
 
   .chip-icon {
-    color: #e50914;
+    color: var(--color-brand);
     transition: transform 0.2s ease;
   }
 
@@ -1120,9 +1120,9 @@
   }
 
   .icon-badge--red {
-    background: rgba(229, 9, 20, 0.15);
-    color: #e50914;
-    border: 1px solid rgba(229, 9, 20, 0.25);
+    background: rgba(245, 67, 44, 0.15);
+    color: var(--color-brand);
+    border: 1px solid rgba(245, 67, 44, 0.25);
   }
 
   .icon-badge--blue {
@@ -1176,7 +1176,7 @@
   }
 
   .see-all-btn:hover {
-    color: #e50914;
+    color: var(--color-brand);
   }
 
   /* ── Responsive Movie Grid (Critical Mobile Fix!) ─────────── */
@@ -1419,7 +1419,7 @@
     width: 40px;
     height: 40px;
     border: 3px solid rgba(255, 255, 255, 0.1);
-    border-top-color: #e50914;
+    border-top-color: var(--color-brand);
     border-radius: 50%;
     animation: spin 0.75s linear infinite;
   }

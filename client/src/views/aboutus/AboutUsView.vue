@@ -219,8 +219,8 @@
     },
     {
       icon: Sparkles,
-      title: t("about.features.items.removyScore.title"),
-      desc: t("about.features.items.removyScore.desc"),
+      title: t("about.features.items.popcornScore.title"),
+      desc: t("about.features.items.popcornScore.desc"),
       color: "#e1251b",
     },
   ]);

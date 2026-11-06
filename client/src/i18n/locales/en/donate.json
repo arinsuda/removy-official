@@ -1,6 +1,6 @@
 {
   "eyebrow": "Support Developer",
-  "title": "Support REMOVY Development",
+  "title": "Support POPCORN Development",
   "subtitle": "Your support is a huge motivation that helps us develop and maintain this platform to make it even better.",
   "promptpay": {
     "title": "Scan QR Code",
@@ -33,6 +33,6 @@
   },
   "thanks": {
     "title": "Thank you for your support",
-    "subtitle": "We promise to develop REMOVY into the best platform for everyone."
+    "subtitle": "We promise to develop POPCORN into the best platform for everyone."
   }
 }

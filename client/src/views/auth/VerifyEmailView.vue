@@ -4,10 +4,10 @@
     <div class="auth-container" ref="containerRef">
       <div class="auth-brand" ref="brandRef">
         <div class="brand-logo">
-          <span class="brand-movie">RE</span><span class="brand-hub">MOVY</span>
+          <span class="brand-movie">POP</span><span class="brand-hub">CORN</span>
         </div>
         <p class="brand-tagline">
-          Welcome to Removy – Your Ultimate Destination<br />
+          Welcome to Popcorn – Your Ultimate Destination<br />
           for Movie Reviews and Recommendations!
         </p>
       </div>
@@ -174,8 +174,8 @@
     margin-bottom: 0.5rem;
   }
   .status-icon--loading {
-    color: #e50914;
-    background: rgba(229, 9, 20, 0.1);
+    color: var(--color-brand);
+    background: rgba(245, 67, 44, 0.1);
   }
   .status-icon--success {
     color: #22c55e;

@@ -2,7 +2,7 @@
   <div class="app-shell">
     <header class="navbar" :class="{ 'navbar--scrolled': scrolled }">
       <RouterLink to="/" class="nav-logo" @click="closeMobileMenu">
-        <span class="logo-movie">RE</span><span class="logo-hub">MOVY</span>
+        <img src="/popcorn-icon-192.png" alt="" class="nav-logo-icon" /><span class="logo-movie">POP</span><span class="logo-hub">CORN</span>
       </RouterLink>
 
       <!-- Desktop / Tablet nav links -->
@@ -622,6 +622,15 @@ onUnmounted(() => {
   border-color: rgba(255, 255, 255, 0.06);
 }
 
+.nav-logo-icon {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  margin-right: 6px;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
 .nav-logo {
   font-family: "Noto Sans Thai", "Arial Black", sans-serif;
   font-size: 1.5rem;
@@ -635,7 +644,7 @@ onUnmounted(() => {
   color: #ffffff;
 }
 .logo-hub {
-  color: #e50914;
+  color: var(--color-brand);
 }
 
 .nav-links {
@@ -810,7 +819,7 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.03);
   border: none;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
-  color: #e50914;
+  color: var(--color-brand);
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
@@ -818,7 +827,7 @@ onUnmounted(() => {
   transition: background 0.15s;
 }
 .search-suggestion-viewall:hover {
-  background: rgba(229, 9, 20, 0.1);
+  background: rgba(245, 67, 44, 0.1);
 }
 
 /* Notification Wrapper & Badge */
@@ -832,7 +841,7 @@ onUnmounted(() => {
   position: absolute;
   top: 2px;
   right: 2px;
-  background: #e50914;
+  background: var(--color-brand);
   color: white;
   font-size: 0.65rem;
   font-weight: bold;
@@ -981,8 +990,8 @@ onUnmounted(() => {
   color: #fff;
 }
 .dropdown-item--danger:hover {
-  background: rgba(229, 9, 20, 0.12);
-  color: #e50914;
+  background: rgba(245, 67, 44, 0.12);
+  color: var(--color-brand);
 }
 .dropdown-divider {
   height: 1px;
@@ -1081,7 +1090,7 @@ onUnmounted(() => {
   color: #a3a3a3;
 }
 .mobile-nav-link--danger {
-  color: #e50914;
+  color: var(--color-brand);
 }
 .mobile-menu-divider {
   height: 1px;

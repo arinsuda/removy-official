@@ -37,19 +37,19 @@ func (m *Mailer) IsEnabled() bool {
 }
 
 func (m *Mailer) SendVerificationEmail(toEmail, username, verifyURL string) error {
-	subject := "ยืนยันอีเมลของคุณ — REMOVY"
+	subject := "ยืนยันอีเมลของคุณ — POPCORN"
 	body := buildVerifyEmailBody(username, verifyURL)
 	return m.send(toEmail, username, subject, body)
 }
 
 // SendLinkCodeEmail sends a 6-digit code used to confirm linking a PLANZI account.
 func (m *Mailer) SendLinkCodeEmail(toEmail, username, code string) error {
-	subject := "รหัสยืนยันการเชื่อมบัญชี — REMOVY"
+	subject := "รหัสยืนยันการเชื่อมบัญชี — POPCORN"
 	body := fmt.Sprintf(`<!DOCTYPE html><html><body style="margin:0;padding:32px 16px;background:#050505;font-family:'Helvetica Neue',Arial,sans-serif;">
 <div style="max-width:440px;margin:0 auto;background:#0f0f0f;border:1px solid #1c1c1c;border-radius:4px;padding:40px;text-align:center;">
-<div style="font-size:18px;font-weight:700;letter-spacing:4px;color:#fff;">REMOVY</div>
+<div style="font-size:18px;font-weight:700;letter-spacing:4px;color:#fff;">POPCORN</div>
 <p style="color:#fff;font-size:16px;margin:24px 0 8px;">สวัสดี %s</p>
-<p style="color:#8f8f8f;font-size:14px;line-height:1.7;">ใช้รหัสนี้เพื่อยืนยันการเชื่อมบัญชี PLANZI กับ REMOVY</p>
+<p style="color:#8f8f8f;font-size:14px;line-height:1.7;">ใช้รหัสนี้เพื่อยืนยันการเชื่อมบัญชี PLANZI กับ POPCORN</p>
 <p style="color:#fff;font-size:32px;font-weight:700;letter-spacing:8px;margin:24px 0;">%s</p>
 <p style="color:#666;font-size:12px;">รหัสมีอายุ 10 นาที หากคุณไม่ได้ร้องขอ กรุณาเพิกเฉยต่ออีเมลนี้</p>
 </div></body></html>`, html.EscapeString(username), html.EscapeString(code))
@@ -122,8 +122,8 @@ func buildVerifyEmailBody(username, verifyURL string) string {
           <!-- Wordmark -->
           <tr>
             <td align="center" style="padding-bottom:32px;">
-              <span style="font-size:18px;font-weight:700;letter-spacing:4px;color:#ffffff;">REMOVY</span>
-              <div style="width:32px;height:2px;background:#e50914;margin:12px auto 0 auto;"></div>
+              <span style="font-size:18px;font-weight:700;letter-spacing:4px;color:#ffffff;">POPCORN</span>
+              <div style="width:32px;height:2px;background:#f5432c;margin:12px auto 0 auto;"></div>
             </td>
           </tr>
 
@@ -133,7 +133,7 @@ func buildVerifyEmailBody(username, verifyURL string) string {
               <table role="presentation" width="100%%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td style="padding:44px 40px 4px 40px;" align="center">
-                    <p style="margin:0 0 12px 0;color:#e50914;font-size:11px;font-weight:700;letter-spacing:2.5px;
+                    <p style="margin:0 0 12px 0;color:#f5432c;font-size:11px;font-weight:700;letter-spacing:2.5px;
                               text-transform:uppercase;">
                       ยินดีต้อนรับ
                     </p>
@@ -141,7 +141,7 @@ func buildVerifyEmailBody(username, verifyURL string) string {
                       สวัสดี %s
                     </p>
                     <p style="margin:0 0 32px 0;color:#8f8f8f;font-size:14px;line-height:1.8;max-width:300px;">
-                      ขอบคุณที่สมัครสมาชิก REMOVY กดปุ่มด้านล่างเพื่อยืนยันอีเมล
+                      ขอบคุณที่สมัครสมาชิก POPCORN กดปุ่มด้านล่างเพื่อยืนยันอีเมล
                       และเริ่มต้นใช้งานบัญชีของคุณได้ทันที
                     </p>
                   </td>
@@ -150,7 +150,7 @@ func buildVerifyEmailBody(username, verifyURL string) string {
                   <td align="center" style="padding:4px 40px 0 40px;">
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%%">
                       <tr>
-                        <td style="background:#e50914;border-radius:6px;">
+                        <td style="background:#f5432c;border-radius:6px;">
                           <a href="%s"
                              style="display:block;padding:15px 44px;color:#ffffff;font-size:13px;
                                     font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
@@ -185,14 +185,14 @@ func buildVerifyEmailBody(username, verifyURL string) string {
           <tr>
             <td style="padding:24px 8px 0 8px;">
               <p style="margin:0;color:#555555;font-size:11.5px;line-height:1.7;text-align:center;">
-                หากคุณไม่ได้สมัครสมาชิก REMOVY กรุณาเพิกเฉยต่ออีเมลฉบับนี้
+                หากคุณไม่ได้สมัครสมาชิก POPCORN กรุณาเพิกเฉยต่ออีเมลฉบับนี้
               </p>
             </td>
           </tr>
           <tr>
             <td align="center" style="padding:28px 0 0 0;">
               <p style="margin:0;color:#3a3a3a;font-size:10.5px;letter-spacing:0.5px;">
-                REMOVY — ระบบส่งอัตโนมัติ กรุณาอย่าตอบกลับอีเมลนี้
+                POPCORN — ระบบส่งอัตโนมัติ กรุณาอย่าตอบกลับอีเมลนี้
               </p>
             </td>
           </tr>

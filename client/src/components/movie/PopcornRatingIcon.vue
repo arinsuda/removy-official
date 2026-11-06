@@ -1,6 +1,6 @@
 <template>
   <svg
-    class="removy-rating-icon"
+    class="popcorn-rating-icon"
     viewBox="0 0 24 24"
     :width="size"
     :height="size"
@@ -33,11 +33,11 @@ const props = withDefaults(
 
 // Generate unique ID per instance to ensure gradient safety in DOM
 const uid = Math.random().toString(36).substring(2, 9);
-const gradId = computed(() => `removy-grad-${uid}`);
+const gradId = computed(() => `popcorn-grad-${uid}`);
 </script>
 
 <style scoped>
-.removy-rating-icon {
+.popcorn-rating-icon {
   display: inline-block;
   vertical-align: middle;
 }

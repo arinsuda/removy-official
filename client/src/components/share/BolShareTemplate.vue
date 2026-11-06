@@ -8,7 +8,7 @@
     <div class="card-header">
       <div class="header-branding">
         <div class="brand-logo">
-          <span class="logo-re">RE</span><span class="logo-mov">MOVY</span>
+          <span class="logo-re">POP</span><span class="logo-mov">CORN</span>
         </div>
         <div class="header-badge">
           <span class="badge-dot"></span>
@@ -71,9 +71,9 @@
       <div class="footer-divider"></div>
       <div class="footer-content">
         <div class="footer-logo">
-          <span class="logo-re">RE</span><span class="logo-mov">MOVY</span>
+          <span class="logo-re">POP</span><span class="logo-mov">CORN</span>
         </div>
-        <span class="footer-url">removy.app</span>
+        <span class="footer-url">POPCORN</span>
       </div>
     </div>
   </div>
@@ -108,7 +108,7 @@ const DEFAULT_COLOR: ExtractedColor = {
   r: 229,
   g: 9,
   b: 20,
-  hex: "#e50914",
+  hex: "#f5432c",
   rgbStr: "rgb(229, 9, 20)",
 }
 
@@ -190,7 +190,7 @@ const headerGlowStyle = computed(() => {
     }
   }
   return {
-    background: "radial-gradient(circle, rgba(229, 9, 20, 0.3) 0%, rgba(0, 0, 0, 0) 70%)",
+    background: "radial-gradient(circle, rgba(245, 67, 44, 0.3) 0%, rgba(0, 0, 0, 0) 70%)",
   }
 })
 </script>
@@ -232,7 +232,7 @@ const headerGlowStyle = computed(() => {
   left: -200px;
   width: 900px;
   height: 900px;
-  background: radial-gradient(circle, rgba(229, 9, 20, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+  background: radial-gradient(circle, rgba(245, 67, 44, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
 }
 
 /* Header */
@@ -260,7 +260,7 @@ const headerGlowStyle = computed(() => {
 }
 
 .logo-re {
-  color: #e50914;
+  color: #f5432c;
 }
 
 .logo-mov {
@@ -282,8 +282,8 @@ const headerGlowStyle = computed(() => {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background-color: #e50914;
-  box-shadow: 0 0 12px #e50914;
+  background-color: #f5432c;
+  box-shadow: 0 0 12px #f5432c;
 }
 
 .username-pill {

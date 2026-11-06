@@ -24,8 +24,8 @@ const i18n = createI18n({
         downloadImage: "Download Image",
         copyCaption: "Copy Caption",
         copyLink: "Copy Link",
-        sharedFrom: "Shared from REMOVY",
-        reviewedOn: "Reviewed on REMOVY",
+        sharedFrom: "Shared from POPCORN",
+        reviewedOn: "Reviewed on POPCORN",
         movie: "Movie",
         tvSeries: "TV Series",
         downloadSuccess: "Image downloaded",
@@ -66,8 +66,8 @@ describe("Share as Image Feature", () => {
 
     it("sanitizes filenames safely", () => {
       const { sanitizeFilename } = useShareImage()
-      const filename = sanitizeFilename("Spider-Man: Across the Spider-Verse!!!", "REMOVY_poster")
-      expect(filename).toContain("REMOVY_poster_Spider-Man_Across_the_Spider-Verse")
+      const filename = sanitizeFilename("Spider-Man: Across the Spider-Verse!!!", "POPCORN_poster")
+      expect(filename).toContain("POPCORN_poster_Spider-Man_Across_the_Spider-Verse")
       expect(filename.endsWith(".png")).toBe(true)
     })
 
@@ -75,7 +75,7 @@ describe("Share as Image Feature", () => {
       const { buildPosterCaption } = useShareImage()
       const caption = buildPosterCaption("Inception", "2010", "movie")
       expect(caption).toContain("Inception (2010)")
-      expect(caption).toContain("Shared from REMOVY")
+      expect(caption).toContain("Shared from POPCORN")
     })
 
     it("builds review caption correctly with author attribution", () => {
@@ -83,7 +83,7 @@ describe("Share as Image Feature", () => {
       const caption = buildReviewCaption("Dune: Part Two", "JohnDoe", 4.5)
       expect(caption).toContain("4.5/5 — Dune: Part Two")
       expect(caption).toContain("JohnDoe")
-      expect(caption).toContain("Shared from REMOVY")
+      expect(caption).toContain("Shared from POPCORN")
     })
 
     it("builds share links accurately", () => {
@@ -103,10 +103,10 @@ describe("Share as Image Feature", () => {
       releaseYear: "1999",
       genres: [{ id: 18, name: "Drama" }],
       voteAverage: 8.4,
-      removyRating: 4.8,
+      popcornRating: 4.8,
     }
 
-    it("renders movie title, year, genre chips and REMOVY rating", () => {
+    it("renders movie title, year, genre chips and POPCORN rating", () => {
       const wrapper = mount(PosterShareTemplate, {
         props: {
           media: mockMedia,
@@ -121,7 +121,7 @@ describe("Share as Image Feature", () => {
       expect(wrapper.find(".media-year").text()).toBe("1999")
       expect(wrapper.find(".genre-chip").text()).toBe("Drama")
       expect(wrapper.find(".rating-value").text()).toBe("4.8")
-      expect(wrapper.find(".rating-source").text()).toBe("REMOVY")
+      expect(wrapper.find(".rating-source").text()).toBe("POPCORN")
     })
 
     it("renders poster fallback when posterBlobUrl is null", () => {
@@ -149,7 +149,7 @@ describe("Share as Image Feature", () => {
       releaseYear: "2014",
       genres: [{ id: 878, name: "Sci-Fi" }],
       voteAverage: 8.6,
-      removyRating: 4.9,
+      popcornRating: 4.9,
     }
 
     const mockReview: ShareReviewContext = {
@@ -209,7 +209,7 @@ describe("Share as Image Feature", () => {
       releaseYear: "2002",
       genres: [{ id: 28, name: "Action" }],
       voteAverage: 7.3,
-      removyRating: 4.5,
+      popcornRating: 4.5,
     }
 
     it("renders modal shell with download and copy buttons when open", () => {

@@ -54,7 +54,7 @@
         <h3 class="popup__title">{{ displayTitle }}</h3>
       </RouterLink>
       <div class="popup__rating" :class="{ 'popup__rating--unrated': !ratingInfo.available }">
-        <RemovyRatingIcon v-if="ratingInfo.available && ratingInfo.isRemovy" :size="12" class="popup__star" />
+        <PopcornRatingIcon v-if="ratingInfo.available && ratingInfo.isPopcorn" :size="12" class="popup__star" />
         <Star v-else-if="ratingInfo.available" :size="11" class="popup__star" />
         <span>{{ ratingInfo.display }}</span>
       </div>
@@ -153,7 +153,7 @@ import type { ResolvedTrailer } from "@/composables/useTrailerPreview";
 import { libraryApi } from "@/api/endpoints/library";
 import { useAuthStore } from "@/stores/auth";
 import { mediaApi } from "@/api/endpoints/media";
-import RemovyRatingIcon from "./RemovyRatingIcon.vue";
+import PopcornRatingIcon from "./PopcornRatingIcon.vue";
 import { useI18n } from "vue-i18n";
 
 const props = defineProps<{
@@ -233,17 +233,17 @@ const { t } = useI18n();
 const ratingInfo = computed(() => {
   const m = props.movie as any;
   if (m.ratings) {
-    if (m.ratings.removy && m.ratings.removy.available) {
+    if (m.ratings.popcorn && m.ratings.popcorn.available) {
       return {
         available: true,
-        isRemovy: true,
-        display: `${m.ratings.removy.average.toFixed(1)}/5`
+        isPopcorn: true,
+        display: `${m.ratings.popcorn.average.toFixed(1)}/5`
       };
     }
     if (m.ratings.tmdb && m.ratings.tmdb.available) {
       return {
         available: true,
-        isRemovy: false,
+        isPopcorn: false,
         display: `${m.ratings.tmdb.average.toFixed(1)}`
       };
     }
@@ -254,14 +254,14 @@ const ratingInfo = computed(() => {
   if (typeof legacyAvg === "number" && legacyAvg > 0) {
     return {
       available: true,
-      isRemovy: false,
+      isPopcorn: false,
       display: legacyAvg.toFixed(1)
     };
   }
 
   return {
     available: false,
-    isRemovy: false,
+    isPopcorn: false,
     display: t("reviews.errors.notRated")
   };
 });
@@ -365,7 +365,7 @@ async function handleWatchedToggle() {
     console.error("Watched Error:", err);
     window.$toast?.error(
       "บันทึกข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
-      "REMOVY HUB",
+      "POPCORN HUB",
     );
   }
 }
@@ -388,7 +388,7 @@ async function handleLikeToggle() {
       );
     }
   } catch (err) {
-    window.$toast?.error("เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง", "REMOVY HUB");
+    window.$toast?.error("เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง", "POPCORN HUB");
   }
 }
 
@@ -431,7 +431,7 @@ async function handleWatchlistToggle() {
     console.error("Watchlist Error:", err);
     window.$toast?.error(
       "บันทึกข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
-      "REMOVY HUB",
+      "POPCORN HUB",
     );
   }
 }
@@ -572,7 +572,7 @@ function fmtRuntime(mins: number) {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #e50914;
+  background: var(--color-brand);
   animation: pulse-dot 1.8s ease-in-out infinite;
 }
 .popup__media-link {

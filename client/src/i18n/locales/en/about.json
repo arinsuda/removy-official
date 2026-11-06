@@ -4,7 +4,7 @@
     "line1": "Made for",
     "line2": "Movie Lovers"
   },
-  "sub": "REMOVY is a place to search, review, and track the movies and series you love all in one place.",
+  "sub": "POPCORN is a place to search, review, and track the movies and series you love all in one place.",
   "stats": {
     "movies": "Movies",
     "tv": "Series",
@@ -12,13 +12,13 @@
   },
   "mission": {
     "label": "Story",
-    "title": "Why we created REMOVY",
-    "paragraph1": "REMOVY started from my own passion for movies. Whenever I watched something great, I wanted to share my feelings and reviews with others who shared the same interest. But the issue was, we didn't know what kind of movies our friends liked, whether they watched the same things, or had similar tastes.",
-    "paragraph2": "So I wanted to create REMOVY as a platform for movie lovers, allowing users to save what they watch, write reviews, share thoughts, discover new titles easily, and connect with people who have similar tastes."
+    "title": "Why we created POPCORN",
+    "paragraph1": "POPCORN started from my own passion for movies. Whenever I watched something great, I wanted to share my feelings and reviews with others who shared the same interest. But the issue was, we didn't know what kind of movies our friends liked, whether they watched the same things, or had similar tastes.",
+    "paragraph2": "So I wanted to create POPCORN as a platform for movie lovers, allowing users to save what they watch, write reviews, share thoughts, discover new titles easily, and connect with people who have similar tastes."
   },
   "features": {
     "label": "Features",
-    "title": "What you can do on REMOVY",
+    "title": "What you can do on POPCORN",
     "items": {
       "reviews": {
         "title": "Reviews & Ratings",
@@ -40,16 +40,16 @@
         "title": "Full Information",
         "desc": "Access details for thousands of titles from TMDB, complete with ratings, cast, and trailers."
       },
-      "removyScore": {
-        "title": "REMOVY Score",
-        "desc": "Rating scores aggregated from the REMOVY user community, providing a separate perspective."
+      "popcornScore": {
+        "title": "POPCORN Score",
+        "desc": "Rating scores aggregated from the POPCORN user community, providing a separate perspective."
       }
     }
   },
   "tech": {
     "label": "Tech Stack",
     "title": "Behind the Development",
-    "desc": "REMOVY is developed using Go (Fiber, GORM, PostgreSQL) on the Backend, and Vue 3 (Composition API, TypeScript, Pinia, TanStack Query) on the Frontend.",
+    "desc": "POPCORN is developed using Go (Fiber, GORM, PostgreSQL) on the Backend, and Vue 3 (Composition API, TypeScript, Pinia, TanStack Query) on the Frontend.",
     "roles": {
       "backendRuntime": "Backend Runtime",
       "httpFramework": "HTTP Framework",
@@ -68,7 +68,7 @@
     "bio": "IT student passionate about building Full-stack products and watching movies"
   },
   "cta": {
-    "title": "Like REMOVY?",
+    "title": "Like POPCORN?",
     "desc": "If you would like to support the development of this project, click the button below.",
     "btn": "Support Developer"
   }

@@ -336,7 +336,7 @@ func (s *Service) HandleGoogleCallback(ctx context.Context, code, stateStr, cook
 				}
 				sessionUser = &u
 			} else {
-				// 2. Check if REMOVY user with matching email exists
+				// 2. Check if POPCORN user with matching email exists
 				normalizedEmail := strings.ToLower(strings.TrimSpace(claims.Email))
 				var existingUser user_module.User
 				err := txDB.Where("email = ? AND is_active = true", normalizedEmail).First(&existingUser).Error
@@ -421,7 +421,7 @@ func (s *Service) HandleGoogleCallback(ctx context.Context, code, stateStr, cook
 				}
 			}
 
-			// Issue REMOVY token pair & store refresh token session inside transaction scope
+			// Issue POPCORN token pair & store refresh token session inside transaction scope
 			pair, err := s.issueAndStoreTokensTx(txDB, sessionUser, userAgent, ip)
 			if err != nil {
 				return fmt.Errorf("failed to issue session tokens: %w", err)

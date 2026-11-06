@@ -1,7 +1,7 @@
 [
   {
     "name": "First Steps",
-    "description": "กดดูหนังหรือซีรีส์เรื่องแรกในชีวิต Removy",
+    "description": "กดดูหนังหรือซีรีส์เรื่องแรกในชีวิต Popcorn",
     "exp_reward": 10,
     "action_type": "watched_count",
     "target_count": 1
@@ -178,8 +178,8 @@
     "target_count": 300
   },
   {
-    "name": "Removy Legend",
-    "description": "มีคนติดตามครบ 500 คน คุณคือ influencer ของ Removy",
+    "name": "Popcorn Legend",
+    "description": "มีคนติดตามครบ 500 คน คุณคือ influencer ของ Popcorn",
     "exp_reward": 600,
     "action_type": "follower_count",
     "target_count": 500
@@ -548,14 +548,14 @@
   },
   {
     "name": "Regular Visitor",
-    "description": "เข้าใช้งาน Removy 7 วันติดต่อกัน",
+    "description": "เข้าใช้งาน Popcorn 7 วันติดต่อกัน",
     "exp_reward": 40,
     "action_type": "login_streak",
     "target_count": 7
   },
   {
     "name": "Devoted Fan",
-    "description": "เข้าใช้งาน Removy 30 วันติดต่อกัน",
+    "description": "เข้าใช้งาน Popcorn 30 วันติดต่อกัน",
     "exp_reward": 150,
     "action_type": "login_streak",
     "target_count": 30
@@ -590,7 +590,7 @@
   },
   {
     "name": "Early Adopter",
-    "description": "สมัครสมาชิกในช่วงเปิดตัว Removy",
+    "description": "สมัครสมาชิกในช่วงเปิดตัว Popcorn",
     "exp_reward": 100,
     "action_type": "early_adopter",
     "target_count": 1
@@ -639,7 +639,7 @@
   },
   {
     "name": "Completionist",
-    "description": "ปลดล็อค Achievement ครบทุกอัน คุณคือ Removy ที่มีชีวิต",
+    "description": "ปลดล็อค Achievement ครบทุกอัน คุณคือ Popcorn ที่มีชีวิต",
     "exp_reward": 2000,
     "action_type": "achievement_unlocked_count",
     "target_count": 100

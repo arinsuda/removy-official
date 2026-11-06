@@ -199,7 +199,7 @@
     color: #3b82f6;
   }
   .noti-item-icon--media {
-    color: #e50914;
+    color: var(--color-brand);
   }
   .noti-item-icon--achievement {
     color: #f5c518;
@@ -242,7 +242,7 @@
     gap: 0.3rem;
     background: none;
     border: none;
-    color: #e50914;
+    color: var(--color-brand);
     font-size: 0.75rem;
     font-weight: 600;
     cursor: pointer;
@@ -251,7 +251,7 @@
     transition: background 0.15s;
   }
   .noti-header-action:hover {
-    background: rgba(229, 9, 20, 0.1);
+    background: rgba(245, 67, 44, 0.1);
   }
 
   .noti-body {
@@ -274,7 +274,7 @@
     padding: 0.75rem;
   }
   .noti-state--error {
-    color: #e50914;
+    color: var(--color-brand);
   }
   .noti-retry {
     background: rgba(255, 255, 255, 0.08);
@@ -313,14 +313,14 @@
     background: rgba(255, 255, 255, 0.05);
   }
   .noti-item:focus-visible {
-    outline: 2px solid rgba(229, 9, 20, 0.6);
+    outline: 2px solid rgba(245, 67, 44, 0.6);
     outline-offset: -2px;
   }
   .noti-item--unread {
-    background: rgba(229, 9, 20, 0.05);
+    background: rgba(245, 67, 44, 0.05);
   }
   .noti-item--unread:hover {
-    background: rgba(229, 9, 20, 0.09);
+    background: rgba(245, 67, 44, 0.09);
   }
 
   .noti-item-icon {
@@ -339,7 +339,7 @@
     color: #3b82f6;
   }
   .noti-item-icon--review_like {
-    color: #e50914;
+    color: var(--color-brand);
   }
   .noti-item-icon--review_comment,
   .noti-item-icon--comment_reply {
@@ -381,7 +381,7 @@
     width: 7px;
     height: 7px;
     border-radius: 50%;
-    background: #e50914;
+    background: var(--color-brand);
   }
 
   .noti-item-delete {
@@ -432,14 +432,14 @@
     padding: 0.75rem;
     background: none;
     border: none;
-    color: #e50914;
+    color: var(--color-brand);
     font-size: 0.8rem;
     font-weight: 600;
     cursor: pointer;
     transition: background 0.15s;
   }
   .noti-viewall:hover {
-    background: rgba(229, 9, 20, 0.08);
+    background: rgba(245, 67, 44, 0.08);
   }
 
   @media (max-width: 576px) {

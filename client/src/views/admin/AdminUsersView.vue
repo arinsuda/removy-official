@@ -510,7 +510,7 @@ onMounted(() => {
   font-weight: 700;
   text-transform: uppercase;
 }
-.role-badge.admin { background: rgba(229, 9, 20, 0.2); color: var(--color-brand); }
+.role-badge.admin { background: rgba(245, 67, 44, 0.2); color: var(--color-brand); }
 .role-badge.user { background: rgba(255, 255, 255, 0.08); color: var(--color-text-secondary); }
 
 .status-badge {

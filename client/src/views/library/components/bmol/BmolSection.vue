@@ -1243,7 +1243,7 @@ function getMediaDate(media: Movie | TVSeries): string {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: linear-gradient(135deg, rgba(229, 9, 20, 0.9) 0%, rgba(180, 0, 10, 0.9) 100%);
+  background: linear-gradient(135deg, rgba(245, 67, 44, 0.9) 0%, rgba(180, 0, 10, 0.9) 100%);
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 10px;
@@ -1251,14 +1251,14 @@ function getMediaDate(media: Movie | TVSeries): string {
   font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(229, 9, 20, 0.3);
+  box-shadow: 0 4px 14px rgba(245, 67, 44, 0.3);
   transition: all 0.2s ease;
   touch-action: manipulation;
 }
 
 .btn-share-bol:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(229, 9, 20, 0.45);
+  box-shadow: 0 6px 18px rgba(245, 67, 44, 0.45);
   background: linear-gradient(135deg, rgba(245, 10, 20, 1) 0%, rgba(200, 0, 10, 1) 100%);
 }
 

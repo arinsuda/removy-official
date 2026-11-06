@@ -1,19 +1,19 @@
 {
-  "name": "REMOVY - Movie & TV Reviews",
-  "short_name": "REMOVY",
+  "name": "POPCORN - Movie & TV Reviews",
+  "short_name": "POPCORN",
   "description": "ศูนย์รวมรีวิวภาพยนตร์และซีรีส์ยอดนิยม",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
+  "background_color": "#050505",
+  "theme_color": "#050505",
   "icons": [
     {
-      "src": "/removy-logo.png",
+      "src": "/popcorn-icon-512.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/removy-logo.png",
+      "src": "/popcorn-icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
     }

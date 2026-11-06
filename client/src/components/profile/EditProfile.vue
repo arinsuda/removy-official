@@ -1341,7 +1341,7 @@ watch(
     background 0.3s ease;
 }
 .strength-bar__fill--weak {
-  background: #e50914;
+  background: var(--color-brand);
 }
 .strength-bar__fill--fair {
   background: #f59e0b;
@@ -1357,7 +1357,7 @@ watch(
   margin-top: 2px;
 }
 .strength-label--weak {
-  color: #e50914;
+  color: var(--color-brand);
 }
 .strength-label--fair {
   color: #f59e0b;
@@ -1400,8 +1400,8 @@ watch(
   border-radius: 8px;
 }
 .pw-alert--error {
-  background: rgba(229, 9, 20, 0.1);
-  border: 1px solid rgba(229, 9, 20, 0.25);
+  background: rgba(245, 67, 44, 0.1);
+  border: 1px solid rgba(245, 67, 44, 0.25);
   color: #ff6b6b;
 }
 .pw-alert--success {

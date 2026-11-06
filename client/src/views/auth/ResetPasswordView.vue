@@ -4,7 +4,7 @@
     <div class="auth-container" ref="containerRef">
       <div class="auth-brand" ref="brandRef">
         <div class="brand-logo">
-          <span class="brand-movie">RE</span><span class="brand-hub">MOVY</span>
+          <span class="brand-movie">POP</span><span class="brand-hub">CORN</span>
         </div>
         <p class="brand-tagline">
           Set a new password for your account.<br />
@@ -359,7 +359,7 @@
     color: #ffffff;
   }
   .brand-hub {
-    color: #e50914;
+    color: var(--color-brand);
   }
   .brand-tagline {
     font-size: 0.875rem;
@@ -441,7 +441,7 @@
   }
   .form-input:focus {
     background: #f0f0f0;
-    box-shadow: 0 0 0 2px rgba(229, 9, 20, 0.45);
+    box-shadow: 0 0 0 2px rgba(245, 67, 44, 0.45);
   }
   .form-input:disabled {
     opacity: 0.6;
@@ -461,7 +461,7 @@
     transition: color 0.2s;
   }
   .input-toggle:hover {
-    color: #e50914;
+    color: var(--color-brand);
   }
 
   /* strength bar */
@@ -480,7 +480,7 @@
       background 0.3s ease;
   }
   .strength-bar__fill--weak {
-    background: #e50914;
+    background: var(--color-brand);
   }
   .strength-bar__fill--fair {
     background: #f59e0b;
@@ -496,7 +496,7 @@
     margin-top: 2px;
   }
   .strength-label--weak {
-    color: #e50914;
+    color: var(--color-brand);
   }
   .strength-label--fair {
     color: #f59e0b;
@@ -514,7 +514,7 @@
     align-items: center;
     gap: 4px;
     font-size: 0.75rem;
-    color: #e50914;
+    color: var(--color-brand);
     margin-top: 2px;
   }
   .inline-err-enter-active {
@@ -535,8 +535,8 @@
     align-items: center;
     gap: 8px;
     padding: 0.6rem 0.9rem;
-    background: rgba(229, 9, 20, 0.12);
-    border: 1px solid rgba(229, 9, 20, 0.35);
+    background: rgba(245, 67, 44, 0.12);
+    border: 1px solid rgba(245, 67, 44, 0.35);
     border-radius: 10px;
     color: #ff6b6b;
     font-size: 0.8rem;
@@ -545,7 +545,7 @@
   .form-alert__icon {
     display: flex;
     flex-shrink: 0;
-    color: #e50914;
+    color: var(--color-brand);
   }
   .form-alert__text {
     flex: 1;
@@ -610,8 +610,8 @@
     color: #22c55e;
   }
   .state-icon--error {
-    background: rgba(229, 9, 20, 0.15);
-    color: #e50914;
+    background: rgba(245, 67, 44, 0.15);
+    color: var(--color-brand);
   }
 
   /* cta button */
@@ -619,7 +619,7 @@
     margin-top: 0.25rem;
     width: 100%;
     padding: 0.75rem;
-    background: #e50914;
+    background: var(--color-brand);
     color: #fff;
     border: none;
     border-radius: 9999px;
@@ -637,7 +637,7 @@
     min-height: 48px;
   }
   .btn-primary:hover:not(:disabled) {
-    background: #f40612;
+    background: var(--color-brand-hover);
     transform: translateY(-1px);
   }
   .btn-primary:active:not(:disabled) {

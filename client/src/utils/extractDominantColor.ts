@@ -10,7 +10,7 @@ const DEFAULT_COLOR: ExtractedColor = {
   r: 229,
   g: 9,
   b: 20,
-  hex: "#e50914",
+  hex: "#f5432c",
   rgbStr: "rgb(229, 9, 20)",
 }
 

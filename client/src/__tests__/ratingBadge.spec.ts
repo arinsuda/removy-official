@@ -3,7 +3,7 @@ import { mount } from "@vue/test-utils"
 import { createPinia, setActivePinia } from "pinia"
 import { i18n } from "../i18n"
 import PopupCard from "../components/movie/PopupCard.vue"
-import RemovyRatingIcon from "../components/movie/RemovyRatingIcon.vue"
+import PopcornRatingIcon from "../components/movie/PopcornRatingIcon.vue"
 import { mediaApi } from "../api/endpoints/media"
 import { libraryApi } from "../api/endpoints/library"
 
@@ -53,27 +53,27 @@ describe("Phase 1 Frontend Requirements", () => {
     })
   })
 
-  describe("RemovyRatingIcon Collision Safety", () => {
+  describe("PopcornRatingIcon Collision Safety", () => {
     it("generates unique element ID prefixes to prevent DOM collisions", () => {
-      const wrapper1 = mount(RemovyRatingIcon)
-      const wrapper2 = mount(RemovyRatingIcon)
+      const wrapper1 = mount(PopcornRatingIcon)
+      const wrapper2 = mount(PopcornRatingIcon)
       const gradId1 = wrapper1.find("linearGradient").attributes("id")
       const gradId2 = wrapper2.find("linearGradient").attributes("id")
 
-      expect(gradId1).toContain("removy-grad-")
-      expect(gradId2).toContain("removy-grad-")
+      expect(gradId1).toContain("popcorn-grad-")
+      expect(gradId2).toContain("popcorn-grad-")
       expect(gradId1).not.toBe(gradId2)
     })
   })
 
   describe("PopupCard Rating & Stats Integration", () => {
-    const mockMovieWithRemovy = {
+    const mockMovieWithPopcorn = {
       id: 101,
       title: "Sample Movie",
       vote_average: 7.8,
       vote_count: 50,
       ratings: {
-        removy: { average: 4.2, count: 5, available: true, scale: 5.0 },
+        popcorn: { average: 4.2, count: 5, available: true, scale: 5.0 },
         tmdb: { average: 7.8, count: 50, available: true, scale: 10.0 }
       }
     }
@@ -84,7 +84,7 @@ describe("Phase 1 Frontend Requirements", () => {
       vote_average: 8.1,
       vote_count: 120,
       ratings: {
-        removy: { average: 0.0, count: 0, available: false, scale: 5.0 },
+        popcorn: { average: 0.0, count: 0, available: false, scale: 5.0 },
         tmdb: { average: 8.1, count: 120, available: true, scale: 10.0 }
       }
     }
@@ -95,16 +95,16 @@ describe("Phase 1 Frontend Requirements", () => {
       vote_average: 0.0,
       vote_count: 0,
       ratings: {
-        removy: { average: 0.0, count: 0, available: false, scale: 5.0 },
+        popcorn: { average: 0.0, count: 0, available: false, scale: 5.0 },
         tmdb: { average: 0.0, count: 0, available: false, scale: 10.0 }
       }
     }
 
-    it("renders REMOVY ratings first when available", () => {
+    it("renders POPCORN ratings first when available", () => {
       const wrapper = mount(PopupCard, {
         global: { plugins: [i18n] },
         props: {
-          movie: mockMovieWithRemovy,
+          movie: mockMovieWithPopcorn,
           currentTrailer: null,
           trailerUnavailable: true,
           isIframeMounted: false,
@@ -115,11 +115,11 @@ describe("Phase 1 Frontend Requirements", () => {
         }
       })
 
-      expect(wrapper.findComponent(RemovyRatingIcon).exists()).toBe(true)
+      expect(wrapper.findComponent(PopcornRatingIcon).exists()).toBe(true)
       expect(wrapper.text()).toContain("4.2/5")
     })
 
-    it("falls back to TMDB rating if REMOVY is not available", () => {
+    it("falls back to TMDB rating if POPCORN is not available", () => {
       const wrapper = mount(PopupCard, {
         global: { plugins: [i18n] },
         props: {
@@ -134,7 +134,7 @@ describe("Phase 1 Frontend Requirements", () => {
         }
       })
 
-      expect(wrapper.findComponent(RemovyRatingIcon).exists()).toBe(false)
+      expect(wrapper.findComponent(PopcornRatingIcon).exists()).toBe(false)
       expect(wrapper.text()).toContain("8.1")
     })
 
@@ -161,7 +161,7 @@ describe("Phase 1 Frontend Requirements", () => {
       mount(PopupCard, {
         global: { plugins: [i18n] },
         props: {
-          movie: mockMovieWithRemovy,
+          movie: mockMovieWithPopcorn,
           currentTrailer: null,
           trailerUnavailable: true,
           isIframeMounted: false,
@@ -179,7 +179,7 @@ describe("Phase 1 Frontend Requirements", () => {
       const wrapper = mount(PopupCard, {
         global: { plugins: [i18n] },
         props: {
-          movie: mockMovieWithRemovy,
+          movie: mockMovieWithPopcorn,
           currentTrailer: null,
           trailerUnavailable: true,
           isIframeMounted: false,

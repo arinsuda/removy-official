@@ -61,7 +61,7 @@ type Service struct {
 
 func NewService(db *gorm.DB, cfg config.LinkConfig, auth *auth_module.Service, m *mailer.Mailer) *Service {
 	if cfg.SelfPlatform != PlatformPlanzi {
-		cfg.SelfPlatform = PlatformRemovy
+		cfg.SelfPlatform = PlatformPopcorn
 	}
 	return &Service{db: db, cfg: cfg, auth: auth, mailer: m, remote: newRemoteClient(cfg)}
 }
@@ -69,10 +69,10 @@ func NewService(db *gorm.DB, cfg config.LinkConfig, auth *auth_module.Service, m
 func (s *Service) Enabled() bool { return s.cfg.Enabled() }
 
 func (s *Service) remotePlatform() string {
-	if s.cfg.SelfPlatform == PlatformRemovy {
+	if s.cfg.SelfPlatform == PlatformPopcorn {
 		return PlatformPlanzi
 	}
-	return PlatformRemovy
+	return PlatformPopcorn
 }
 
 func hashHex(v string) string {

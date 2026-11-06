@@ -1,6 +1,6 @@
 import { nextTick } from "vue";
 import { i18n } from "./index";
-import { LOCALE_STORAGE_KEY, DEFAULT_LOCALE, type SupportedLocale, isSupportedLocale } from "./types";
+import { LOCALE_STORAGE_KEY, LEGACY_LOCALE_STORAGE_KEY, DEFAULT_LOCALE, type SupportedLocale, isSupportedLocale } from "./types";
 import api from "@/api";
 
 const pendingLocaleLoads = new Map<SupportedLocale, Promise<void>>();
@@ -53,7 +53,7 @@ async function loadLocaleMessages(locale: SupportedLocale): Promise<void> {
 }
 
 export function getSavedLocale(): SupportedLocale {
-  const saved = localStorage.getItem(LOCALE_STORAGE_KEY);
+  const saved = localStorage.getItem(LOCALE_STORAGE_KEY) ?? localStorage.getItem(LEGACY_LOCALE_STORAGE_KEY);
   if (isSupportedLocale(saved)) {
     return saved;
   }
@@ -66,14 +66,14 @@ export function updateDocumentTitle() {
     const currentRoute = router.currentRoute.value;
     if (currentRoute && currentRoute.meta && currentRoute.meta.titleKey) {
       const titleKey = currentRoute.meta.titleKey as string;
-      document.title = `${i18n.global.t(titleKey)} | REMOVY`;
+      document.title = `${i18n.global.t(titleKey)} | POPCORN`;
     } else if (currentRoute && currentRoute.meta && typeof currentRoute.meta.title === "string") {
-      document.title = `${currentRoute.meta.title} | REMOVY`;
+      document.title = `${currentRoute.meta.title} | POPCORN`;
     } else if (currentRoute && currentRoute.name) {
       const routeName = String(currentRoute.name);
-      document.title = `${routeName.toUpperCase()} | REMOVY`;
+      document.title = `${routeName.toUpperCase()} | POPCORN`;
     } else {
-      document.title = "REMOVY";
+      document.title = "POPCORN";
     }
   });
 }

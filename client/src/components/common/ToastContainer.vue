@@ -139,10 +139,10 @@
   }
 
   .toast-item--error::before {
-    background: #e50914;
+    background: var(--color-brand);
   } /* แดงคอร์ปอเรตเว็บหนัง */
   .toast-item--error .toast-icon {
-    color: #e50914;
+    color: var(--color-brand);
   }
 
   .toast-item--warning::before {

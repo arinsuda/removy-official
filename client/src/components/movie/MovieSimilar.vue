@@ -254,7 +254,7 @@
 
 <style scoped>
   .similar-block {
-    --sim-red: var(--red, #e50914);
+    --sim-red: var(--red, var(--color-brand));
     --sim-gold: var(--gold, #f5c518);
     --sim-surface: var(--surface, #121212);
     --sim-surface2: var(--surface2, #1c1c1c);

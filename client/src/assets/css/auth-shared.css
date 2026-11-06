@@ -62,7 +62,7 @@
   color: #ffffff;
 }
 .brand-hub {
-  color: #e50914;
+  color: #f5432c;
 }
 .brand-tagline {
   font-size: 0.875rem;
@@ -96,7 +96,7 @@
   margin-top: 0.25rem;
   width: 100%;
   padding: 0.75rem;
-  background: #e50914;
+  background: #f5432c;
   color: #fff;
   border: none;
   border-radius: 9999px;
@@ -115,7 +115,7 @@
   text-decoration: none;
 }
 .btn-primary:hover:not(:disabled) {
-  background: #f40612;
+  background: #ff5a42;
   transform: translateY(-1px);
 }
 .btn-primary:active:not(:disabled) {

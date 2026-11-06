@@ -298,7 +298,7 @@
     gap: 0.35rem;
     background: none;
     border: 1px solid rgba(255, 255, 255, 0.12);
-    color: #e50914;
+    color: var(--color-brand);
     font-size: 0.82rem;
     font-weight: 600;
     cursor: pointer;
@@ -307,7 +307,7 @@
     transition: background 0.15s;
   }
   .notifications-page-markall:hover {
-    background: rgba(229, 9, 20, 0.1);
+    background: rgba(245, 67, 44, 0.1);
   }
 
   .notifications-page-tabs {
@@ -341,7 +341,7 @@
     background: rgba(255, 255, 255, 0.09);
   }
   .notifications-page-tab--active {
-    background: #e50914;
+    background: var(--color-brand);
     color: #fff;
   }
 
@@ -365,7 +365,7 @@
     padding: 1rem;
   }
   .notifications-page-state--error {
-    color: #e50914;
+    color: var(--color-brand);
   }
   .notifications-page-retry {
     background: rgba(255, 255, 255, 0.08);
@@ -403,15 +403,15 @@
     background: #222;
   }
   .notifications-page-item:focus-visible {
-    outline: 2px solid rgba(229, 9, 20, 0.6);
+    outline: 2px solid rgba(245, 67, 44, 0.6);
     outline-offset: -2px;
   }
   .notifications-page-item--unread {
-    background: rgba(229, 9, 20, 0.06);
-    border-color: rgba(229, 9, 20, 0.2);
+    background: rgba(245, 67, 44, 0.06);
+    border-color: rgba(245, 67, 44, 0.2);
   }
   .notifications-page-item--unread:hover {
-    background: rgba(229, 9, 20, 0.1);
+    background: rgba(245, 67, 44, 0.1);
   }
 
   .notifications-page-item-icon {
@@ -429,7 +429,7 @@
     color: #3b82f6;
   }
   .notifications-page-item-icon--media {
-    color: #e50914;
+    color: var(--color-brand);
   }
   .notifications-page-item-icon--achievement {
     color: #f5c518;
@@ -466,7 +466,7 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #e50914;
+    background: var(--color-brand);
   }
 
   .notifications-page-loadmore {

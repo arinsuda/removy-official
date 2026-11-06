@@ -41,7 +41,7 @@ func (m *brevoPasswordResetMailer) SendResetLink(toEmail, resetURL string) error
 		return nil
 	}
 
-	subject := "รีเซ็ตรหัสผ่านบัญชีของคุณ — REMOVY"
+	subject := "รีเซ็ตรหัสผ่านบัญชีของคุณ — POPCORN"
 	htmlBody := buildResetPasswordEmailBody(resetURL)
 
 	payload := map[string]interface{}{
@@ -101,8 +101,8 @@ func buildResetPasswordEmailBody(resetURL string) string {
           <!-- Wordmark -->
           <tr>
             <td align="center" style="padding-bottom:32px;">
-              <span style="font-size:18px;font-weight:700;letter-spacing:4px;color:#ffffff;">REMOVY</span>
-              <div style="width:32px;height:2px;background:#e50914;margin:12px auto 0 auto;"></div>
+              <span style="font-size:18px;font-weight:700;letter-spacing:4px;color:#ffffff;">POPCORN</span>
+              <div style="width:32px;height:2px;background:#f5432c;margin:12px auto 0 auto;"></div>
             </td>
           </tr>
 
@@ -112,7 +112,7 @@ func buildResetPasswordEmailBody(resetURL string) string {
               <table role="presentation" width="100%%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td style="padding:44px 40px 4px 40px;" align="center">
-                    <p style="margin:0 0 12px 0;color:#e50914;font-size:11px;font-weight:700;letter-spacing:2.5px;
+                    <p style="margin:0 0 12px 0;color:#f5432c;font-size:11px;font-weight:700;letter-spacing:2.5px;
                               text-transform:uppercase;">
                       ความปลอดภัยของบัญชี
                     </p>
@@ -125,7 +125,7 @@ func buildResetPasswordEmailBody(resetURL string) string {
                   <td align="center" style="padding:4px 40px 0 40px;">
                     <table role="presentation" cellpadding="0" cellspacing="0">
                       <tr>
-                        <td style="background:#e50914;border-radius:6px;">
+                        <td style="background:#f5432c;border-radius:6px;">
                           <a href="%s"
                              style="display:block;padding:15px 44px;color:#ffffff;font-size:13px;
                                     font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
@@ -167,7 +167,7 @@ func buildResetPasswordEmailBody(resetURL string) string {
           <tr>
             <td align="center" style="padding:28px 0 0 0;">
               <p style="margin:0;color:#3a3a3a;font-size:10.5px;letter-spacing:0.5px;">
-                REMOVY — ระบบส่งอัตโนมัติ กรุณาอย่าตอบกลับอีเมลนี้
+                POPCORN — ระบบส่งอัตโนมัติ กรุณาอย่าตอบกลับอีเมลนี้
               </p>
             </td>
           </tr>

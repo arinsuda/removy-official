@@ -247,10 +247,10 @@ onBeforeUnmount(() => {
 }
 
 .modal-icon-badge.variant-danger {
-  background: rgba(229, 9, 20, 0.15);
+  background: rgba(245, 67, 44, 0.15);
   color: #ff4d4d;
-  border: 1px solid rgba(229, 9, 20, 0.3);
-  box-shadow: 0 0 20px rgba(229, 9, 20, 0.15);
+  border: 1px solid rgba(245, 67, 44, 0.3);
+  box-shadow: 0 0 20px rgba(245, 67, 44, 0.15);
 }
 
 .modal-icon-badge.variant-warning {
@@ -392,13 +392,13 @@ onBeforeUnmount(() => {
 }
 
 .btn-confirm.variant-danger {
-  background: #e50914;
+  background: var(--color-brand);
   color: #ffffff;
 }
 
 .btn-confirm.variant-danger:hover:not(:disabled) {
-  background: #f40612;
-  box-shadow: 0 6px 20px rgba(229, 9, 20, 0.4);
+  background: var(--color-brand-hover);
+  box-shadow: 0 6px 20px rgba(245, 67, 44, 0.4);
   transform: translateY(-1px) translateZ(0);
 }
 

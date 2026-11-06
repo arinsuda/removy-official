@@ -467,7 +467,7 @@
     color: #fff;
   }
   .brand-hub {
-    color: #e50914;
+    color: var(--color-brand);
   }
 
   .onboarding-title {
@@ -496,7 +496,7 @@
   }
   .progress-bar-fill {
     height: 100%;
-    background: #e50914;
+    background: var(--color-brand);
     border-radius: 9999px;
     transition:
       width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
@@ -526,8 +526,8 @@
   }
 
   .genre-tag {
-    background: rgba(229, 9, 20, 0.15);
-    border: 1px solid rgba(229, 9, 20, 0.4);
+    background: rgba(245, 67, 44, 0.15);
+    border: 1px solid rgba(245, 67, 44, 0.4);
     color: #ff6b6b;
     font-size: 0.7rem;
     font-weight: 600;
@@ -589,10 +589,10 @@
   }
 
   .movie-card--selected {
-    border-color: #e50914 !important;
+    border-color: var(--color-brand) !important;
     box-shadow:
-      0 0 0 1px #e50914,
-      0 8px 28px rgba(229, 9, 20, 0.3) !important;
+      0 0 0 1px var(--color-brand),
+      0 8px 28px rgba(245, 67, 44, 0.3) !important;
   }
 
   .movie-card--skeleton {
@@ -653,7 +653,7 @@
   .movie-check {
     position: absolute;
     inset: 0;
-    background: rgba(229, 9, 20, 0.45);
+    background: rgba(245, 67, 44, 0.45);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -729,7 +729,7 @@
     width: 100%;
     max-width: 320px;
     padding: 0.85rem;
-    background: #e50914;
+    background: var(--color-brand);
     color: #fff;
     border: none;
     border-radius: 9999px;
@@ -748,7 +748,7 @@
     will-change: transform;
   }
   .btn-confirm:hover:not(:disabled) {
-    background: #f40612;
+    background: var(--color-brand-hover);
   }
   .btn-confirm:disabled {
     opacity: 0.35;

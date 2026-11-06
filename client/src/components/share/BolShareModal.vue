@@ -252,7 +252,7 @@ async function handleDownload() {
       const label = props.mediaType === "movie" ? "Movies" : "TV"
       const filename = share.sanitizeFilename(
         `BOL_${label}_Top5`,
-        "REMOVY_BOL"
+        "POPCORN_BOL"
       )
       share.downloadBlob(blob, filename)
     }
@@ -263,7 +263,7 @@ async function handleDownload() {
 
 function handleCopyCaption() {
   const mediaLabel = props.mediaType === "movie" ? "Movies" : "TV Series"
-  let text = `🏆 My Top Best ${mediaLabel} of Life on REMOVY ✨\n\n`
+  let text = `🏆 My Top Best ${mediaLabel} of Life on POPCORN ✨\n\n`
 
   const topRanks = props.ranks.slice(0, 5)
   topRanks.forEach((group) => {
@@ -275,7 +275,7 @@ function handleCopyCaption() {
     text += `\nCurated by @${props.username}\n`
   }
 
-  text += `\nShared from removy.app ✨`
+  text += `\nShared from POPCORN ✨`
   share.copyText(text, "share.captionCopied")
 }
 
@@ -447,7 +447,7 @@ onUnmounted(() => {
 }
 
 input:checked + .slider {
-  background-color: #e50914;
+  background-color: #f5432c;
 }
 
 input:checked + .slider:before {
@@ -495,7 +495,7 @@ input:checked + .slider:before {
 
 .export-overlay .pi-spinner {
   font-size: 2.2rem;
-  color: #e50914;
+  color: #f5432c;
 }
 
 /* Actions */
@@ -533,16 +533,16 @@ input:checked + .slider:before {
 }
 
 .btn-download {
-  background: #e50914;
+  background: #f5432c;
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(229, 9, 20, 0.3);
+  box-shadow: 0 4px 12px rgba(245, 67, 44, 0.3);
   width: 100%;
 }
 
 .btn-download:hover:not(:disabled) {
-  background: #f40612;
+  background: #ff5a42;
   transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(229, 9, 20, 0.45);
+  box-shadow: 0 6px 18px rgba(245, 67, 44, 0.45);
 }
 
 .btn-download:active:not(:disabled) {

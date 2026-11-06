@@ -2,7 +2,7 @@
   <div class="session-bootstrap-container">
     <div class="session-bootstrap-card">
       <div class="brand-logo">
-        <span class="brand-movie">RE</span><span class="brand-hub">MOVY</span>
+        <img src="/popcorn-full-512.png" alt="POPCORN" style="display:block;width:140px;margin:0 auto" />
       </div>
 
       <!-- Loading State -->
@@ -106,7 +106,7 @@
   }
 
   .brand-hub {
-    color: #e50914;
+    color: var(--color-brand);
   }
 
   .bootstrap-status {
@@ -120,7 +120,7 @@
     width: 44px;
     height: 44px;
     border: 3px solid rgba(255, 255, 255, 0.1);
-    border-top-color: #e50914;
+    border-top-color: var(--color-brand);
     border-radius: 50%;
     animation: bootstrap-spin 0.8s linear infinite;
   }
@@ -146,7 +146,7 @@
   }
 
   .error-icon {
-    color: #e50914;
+    color: var(--color-brand);
     margin-bottom: 0.25rem;
   }
 
@@ -167,7 +167,7 @@
   .btn-retry {
     margin-top: 0.5rem;
     padding: 0.625rem 1.75rem;
-    background-color: #e50914;
+    background-color: var(--color-brand);
     color: #ffffff;
     border: none;
     border-radius: 6px;
@@ -183,7 +183,7 @@
   }
 
   .btn-retry:hover:not(:disabled) {
-    background-color: #f40612;
+    background-color: var(--color-brand-hover);
   }
 
   .btn-retry:disabled {

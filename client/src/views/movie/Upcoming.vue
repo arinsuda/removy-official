@@ -16,7 +16,7 @@
       <header class="page-header" ref="introRef">
         <div class="page-header__eyebrow">
           <span class="eyebrow-dot" />
-          <span class="eyebrow-text">REMOVY</span>
+          <span class="eyebrow-text">POPCORN</span>
         </div>
         <div class="page-header__row">
           <div>
@@ -533,8 +533,8 @@
   }
 
   .upcoming-page {
-    --red: #e50914;
-    --red-dim: rgba(229, 9, 20, 0.15);
+    --red: var(--color-brand);
+    --red-dim: rgba(245, 67, 44, 0.15);
     --gold: #f5c518;
     --green: #22c55e;
     --bg: #080808;
@@ -723,7 +723,7 @@
     display: inline-flex;
     align-items: center;
     background: var(--red-dim);
-    border: 1px solid rgba(229, 9, 20, 0.28);
+    border: 1px solid rgba(245, 67, 44, 0.28);
     color: #ff7070;
     font-size: 0.68rem;
     font-weight: 700;
@@ -841,7 +841,7 @@
     margin-top: 0.25rem;
   }
   .btn-detail:hover {
-    background: #f40612;
+    background: var(--color-brand-hover);
     transform: translateY(-1px);
   }
 
@@ -874,7 +874,7 @@
     border-color: var(--red) !important;
     box-shadow:
       0 0 0 1px var(--red),
-      0 10px 28px rgba(229, 9, 20, 0.18) !important;
+      0 10px 28px rgba(245, 67, 44, 0.18) !important;
   }
   .movie-card__poster-wrap {
     position: relative;

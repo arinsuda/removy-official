@@ -139,11 +139,11 @@ const chartData = computed(() => {
       {
         label: "New Registrations",
         data: points.map((p) => p.user_count),
-        borderColor: "#e50914",
-        backgroundColor: "rgba(229, 9, 20, 0.15)",
+        borderColor: "#f5432c",
+        backgroundColor: "rgba(245, 67, 44, 0.15)",
         fill: true,
         tension: 0.35,
-        pointBackgroundColor: "#e50914",
+        pointBackgroundColor: "#f5432c",
         pointBorderColor: "#ffffff",
         pointRadius: 4,
       },
@@ -159,7 +159,7 @@ const chartOptions = {
     tooltip: {
       backgroundColor: "#1f1f1f",
       titleColor: "#ffffff",
-      bodyColor: "#e50914",
+      bodyColor: "#f5432c",
       borderColor: "#2a2a2a",
       borderWidth: 1,
     },
@@ -242,7 +242,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
 }
-.stat-icon-badge.brand { background: rgba(229, 9, 20, 0.15); color: var(--color-brand); }
+.stat-icon-badge.brand { background: rgba(245, 67, 44, 0.15); color: var(--color-brand); }
 .stat-icon-badge.success { background: rgba(16, 185, 129, 0.15); color: #10b981; }
 .stat-icon-badge.info { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
 .stat-icon-badge.warning { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }

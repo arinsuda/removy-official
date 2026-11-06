@@ -188,7 +188,7 @@ export function useShareImage() {
   ): string {
     const typeLabel = mediaType === "movie" ? "Movie" : "TV Series"
     const yearStr = year ? ` (${year})` : ""
-    return `🎬 ${title}${yearStr}\n${typeLabel}\n\nShared from REMOVY ✨`
+    return `🎬 ${title}${yearStr}\n${typeLabel}\n\nShared from POPCORN ✨`
   }
 
   /** Build a caption for review share */
@@ -197,7 +197,7 @@ export function useShareImage() {
     authorName: string,
     rating: number,
   ): string {
-    return `⭐ ${rating.toFixed(1)}/5 — ${title}\n📝 Reviewed on REMOVY • ${authorName}\n\nShared from REMOVY ✨`
+    return `⭐ ${rating.toFixed(1)}/5 — ${title}\n📝 Reviewed on POPCORN • ${authorName}\n\nShared from POPCORN ✨`
   }
 
   /** Build a share link for the media detail page */

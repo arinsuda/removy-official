@@ -25,7 +25,7 @@ type Config struct {
 	Link       LinkConfig
 }
 
-// LinkConfig configures PLANZI <-> REMOVY account linking. Empty Secrets disables the feature.
+// LinkConfig configures PLANZI <-> POPCORN account linking. Empty Secrets disables the feature.
 type LinkConfig struct {
 	Secrets      []string // first signs, all verify
 	RemoteAPIURL string
@@ -137,7 +137,7 @@ func Load() (*Config, error) {
 		Brevo: BrevoConfig{
 			APIKey:      brevoAPIKey,
 			SenderEmail: getEnv("BREVO_SENDER_EMAIL", getEnv("ADMIN_EMAIL", "removy.official@gmail.com")),
-			SenderName:  getEnv("BREVO_SENDER_NAME", "REMOVY"),
+			SenderName:  getEnv("BREVO_SENDER_NAME", "POPCORN"),
 			Enabled:     brevoAPIKey != "",
 		},
 		Cookie: CookieConfig{
@@ -164,7 +164,7 @@ func Load() (*Config, error) {
 			Secrets:      splitSecrets(getEnv("LINK_SHARED_SECRET", "")),
 			RemoteAPIURL: strings.TrimRight(getEnv("LINK_REMOTE_API_URL", ""), "/"),
 			RemoteWebURL: strings.TrimRight(getEnv("LINK_REMOTE_WEB_URL", ""), "/"),
-			SelfPlatform: getEnv("LINK_SELF_PLATFORM", "removy"),
+			SelfPlatform: getEnv("LINK_SELF_PLATFORM", "popcorn"),
 		},
 	}
 

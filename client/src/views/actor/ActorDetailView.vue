@@ -447,7 +447,7 @@
   }
 
   .btn-back:focus-visible {
-    outline: 2px solid #e50914;
+    outline: 2px solid var(--color-brand);
     outline-offset: 2px;
   }
 
@@ -464,7 +464,7 @@
 
   .error-icon {
     font-size: 3.5rem;
-    color: #e50914;
+    color: var(--color-brand);
   }
 
   .btn-primary {
@@ -472,7 +472,7 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.75rem 1.75rem;
-    background-color: #e50914;
+    background-color: var(--color-brand);
     color: #ffffff;
     border: none;
     border-radius: 8px;
@@ -483,7 +483,7 @@
   }
 
   .btn-primary:hover {
-    background-color: #f40612;
+    background-color: var(--color-brand-hover);
     transform: translateY(-2px);
   }
 
@@ -628,7 +628,7 @@
   }
 
   .meta-pill i {
-    color: #e50914;
+    color: var(--color-brand);
   }
 
   .meta-pill.imdb-link:hover {
@@ -680,7 +680,7 @@
   .btn-toggle-bio {
     background: none;
     border: none;
-    color: #e50914;
+    color: var(--color-brand);
     font-size: 0.875rem;
     font-weight: 600;
     cursor: pointer;
@@ -715,7 +715,7 @@
   }
 
   .section-title i {
-    color: #e50914;
+    color: var(--color-brand);
   }
 
   .tab-controls {
@@ -743,7 +743,7 @@
   }
 
   .tab-btn.active {
-    background: #e50914;
+    background: var(--color-brand);
     color: #ffffff;
   }
 
@@ -776,13 +776,13 @@
   .media-card:hover,
   .media-card:focus-visible {
     transform: translateY(-6px);
-    border-color: rgba(229, 9, 20, 0.5);
+    border-color: rgba(245, 67, 44, 0.5);
     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
     outline: none;
   }
 
   .media-card:focus-visible {
-    box-shadow: 0 0 0 2px #e50914, 0 12px 24px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 0 0 2px var(--color-brand), 0 12px 24px rgba(0, 0, 0, 0.5);
   }
 
   .poster-wrap {
@@ -851,7 +851,7 @@
 
   .character-role {
     font-size: 0.8125rem;
-    color: #e50914;
+    color: var(--color-brand);
     margin: 0;
     display: flex;
     align-items: flex-start;

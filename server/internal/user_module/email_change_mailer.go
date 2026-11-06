@@ -41,7 +41,7 @@ func (m *brevoMailer) SendOTP(toEmail, otp string) error {
 		return nil
 	}
 
-	subject := "รหัสยืนยันการเปลี่ยนอีเมล — REMOVY"
+	subject := "รหัสยืนยันการเปลี่ยนอีเมล — POPCORN"
 	htmlBody := buildOTPEmailBody(otp)
 
 	payload := map[string]interface{}{
@@ -101,8 +101,8 @@ func buildOTPEmailBody(otp string) string {
           <!-- Wordmark -->
           <tr>
             <td align="center" style="padding-bottom:32px;">
-              <span style="font-size:18px;font-weight:700;letter-spacing:4px;color:#ffffff;">REMOVY</span>
-              <div style="width:32px;height:2px;background:#e50914;margin:12px auto 0 auto;"></div>
+              <span style="font-size:18px;font-weight:700;letter-spacing:4px;color:#ffffff;">POPCORN</span>
+              <div style="width:32px;height:2px;background:#f5432c;margin:12px auto 0 auto;"></div>
             </td>
           </tr>
 
@@ -112,7 +112,7 @@ func buildOTPEmailBody(otp string) string {
               <table role="presentation" width="100%%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td style="padding:44px 40px 4px 40px;" align="center">
-                    <p style="margin:0 0 12px 0;color:#e50914;font-size:11px;font-weight:700;letter-spacing:2.5px;
+                    <p style="margin:0 0 12px 0;color:#f5432c;font-size:11px;font-weight:700;letter-spacing:2.5px;
                               text-transform:uppercase;">
                       คำขอเปลี่ยนอีเมล
                     </p>
@@ -126,7 +126,7 @@ func buildOTPEmailBody(otp string) string {
                 <tr>
                   <td align="center" style="padding:0 40px;">
                     <table role="presentation" cellpadding="0" cellspacing="0"
-                           style="background:#050505;border:1px solid #e50914;border-radius:6px;">
+                           style="background:#050505;border:1px solid #f5432c;border-radius:6px;">
                       <tr>
                         <td style="padding:20px 32px;">
                           <span style="font-size:30px;font-weight:700;letter-spacing:10px;color:#ffffff;
@@ -166,7 +166,7 @@ func buildOTPEmailBody(otp string) string {
           <tr>
             <td align="center" style="padding:28px 0 0 0;">
               <p style="margin:0;color:#3a3a3a;font-size:10.5px;letter-spacing:0.5px;">
-                REMOVY — ระบบส่งอัตโนมัติ กรุณาอย่าตอบกลับอีเมลนี้
+                POPCORN — ระบบส่งอัตโนมัติ กรุณาอย่าตอบกลับอีเมลนี้
               </p>
             </td>
           </tr>

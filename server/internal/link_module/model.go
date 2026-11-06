@@ -3,8 +3,8 @@ package link_module
 import "time"
 
 const (
-	PlatformPlanzi = "planzi"
-	PlatformRemovy = "removy"
+	PlatformPlanzi  = "planzi"
+	PlatformPopcorn = "popcorn"
 
 	HandoffTTL    = 60 * time.Second
 	PendingTTL    = 10 * time.Minute

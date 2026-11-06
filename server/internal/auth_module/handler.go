@@ -234,7 +234,7 @@ func (h *Handler) GoogleCallback(c fiber.Ctx) error {
 
 	code := c.Query("code")
 	stateParam := c.Query("state")
-	cookieState := c.Cookies("removy_oauth_state")
+	cookieState := c.Cookies("popcorn_oauth_state")
 
 	if code == "" || stateParam == "" || cookieState == "" {
 		return c.Redirect().To(h.buildErrorRedirectURL("invalid_oauth_state", "/login"))
@@ -321,7 +321,7 @@ func (h *Handler) GoogleStatus(c fiber.Ctx) error {
 
 func (h *Handler) setOAuthStateCookie(c fiber.Ctx, state string) {
 	c.Cookie(&fiber.Cookie{
-		Name:     "removy_oauth_state",
+		Name:     "popcorn_oauth_state",
 		Value:    state,
 		HTTPOnly: true,
 		Secure:   h.cfg.Cookie.Secure,
@@ -333,7 +333,7 @@ func (h *Handler) setOAuthStateCookie(c fiber.Ctx, state string) {
 
 func (h *Handler) clearOAuthStateCookie(c fiber.Ctx) {
 	c.Cookie(&fiber.Cookie{
-		Name:    "removy_oauth_state",
+		Name:    "popcorn_oauth_state",
 		Value:   "",
 		MaxAge:  -1,
 		Expires: time.Unix(0, 0),

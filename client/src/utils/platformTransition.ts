@@ -1,6 +1,6 @@
-// Desktop-style slide between PLANZI and REMOVY. The apps are on different
+// Desktop-style slide between PLANZI and POPCORN. The apps are on different
 // origins, so the source app plays the exit and the target app plays the enter.
-// REMOVY is the right desktop: it leaves toward the right and arrives from the right.
+// POPCORN is the right desktop: it leaves toward the right and arrives from the right.
 // Keep in sync with cooked-app/frontend/src/utils/platformTransition.ts.
 const SIDE = 1
 

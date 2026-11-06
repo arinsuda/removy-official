@@ -1,6 +1,6 @@
-# 🎬 REMOVY (Movie Hub Official)
+# 🎬 POPCORN (Movie Hub Official)
 
-**REMOVY** is a full-stack web application designed for movie and TV series enthusiasts to browse, track, rate, review, and socially interact around entertainment content. Powered by **Vue 3** on the frontend and **Go (Fiber v3)** on the backend, integrated with **The Movie Database (TMDB) API**, **PostgreSQL**, **MinIO S3 Object Storage**, **Brevo Transactional Email Service**, and **Socket.io WebSockets**.
+**POPCORN** is a full-stack web application designed for movie and TV series enthusiasts to browse, track, rate, review, and socially interact around entertainment content. Powered by **Vue 3** on the frontend and **Go (Fiber v3)** on the backend, integrated with **The Movie Database (TMDB) API**, **PostgreSQL**, **MinIO S3 Object Storage**, **Brevo Transactional Email Service**, and **Socket.io WebSockets**.
 
 ---
 
@@ -169,7 +169,7 @@ THE_MOVIE_API_KEY=your_tmdb_api_key
 # Brevo Email API (https://brevo.com - Free 300 emails/day)
 BREVO_API_KEY=your_brevo_api_key
 BREVO_SENDER_EMAIL=removy.official@gmail.com
-BREVO_SENDER_NAME=REMOVY
+BREVO_SENDER_NAME=POPCORN
 
 # MinIO Object Storage
 MINIO_ENDPOINT=localhost:9000

@@ -71,9 +71,9 @@
     <div class="brand-footer">
       <div class="brand-divider" />
       <div class="brand-logo">
-        <span class="logo-re">RE</span><span class="logo-mov">MOVY</span>
+        <span class="logo-re">POP</span><span class="logo-mov">CORN</span>
       </div>
-      <span class="brand-handle">removy.app</span>
+      <span class="brand-handle">POPCORN</span>
     </div>
   </div>
 </template>
@@ -133,12 +133,12 @@
   )
 
   const ratingDisplay = computed(() => {
-    if (props.media.removyRating !== null && props.media.removyRating > 0) {
+    if (props.media.popcornRating !== null && props.media.popcornRating > 0) {
       return {
-        value: props.media.removyRating.toFixed(1),
+        value: props.media.popcornRating.toFixed(1),
         scale: "/5",
-        source: "REMOVY",
-        badgeClass: "badge-removy",
+        source: "POPCORN",
+        badgeClass: "badge-popcorn",
       }
     }
     if (props.media.voteAverage > 0) {
@@ -312,7 +312,7 @@
     font-weight: 700;
   }
 
-  .badge-removy {
+  .badge-popcorn {
     background: linear-gradient(135deg, #ff512f, #dd2476);
     color: #ffffff;
   }
@@ -369,7 +369,7 @@
   }
 
   .logo-mov {
-    color: #e50914;
+    color: #f5432c;
   }
 
   .brand-handle {

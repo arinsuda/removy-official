@@ -1,7 +1,7 @@
 <template>
   <div class="handoff-page">
     <div class="handoff-card">
-      <div class="brand"><span class="brand-re">RE</span>MOVY</div>
+      <div class="brand"><img src="/popcorn-full-512.png" alt="POPCORN" class="brand-logo" /></div>
 
       <template v-if="state === 'working'">
         <p class="text">{{ t("navigation.link.handoff.working") }}</p>
@@ -212,8 +212,13 @@ async function submitCode() {
   letter-spacing: 4px;
   margin-bottom: 24px;
 }
+.brand-logo {
+  display: block;
+  width: 140px;
+  margin: 0 auto;
+}
 .brand-re {
-  color: #e50914;
+  color: var(--color-brand);
 }
 .title {
   font-size: 18px;
@@ -251,7 +256,7 @@ async function submitCode() {
 .btn {
   display: block;
   padding: 12px 16px;
-  background: #e50914;
+  background: var(--color-brand);
   border: 0;
   border-radius: 6px;
   color: #fff;

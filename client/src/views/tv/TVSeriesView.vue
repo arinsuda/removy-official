@@ -470,8 +470,8 @@
     border-color: #444;
   }
   .tab-btn.active {
-    background: #e50914;
-    border-color: #e50914;
+    background: var(--color-brand);
+    border-color: var(--color-brand);
     color: #fff;
   }
   .filter-bar {
@@ -542,7 +542,7 @@
     color: #fff;
   }
   .filter-option.active {
-    color: #e50914;
+    color: var(--color-brand);
     font-weight: 600;
   }
   .search-inline {
@@ -691,8 +691,8 @@
     color: #fff;
   }
   .page-btn--active {
-    background: #e50914;
-    border-color: #e50914;
+    background: var(--color-brand);
+    border-color: var(--color-brand);
     color: #fff;
   }
   .page-btn--ellipsis {
@@ -720,7 +720,7 @@
     width: 40px;
     height: 40px;
     border: 3px solid rgba(255, 255, 255, 0.15);
-    border-top-color: #e50914;
+    border-top-color: var(--color-brand);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
   }

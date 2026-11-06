@@ -1,8 +1,8 @@
 {
   "title": "Your Favorite Movie Genres",
-  "subtitle": "Select at least 3 genres you enjoy to personalize your REMOVY recommendations",
+  "subtitle": "Select at least 3 genres you enjoy to personalize your POPCORN recommendations",
   "selectedCount": "Selected {count} genres",
-  "submit": "Get Started with REMOVY",
+  "submit": "Get Started with POPCORN",
   "loading": "Saving info...",
   "errorMin": "Please select at least 3 genres before continuing"
 }

@@ -387,6 +387,13 @@ func runSQLMigrations(db *gorm.DB, cfg *config.Config) error {
 		return err
 	}
 
+	// Seeding upserts by name, so rename the row first to keep users' unlocked achievement.
+	if err := runMigrationWithHistoryTx(db, "20261106_rename_legend_achievement", cfg.DB.MigrationLockTimeoutMs, cfg.DB.MigrationStatementTimeoutMs, func(tx *gorm.DB) error {
+		return tx.Exec(`UPDATE achievements SET name = 'Popcorn Legend' WHERE name = 'Removy Legend'`).Error
+	}); err != nil {
+		return err
+	}
+
 	log.Println("SQL migrations completed")
 	return nil
 }

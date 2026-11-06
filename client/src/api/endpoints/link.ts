@@ -2,7 +2,7 @@ import api from "../index"
 
 import type { AuthResponse } from "@/types"
 
-export type LinkPlatform = "planzi" | "removy"
+export type LinkPlatform = "planzi" | "popcorn"
 export type LinkConfirmMethod = "local_password" | "email_code"
 
 export interface LinkHandoffResponse {

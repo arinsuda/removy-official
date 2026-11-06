@@ -32,7 +32,7 @@
       "rating": "Rating",
       "voteCount": "({count} reviews)",
       "tmdbRating": "TMDB Rating",
-      "removyRating": "REMOVY Rating",
+      "popcornRating": "POPCORN Rating",
       "firstAirDate": "First Air Date"
     },
     "actions": {

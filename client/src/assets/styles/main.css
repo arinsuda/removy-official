@@ -1,8 +1,10 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand: #e50914;
-  --color-brand-hover: #f40612;
+  --color-brand: #f5432c;
+  --color-brand-hover: #ff5a42;
+  --color-accent: #ffd93b;
+  --color-info: #38abeb;
   --color-surface: #141414;
   --color-surface-2: #1f1f1f;
   --color-surface-3: #2a2a2a;
@@ -55,7 +57,7 @@
 
 @layer utilities {
   .text-gradient {
-    background: linear-gradient(135deg, #e50914, #ff6b6b);
+    background: linear-gradient(135deg, #f5432c, #ff6b6b);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -77,19 +79,19 @@
   --dp-text-color: #ffffff;
   --dp-hover-color: #2a2a2a;
   --dp-hover-text-color: #ffffff;
-  --dp-primary-color: #e50914;
-  --dp-primary-disabled-color: #7a1f24;
+  --dp-primary-color: #f5432c;
+  --dp-primary-disabled-color: #7f2c20;
   --dp-primary-text-color: #ffffff;
   --dp-secondary-color: #a3a3a3;
   --dp-border-color: #2a2a2a;
   --dp-menu-border-color: #2a2a2a;
-  --dp-border-color-hover: #e50914;
-  --dp-border-color-focus: #e50914;
+  --dp-border-color-hover: #f5432c;
+  --dp-border-color-focus: #f5432c;
   --dp-disabled-color: #333333;
   --dp-disabled-color-text: #666666;
   --dp-icon-color: #a3a3a3;
   --dp-danger-color: #e53935;
-  --dp-marker-color: #e50914;
+  --dp-marker-color: #f5432c;
   --dp-highlight-color: rgb(229 9 20 / 20%);
 }
 

@@ -2,14 +2,14 @@
 
 Agent handoff guide. Read this first; open other docs only when needed.
 Movie and TV social web app: browse (TMDB), rate, review, track, follow. Go API + Vue 3 SPA + PostgreSQL.
-The product name in these docs is POPCORN, but the code has not been renamed. Existing identifiers still say `removy`, `movie-hub`, `moviehub`, or `moviereview` (see "Naming"). Don't rename them without a migration plan.
+The product is POPCORN (formerly REMOVY). A few identifiers intentionally keep old names (see "Naming"). Don't rename them without a migration plan.
 
 ## Commands
 ```bash
 docker compose --env-file server/.env up -d  # postgres + MinIO (:9000, console :9001)
-cd server && go run main.go          # :8080; run from server/ (relative paths); auto-migrates and seeds on boot
+cd server && go run main.go          # PORT from .env (8081 locally); run from server/ (relative paths); auto-migrates and seeds on boot
 cd server && go test ./...           # unit tests
-cd client && npm run dev             # :3000, proxies /api -> localhost:8080
+cd client && npm run dev             # :3000, proxies /api -> localhost:8081 (VITE_API_PROXY_TARGET)
 cd client && npm run type-check      # vue-tsc --build
 cd client && npm test                # Vitest (src/__tests__)
 cd client && npm run build           # type-check + vite build
@@ -85,11 +85,10 @@ client/src/
 
 ## Naming (intentionally not renamed)
 Changing any of these affects stored data, live sessions, or other systems:
-- `removy` platform ID: `LINK_SELF_PLATFORM`, `PlatformRemovy`, `LinkPlatform` in the client. It is part of the `../LINKING_SPEC.md` contract and stored in `account_links`, so PLANZI must change with it.
-- `removy` JSON key in ratings responses (`movie_module/dto.go`), `removy-private` bucket, `removy_oauth_state` cookie, `removy-locale` localStorage key.
-- `removy.official@gmail.com` sender, `removy-official.pages.dev` URLs, `removy-logo.png`, `RemovyRatingIcon.vue`.
-- Go module `github.com/arinsuda/movie-hub`, DB `moviehub`, containers `moviereview_*`.
-- User-visible "REMOVY" text still exists in `client/index.html`, `manifest.json`, i18n files, page titles, and email templates. Rebranding it is a separate task.
+- `removy-official.pages.dev` URLs (needs a new domain) and `removy.official@gmail.com` sender (needs a verified Brevo sender).
+- `removy-private` bucket: stored files must be moved first.
+- Repo/folder `removy-official`, Go module `github.com/arinsuda/movie-hub`, DB `moviehub`, containers `moviereview_*`.
+- Legacy fallback only: `LEGACY_LOCALE_STORAGE_KEY` (`removy-locale`) is still read. PLANZI still accepts `removy` as an input alias for `popcorn`.
 
 ## Gotchas
 - Env precedence: real environment > `server/.env` > repo-root `.env` (`config.LoadDotEnv`). `docker compose` needs `--env-file server/.env`.
@@ -102,6 +101,6 @@ Changing any of these affects stored data, live sessions, or other systems:
 
 ## Docs (trust level)
 - Code > this file > `README.md` (may lag code) > `client/README.md`.
-- `../LINKING_SPEC.md` is the shared linking contract with PLANZI (`../cooked-app`). It still uses the name REMOVY.
+- `../LINKING_SPEC.md` is the shared linking contract with PLANZI (`../cooked-app`). 
 - Commit style: `feat: ...` / `fix: ...` / `refactor: ...` / `docs: ...`.
 - Claude Code subagents and dispatch rules are described in `CLAUDE.md`.

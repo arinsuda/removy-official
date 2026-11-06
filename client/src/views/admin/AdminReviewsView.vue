@@ -596,7 +596,7 @@ onMounted(() => {
 }
 
 .media-type-tag.movie {
-  background: rgba(229, 9, 20, 0.15);
+  background: rgba(245, 67, 44, 0.15);
   color: #ff4d4d;
 }
 
@@ -752,7 +752,7 @@ onMounted(() => {
   gap: 0.5rem;
 
   i {
-    color: #e50914;
+    color: var(--color-brand);
   }
 }
 
@@ -823,7 +823,7 @@ onMounted(() => {
 }
 
 .modal-media-type.movie {
-  background: rgba(229, 9, 20, 0.2);
+  background: rgba(245, 67, 44, 0.2);
   color: #ff4d4d;
 }
 

@@ -114,9 +114,9 @@
               <i class="pi pi-star-fill"></i>
               TMDB: {{ movie.vote_average.toFixed(1) }}
             </span>
-            <span class="meta-badge rating-removy" v-if="removyStats.average_rating > 0">
-              <RemovyRatingIcon :size="12" style="margin-right: 4px;" />
-              REMOVY: {{ removyStats.average_rating.toFixed(1) }}/5
+            <span class="meta-badge rating-popcorn" v-if="popcornStats.average_rating > 0">
+              <PopcornRatingIcon :size="12" style="margin-right: 4px;" />
+              POPCORN: {{ popcornStats.average_rating.toFixed(1) }}/5
             </span>
           </div>
 
@@ -130,39 +130,39 @@
             </span>
           </div>
 
-          <section class="removy-info-section">
-            <div class="removy-stat-card view">
+          <section class="popcorn-info-section">
+            <div class="popcorn-stat-card view">
               <i class="pi pi-eye"></i>
               <div class="stat-details">
                 <span class="stat-count">{{
-                  removyStats.view_count.toLocaleString()
+                  popcornStats.view_count.toLocaleString()
                 }}</span>
                 <span class="stat-name">ยอดเข้าชม</span>
               </div>
             </div>
-            <div class="removy-stat-card like">
+            <div class="popcorn-stat-card like">
               <i class="pi pi-thumbs-up-fill"></i>
               <div class="stat-details">
                 <span class="stat-count">{{
-                  removyStats.like_count.toLocaleString()
+                  popcornStats.like_count.toLocaleString()
                 }}</span>
                 <span class="stat-name">ถูกใจ</span>
               </div>
             </div>
-            <div class="removy-stat-card review">
+            <div class="popcorn-stat-card review">
               <i class="pi pi-comment"></i>
               <div class="stat-details">
                 <span class="stat-count">{{
-                  removyStats.review_count.toLocaleString()
+                  popcornStats.review_count.toLocaleString()
                 }}</span>
                 <span class="stat-name">รีวิว</span>
               </div>
             </div>
-            <div class="removy-stat-card watchlist">
+            <div class="popcorn-stat-card watchlist">
               <i class="pi pi-bookmark-fill"></i>
               <div class="stat-details">
                 <span class="stat-count">{{
-                  removyStats.watchlist_count.toLocaleString()
+                  popcornStats.watchlist_count.toLocaleString()
                 }}</span>
                 <span class="stat-name">เพลย์ลิสต์</span>
               </div>
@@ -229,7 +229,7 @@
 
           <section class="info-section review-zone">
             <h2 class="section-title">
-              <i class="pi pi-comments"></i>รีวิวจากผู้ใช้งาน REMOVY
+              <i class="pi pi-comments"></i>รีวิวจากผู้ใช้งาน POPCORN
             </h2>
             <MovieReviews
               :movie-id="displayMovieId"
@@ -277,7 +277,7 @@
   import { resolveTrailer } from "@/composables/useTrailerPreview"
   import { useAuthStore } from "@/stores/auth"
   import { mediaApi } from "@/api/endpoints/media"
-  import RemovyRatingIcon from "@/components/movie/RemovyRatingIcon.vue"
+  import PopcornRatingIcon from "@/components/movie/PopcornRatingIcon.vue"
 
   const route = useRoute()
   const router = useRouter()
@@ -301,8 +301,8 @@
         : null,
       genres: movie.value.genres || [],
       voteAverage: movie.value.vote_average || 0,
-      removyRating: removyStats.value?.has_rating
-        ? removyStats.value.average_rating
+      popcornRating: popcornStats.value?.has_rating
+        ? popcornStats.value.average_rating
         : null,
     }
   })
@@ -340,9 +340,9 @@
     }
   }
 
-  const removyStats = ref(createDefaultStats())
+  const popcornStats = ref(createDefaultStats())
 
-  const isLiked = computed(() => removyStats.value.liked_at !== null)
+  const isLiked = computed(() => popcornStats.value.liked_at !== null)
 
   const isWatchlisted = ref(false)
   const isWatched = ref(false)
@@ -387,16 +387,16 @@
     try {
       if (isLiked.value) {
         await mediaApi.unlikeMedia("movie", movieId.value)
-        removyStats.value.liked_at = null
-        removyStats.value.like_count = Math.max(
+        popcornStats.value.liked_at = null
+        popcornStats.value.like_count = Math.max(
           0,
-          removyStats.value.like_count - 1,
+          popcornStats.value.like_count - 1,
         )
         window.$toast?.info("ลบภาพยนตร์ออกจากรายการที่ชอบแล้ว")
       } else {
         await mediaApi.likeMedia("movie", movieId.value)
-        removyStats.value.liked_at = new Date().toISOString()
-        removyStats.value.like_count += 1
+        popcornStats.value.liked_at = new Date().toISOString()
+        popcornStats.value.like_count += 1
         window.$toast?.success("เพิ่มเข้าภาพยนตร์ที่คุณชื่นชอบแล้ว")
       }
     } catch (err) {
@@ -435,9 +435,9 @@
           watchlist_ItemId.value!,
         )
 
-        removyStats.value.watchlist_count = Math.max(
+        popcornStats.value.watchlist_count = Math.max(
           0,
-          removyStats.value.watchlist_count - 1,
+          popcornStats.value.watchlist_count - 1,
         )
         isWatchlisted.value = false
         watchlist_ItemId.value = null
@@ -453,7 +453,7 @@
           watchlist_ItemId.value = res.data.item.id
         }
 
-        removyStats.value.watchlist_count += 1
+        popcornStats.value.watchlist_count += 1
         isWatchlisted.value = true
         window.$toast?.success("เพิ่มเข้าเพลย์ลิสต์สำเร็จ 🍿")
       }
@@ -643,7 +643,7 @@
       if (statsRes.data && statsRes.data.stats) {
         const incomingStats = statsRes.data.stats
 
-        removyStats.value = {
+        popcornStats.value = {
           media_id: incomingStats.media_id ?? 0,
           media_type: incomingStats.media_type ?? "movie",
           like_count: incomingStats.like_count ?? 0,
@@ -725,7 +725,7 @@
       isWatched.value = false
       watchlist_ItemId.value = null
       watched_ItemId.value = null
-      removyStats.value = createDefaultStats()
+      popcornStats.value = createDefaultStats()
       displayMovieId.value = currentMovieId
 
       mediaApi.recordMediaView("movie", currentMovieId).catch(err => {
@@ -794,7 +794,7 @@
   @import url("https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap");
 
   .movie-detail-page {
-    --red: #e50914;
+    --red: var(--color-brand);
     --gold: #f5c518;
     --neon-pink: #ff2a74;
     --bg: #080808;
@@ -820,7 +820,7 @@
     height: 3px;
     background: linear-gradient(90deg, var(--red), var(--neon-pink));
     z-index: 60;
-    box-shadow: 0 0 10px rgba(229, 9, 20, 0.55);
+    box-shadow: 0 0 10px rgba(245, 67, 44, 0.55);
     border-radius: 0 3px 3px 0;
     pointer-events: none;
   }
@@ -963,7 +963,7 @@
     transition: background 0.2s;
   }
   .btn-primary-action:hover {
-    background: #f40612;
+    background: var(--color-brand-hover);
   }
   .btn-secondary-action {
     background: rgba(255, 255, 255, 0.05);
@@ -1044,13 +1044,13 @@
   .rating-tmdb i {
     color: var(--gold);
   }
-  .rating-removy {
+  .rating-popcorn {
     background: rgba(255, 42, 42, 0.15);
     border-color: rgba(255, 0, 0, 0.3);
     color: var(--red);
     font-weight: 600;
   }
-  .rating-removy i {
+  .rating-popcorn i {
     color: var(--red);
   }
   .genres-list {
@@ -1072,13 +1072,13 @@
     border-top: 1px solid var(--border);
     margin: 0.5rem 0;
   }
-  .removy-info-section {
+  .popcorn-info-section {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 1rem;
     margin: 0.5rem 0;
   }
-  .removy-stat-card {
+  .popcorn-stat-card {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid var(--border);
     border-radius: 12px;
@@ -1091,11 +1091,11 @@
       transform 0.2s,
       background 0.2s;
   }
-  .removy-stat-card:hover {
+  .popcorn-stat-card:hover {
     background: rgba(255, 255, 255, 0.06);
     transform: translateY(-2px);
   }
-  .removy-stat-card i {
+  .popcorn-stat-card i {
     font-size: 1.25rem;
     padding: 0.5rem;
     border-radius: 8px;
@@ -1117,19 +1117,19 @@
     color: var(--muted);
     white-space: nowrap;
   }
-  .removy-stat-card.view i {
+  .popcorn-stat-card.view i {
     background: rgba(115, 164, 255, 0.15);
     color: #73a4ff;
   }
-  .removy-stat-card.like i {
+  .popcorn-stat-card.like i {
     background: rgba(255, 42, 116, 0.15);
     color: var(--neon-pink);
   }
-  .removy-stat-card.review i {
+  .popcorn-stat-card.review i {
     background: rgba(46, 213, 115, 0.15);
     color: #2ed573;
   }
-  .removy-stat-card.watchlist i {
+  .popcorn-stat-card.watchlist i {
     background: rgba(245, 197, 24, 0.15);
     color: var(--gold);
   }
@@ -1306,7 +1306,7 @@
     .detail-backdrop {
       height: 460px;
     }
-    .removy-info-section {
+    .popcorn-info-section {
       grid-template-columns: repeat(4, 1fr);
       gap: 0.85rem;
     }
@@ -1340,7 +1340,7 @@
       font-size: 0.82rem;
       padding: 0.65rem;
     }
-    .removy-info-section {
+    .popcorn-info-section {
       grid-template-columns: repeat(2, 1fr);
       gap: 0.75rem;
     }
@@ -1410,16 +1410,16 @@
       font-size: 0.7rem;
       padding: 0.15rem 0.6rem;
     }
-    .removy-info-section {
+    .popcorn-info-section {
       grid-template-columns: repeat(2, 1fr);
       gap: 0.6rem;
     }
-    .removy-stat-card {
+    .popcorn-stat-card {
       padding: 0.6rem 0.75rem;
       gap: 0.6rem;
       border-radius: 10px;
     }
-    .removy-stat-card i {
+    .popcorn-stat-card i {
       font-size: 1rem;
       padding: 0.4rem;
     }
@@ -1485,7 +1485,7 @@
     .genres-list {
       justify-content: center;
     }
-    .removy-info-section {
+    .popcorn-info-section {
       grid-template-columns: 1fr;
       gap: 0.6rem;
     }
@@ -1554,7 +1554,7 @@
       font-size: 0.68rem;
       padding: 0.28rem 0.55rem;
     }
-    .removy-stat-card {
+    .popcorn-stat-card {
       padding: 0.55rem 0.65rem;
     }
     .stat-count {

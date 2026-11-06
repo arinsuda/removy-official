@@ -194,7 +194,7 @@
     if (blob) {
       const filename = share.sanitizeFilename(
         props.media.title,
-        props.shareType === "poster" ? "REMOVY_poster" : "REMOVY_review",
+        props.shareType === "poster" ? "POPCORN_poster" : "POPCORN_review",
       )
       share.downloadBlob(blob, filename)
     }
@@ -292,7 +292,7 @@
   }
 
   .modal-title i {
-    color: #e50914;
+    color: #f5432c;
   }
 
   .btn-close {
@@ -371,12 +371,12 @@
   }
 
   .btn-download {
-    background: #e50914;
+    background: #f5432c;
     color: #ffffff;
   }
 
   .btn-download:hover:not(:disabled) {
-    background: #f40612;
+    background: #ff5a42;
   }
 
   .btn-download:disabled {

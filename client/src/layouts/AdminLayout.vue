@@ -4,7 +4,7 @@
     <header class="admin-topbar">
       <div class="admin-brand">
         <RouterLink to="/" class="nav-logo">
-          <span class="logo-movie">RE</span><span class="logo-hub">MOVY</span>
+          <span class="logo-movie">POP</span><span class="logo-hub">CORN</span>
         </RouterLink>
         <span class="admin-badge">
           <Shield :size="14" /> {{ $t("admin.nav.adminMode") }}
@@ -136,8 +136,8 @@ function handleExitAdmin() {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  background: rgba(229, 9, 20, 0.15);
-  border: 1px solid rgba(229, 9, 20, 0.4);
+  background: rgba(245, 67, 44, 0.15);
+  border: 1px solid rgba(245, 67, 44, 0.4);
   color: var(--color-brand);
   font-size: 0.75rem;
   font-weight: 700;
@@ -164,7 +164,7 @@ function handleExitAdmin() {
 .exit-admin-btn:hover {
   color: var(--color-text-primary);
   border-color: var(--color-brand);
-  background: rgba(229, 9, 20, 0.1);
+  background: rgba(245, 67, 44, 0.1);
 }
 
 /* ── Body Layout ────────────────────────────────────── */

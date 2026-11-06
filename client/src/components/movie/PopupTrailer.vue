@@ -135,7 +135,7 @@
   }
 
   .trailer-popup__close-btn:hover {
-    background: #e50914; /* แดงสไตล์เน็ตฟลิกซ์ */
+    background: var(--color-brand); /* แดงสไตล์เน็ตฟลิกซ์ */
     border-color: transparent;
     transform: scale(1.05);
   }

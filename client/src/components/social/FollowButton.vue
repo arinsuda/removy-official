@@ -88,11 +88,11 @@
   }
 
   .follow-btn.is-none {
-    background: var(--red, #e50914);
+    background: var(--red, var(--color-brand));
     color: #fff;
   }
   .follow-btn.is-none:hover:not(.is-loading) {
-    background: #f40612;
+    background: var(--color-brand-hover);
   }
 
   .follow-btn.is-following {
@@ -101,9 +101,9 @@
     border-color: rgba(255, 255, 255, 0.15);
   }
   .follow-btn.is-following:hover:not(.is-loading) {
-    background: rgba(229, 9, 20, 0.12);
-    border-color: rgba(229, 9, 20, 0.35);
-    color: #e50914;
+    background: rgba(245, 67, 44, 0.12);
+    border-color: rgba(245, 67, 44, 0.35);
+    color: var(--color-brand);
   }
 
   .follow-btn.is-pending {
@@ -112,8 +112,8 @@
     border-color: rgba(245, 197, 24, 0.25);
   }
   .follow-btn.is-pending:hover:not(.is-loading) {
-    background: rgba(229, 9, 20, 0.12);
-    border-color: rgba(229, 9, 20, 0.35);
-    color: #e50914;
+    background: rgba(245, 67, 44, 0.12);
+    border-color: rgba(245, 67, 44, 0.35);
+    color: var(--color-brand);
   }
 </style>

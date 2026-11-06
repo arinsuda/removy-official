@@ -33,7 +33,7 @@ func (s *Service) PushWelcome(ctx context.Context, userID uint, username string)
 	n := Notification{
 		UserID:  userID,
 		Type:    NotifWelcome,
-		Message: fmt.Sprintf("ยินดีต้อนรับสู่ REMOVY, %s! เริ่มสร้าง Portfolio สำหรับการดูภาพยนต์ ของคุณได้เลย", username),
+		Message: fmt.Sprintf("ยินดีต้อนรับสู่ POPCORN, %s! เริ่มสร้าง Portfolio สำหรับการดูภาพยนต์ ของคุณได้เลย", username),
 	}
 	return s.createAndEmit(ctx, []Notification{n})
 }
