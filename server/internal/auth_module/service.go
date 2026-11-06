@@ -96,6 +96,7 @@ func (s *Service) Register(req RegisterRequest) (*user_module.User, error) {
 		return nil, ErrPasswordMismatch
 	}
 
+	req.Email = NormalizeEmail(req.Email)
 	if _, err := s.repo.FindByEmail(req.Email); err == nil {
 		return nil, ErrEmailTaken
 	}
@@ -136,6 +137,7 @@ func (s *Service) Register(req RegisterRequest) (*user_module.User, error) {
 }
 
 func (s *Service) Login(req LoginRequest, userAgent, ip string) (*TokenPair, *user_module.User, error) {
+	req.Identifier = strings.TrimSpace(req.Identifier)
 	user, err := s.repo.FindByEmail(req.Identifier)
 	if err != nil {
 		user, err = s.repo.FindByUsername(req.Identifier)
@@ -357,9 +359,10 @@ func (s *Service) HandleGoogleCallback(ctx context.Context, code, stateStr, cook
 				sessionUser = &u
 			} else {
 				// 2. Check if POPCORN user with matching email exists
-				normalizedEmail := strings.ToLower(strings.TrimSpace(claims.Email))
+				normalizedEmail := NormalizeEmail(claims.Email)
 				var existingUser user_module.User
-				err := txDB.Where("email = ? AND is_active = true", normalizedEmail).First(&existingUser).Error
+				err := txDB.Where("lower(email) = ? AND is_active = true", normalizedEmail).
+					Order("(verified_email_at IS NOT NULL) DESC, id ASC").First(&existingUser).Error
 
 				if err == nil {
 					// User exists with matching email

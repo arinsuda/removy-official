@@ -2,6 +2,7 @@ package user_module
 
 import (
 	"errors"
+	"strings"
 
 	"gorm.io/gorm"
 )
@@ -77,7 +78,8 @@ func (r *repository) FindByID(id uint) (*User, int, int, int, error) {
 func (r *repository) FindByEmail(email string) (*User, error) {
 	var user User
 	err := r.db.
-		Where("email = ? AND is_active = true", email).
+		Where("lower(email) = lower(?) AND is_active = true", strings.TrimSpace(email)).
+		Order("(verified_email_at IS NOT NULL) DESC, id ASC").
 		First(&user).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrUserNotFound

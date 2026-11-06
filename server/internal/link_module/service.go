@@ -88,7 +88,8 @@ func hashHex(v string) string {
 
 func (s *Service) findUserByEmail(db *gorm.DB, email string) (*user_module.User, error) {
 	var u user_module.User
-	err := db.Preload("Role").Where("lower(email) = lower(?)", strings.TrimSpace(email)).First(&u).Error
+	err := db.Preload("Role").Where("lower(email) = lower(?)", strings.TrimSpace(email)).
+		Order("(verified_email_at IS NOT NULL) DESC, id ASC").First(&u).Error
 	if err != nil {
 		return nil, err
 	}
