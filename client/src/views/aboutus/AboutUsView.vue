@@ -242,7 +242,6 @@
 </script>
 
 <style scoped>
-  @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Noto+Sans+Thai:wght@300;400;500;600;700;800;900&display=swap");
 
   .about-page {
     --c-bg: #0a0a0a;
