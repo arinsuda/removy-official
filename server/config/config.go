@@ -3,7 +3,9 @@ package config
 import (
 	"fmt"
 	"log"
+	"net/url"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -43,7 +45,12 @@ type GoogleConfig struct {
 }
 
 type CORSConfig struct {
-	AllowedOrigin string
+	AllowedOrigins []string
+}
+
+// IsAllowed reports whether origin exactly matches the allowlist.
+func (c CORSConfig) IsAllowed(origin string) bool {
+	return slices.Contains(c.AllowedOrigins, origin)
 }
 
 type DBConfig struct {
@@ -96,11 +103,16 @@ func Load() (*Config, error) {
 
 	brevoAPIKey := getEnv("BREVO_API_KEY", "")
 
+	allowedOrigins, err := parseAllowedOrigins(getEnv("CORS_ALLOWED_ORIGIN", defaultAllowedOrigins))
+	if err != nil {
+		return nil, err
+	}
+
 	cfg := &Config{
 		Port:       getEnv("PORT", "8080"),
 		AppBaseURL: getEnv("APP_BASE_URL", "http://localhost:3000"),
 		CORS: CORSConfig{
-			AllowedOrigin: getEnv("CORS_ALLOWED_ORIGIN", "http://localhost:5173"),
+			AllowedOrigins: allowedOrigins,
 		},
 		DB: DBConfig{
 			Host:                        requireEnv("POSTGRES_HOST"),
@@ -193,6 +205,32 @@ func requireEnv(key string) string {
 		panic(fmt.Sprintf("required environment variable %q is not set", key))
 	}
 	return v
+}
+
+// defaultAllowedOrigins covers the local Vite dev server (:3000) and the legacy :5173 setup.
+const defaultAllowedOrigins = "http://localhost:3000,http://localhost:5173"
+
+// parseAllowedOrigins parses a comma-separated allowlist. Wildcards are rejected
+// because every CORS consumer here allows credentials.
+func parseAllowedOrigins(raw string) ([]string, error) {
+	var origins []string
+	for _, entry := range strings.Split(raw, ",") {
+		origin := strings.TrimRight(strings.TrimSpace(entry), "/")
+		if origin == "" {
+			continue
+		}
+		u, err := url.Parse(origin)
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.Path != "" || u.RawQuery != "" || u.Fragment != "" {
+			return nil, fmt.Errorf("CORS_ALLOWED_ORIGIN: invalid origin %q (want scheme://host[:port], no wildcard)", entry)
+		}
+		if !slices.Contains(origins, origin) {
+			origins = append(origins, origin)
+		}
+	}
+	if len(origins) == 0 {
+		return nil, fmt.Errorf("CORS_ALLOWED_ORIGIN: no origins configured")
+	}
+	return origins, nil
 }
 
 func splitSecrets(raw string) []string {

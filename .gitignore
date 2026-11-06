@@ -96,3 +96,7 @@ logs/
 *.bak
 *.tmp
 *.orig
+# Dependencies and local build output
+node_modules/
+server/tmp/
+.DS_Store

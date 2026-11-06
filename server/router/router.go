@@ -56,20 +56,13 @@ func Register(app *fiber.App, db *gorm.DB, cfg *config.Config, m *mailer.Mailer)
 
 	verifier := &jwtVerifier{secret: cfg.JWT.AccessSecret}
 
-	allowedOrigins := []string{
-		cfg.CORS.AllowedOrigin,
-		"http://localhost:3000",
-		"http://localhost:5173",
-		"https://movie-hub-official.pages.dev",
-	}
-	notifHub := notification_module.NewHub(verifier, allowedOrigins)
+	notifHub := notification_module.NewHub(verifier, cfg.CORS.AllowedOrigins)
 	notifSvc := notification_module.NewService(db, userNotifAdapter, notifHub)
 
 	policy := privacy_policy.NewUserAccessPolicy(db)
 
 	achieveModule := achievementsmodule.New(db, policy)
 	feedModule := feed_module.New(db, notifHub, mc)
-
 
 	app.Get("/", welcomeHandler)
 	app.Get("/health", healthHandler)

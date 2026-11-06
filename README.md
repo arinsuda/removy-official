@@ -141,13 +141,14 @@ movie-hub-official/
 
 ## ⚙️ Environment Variables Setup
 
-Create a `.env` file at the root or inside `/server` based on `.env.example`:
+Create `server/.env` from `server/.env.example`. The server reads real environment variables first, then `server/.env`, then a repo-root `.env`.
 
 ### Server `.env` (`server/.env`)
 ```env
 PORT=8080
 APP_BASE_URL=http://localhost:8080
-CORS_ALLOWED_ORIGIN=http://localhost:5173
+# Comma-separated exact origins, no wildcard
+CORS_ALLOWED_ORIGIN=http://localhost:3000,http://localhost:5173
 
 # PostgreSQL Database
 POSTGRES_HOST=localhost
@@ -213,7 +214,7 @@ cd movie-hub-official
 
 #### 2. Start Infrastructure Services (PostgreSQL & MinIO)
 ```bash
-docker compose up -d
+docker compose --env-file server/.env up -d
 ```
 Services started:
 - **PostgreSQL**: `localhost:5432`
@@ -234,7 +235,7 @@ cd client
 npm install
 npm run dev
 ```
-*Open `http://localhost:5173` in your browser.*
+*Open `http://localhost:3000` in your browser.*
 
 ---
 

@@ -23,13 +23,10 @@ type Hub struct {
 	userSockets map[uint]map[string]bool
 }
 
-func NewHub(verifier TokenVerifier, allowedOrigin any) *Hub {
+func NewHub(verifier TokenVerifier, allowedOrigins []string) *Hub {
 	opts := socket.DefaultServerOptions()
-	if allowedOrigin == nil || allowedOrigin == "" {
-		allowedOrigin = "*"
-	}
 	opts.SetCors(&types.Cors{
-		Origin:      allowedOrigin,
+		Origin:      allowedOrigins,
 		Credentials: true,
 	})
 

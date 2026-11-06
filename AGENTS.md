@@ -6,7 +6,7 @@ The product name in these docs is POPCORN, but the code has not been renamed. Ex
 
 ## Commands
 ```bash
-docker compose up -d                 # postgres + MinIO (:9000, console :9001); reads repo-root .env
+docker compose --env-file server/.env up -d  # postgres + MinIO (:9000, console :9001)
 cd server && go run main.go          # :8080; run from server/ (relative paths); auto-migrates and seeds on boot
 cd server && go test ./...           # unit tests
 cd client && npm run dev             # :3000, proxies /api -> localhost:8080
@@ -16,7 +16,7 @@ cd client && npm run build           # type-check + vite build
 cd client && npm run lint            # verify-locales + oxlint + eslint; both linters use --fix, so it EDITS files
 cd client && npm run verify-locales  # locale check only
 ```
-Verify before finishing: `go vet ./... && go test ./...`, `npm run type-check`, `npm test`, `npm run build-only`, and `npm run verify-locales` when locale files change. There is no CI in this repo (no `.github/`), so nothing runs these for you.
+Verify before finishing: `go vet ./... && go test ./...`, `npm run type-check`, `npm test`, `npm run build-only`, and `npm run verify-locales` when locale files change. CI (`.github/workflows/ci.yml`) runs these plus `oxlint` on every push/PR. ESLint is not in CI yet because of existing errors.
 
 ## Layout (only what matters)
 ```
@@ -92,9 +92,10 @@ Changing any of these affects stored data, live sessions, or other systems:
 - User-visible "REMOVY" text still exists in `client/index.html`, `manifest.json`, i18n files, page titles, and email templates. Rebranding it is a separate task.
 
 ## Gotchas
-- `main.go` loads only `../.env` (the repo root), and `docker compose` reads the root `.env` too. A `server/.env` is not loaded unless its values are exported some other way.
-- CORS origins are hard-coded in two places, `main.go` and `router/router.go`, and both still list `movie-hub-official.pages.dev`. Update both together.
-- The dev client runs on :3000, but the README and the `CORS_ALLOWED_ORIGIN` default say :5173.
+- Env precedence: real environment > `server/.env` > repo-root `.env` (`config.LoadDotEnv`). `docker compose` needs `--env-file server/.env`.
+- CORS has one source: `CORS_ALLOWED_ORIGIN` (comma-separated exact origins, no wildcard), used by Fiber, Socket.io, and the `/socket.io` handler in `main.go`. Production must set its frontend origin.
+- `node_modules` is platform-specific. After moving between OSes, run `npm ci` in `client/`.
+- `client/dist` is committed, so `npm run build-only` dirties the tree. Restore it with `git restore client/dist && git clean -fd client/dist` unless you mean to update it.
 - `npm run lint` rewrites files, so run it only when you accept those edits.
 - Huge files: UserBmol.vue (~2.4k), BmolSection.vue (~1.8k), TVDetailView / EditProfile / MovieDetailView (~1.6k), HomeView (~1.4k), MainLayout (~1.3k), MovieReviews (~1.3k). Use grep + ranged reads, not full reads.
 - `server/tmp/` is air build output (`.air.toml`). `components/HelloWorld.vue`, `TheWelcome.vue`, and `WelcomeItem.vue` look like Vite scaffold leftovers; check usage before relying on or removing them.

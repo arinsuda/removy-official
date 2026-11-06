@@ -19,13 +19,12 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/adaptor"
 	"github.com/gofiber/fiber/v3/middleware/cors"
-	"github.com/joho/godotenv"
 )
 
 func main() {
 
-	if err := godotenv.Load("../.env"); err != nil {
-		log.Println("⚠️  No .env file found, falling back to system env")
+	if err := config.LoadDotEnv(); err != nil {
+		log.Fatalf("❌ Env file error: %v", err)
 	}
 
 	cfg, err := config.Load()
@@ -42,7 +41,7 @@ func main() {
 	})
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{cfg.CORS.AllowedOrigin, "http://localhost:3000", "http://localhost:5173", "https://movie-hub-official.pages.dev"},
+		AllowOrigins:     cfg.CORS.AllowedOrigins,
 		AllowCredentials: true,
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -56,7 +55,8 @@ func main() {
 	mainHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.URL.Path, "/socket.io") {
 			origin := r.Header.Get("Origin")
-			if origin != "" {
+			if cfg.CORS.IsAllowed(origin) {
+				w.Header().Set("Vary", "Origin")
 				w.Header().Set("Access-Control-Allow-Origin", origin)
 				w.Header().Set("Access-Control-Allow-Credentials", "true")
 				w.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, Authorization, X-Requested-With")
