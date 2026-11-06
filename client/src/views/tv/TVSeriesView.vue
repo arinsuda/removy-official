@@ -434,7 +434,7 @@ import SkeletonGrid from "@/components/ui/skeleton/SkeletonGrid.vue"
 
 <style scoped>
   .list-page {
-    background: #141414;
+    background: var(--color-surface);
     min-height: 100vh;
   }
   .page-header {

@@ -186,7 +186,7 @@ const copyAccountNumber = async () => {
 .donate-page {
   font-family: var(--font-sans);
   min-height: 100vh;
-  background-color: #0a0a0a;
+  background-color: var(--color-surface);
   color: #f5f5f5;
   position: relative;
   overflow: hidden;

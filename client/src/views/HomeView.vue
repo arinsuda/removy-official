@@ -714,7 +714,7 @@ import SkeletonBlock from "@/components/ui/skeleton/SkeletonBlock.vue"
 
 <style scoped>
   .home {
-    background: #0d0d0f;
+    background: var(--color-surface);
     min-height: 100vh;
     color: #e2e8f0;
   }

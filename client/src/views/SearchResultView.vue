@@ -407,7 +407,7 @@ onMounted(() => {
 <style scoped>
 .search-page {
   min-height: calc(100vh - 64px);
-  background: #141414;
+  background: var(--color-surface);
   color: #f0f0f0;
   font-family: var(--font-sans);
 }

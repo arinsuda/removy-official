@@ -794,7 +794,7 @@ import SkeletonMediaDetail from "@/components/ui/skeleton/SkeletonMediaDetail.vu
     --red: var(--color-brand);
     --gold: #f5c518;
     --neon-pink: #ff2a74;
-    --bg: #080808;
+    --bg: var(--color-surface);
     --surface: #121212;
     --surface2: #1c1c1c;
     --border: rgba(255, 255, 255, 0.08);

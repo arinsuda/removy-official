@@ -270,7 +270,7 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    background: #0a0a0a;
+    background: var(--color-surface);
   }
   .auth-bg {
     position: absolute;

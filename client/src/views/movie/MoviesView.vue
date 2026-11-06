@@ -359,7 +359,7 @@ onUnmounted(() => {
 
 <style scoped>
 .list-page {
-  background: #141414;
+  background: var(--color-surface);
   min-height: 100vh;
 }
 .page-header {

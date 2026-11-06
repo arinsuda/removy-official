@@ -239,7 +239,7 @@ watch(userId, () => {
 <style scoped>
 .library-root {
   font-family: var(--font-sans);
-  background-color: #0c0c0e;
+  background-color: var(--color-surface);
   color: #f3f4f6;
   min-height: 100vh;
   padding: 2.5rem 2rem;

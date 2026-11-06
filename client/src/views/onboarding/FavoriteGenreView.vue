@@ -407,7 +407,7 @@ import SkeletonBlock from "@/components/ui/skeleton/SkeletonBlock.vue"
     display: flex;
     align-items: flex-start;
     justify-content: center;
-    background: #0a0a0a;
+    background: var(--color-surface);
     padding: 2rem 1rem 3rem;
   }
 
