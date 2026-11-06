@@ -56,21 +56,28 @@ func Connect(cfg *config.Config) {
 	DB = db
 	log.Println("✅ Database connected")
 
-	if err := autoMigrate(db); err != nil {
-		log.Fatalf("❌ AutoMigrate failed: %v", err)
-	}
-
-	if err := runSQLMigrations(db, cfg); err != nil {
-		log.Fatalf("❌ SQL migrations failed: %v", err)
-	}
-
-	if err := seedInitialData(db); err != nil {
-		log.Fatalf("❌ Seed roles failed: %v", err)
+	if err := Migrate(db, cfg); err != nil {
+		log.Fatalf("❌ Migration failed: %v", err)
 	}
 
 	if err := achievementsmodule.SeedFromFile(db, "database/seeder/achievement.json"); err != nil {
 		log.Fatalf("❌ Seed achievements failed: %v", err)
 	}
+}
+
+// Migrate runs AutoMigrate, the versioned SQL migrations and the role/admin seed.
+// It is the entry point shared by Connect and the Postgres integration tests.
+func Migrate(db *gorm.DB, cfg *config.Config) error {
+	if err := autoMigrate(db); err != nil {
+		return fmt.Errorf("automigrate: %w", err)
+	}
+	if err := runSQLMigrations(db, cfg); err != nil {
+		return fmt.Errorf("sql migrations: %w", err)
+	}
+	if err := seedInitialData(db); err != nil {
+		return fmt.Errorf("seed: %w", err)
+	}
+	return nil
 }
 
 func autoMigrate(db *gorm.DB) error {
@@ -391,6 +398,10 @@ func runSQLMigrations(db *gorm.DB, cfg *config.Config) error {
 	if err := runMigrationWithHistoryTx(db, "20261106_rename_legend_achievement", cfg.DB.MigrationLockTimeoutMs, cfg.DB.MigrationStatementTimeoutMs, func(tx *gorm.DB) error {
 		return tx.Exec(`UPDATE achievements SET name = 'Popcorn Legend' WHERE name = 'Removy Legend'`).Error
 	}); err != nil {
+		return err
+	}
+
+	if err := runMigrationWithHistory(db, "20261107_user_identity_unique_ensure", migrate.UserIdentityUniqueEnsure); err != nil {
 		return err
 	}
 
