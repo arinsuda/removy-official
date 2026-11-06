@@ -68,6 +68,27 @@ client/src/
 | Admin | admin_module | views/admin/, layouts/AdminLayout.vue, stores/admin.ts |
 | Onboarding, donate, about | — | views/onboarding/, views/aboutus/ |
 
+## Design system (client)
+Tokens live in `client/src/assets/styles/main.css` (`@theme static`); use them as Tailwind utilities (`bg-surface`, `text-text-muted`, `border-border`).
+| Token | Value | Use |
+|---|---|---|
+| `surface` / `surface-2` / `surface-3` | #0b0b0c / #151517 / #202023 | page root / cards / fills |
+| `border` / `border-strong` | white 8% / 14% | hairlines / emphasized edges |
+| `text-primary` / `text-secondary` / `text-muted` | #f5f5f7 / #a1a1aa / #8a8a8e | text |
+| `brand` / `brand-hover` / `on-brand` | #f5432c / #ff5a42 / #fff | actions |
+| `success` / `warning` / `danger` / `info` | #34c759 / #fbbf24 / #ff5a52 / #38abeb | status (`danger` = destructive) |
+| `rating`, `focus`, `accent` | #fbbf24, #f5f5f7, #ffd93b | stars, focus ring, highlight |
+| `font-sans` | Noto Sans Thai first | only font stack; loaded once from `index.html` |
+| `text-caption..display`, `rounded-card`, `rounded-btn` | see file | type scale (not migrated yet), radii |
+- Light mode later = one `[data-theme=light]` override block of these variables. Avoid `dark:` variants.
+- Hard-coded color mapping: #080808-#141414 page roots -> `surface`; #111-#1a1a1a cards -> `surface-2`; #1f1f1f/#2a2a2a fills -> `surface-3`; white alpha 5-8% -> `border`, 12-15% -> `border-strong`; #e1251b/#f5432c -> `brand` (actions) or `danger` (destructive); #f5c518/#fbbf24 -> `rating`.
+- Leave alone: share templates, poster scrims, `PopcornRatingIcon` gradients.
+- Convert on edit: when you touch a file, convert its hard-coded colors. Never run a codemod over the repo.
+- `--c-*` variables are legacy aliases to the tokens; remove them file by file, don't add new ones.
+- `designTokens.spec.ts` is a ratchet: it fails if `.vue` hex/rgb counts or `--c-` definitions grow. Lower its baseline when counts drop.
+- Breakpoints for new CSS: 480/640/768/1024/1280, mobile-first (`min-width`).
+- Input focus ring is global (`motion.css`); add `data-focus-custom` to opt out when a control draws its own.
+
 ## Hard rules (invariants)
 1. Ratings run from 0.5 to 5.0 in 0.5 steps, enforced by DB constraint `chk_reviews_rating_step`. Reviews have a unique constraint per user and media (migration `review_unique_constraint_v1`).
 2. Library entries must not duplicate; a partial unique index guards this (`idx_library_items_user_media_list`).
