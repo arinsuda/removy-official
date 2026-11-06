@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/arinsuda/movie-hub/config"
+	"github.com/arinsuda/movie-hub/internal/identity_policy"
 	"github.com/arinsuda/movie-hub/internal/mailer"
 	"github.com/arinsuda/movie-hub/internal/notification_module"
 	"github.com/arinsuda/movie-hub/internal/shared/storage"
@@ -334,6 +335,13 @@ func (s *Service) HandleGoogleCallback(ctx context.Context, code, stateStr, cook
 				if err := txDB.Where("id = ? AND is_active = true", identity.UserID).First(&u).Error; err != nil {
 					return ErrUserInactive
 				}
+				if u.VerifiedEmailAt == nil && isProvenByGoogle(claims, u.Email) {
+					// Google vouches for the account's address: prove it through the policy
+					// (wipes anything planted while it was unverified) and keep this identity.
+					if err := s.proveWithGoogle(txDB, &u, claims); err != nil {
+						return err
+					}
+				}
 				sessionUser = &u
 			} else {
 				// 2. Check if POPCORN user with matching email exists
@@ -343,22 +351,11 @@ func (s *Service) HandleGoogleCallback(ctx context.Context, code, stateStr, cook
 
 				if err == nil {
 					// User exists with matching email
-					if IsAuthoritativeGoogleEmail(claims) {
-						// Auto-link Google identity to authoritative email
-						newIdentity := &user_module.UserIdentity{
-							UserID:          existingUser.ID,
-							Provider:        user_module.ProviderGoogle,
-							ProviderSubject: claims.Subject,
-							ProviderEmail:   claims.Email,
-						}
-						if err := txDB.Create(newIdentity).Error; err != nil {
-							return fmt.Errorf("failed to link Google identity: %w", err)
-						}
-
-						if existingUser.VerifiedEmailAt == nil {
-							now := time.Now().UTC()
-							existingUser.VerifiedEmailAt = &now
-							txDB.Model(&existingUser).Update("verified_email_at", now)
+					if isProvenByGoogle(claims, existingUser.Email) {
+						// Authoritative Google email: proves the address (wiping anything planted
+						// on an unverified account), then links this Google identity.
+						if err := s.proveWithGoogle(txDB, &existingUser, claims); err != nil {
+							return err
 						}
 						sessionUser = &existingUser
 					} else {
@@ -477,6 +474,55 @@ func (s *Service) HandleGoogleCallback(ctx context.Context, code, stateStr, cook
 	}
 
 	return tokenPair, sessionUser, tx.ReturnURL, nil
+}
+
+// isProvenByGoogle reports whether Google asserts ownership of email.
+func isProvenByGoogle(claims *GoogleIdentityClaims, email string) bool {
+	return claims.EmailVerified && IsAuthoritativeGoogleEmail(claims) && identity_policy.SameEmail(claims.Email, email)
+}
+
+// proveWithGoogle records Google's proof of u.Email and makes sure u has exactly
+// this Google identity. It reloads u so the caller sees the post-proof state.
+func (s *Service) proveWithGoogle(txDB *gorm.DB, u *user_module.User, claims *GoogleIdentityClaims) error {
+	if _, err := identity_policy.ProveEmail(txDB, identity_policy.Proof{
+		UserID: u.ID, Email: u.Email, Kind: identity_policy.KindGoogle,
+	}); err != nil {
+		return fmt.Errorf("prove email: %w", err)
+	}
+
+	// The user row is locked until commit, so this check cannot race another proof.
+	var identity user_module.UserIdentity
+	err := txDB.Where("user_id = ? AND provider = ?", u.ID, user_module.ProviderGoogle).First(&identity).Error
+	switch {
+	case err == nil:
+		if identity.ProviderSubject != claims.Subject {
+			return ErrGoogleIdentityAlreadyConnected
+		}
+	case errors.Is(err, gorm.ErrRecordNotFound):
+		newIdentity := &user_module.UserIdentity{
+			UserID:          u.ID,
+			Provider:        user_module.ProviderGoogle,
+			ProviderSubject: claims.Subject,
+			ProviderEmail:   claims.Email,
+		}
+		if err := txDB.Create(newIdentity).Error; err != nil {
+			if isUniqueViolation(err) {
+				return ErrGoogleIdentityAlreadyConnected
+			}
+			return fmt.Errorf("failed to link Google identity: %w", err)
+		}
+	default:
+		return err
+	}
+	return txDB.Preload("Role").First(u, u.ID).Error
+}
+
+func isUniqueViolation(err error) bool {
+	if errors.Is(err, gorm.ErrDuplicatedKey) {
+		return true
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "duplicate key") || strings.Contains(msg, "23505")
 }
 
 func (s *Service) DisconnectGoogleIdentity(ctx context.Context, userID uint) error {
@@ -676,23 +722,37 @@ func (s *Service) SendVerification(userID uint, email string) error {
 	return s.sendVerificationEmail(user)
 }
 
-func (s *Service) VerifyEmail(token string) error {
-	record, err := s.repo.FindEmailVerification(token)
-	if err != nil {
+// VerifyEmail consumes a verification token and proves the address it was
+// mailed to. password is the current password, when the person typed one: a
+// match keeps the account intact, otherwise planted credentials are wiped.
+func (s *Service) VerifyEmail(token string, password *string) error {
+	if token == "" {
 		return ErrInvalidToken
 	}
-
-	if record.IsExpired() {
-		_ = s.repo.DeleteEmailVerification(record.ID)
-		return ErrInvalidToken
-	}
-
-	if err := s.repo.MarkEmailVerified(record.UserID); err != nil {
-		return err
-	}
-
-	_ = s.repo.DeleteEmailVerification(record.ID)
-	return nil
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		var record user_module.EmailVerification
+		if err := tx.Where("token = ?", token).First(&record).Error; err != nil {
+			return ErrInvalidToken
+		}
+		// Consume first: concurrent clicks race on this row, only one deletes it.
+		del := tx.Delete(&user_module.EmailVerification{}, record.ID)
+		if del.Error != nil {
+			return del.Error
+		}
+		if del.RowsAffected != 1 || record.IsExpired() || record.Email == nil {
+			return ErrInvalidToken
+		}
+		_, err := identity_policy.ProveEmail(tx, identity_policy.Proof{
+			UserID: record.UserID, Email: *record.Email, Kind: identity_policy.KindVerifyLink, PresentedPassword: password,
+		})
+		if err != nil {
+			if errors.Is(err, identity_policy.ErrEmailMismatch) || errors.Is(err, identity_policy.ErrUserNotFound) || errors.Is(err, identity_policy.ErrUserInactive) {
+				return ErrInvalidToken
+			}
+			return err
+		}
+		return nil
+	})
 }
 
 func (s *Service) ResendVerification(email string) error {
@@ -737,6 +797,7 @@ func (s *Service) sendVerificationEmail(u *user_module.User) error {
 		UserID:    u.ID,
 		Token:     rawToken,
 		ExpiresAt: time.Now().Add(24 * time.Hour),
+		Email:     &u.Email, // bound: the token only proves this address, not whatever the email becomes
 	}
 
 	if err := s.repo.CreateEmailVerification(ev); err != nil {

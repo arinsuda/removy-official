@@ -110,7 +110,7 @@ func (h *Handler) VerifyEmail(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "missing token"})
 	}
 
-	if err := h.svc.VerifyEmail(token); err != nil {
+	if err := h.svc.VerifyEmail(token, nil); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid or expired token"})
 	}
 

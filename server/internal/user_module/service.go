@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/arinsuda/movie-hub/internal/identity_policy"
 	"github.com/arinsuda/movie-hub/internal/privacy_policy"
 	"github.com/arinsuda/movie-hub/internal/shared/storage"
 	"golang.org/x/crypto/bcrypt"
@@ -331,6 +332,7 @@ func (s *Service) ForgotPassword(email string) error {
 		UserID:      user.ID,
 		HashedToken: string(hashedToken),
 		ExpiresAt:   time.Now().Add(1 * time.Hour),
+		Email:       &user.Email, // bound: only valid while this is still the account's address
 	}
 	if err := s.repo.UpsertPasswordResetToken(record); err != nil {
 		return err
@@ -369,18 +371,37 @@ func (s *Service) ResetPassword(userID uint, rawToken string, req ResetPasswordR
 		return ErrPasswordResetTokenInvalid
 	}
 
+	// A token minted before the email column existed, or for another address, proves nothing.
+	if record.Email == nil {
+		return ErrPasswordResetTokenInvalid
+	}
+
 	hashed, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
+	hashedStr := string(hashed)
 
-	if err := s.repo.UpdatePassword(userID, string(hashed)); err != nil {
+	return s.repo.db.Transaction(func(tx *gorm.DB) error {
+		// Consume first: concurrent uses race on this row and only one deletes it.
+		del := tx.Delete(&PasswordResetToken{}, record.ID)
+		if del.Error != nil {
+			return del.Error
+		}
+		if del.RowsAffected != 1 {
+			return ErrPasswordResetTokenInvalid
+		}
+		_, err := identity_policy.ProveEmail(tx, identity_policy.Proof{
+			UserID: userID, Email: *record.Email, Kind: identity_policy.KindPasswordReset, NewPasswordHash: &hashedStr,
+		})
+		switch {
+		case errors.Is(err, identity_policy.ErrEmailMismatch):
+			return ErrPasswordResetTokenInvalid
+		case errors.Is(err, identity_policy.ErrUserNotFound), errors.Is(err, identity_policy.ErrUserInactive):
+			return ErrUserNotFound
+		}
 		return err
-	}
-
-	_ = s.repo.DeletePasswordResetToken(userID)
-
-	return nil
+	})
 }
 
 func validateNewPassword(newPassword, confirmPassword string) error {

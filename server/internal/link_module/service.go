@@ -15,6 +15,7 @@ import (
 
 	"github.com/arinsuda/movie-hub/config"
 	"github.com/arinsuda/movie-hub/internal/auth_module"
+	"github.com/arinsuda/movie-hub/internal/identity_policy"
 	"github.com/arinsuda/movie-hub/internal/mailer"
 	"github.com/arinsuda/movie-hub/internal/user_module"
 	"github.com/google/uuid"
@@ -387,7 +388,7 @@ func (s *Service) claimAttempt(pendingID string) (*LinkPending, error) {
 	}
 	var p LinkPending
 	res := s.db.Raw(`UPDATE link_pending SET attempts = attempts + 1 WHERE id = ? AND attempts < ? AND expires_at > ?
-		RETURNING id, local_user_id, remote_platform, remote_user_id, remote_email, attempts, code_hash, code_expires_at, expires_at, created_at`,
+		RETURNING id, local_user_id, remote_platform, remote_user_id, remote_email, attempts, code_hash, code_expires_at, code_email, expires_at, created_at`,
 		pendingID, MaxAttempts, time.Now()).Scan(&p)
 	if res.Error != nil || res.RowsAffected == 0 {
 		return nil, ErrPendingInvalid
@@ -417,7 +418,9 @@ func (s *Service) Confirm(pendingID, method, password, code string) (*Result, er
 			return nil, ErrBadCredentials
 		}
 	case MethodEmail:
+		// The code only counts while it was mailed to the address the account has now.
 		if p.CodeHash == nil || p.CodeExpiresAt == nil || time.Now().After(*p.CodeExpiresAt) || len(code) != 6 ||
+			p.CodeEmail == nil || !identity_policy.SameEmail(*p.CodeEmail, u.Email) ||
 			subtle.ConstantTimeCompare([]byte(*p.CodeHash), []byte(codeHash(p.ID, code))) != 1 {
 			return nil, ErrBadCredentials
 		}
@@ -427,18 +430,27 @@ func (s *Service) Confirm(pendingID, method, password, code string) (*Result, er
 		via = ViaEmailCode
 	}
 	err = s.db.Transaction(func(tx *gorm.DB) error {
+		if method == MethodEmail {
+			// The code proves the mailbox, not the person: the policy wipes whatever an
+			// unverified account carries before the link is created.
+			if _, err := identity_policy.ProveEmail(tx, identity_policy.Proof{
+				UserID: u.ID, Email: *p.CodeEmail, Kind: identity_policy.KindLinkCode,
+			}); err != nil {
+				if errors.Is(err, identity_policy.ErrEmailMismatch) || errors.Is(err, identity_policy.ErrUserNotFound) || errors.Is(err, identity_policy.ErrUserInactive) {
+					return ErrBadCredentials
+				}
+				return err
+			}
+		}
 		if err := s.createLink(tx, u.ID, p.RemoteUserID, via); err != nil {
 			return err
 		}
-		if method == MethodEmail && u.VerifiedEmailAt == nil {
-			now := time.Now()
-			if err := tx.Model(&user_module.User{}).Where("id = ?", u.ID).Update("verified_email_at", now).Error; err != nil {
-				return err
-			}
-			u.VerifiedEmailAt = &now
-		}
 		return tx.Exec(`DELETE FROM link_pending WHERE id = ?`, p.ID).Error
 	})
+	if err != nil {
+		return nil, err
+	}
+	u, err = s.loadUser(u.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -466,7 +478,7 @@ func (s *Service) SendCode(pendingID string) error {
 	code := fmt.Sprintf("%06d", n)
 	exp := time.Now().Add(CodeTTL)
 	if err := s.db.Model(&LinkPending{}).Where("id = ?", p.ID).
-		Updates(map[string]any{"code_hash": codeHash(p.ID, code), "code_expires_at": exp}).Error; err != nil {
+		Updates(map[string]any{"code_hash": codeHash(p.ID, code), "code_expires_at": exp, "code_email": u.Email}).Error; err != nil {
 		return err
 	}
 	if s.mailer == nil || !s.mailer.IsEnabled() {
