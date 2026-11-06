@@ -185,7 +185,7 @@ func (h *Handler) ChangePassword(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "confirm_password is required"})
 	}
 
-	if err := h.svc.ChangePassword(targetID, claims.UserID, req); err != nil {
+	if err := h.svc.ChangePassword(targetID, claims.UserID, claims.TokenVersion, req); err != nil {
 		return handlePasswordError(c, err)
 	}
 
@@ -200,6 +200,10 @@ func handlePasswordError(c fiber.Ctx, err error) error {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "forbidden"})
 	case errors.Is(err, ErrInvalidCredentials):
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "incorrect current password"})
+	case errors.Is(err, ErrSessionStale):
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	case errors.Is(err, ErrPasswordNotSet):
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": err.Error(), "code": "PASSWORD_NOT_SET"})
 	default:
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}

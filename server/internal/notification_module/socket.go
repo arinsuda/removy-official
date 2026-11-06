@@ -80,6 +80,12 @@ func NewHub(verifier TokenVerifier, allowedOrigins []string) *Hub {
 	return h
 }
 
+// DisconnectUser drops every live socket of the user. Called after a commit that
+// revoked their sessions, so a stolen connection stops receiving notifications.
+func (h *Hub) DisconnectUser(userID uint) {
+	h.io.In(roomFor(userID)).DisconnectSockets(true)
+}
+
 func (h *Hub) UniqueOnlineCount() int {
 	h.mu.RLock()
 	defer h.mu.RUnlock()

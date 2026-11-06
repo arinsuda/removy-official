@@ -227,7 +227,7 @@ func newEnv(t *testing.T) *env {
 	e.auth.SetGoogleOAuthProvider(e.google)
 	e.link = link_module.RegisterRoutes(api, db, e.cfg, m, e.auth)
 
-	mw := middleware.NewAuthMiddleware(e.cfg)
+	mw := middleware.NewAuthMiddleware(e.cfg, db)
 	protected := api.Group("/", mw.RequireAuth)
 	protected.Get("/ping", func(c fiber.Ctx) error {
 		return c.JSON(fiber.Map{"uid": middleware.GetClaims(c).UserID})
@@ -314,3 +314,5 @@ func (e *env) googleLogin() (*auth_module.TokenPair, *user_module.User, error) {
 	pair, u, _, err := e.auth.HandleGoogleCallback(ctx, "code", state, state, "ua", "1.2.3.4")
 	return pair, u, err
 }
+
+func modelWithID(id uint) gorm.Model { return gorm.Model{ID: id} }

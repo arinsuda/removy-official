@@ -21,6 +21,8 @@ var (
 	ErrPasswordResetTokenNotFound = errors.New("password reset token not found")
 	ErrPasswordResetTokenExpired  = errors.New("password reset token expired")
 	ErrPasswordResetTokenInvalid  = errors.New("password reset token invalid")
+	ErrPasswordNotSet             = errors.New("no password set, use password reset to create one")
+	ErrSessionStale               = errors.New("session is no longer valid")
 )
 
 type repository struct {

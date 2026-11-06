@@ -275,7 +275,7 @@ func (s *Service) VerifyEmailChange(
 	return s.GetProfile(targetUserID, requesterID)
 }
 
-func (s *Service) ChangePassword(targetUserID, requesterID uint, req ChangePasswordRequest) error {
+func (s *Service) ChangePassword(targetUserID, requesterID uint, sessionVersion int, req ChangePasswordRequest) error {
 	if targetUserID != requesterID {
 		return ErrForbidden
 	}
@@ -284,26 +284,38 @@ func (s *Service) ChangePassword(targetUserID, requesterID uint, req ChangePassw
 		return err
 	}
 
-	user, _, _, _, err := s.repo.FindByID(targetUserID)
-	if err != nil {
-		return err
-	}
-
-	if user.Password != nil && *user.Password != "" {
-		if err := bcrypt.CompareHashAndPassword([]byte(*user.Password), []byte(req.OldPassword)); err != nil {
-			return ErrInvalidCredentials
-		}
-		if err := bcrypt.CompareHashAndPassword([]byte(*user.Password), []byte(req.NewPassword)); err == nil {
-			return errors.New("new password must be different from current password")
-		}
-	}
-
 	hashed, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
 
-	return s.repo.UpdatePassword(targetUserID, string(hashed))
+	return s.repo.db.Transaction(func(tx *gorm.DB) error {
+		// A request that passed RequireAuth just before a claim must not write after it.
+		if err := identity_policy.EnsureSession(tx, targetUserID, sessionVersion, true); err != nil {
+			if errors.Is(err, identity_policy.ErrSessionStale) {
+				return ErrSessionStale
+			}
+			return err
+		}
+
+		var current struct{ Password *string }
+		if err := tx.Raw(`SELECT password FROM users WHERE id = ? AND deleted_at IS NULL`, targetUserID).Scan(&current).Error; err != nil {
+			return err
+		}
+		// First passwords are set only through a reset link (proof of the mailbox),
+		// never through an authenticated session that may belong to a squatter.
+		if current.Password == nil || *current.Password == "" {
+			return ErrPasswordNotSet
+		}
+		if err := bcrypt.CompareHashAndPassword([]byte(*current.Password), []byte(req.OldPassword)); err != nil {
+			return ErrInvalidCredentials
+		}
+		if err := bcrypt.CompareHashAndPassword([]byte(*current.Password), []byte(req.NewPassword)); err == nil {
+			return errors.New("new password must be different from current password")
+		}
+
+		return tx.Model(&User{}).Where("id = ?", targetUserID).Update("password", string(hashed)).Error
+	})
 }
 
 func (s *Service) ForgotPassword(email string) error {
@@ -382,7 +394,8 @@ func (s *Service) ResetPassword(userID uint, rawToken string, req ResetPasswordR
 	}
 	hashedStr := string(hashed)
 
-	return s.repo.db.Transaction(func(tx *gorm.DB) error {
+	var out identity_policy.Outcome
+	err = s.repo.db.Transaction(func(tx *gorm.DB) error {
 		// Consume first: concurrent uses race on this row and only one deletes it.
 		del := tx.Delete(&PasswordResetToken{}, record.ID)
 		if del.Error != nil {
@@ -391,7 +404,8 @@ func (s *Service) ResetPassword(userID uint, rawToken string, req ResetPasswordR
 		if del.RowsAffected != 1 {
 			return ErrPasswordResetTokenInvalid
 		}
-		_, err := identity_policy.ProveEmail(tx, identity_policy.Proof{
+		var err error
+		out, err = identity_policy.ProveEmail(tx, identity_policy.Proof{
 			UserID: userID, Email: *record.Email, Kind: identity_policy.KindPasswordReset, NewPasswordHash: &hashedStr,
 		})
 		switch {
@@ -402,6 +416,11 @@ func (s *Service) ResetPassword(userID uint, rawToken string, req ResetPasswordR
 		}
 		return err
 	})
+	if err != nil {
+		return err
+	}
+	out.Publish(userID)
+	return nil
 }
 
 func validateNewPassword(newPassword, confirmPassword string) error {

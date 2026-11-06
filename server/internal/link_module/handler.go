@@ -72,7 +72,7 @@ func (h *Handler) CreateHandoff(c fiber.Ctx) error {
 	if err := c.Bind().JSON(&req); err != nil {
 		return errJSON(c, fiber.StatusBadRequest, "invalid request body")
 	}
-	url, ttl, err := h.svc.CreateHandoff(claims.UserID, req.Target)
+	url, ttl, err := h.svc.CreateHandoff(claims.UserID, claims.TokenVersion, req.Target)
 	if err != nil {
 		return h.fail(c, err)
 	}
@@ -81,6 +81,9 @@ func (h *Handler) CreateHandoff(c fiber.Ctx) error {
 
 func (h *Handler) sessionResponse(c fiber.Ctx, res *Result) error {
 	pair, err := h.svc.auth.IssueAndStoreTokens(res.User, c.Get("User-Agent"), c.IP())
+	if errors.Is(err, auth_module.ErrEmailUnverified) {
+		return errJSON(c, fiber.StatusForbidden, "email not verified")
+	}
 	if err != nil {
 		log.Printf("ERROR link: issue tokens: %v", err)
 		return errJSON(c, fiber.StatusInternalServerError, "internal server error")
@@ -173,7 +176,7 @@ func (h *Handler) fail(c fiber.Ctx, err error) error {
 		})
 	case errors.Is(err, ErrDisabled):
 		return errJSON(c, fiber.StatusServiceUnavailable, err.Error())
-	case errors.Is(err, ErrInvalidToken), errors.Is(err, ErrBadCredentials):
+	case errors.Is(err, ErrInvalidToken), errors.Is(err, ErrBadCredentials), errors.Is(err, ErrSessionStale):
 		return errJSON(c, fiber.StatusUnauthorized, err.Error())
 	case errors.Is(err, ErrInvalidTarget), errors.Is(err, ErrInvalidMethod), errors.Is(err, ErrPendingInvalid):
 		return errJSON(c, fiber.StatusBadRequest, err.Error())

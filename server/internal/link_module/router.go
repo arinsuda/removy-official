@@ -25,7 +25,7 @@ func rateLimit(max int, window time.Duration) fiber.Handler {
 func RegisterRoutes(api fiber.Router, db *gorm.DB, cfg *config.Config, m *mailer.Mailer, authSvc *auth_module.Service) *Service {
 	svc := NewService(db, cfg.Link, authSvc, m)
 	h := &Handler{svc: svc, cfg: cfg}
-	mw := auth_module.NewMiddleware(cfg)
+	mw := auth_module.NewMiddleware(cfg, db)
 	authSvc.SetLoginFallback(svc)
 
 	internal := api.Group("/internal/link", rateLimit(120, time.Minute), h.requireSignature)

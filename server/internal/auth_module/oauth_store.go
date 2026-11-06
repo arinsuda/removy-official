@@ -34,9 +34,11 @@ type OAuthTransaction struct {
 	CodeChallenge string                 `json:"code_challenge"`
 	Intent        OAuthTransactionIntent `json:"intent"`
 	UserID        uint                   `json:"user_id,omitempty"`
-	ReturnURL     string                 `json:"return_url,omitempty"`
-	CreatedAt     time.Time              `json:"created_at"`
-	ExpiresAt     time.Time              `json:"expires_at"`
+	// UserVersion is the initiating session's epoch; the callback re-checks it under lock.
+	UserVersion int       `json:"user_version,omitempty"`
+	ReturnURL   string    `json:"return_url,omitempty"`
+	CreatedAt   time.Time `json:"created_at"`
+	ExpiresAt   time.Time `json:"expires_at"`
 }
 
 type OAuthTransactionStore interface {

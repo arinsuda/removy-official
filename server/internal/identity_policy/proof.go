@@ -53,6 +53,7 @@ type Outcome struct {
 	SamePerson       bool // unverified account, current password matched: everything kept
 	CredentialsWiped bool // planted credentials removed, session epoch bumped
 	PasswordReplaced bool // a reset stored the new password
+	SessionsRevoked  bool // token_version bumped; call Publish after commit
 }
 
 type lockedUser struct {
@@ -97,6 +98,7 @@ func ProveEmail(tx *gorm.DB, p Proof) (Outcome, error) {
 				return out, err
 			}
 			out.PasswordReplaced = true
+			out.SessionsRevoked = true
 			return out, deleteAll(tx, u.ID, resetScopeTables)
 		}
 		return out, nil
@@ -123,6 +125,7 @@ func ProveEmail(tx *gorm.DB, p Proof) (Outcome, error) {
 		return out, err
 	}
 	out.CredentialsWiped = true
+	out.SessionsRevoked = true
 	return out, deleteAll(tx, u.ID, wipeTables)
 }
 

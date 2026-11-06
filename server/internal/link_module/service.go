@@ -36,6 +36,7 @@ var (
 	ErrCodeNotAllowed  = errors.New("could not send code")
 	ErrNotLinked       = errors.New("not linked")
 	ErrEmailNotAllowed = errors.New("email taken")
+	ErrSessionStale    = errors.New("session is no longer valid")
 )
 
 // ConfirmRequiredError is returned by Redeem when the user must prove ownership.
@@ -150,7 +151,7 @@ func (s *Service) VerifyPassword(email, password string) (*RemoteUser, bool) {
 
 // ---- outgoing handoff ----
 
-func (s *Service) CreateHandoff(userID uint, target string) (string, int, error) {
+func (s *Service) CreateHandoff(userID uint, sessionVersion int, target string) (string, int, error) {
 	if !s.Enabled() {
 		return "", 0, ErrDisabled
 	}
@@ -169,7 +170,17 @@ func (s *Service) CreateHandoff(userID uint, target string) (string, int, error)
 		ExpiresAt:      time.Now().Add(HandoffTTL),
 		CreatedAt:      time.Now(),
 	}
-	if err := s.db.Create(row).Error; err != nil {
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		// Minting a handoff hands the account to another platform: only for a live session.
+		if err := identity_policy.EnsureSession(tx, userID, sessionVersion, false); err != nil {
+			if errors.Is(err, identity_policy.ErrSessionStale) {
+				return ErrSessionStale
+			}
+			return err
+		}
+		return tx.Create(row).Error
+	})
+	if err != nil {
 		return "", 0, err
 	}
 	// opportunistic cleanup of old rows
@@ -429,13 +440,16 @@ func (s *Service) Confirm(pendingID, method, password, code string) (*Result, er
 	if method == MethodEmail {
 		via = ViaEmailCode
 	}
+	var proof identity_policy.Outcome
 	err = s.db.Transaction(func(tx *gorm.DB) error {
 		if method == MethodEmail {
 			// The code proves the mailbox, not the person: the policy wipes whatever an
 			// unverified account carries before the link is created.
-			if _, err := identity_policy.ProveEmail(tx, identity_policy.Proof{
+			var err error
+			proof, err = identity_policy.ProveEmail(tx, identity_policy.Proof{
 				UserID: u.ID, Email: *p.CodeEmail, Kind: identity_policy.KindLinkCode,
-			}); err != nil {
+			})
+			if err != nil {
 				if errors.Is(err, identity_policy.ErrEmailMismatch) || errors.Is(err, identity_policy.ErrUserNotFound) || errors.Is(err, identity_policy.ErrUserInactive) {
 					return ErrBadCredentials
 				}
@@ -450,6 +464,7 @@ func (s *Service) Confirm(pendingID, method, password, code string) (*Result, er
 	if err != nil {
 		return nil, err
 	}
+	proof.Publish(u.ID)
 	u, err = s.loadUser(u.ID)
 	if err != nil {
 		return nil, err

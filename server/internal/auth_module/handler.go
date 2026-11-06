@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/arinsuda/movie-hub/config"
+	"github.com/arinsuda/movie-hub/internal/identity_policy"
 	"github.com/arinsuda/movie-hub/internal/user_module"
 	"github.com/gofiber/fiber/v3"
 )
@@ -250,6 +251,10 @@ func (h *Handler) GoogleCallback(c fiber.Ctx) error {
 			errCode = "google_identity_already_connected"
 		case errors.Is(err, ErrUserInactive):
 			errCode = "account_disabled"
+		case errors.Is(err, ErrGoogleEmailVerificationRequired):
+			errCode = "google_email_verification_required"
+		case errors.Is(err, identity_policy.ErrSessionStale):
+			errCode = "session_expired"
 		case errors.Is(err, ErrInvalidOAuthState), errors.Is(err, ErrOAuthTransactionNotFound):
 			errCode = "invalid_oauth_state"
 		}
