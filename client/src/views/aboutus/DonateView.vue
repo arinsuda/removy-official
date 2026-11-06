@@ -697,12 +697,6 @@ const copyAccountNumber = async () => {
   }
 }
 
-@keyframes pop-in {
-  0% { transform: scale(0.5); opacity: 0; }
-  70% { transform: scale(1.2); }
-  100% { transform: scale(1); opacity: 1; }
-}
-
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .gradient-sphere {

@@ -183,7 +183,7 @@
             @click="loadMoreNowPlaying"
             :disabled="isNowPlayingLoading"
           >
-            <i class="pi pi-spin pi-spinner" v-if="isNowPlayingLoading"></i>
+            <AppSpinner v-if="isNowPlayingLoading" />
             <span v-else>เพิ่มเติมสำหรับกําลังฉาย</span>
           </button>
         </div>
@@ -250,7 +250,7 @@
             @click="loadMoreUpcoming"
             :disabled="isUpcomingLoading"
           >
-            <i class="pi pi-spin pi-spinner" v-if="isUpcomingLoading"></i>
+            <AppSpinner v-if="isUpcomingLoading" />
             <span v-else>เพิ่มเติมสำหรับเร็วๆ นี้</span>
           </button>
         </div>
@@ -260,6 +260,7 @@
 </template>
 
 <script setup lang="ts">
+import AppSpinner from "@/components/ui/AppSpinner.vue"
   import { ref, onMounted, onUnmounted, watch } from "vue"
   import { useRouter } from "vue-router"
   import { movieApi } from "@/api/api"

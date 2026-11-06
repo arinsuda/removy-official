@@ -38,11 +38,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-if="adminStore.isLoadingAuditLogs">
-            <td colspan="7" class="text-center py-8">
-              <div class="spinner inline" />
-            </td>
-          </tr>
+          <SkeletonTableRows v-if="adminStore.isLoadingAuditLogs" :columns="7" />
           <tr v-else-if="auditLogs.length === 0">
             <td colspan="7" class="text-center py-8 text-muted">
               No audit logs recorded yet.
@@ -106,6 +102,7 @@
 </template>
 
 <script setup lang="ts">
+import SkeletonTableRows from "@/components/ui/skeleton/SkeletonTableRows.vue"
 import { ref, computed, onMounted } from "vue"
 import { useAdminStore } from "@/stores/admin"
 

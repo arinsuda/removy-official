@@ -109,7 +109,7 @@
               "
               @click="handleRequestOTP"
             >
-              <span v-if="emailSaving" class="btn-spinner" />
+              <AppSpinner v-if="emailSaving" />
               <template v-else><Mail :size="12" /> Send OTP</template>
             </button>
             <button
@@ -134,7 +134,7 @@
             class="email-action-btn email-action-btn--waiting"
             disabled
           >
-            <span class="btn-spinner" /> Waiting…
+            <AppSpinner /> Waiting…
           </button>
           <button
             v-else-if="emailStep === 'done'"
@@ -174,7 +174,7 @@
                 :disabled="otpValue.length !== 6 || otpConfirming"
                 @click="handleVerifyOTP"
               >
-                <span v-if="otpConfirming" class="btn-spinner" /><span v-else
+                <AppSpinner v-if="otpConfirming" /><span v-else
                   >Confirm</span
                 >
               </button>
@@ -187,7 +187,7 @@
         <transition name="otp-slide">
           <div v-if="emailStep === 'waiting'" class="otp-box otp-box--waiting">
             <div class="waiting-row">
-              <span class="waiting-spinner" />
+              <AppSpinner />
               <p class="otp-hint" style="margin: 0">
                 Verification link sent to <strong>{{ form.email }}</strong
                 >.<br />Click the link in your email to confirm.
@@ -411,7 +411,7 @@
             :disabled="pwLoading || !pwCanSubmit"
             @click="handleChangePassword"
           >
-            <span v-if="pwLoading" class="btn-spinner" />
+            <AppSpinner v-if="pwLoading" />
             <span v-else>Update Password</span>
           </button>
         </div>
@@ -455,7 +455,7 @@
               @click="handleDisconnectGoogle"
               :title="!googleStatus.can_disconnect ? 'Cannot disconnect your only authentication method' : ''"
             >
-              <span v-if="googleLoading" class="btn-spinner" />
+              <AppSpinner v-if="googleLoading" />
               <span v-else>Disconnect</span>
             </button>
             <button
@@ -465,7 +465,7 @@
               :disabled="googleLoading"
               @click="handleConnectGoogle"
             >
-              <span v-if="googleLoading" class="btn-spinner" />
+              <AppSpinner v-if="googleLoading" />
               <span v-else>Connect Google</span>
             </button>
           </div>
@@ -492,7 +492,7 @@
         :disabled="saving || !isDirty"
         @click="handleSave"
       >
-        <span v-if="saving" class="save-spinner" /><span v-else
+        <AppSpinner v-if="saving" /><span v-else
           >Save Changes</span
         >
       </button>
@@ -509,6 +509,7 @@
 </template>
 
 <script setup lang="ts">
+import AppSpinner from "@/components/ui/AppSpinner.vue"
 import { reactive, ref, computed, onMounted, onUnmounted, watch } from "vue";
 import {
   X,
@@ -1216,16 +1217,6 @@ watch(
   align-items: flex-start;
   gap: 12px;
 }
-.waiting-spinner {
-  width: 18px;
-  height: 18px;
-  border: 2px solid rgba(255, 255, 255, 0.15);
-  border-top-color: var(--c-sub);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
 .resend-btn {
   font-family: var(--font);
   font-size: 0.7rem;
@@ -1459,16 +1450,6 @@ watch(
   transform: translateY(-6px);
 }
 
-.btn-spinner {
-  width: 11px;
-  height: 11px;
-  border: 1.5px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-  display: inline-block;
-}
-
 /* Gender */
 .radio-group {
   display: flex;
@@ -1596,19 +1577,5 @@ watch(
 .footer-btn--save:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-.save-spinner {
-  width: 14px;
-  height: 14px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 </style>

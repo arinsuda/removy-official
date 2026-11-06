@@ -1,13 +1,17 @@
 <template>
-  <div class="flex animate-pulse gap-4 rounded-2xl border border-white/5 bg-neutral-900/20 p-5 mb-5">
-    <div class="h-10 w-10 shrink-0 rounded-full bg-white/10" />
+  <div class="mb-5 flex gap-4 rounded-2xl border border-white/5 bg-neutral-900/20 p-5">
+    <SkeletonBlock circle width="40px" height="40px" />
     <div class="flex-1 space-y-3.5">
-      <div class="flex justify-between items-center">
-        <div class="h-4 w-1/3 rounded bg-white/10" />
-        <div class="h-5 w-20 rounded-full bg-white/5" />
+      <div class="flex items-center justify-between">
+        <SkeletonBlock width="33%" height="16px" />
+        <SkeletonBlock width="80px" height="20px" radius="999px" />
       </div>
-      <div class="h-3 w-1/4 rounded bg-white/5" />
-      <div class="h-20 rounded-xl bg-white/[0.02]" />
+      <SkeletonBlock width="25%" height="12px" />
+      <SkeletonBlock height="80px" radius="12px" />
     </div>
   </div>
 </template>
+
+<script setup lang="ts">
+import SkeletonBlock from "@/components/ui/skeleton/SkeletonBlock.vue"
+</script>

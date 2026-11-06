@@ -110,7 +110,7 @@
               class="btn-primary form-item"
               :disabled="isLoading || !!error || !email"
             >
-              <span v-if="isLoading" class="spinner" /><span v-else
+              <AppSpinner v-if="isLoading" /><span v-else
                 >SEND RESET LINK</span
               >
             </button>
@@ -127,6 +127,7 @@
 </template>
 
 <script setup lang="ts">
+import AppSpinner from "@/components/ui/AppSpinner.vue"
   import { ref, onMounted, onUnmounted } from "vue"
   import { gsap } from "gsap"
   import {
@@ -628,20 +629,6 @@
     opacity: 0.6;
     cursor: not-allowed;
   }
-  .spinner {
-    width: 20px;
-    height: 20px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-top-color: #fff;
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-  }
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
   .form-footer {
     text-align: center;
     margin: 0;

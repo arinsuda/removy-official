@@ -7,9 +7,7 @@
       เลือกว่ากิจกรรมประเภทไหนของคุณจะไปแสดงในฟีดของคนที่ติดตามคุณอยู่
     </p>
 
-    <div v-if="loading" class="py-6 text-center text-xs text-white/40">
-      กำลังโหลดการตั้งค่า...
-    </div>
+    <SkeletonList v-if="loading" :count="3" />
 
     <p v-else-if="settingsError" class="py-6 text-center text-xs text-red-400">
       {{ settingsError }}
@@ -53,6 +51,7 @@
 </template>
 
 <script setup lang="ts">
+import SkeletonList from "@/components/ui/skeleton/SkeletonList.vue"
 import { onMounted } from "vue";
 import { storeToRefs } from "pinia";
 import { useFeedStore } from "@/stores/feed";

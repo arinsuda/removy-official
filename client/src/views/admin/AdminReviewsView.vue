@@ -59,11 +59,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-if="adminStore.isLoadingReviews">
-            <td colspan="8" class="text-center py-8">
-              <div class="spinner inline" />
-            </td>
-          </tr>
+          <SkeletonTableRows v-if="adminStore.isLoadingReviews" :columns="8" />
           <tr v-else-if="reviews.length === 0">
             <td colspan="8" class="text-center py-8 text-muted">
               No reviews found.
@@ -288,6 +284,7 @@
 </template>
 
 <script setup lang="ts">
+import SkeletonTableRows from "@/components/ui/skeleton/SkeletonTableRows.vue"
 import { ref, computed, onMounted } from "vue"
 import { RouterLink } from "vue-router"
 import { useAdminStore } from "@/stores/admin"

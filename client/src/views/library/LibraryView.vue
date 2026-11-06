@@ -3,10 +3,7 @@
     <div class="grain" aria-hidden="true" />
 
     <!-- Loading State -->
-    <div v-if="loading" class="library-loading">
-      <div class="loading-ring" />
-      <span class="loading-text">{{ $t("common.loading") }}</span>
-    </div>
+    <SkeletonProfile v-if="loading" />
 
     <!-- Main Layout -->
     <div v-else class="library-layout">
@@ -142,6 +139,7 @@
 </template>
 
 <script setup lang="ts">
+import SkeletonProfile from "@/components/ui/skeleton/SkeletonProfile.vue"
 import { ref, computed, onMounted, watch } from "vue"
 import { useRoute } from "vue-router"
 import { useAuthStore } from "@/stores/auth"
@@ -256,34 +254,6 @@ watch(userId, () => {
   background-size: 24px 24px;
   pointer-events: none;
   z-index: 1;
-}
-
-/* Loading styling */
-.library-loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 70vh;
-  gap: 1rem;
-}
-
-.loading-ring {
-  width: 48px;
-  height: 48px;
-  border: 3px solid rgba(225, 37, 27, 0.1);
-  border-top-color: #e1251b;
-  border-radius: 50%;
-  animation: spin 1s infinite linear;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.loading-text {
-  font-size: 0.95rem;
-  color: #9ca3af;
 }
 
 .library-layout {

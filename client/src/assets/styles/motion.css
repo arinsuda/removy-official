@@ -1,0 +1,121 @@
+/*
+ * Shared motion for elements that lead somewhere (buttons, links, cards).
+ * Static content must not use these classes. Keep hover effects behind
+ * (hover: hover) so touch devices do not get stuck in the hovered state.
+ */
+:root {
+  --motion-fast: 140ms;
+  --motion-base: 320ms;
+  --motion-wave: 700ms;
+  --motion-wave-rise: 1150ms;
+  --motion-wave-text: 400ms;
+  --ease-water: cubic-bezier(0.37, 0, 0.63, 1);
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --focus-ring-color: var(--color-accent);
+  --focus-input-shadow: 0 0 0 2px var(--color-brand), 0 0 0 6px rgb(245 67 44 / 20%),
+    0 8px 24px rgb(245 67 44 / 18%);
+  --slide-fill: var(--color-accent);
+  --slide-fill-text: #141414;
+}
+
+/*
+ * Keyboard focus ring. :where keeps specificity at zero, so components can
+ * still override it. An outline is used because overflow: hidden cannot clip it.
+ */
+:where(a, button, summary, [role="button"], [tabindex]):focus-visible {
+  outline: 2px solid var(--focus-ring-color);
+  outline-offset: 3px;
+  animation: focus-ring-in 220ms var(--ease-out-soft);
+}
+
+@keyframes focus-ring-in {
+  from {
+    outline-color: transparent;
+    outline-offset: 7px;
+  }
+}
+
+/*
+ * Water fill: a huge, almost-round blob rises from below. Its slow rotation
+ * makes the visible top edge ripple. The rotation pauses instead of resetting,
+ * so leaving the element drains the water without a jump.
+ */
+.slide-fill {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  transition:
+    color var(--motion-wave-text) var(--ease-water) 120ms,
+    border-color var(--motion-wave) var(--ease-water),
+    transform var(--motion-fast) var(--ease-out-soft);
+}
+
+.slide-fill::before {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  z-index: -1;
+  width: 220%;
+  aspect-ratio: 1;
+  margin-left: -110%;
+  background: var(--slide-fill);
+  border-radius: 43% 47% 44% 46%;
+  /* A paused rotation can leave a corner above the box, so rest further down. */
+  translate: 0 6%;
+  transition: translate var(--motion-wave) var(--ease-water);
+  animation: water-ripple 5s linear infinite paused;
+}
+
+@keyframes water-ripple {
+  to {
+    rotate: 360deg;
+  }
+}
+
+@media (hover: hover) {
+  .slide-fill:not(:disabled, [aria-disabled="true"]):hover {
+    color: var(--slide-fill-text);
+    border-color: var(--slide-fill);
+    transition-duration: 650ms, var(--motion-wave-rise), var(--motion-fast);
+  }
+
+  .slide-fill:not(:disabled, [aria-disabled="true"]):hover::before {
+    translate: 0 -60%;
+    /* Applies while rising; the base rule's --motion-wave controls the drain. */
+    transition-duration: var(--motion-wave-rise);
+    animation-play-state: running;
+  }
+
+  /* Trailing icon nudges toward the destination. */
+  .link-nudge svg {
+    transition: transform var(--motion-fast) var(--ease-out-soft);
+  }
+
+  .link-nudge:hover svg {
+    transform: translateX(3px);
+  }
+}
+
+.slide-fill:not(:disabled, [aria-disabled="true"]):active {
+  transform: scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slide-fill,
+  .slide-fill::before,
+  .link-nudge svg {
+    transition-duration: 1ms;
+    transition-delay: 0ms;
+  }
+
+  .slide-fill::before,
+  :where(a, button, summary, [role="button"], [tabindex]):focus-visible {
+    animation: none;
+  }
+
+  .slide-fill:not(:disabled, [aria-disabled="true"]):active,
+  .link-nudge:hover svg {
+    transform: none;
+  }
+}

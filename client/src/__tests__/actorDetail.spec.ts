@@ -93,8 +93,8 @@ describe("ActorDetailView Component & Routing", () => {
       },
     })
 
-    expect(wrapper.find(".loading-state").exists()).toBe(true)
-    expect(wrapper.find(".skeleton-avatar").exists()).toBe(true)
+    expect(wrapper.find('[role="status"]').attributes("aria-busy")).toBe("true")
+    expect(wrapper.find(".skeleton-block").exists()).toBe(true)
   })
 
   it("renders actor details, age, biography, and workography when loaded", async () => {

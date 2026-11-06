@@ -37,6 +37,7 @@ client/src/
   api/endpoints/<domain>.ts  API calls (api/index.ts = axios instance)
   types/<domain>.ts          TS mirrors of DTOs
   views/  route pages        components/<area>/        layouts/ MainLayout, AdminLayout
+  components/ui/  AppButton, AppSpinner, LoadingBar, skeleton/ (use these for every loading state: skeleton for known layouts, spinner for actions)    assets/styles/motion.css  motion + focus tokens
   stores/ auth, ui, feed, notification, achievement, admin
   composables/ useAuth, useSocket, useFollow, useReviewForm, useShareImage, ...
   i18n/locales/{en,th}/*.json  UI text, one file per area
@@ -52,7 +53,7 @@ client/src/
 ## Feature -> files map
 | Feature | Backend (`server/internal/`) | Frontend |
 |---|---|---|
-| Auth, email verification, Google OAuth, sessions | auth_module, user_module (password reset, email change mailers) | views/auth/, stores/auth.ts, composables/useAuth.ts |
+| Auth, email verification, Google OAuth, sessions | auth_module, user_module (password reset, email change mailers) | views/auth/, components/auth/ (AuthShell, AuthField, AuthAlert, GoogleSignInButton, PasswordStrength), stores/auth.ts, composables/useAuth.ts |
 | Account linking PLANZI<->POPCORN (HMAC server-to-server, handoff token in URL fragment; contract in `../LINKING_SPEC.md`; disabled when `LINK_SHARED_SECRET` is empty; login falls back to remote `verify-password`) | link_module | views/auth/HandoffView.vue, api/endpoints/link.ts |
 | Movie, TV, actor, search, upcoming | movie_module, tmdb_module | views/movie/, views/tv/, views/actor/, views/SearchResultView.vue |
 | Reviews, comments, ratings | review_module, like_module, media_stats_module | components/movie/MovieReviews.vue, composables/useReviewForm.ts |

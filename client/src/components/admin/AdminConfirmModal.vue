@@ -63,7 +63,7 @@
               :disabled="loading || confirmDisabled"
               @click="handleConfirm"
             >
-              <div v-if="loading" class="spinner-sm" />
+              <AppSpinner v-if="loading" />
               <span>{{ loading ? 'กำลังดำเนินการ...' : (confirmText || 'ยืนยัน') }}</span>
             </button>
           </div>
@@ -74,6 +74,7 @@
 </template>
 
 <script setup lang="ts">
+import AppSpinner from "@/components/ui/AppSpinner.vue"
 import { ref, computed, watch, onBeforeUnmount, type Component } from 'vue'
 import { X, ShieldAlert, Shield, UserX, UserCheck, Trash2, AlertTriangle } from 'lucide-vue-next'
 
@@ -446,22 +447,6 @@ onBeforeUnmount(() => {
   cursor: not-allowed;
   transform: none !important;
   box-shadow: none !important;
-}
-
-.spinner-sm {
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #ffffff;
-  border-radius: 50%;
-  animation: spin-modal 0.7s linear infinite;
-  will-change: transform;
-}
-
-@keyframes spin-modal {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 /* Modal Transition */

@@ -38,7 +38,7 @@
             @click="resend"
           >
             <span v-if="resendStatus === 'idle'">RESEND EMAIL</span>
-            <span v-else-if="resendStatus === 'sending'" class="spinner" />
+            <AppSpinner v-else-if="resendStatus === 'sending'" />
             <span v-else-if="resendStatus === 'sent'">SENT SUCCESSFUL</span>
             <span v-else>ERROR, TRY AGAIN</span>
           </button>
@@ -55,6 +55,7 @@
 </template>
 
 <script setup lang="ts">
+import AppSpinner from "@/components/ui/AppSpinner.vue"
   import { ref, onMounted } from "vue"
   import { RouterLink } from "vue-router"
   import { useAuthStore } from "@/stores/auth"

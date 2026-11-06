@@ -2,9 +2,9 @@
   <div>
     <Transition name="fade-fast" mode="out-in">
       <!-- 1. Loading Skeletons -->
-      <div v-if="loading && items.length === 0" key="loading">
+      <SkeletonRegion v-if="loading && items.length === 0" key="loading">
         <FeedItemSkeleton v-for="n in 5" :key="n" />
-      </div>
+      </SkeletonRegion>
 
       <!-- 2. Error Message -->
       <div
@@ -78,6 +78,7 @@
 </template>
 
 <script setup lang="ts">
+import SkeletonRegion from "@/components/ui/skeleton/SkeletonRegion.vue"
 import { computed, ref } from "vue";
 import type { FeedItemResponse } from "@/types/feed";
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";

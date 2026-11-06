@@ -17,7 +17,7 @@
           <h1 class="auth-title">VERIFYING</h1>
           <div class="status-content form-item">
             <div class="status-icon status-icon--loading">
-              <IconLoader2 :size="48" class="animate-spin" />
+              <AppSpinner :size="48" />
             </div>
             <p class="status-text">กำลังยืนยันอีเมลของคุณในระบบ...</p>
           </div>
@@ -57,7 +57,7 @@
               @click="resend"
             >
               <span v-if="resendStatus === 'idle'">RESEND LINK</span>
-              <span v-else-if="resendStatus === 'sending'" class="spinner" />
+              <AppSpinner v-else-if="resendStatus === 'sending'" />
               <span v-else-if="resendStatus === 'sent'">SENT! CHECK EMAIL</span>
               <span v-else>ERROR, TRY AGAIN</span>
             </button>
@@ -75,12 +75,12 @@
 </template>
 
 <script setup lang="ts">
+import AppSpinner from "@/components/ui/AppSpinner.vue"
   import { ref, onMounted } from "vue"
   import { useRoute, RouterLink } from "vue-router"
   import { authApi } from "@/api/api"
   import { gsap } from "gsap"
   import {
-    Loader2 as IconLoader2,
     CircleCheck as IconCircleCheck,
     AlertCircle as IconAlertCircle,
   } from "lucide-vue-next"

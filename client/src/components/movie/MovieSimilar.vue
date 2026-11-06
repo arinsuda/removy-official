@@ -7,9 +7,9 @@
         :key="`skeleton-${n}`"
         class="similar-card similar-card--skeleton"
       >
-        <div class="skeleton-poster"></div>
-        <div class="skeleton-line skeleton-line--title"></div>
-        <div class="skeleton-line skeleton-line--year"></div>
+        <SkeletonBlock aspect="2 / 3" radius="10px" />
+        <SkeletonBlock width="80%" height="12px" />
+        <SkeletonBlock width="45%" height="10px" />
       </div>
     </div>
 
@@ -90,6 +90,7 @@
 </template>
 
 <script setup lang="ts">
+import SkeletonBlock from "@/components/ui/skeleton/SkeletonBlock.vue"
   import { computed, ref, onMounted, onUnmounted, watch, nextTick } from "vue"
   import { useRouter } from "vue-router"
   import { gsap } from "gsap"
@@ -416,40 +417,6 @@
   .similar-card--skeleton {
     cursor: default;
   }
-  .skeleton-poster {
-    width: 100%;
-    aspect-ratio: 2/3;
-    border-radius: 10px;
-    background: linear-gradient(
-      100deg,
-      var(--sim-surface) 30%,
-      var(--sim-surface2) 50%,
-      var(--sim-surface) 70%
-    );
-    background-size: 200% 100%;
-    animation: similar-shimmer 1.4s ease-in-out infinite;
-  }
-  .skeleton-line {
-    height: 0.7rem;
-    border-radius: 4px;
-    background: var(--sim-surface);
-    margin-top: 0.5rem;
-  }
-  .skeleton-line--title {
-    width: 85%;
-  }
-  .skeleton-line--year {
-    width: 40%;
-  }
-  @keyframes similar-shimmer {
-    0% {
-      background-position: 200% 0;
-    }
-    100% {
-      background-position: -200% 0;
-    }
-  }
-
   .similar-empty {
     display: flex;
     flex-direction: column;
@@ -533,11 +500,7 @@
     }
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .skeleton-poster {
-      animation: none;
-    }
-    .similar-card,
+  @media (prefers-reduced-motion: reduce) {.similar-card,
     .similar-poster-wrap,
     .similar-nav {
       transition: none;

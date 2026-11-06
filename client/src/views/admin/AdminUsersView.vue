@@ -60,11 +60,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-if="adminStore.isLoadingUsers">
-            <td colspan="8" class="text-center py-8">
-              <div class="spinner inline" />
-            </td>
-          </tr>
+          <SkeletonTableRows v-if="adminStore.isLoadingUsers" :columns="8" />
           <tr v-else-if="users.length === 0">
             <td colspan="8" class="text-center py-8 text-muted">
               No users found.
@@ -188,6 +184,7 @@
 </template>
 
 <script setup lang="ts">
+import SkeletonTableRows from "@/components/ui/skeleton/SkeletonTableRows.vue"
 import { ref, computed, onMounted } from "vue"
 import { useAdminStore } from "@/stores/admin"
 import { useToast } from "@/composables/useToast"

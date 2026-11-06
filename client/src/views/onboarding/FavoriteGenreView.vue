@@ -94,11 +94,7 @@
 
       <!-- Skeleton -->
       <div class="movie-grid" v-else>
-        <div
-          v-for="i in TOTAL_MOVIES"
-          :key="i"
-          class="movie-card movie-card--skeleton"
-        />
+        <SkeletonBlock v-for="i in TOTAL_MOVIES" :key="i" aspect="2 / 3" radius="12px" />
       </div>
 
       <!-- Footer -->
@@ -108,7 +104,7 @@
           :disabled="selectedIds.length < MIN_PICKS || isSaving"
           @click="handleConfirm"
         >
-          <span v-if="isSaving" class="spinner" />
+          <AppSpinner v-if="isSaving" />
           <span v-else>เริ่มต้นใช้งาน</span>
         </button>
         <button class="btn-skip" @click="handleSkip" :disabled="isSaving">
@@ -120,6 +116,8 @@
 </template>
 
 <script setup lang="ts">
+import AppSpinner from "@/components/ui/AppSpinner.vue"
+import SkeletonBlock from "@/components/ui/skeleton/SkeletonBlock.vue"
   import { ref, computed, onMounted, nextTick } from "vue"
   import { useRouter } from "vue-router"
   import { movieApi, userApi } from "@/api/api"
@@ -595,24 +593,6 @@
       0 8px 28px rgba(245, 67, 44, 0.3) !important;
   }
 
-  .movie-card--skeleton {
-    background: linear-gradient(90deg, #1f1f1f 25%, #2a2a2a 50%, #1f1f1f 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.2s infinite;
-    cursor: default;
-    border-color: transparent !important;
-    aspect-ratio: 2/3;
-  }
-
-  @keyframes shimmer {
-    0% {
-      background-position: 200% 0;
-    }
-    100% {
-      background-position: -200% 0;
-    }
-  }
-
   /* Poster image */
   .movie-poster {
     width: 100%;
@@ -769,17 +749,4 @@
     color: #a3a3a3;
   }
 
-  .spinner {
-    width: 20px;
-    height: 20px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-top-color: #fff;
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-  }
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-</style>
+  </style>

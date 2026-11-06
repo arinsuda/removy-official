@@ -173,7 +173,7 @@
               class="bmol-add-search-input"
             />
             <div v-if="bmolAddLoading" class="bmol-add-spinner">
-              <div class="loading-ring small-ring" />
+              <AppSpinner :size="16" />
             </div>
 
             <!-- Search Results Dropdown -->
@@ -399,6 +399,7 @@
 </template>
 
 <script setup lang="ts">
+import AppSpinner from "@/components/ui/AppSpinner.vue"
 import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue"
 import { Search, Trophy, ChevronLeft, Film, Sparkles, Share2 } from "lucide-vue-next"
 import { bmolApi, movieApi } from "@/api/api"
@@ -1480,14 +1481,7 @@ function getMediaDate(media: Movie | TVSeries): string {
   background: rgba(239, 68, 68, 0.1) !important;
   color: #ef4444 !important;
   border-color: rgba(239, 68, 68, 0.2) !important;
-}
-
-.small-ring {
-  width: 24px;
-  height: 24px;
-}
-
-/* Premium Breadcrumb Header Card */
+}/* Premium Breadcrumb Header Card */
 .bmol-breadcrumb-card {
   display: flex;
   align-items: center;

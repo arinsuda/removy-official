@@ -31,7 +31,7 @@
               :disabled="deleting"
               @click="handleDelete"
             >
-              <span v-if="deleting" class="btn-loader" />
+              <AppSpinner v-if="deleting" />
               <span v-else>Delete</span>
             </button>
           </div>
@@ -42,6 +42,7 @@
 </template>
 
 <script setup lang="ts">
+import AppSpinner from "@/components/ui/AppSpinner.vue"
   import { ref, onMounted, onBeforeUnmount } from "vue"
   import { Trash2 } from "lucide-vue-next"
   import { reviewApi } from "@/api/api"
@@ -197,20 +198,6 @@
     opacity: 0.5;
     cursor: not-allowed;
   }
-  .btn-loader {
-    width: 12px;
-    height: 12px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-top-color: #fff;
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-  }
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
   .modal-enter-active {
     transition:
       opacity 0.2s ease,

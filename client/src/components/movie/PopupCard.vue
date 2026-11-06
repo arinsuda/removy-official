@@ -5,8 +5,8 @@
       class="popup__media-link"
     >
       <div v-if="showSkeleton" class="popup__skeleton" aria-hidden="true">
-        <div class="popup__skeleton-bar popup__skeleton-bar--1" />
-        <div class="popup__skeleton-bar popup__skeleton-bar--2" />
+        <SkeletonBlock width="55%" height="7px" radius="4px" />
+        <SkeletonBlock width="38%" height="5px" radius="4px" />
       </div>
 
       <template v-if="showFallback">
@@ -128,6 +128,7 @@
 </template>
 
 <script setup lang="ts">
+import SkeletonBlock from "@/components/ui/skeleton/SkeletonBlock.vue"
 import {
   computed,
   ref,
@@ -605,28 +606,6 @@ function fmtRuntime(mins: number) {
   justify-content: center;
   gap: 10px;
   z-index: 1;
-}
-.popup__skeleton-bar {
-  border-radius: 4px;
-  background: linear-gradient(90deg, #1a1a1a 25%, #252525 50%, #1a1a1a 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.4s ease-in-out infinite;
-}
-.popup__skeleton-bar--1 {
-  width: 55%;
-  height: 7px;
-}
-.popup__skeleton-bar--2 {
-  width: 38%;
-  height: 5px;
-}
-@keyframes shimmer {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
 }
 .popup__info {
   padding: 0.85rem;

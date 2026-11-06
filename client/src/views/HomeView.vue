@@ -182,7 +182,7 @@
         </div>
 
         <div class="movie-grid" v-else-if="isLoadingRecommended">
-          <div v-for="i in 10" :key="i" class="poster-skeleton" />
+          <SkeletonBlock v-for="i in 10" :key="i" aspect="2 / 3" radius="12px" />
         </div>
       </section>
 
@@ -198,7 +198,7 @@
               <p class="section-subtitle">ภาพยนตร์ที่มีผู้เข้าชมมากที่สุดขณะนี้</p>
             </div>
           </div>
-          <RouterLink :to="{ name: 'movies' }" class="see-all-btn">
+          <RouterLink :to="{ name: 'movies' }" class="see-all-btn link-nudge">
             <span>ดูทั้งหมด</span>
             <ChevronRight :size="16" />
           </RouterLink>
@@ -266,7 +266,7 @@
         </div>
 
         <div class="movie-grid" v-else-if="isLoadingPopular">
-          <div v-for="i in 10" :key="i" class="poster-skeleton" />
+          <SkeletonBlock v-for="i in 10" :key="i" aspect="2 / 3" radius="12px" />
         </div>
       </section>
 
@@ -282,7 +282,7 @@
               <p class="section-subtitle">อัปเดตภาพยนตร์ฉายล่าสุดประจำสัปดาห์</p>
             </div>
           </div>
-          <RouterLink :to="{ name: 'movies' }" class="see-all-btn">
+          <RouterLink :to="{ name: 'movies' }" class="see-all-btn link-nudge">
             <span>ดูทั้งหมด</span>
             <ChevronRight :size="16" />
           </RouterLink>
@@ -350,7 +350,7 @@
         </div>
 
         <div class="movie-grid" v-else-if="isLoadingNowPlaying">
-          <div v-for="i in 10" :key="i" class="poster-skeleton" />
+          <SkeletonBlock v-for="i in 10" :key="i" aspect="2 / 3" radius="12px" />
         </div>
       </section>
 
@@ -366,7 +366,7 @@
               <p class="section-subtitle">ได้รับคะแนนรีวิวสูงสุดจากผู้ชมทั่วโลก</p>
             </div>
           </div>
-          <RouterLink :to="{ name: 'movies' }" class="see-all-btn">
+          <RouterLink :to="{ name: 'movies' }" class="see-all-btn link-nudge">
             <span>ดูทั้งหมด</span>
             <ChevronRight :size="16" />
           </RouterLink>
@@ -434,7 +434,7 @@
         </div>
 
         <div class="movie-grid" v-else-if="isLoadingTopRated">
-          <div v-for="i in 10" :key="i" class="poster-skeleton" />
+          <SkeletonBlock v-for="i in 10" :key="i" aspect="2 / 3" radius="12px" />
         </div>
       </section>
     </div>
@@ -445,13 +445,15 @@
         class="loading-overlay"
         v-if="isLoadingNowPlaying && !nowPlayingMovies.length"
       >
-        <div class="spinner" />
+        <AppSpinner />
       </div>
     </Transition>
   </div>
 </template>
 
 <script setup lang="ts">
+import AppSpinner from "@/components/ui/AppSpinner.vue"
+import SkeletonBlock from "@/components/ui/skeleton/SkeletonBlock.vue"
   import { ref, computed, onMounted, onUnmounted } from "vue"
   import { useQuery } from "@tanstack/vue-query"
   import { movieApi } from "@/api/api"
@@ -1334,24 +1336,6 @@
     line-height: 1.4;
   }
 
-  /* ── Skeleton ─────────────────────────────────────────────── */
-  .poster-skeleton {
-    aspect-ratio: 2 / 3;
-    border-radius: 12px;
-    background: linear-gradient(90deg, #18181f 25%, #242430 50%, #18181f 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.4s infinite;
-  }
-
-  @keyframes shimmer {
-    0% {
-      background-position: 200% 0;
-    }
-    100% {
-      background-position: -200% 0;
-    }
-  }
-
   /* ── Hover Popup (Desktop) ────────────────────────────────── */
   .hover-popup {
     position: absolute;
@@ -1413,21 +1397,6 @@
     justify-content: center;
     z-index: 200;
     backdrop-filter: blur(4px);
-  }
-
-  .spinner {
-    width: 40px;
-    height: 40px;
-    border: 3px solid rgba(255, 255, 255, 0.1);
-    border-top-color: var(--color-brand);
-    border-radius: 50%;
-    animation: spin 0.75s linear infinite;
-  }
-
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
   }
 
   .fade-enter-active,

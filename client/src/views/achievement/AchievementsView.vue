@@ -121,7 +121,7 @@
     </div>
 
     <div v-if="store.loading" class="grid-skeleton">
-      <div v-for="n in 6" :key="n" class="skeleton-card" />
+      <SkeletonBlock v-for="n in 6" :key="n" height="110px" radius="12px" />
     </div>
 
     <div v-else-if="store.error" class="state-msg state-msg--error">
@@ -252,6 +252,7 @@
 </template>
 
 <script setup lang="ts">
+import SkeletonBlock from "@/components/ui/skeleton/SkeletonBlock.vue"
   import { computed, onMounted, onUnmounted, ref } from "vue"
   import { useRoute } from "vue-router"
   import {
@@ -592,22 +593,6 @@
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 12px;
   }
-  .skeleton-card {
-    height: 110px;
-    background: var(--c-card);
-    border-radius: 12px;
-    animation: pulse 1.4s infinite ease-in-out;
-  }
-  @keyframes pulse {
-    0%,
-    100% {
-      opacity: 0.5;
-    }
-    50% {
-      opacity: 0.9;
-    }
-  }
-
   .state-msg {
     padding: 48px 0;
     text-align: center;

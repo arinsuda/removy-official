@@ -2,10 +2,7 @@
   <div class="profile-root">
     <div class="grain" aria-hidden="true" />
 
-    <div v-if="loading" class="profile-loading">
-      <div class="loading-ring" />
-      <span class="loading-text">Loading profile…</span>
-    </div>
+    <SkeletonProfile v-if="loading" />
 
     <div v-else-if="!user" class="profile-empty">
       <Monitor class="empty-icon" />
@@ -181,6 +178,7 @@
 </template>
 
 <script setup lang="ts">
+import SkeletonProfile from "@/components/ui/skeleton/SkeletonProfile.vue"
   import { followApi, userApi } from "@/api/api"
   import { useAuthStore } from "@/stores/auth"
   import type { UserProfile } from "@/types/user"
@@ -449,34 +447,6 @@
     opacity: 0.025;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
     background-size: 200px 200px;
-  }
-
-  /* ─────────── Loading ─────────── */
-  .profile-loading {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    min-height: 60vh;
-  }
-  .loading-ring {
-    width: 32px;
-    height: 32px;
-    border: 2px solid var(--c-border);
-    border-top-color: var(--c-red);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-  .loading-text {
-    font-size: 0.8rem;
-    color: var(--c-sub);
-    letter-spacing: 0.04em;
   }
 
   /* ─────────── Empty ─────────── */

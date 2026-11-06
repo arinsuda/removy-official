@@ -7,19 +7,7 @@
     </button>
 
     <!-- Loading State -->
-    <div v-if="isLoading" class="state-container loading-state">
-      <div class="skeleton-header">
-        <div class="skeleton-avatar" />
-        <div class="skeleton-info">
-          <div class="skeleton-title" />
-          <div class="skeleton-meta" />
-          <div class="skeleton-bio" />
-        </div>
-      </div>
-      <div class="skeleton-grid">
-        <div v-for="n in 8" :key="n" class="skeleton-card" />
-      </div>
-    </div>
+    <SkeletonProfile v-if="isLoading" />
 
     <!-- 404 Not Found State -->
     <div v-else-if="isNotFound" class="state-container error-state">
@@ -241,6 +229,7 @@
 </template>
 
 <script setup lang="ts">
+import SkeletonProfile from "@/components/ui/skeleton/SkeletonProfile.vue"
   import { ref, computed, onMounted, watch } from "vue"
   import { useRoute, useRouter, RouterLink } from "vue-router"
   import { useI18n } from "vue-i18n"
@@ -485,69 +474,6 @@
   .btn-primary:hover {
     background-color: var(--color-brand-hover);
     transform: translateY(-2px);
-  }
-
-  /* ── Skeletons ── */
-  .skeleton-header {
-    display: flex;
-    gap: 2rem;
-    width: 100%;
-    margin-bottom: 2rem;
-  }
-
-  .skeleton-avatar {
-    width: 220px;
-    height: 330px;
-    border-radius: 12px;
-    background: linear-gradient(90deg, #1f1f1f 25%, #2a2a2a 50%, #1f1f1f 75%);
-    background-size: 200% 100%;
-    animation: skeleton-shimmer 1.5s infinite;
-  }
-
-  .skeleton-info {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .skeleton-title {
-    width: 40%;
-    height: 36px;
-    border-radius: 6px;
-    background: #1f1f1f;
-  }
-
-  .skeleton-meta {
-    width: 60%;
-    height: 24px;
-    border-radius: 6px;
-    background: #1f1f1f;
-  }
-
-  .skeleton-bio {
-    width: 100%;
-    height: 120px;
-    border-radius: 6px;
-    background: #1f1f1f;
-  }
-
-  .skeleton-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 1.5rem;
-    width: 100%;
-  }
-
-  .skeleton-card {
-    height: 280px;
-    border-radius: 10px;
-    background: #1f1f1f;
-  }
-
-  @keyframes skeleton-shimmer {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
   }
 
   /* ── Actor Content ── */

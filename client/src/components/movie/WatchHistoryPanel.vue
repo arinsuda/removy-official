@@ -11,7 +11,7 @@
           </div>
 
           <div class="panel-content">
-            <div v-if="loading" class="loading">{{ t('common.loading') }}</div>
+            <SkeletonList v-if="loading" :count="3" />
             <div v-else-if="!logs || !logs.length" class="empty">
               {{ t('watchLog.noHistory') }}
             </div>
@@ -39,6 +39,7 @@
 </template>
 
 <script setup lang="ts">
+import SkeletonList from "@/components/ui/skeleton/SkeletonList.vue"
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { X, Trash2, Globe, Users, Lock } from 'lucide-vue-next'

@@ -132,6 +132,7 @@
           </Transition>
         </div>
       </div>
+      <SkeletonGrid v-else-if="isLoading" :count="18" />
       <div class="empty-state" v-else-if="!isLoading">
         <Tv :size="48" class="empty-icon" />
         <p>No TV series found</p>
@@ -167,11 +168,11 @@
         </button>
       </div>
     </div>
-    <div class="loading-overlay" v-if="isLoading"><div class="spinner" /></div>
   </div>
 </template>
 
 <script setup lang="ts">
+import SkeletonGrid from "@/components/ui/skeleton/SkeletonGrid.vue"
   import { ref, computed, onMounted, onUnmounted, watch } from "vue"
   import { useRoute, useRouter } from "vue-router"
   import { useQuery } from "@tanstack/vue-query"
@@ -707,26 +708,4 @@
     opacity: 0.35;
     cursor: not-allowed;
   }
-  .loading-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(20, 20, 20, 0.7);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 200;
-  }
-  .spinner {
-    width: 40px;
-    height: 40px;
-    border: 3px solid rgba(255, 255, 255, 0.15);
-    border-top-color: var(--color-brand);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-</style>
+  </style>

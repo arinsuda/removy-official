@@ -50,10 +50,7 @@
       </div>
 
       <!-- ── Loading ── -->
-      <div class="loading-state" v-if="isLoading">
-        <i class="pi pi-spin pi-spinner spinner-icon"></i>
-        <p>กำลังค้นหา...</p>
-      </div>
+      <SkeletonGrid v-if="isLoading" min-width="180px" />
 
       <!-- ── Results Grid ── -->
       <template v-else>
@@ -245,6 +242,7 @@
 </template>
 
 <script setup lang="ts">
+import SkeletonGrid from "@/components/ui/skeleton/SkeletonGrid.vue"
 import { ref, computed, watch, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { movieApi } from "@/api/api";
@@ -494,21 +492,6 @@ onMounted(() => {
 }
 .filter-tab.active .tab-count {
   background: rgba(245, 67, 44, 0.3);
-}
-
-/* ── Loading ── */
-.loading-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  padding: 5rem 1rem;
-  color: #a3a3a3;
-}
-.spinner-icon {
-  font-size: 2rem;
-  color: var(--color-brand);
 }
 
 /* ── Media Grid (responsive, auto-fill) ── */

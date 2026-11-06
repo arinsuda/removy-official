@@ -12,9 +12,7 @@
       </RouterLink>
     </div>
 
-    <div v-if="store.loading" class="state-loading">
-      <div class="loader-bar"><div class="loader-fill" /></div>
-    </div>
+    <SkeletonList v-if="store.loading" avatar :count="5" />
 
     <div v-else-if="store.error" class="state-empty">{{ store.error }}</div>
 
@@ -56,6 +54,7 @@
 </template>
 
 <script setup lang="ts">
+import SkeletonList from "@/components/ui/skeleton/SkeletonList.vue"
   import { onMounted } from "vue"
   import { CheckCircle } from "lucide-vue-next"
   import { useAchievementStore } from "@/stores/achievement"
@@ -131,35 +130,6 @@
   }
   .view-all:hover {
     color: #fff;
-  }
-
-  .state-loading {
-    padding: 48px 0;
-    display: flex;
-    justify-content: center;
-  }
-  .loader-bar {
-    width: 100px;
-    height: 2px;
-    background: var(--c-border);
-    border-radius: 2px;
-    overflow: hidden;
-    position: relative;
-  }
-  .loader-fill {
-    height: 100%;
-    width: 40%;
-    background: #fff;
-    position: absolute;
-    animation: sweep 1.4s infinite ease-in-out;
-  }
-  @keyframes sweep {
-    0% {
-      left: -40%;
-    }
-    100% {
-      left: 100%;
-    }
   }
 
   .state-empty {

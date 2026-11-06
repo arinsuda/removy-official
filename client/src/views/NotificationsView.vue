@@ -27,10 +27,7 @@
     </div>
 
     <div class="notifications-page-body">
-      <div v-if="loading" class="notifications-page-state">
-        <Loader2 :size="24" class="spin" />
-        <span>กำลังโหลด...</span>
-      </div>
+      <SkeletonList v-if="loading" avatar :count="7" />
 
       <div
         v-else-if="error"
@@ -111,7 +108,7 @@
           v-if="loadingMore"
           class="notifications-page-state notifications-page-state--inline"
         >
-          <Loader2 :size="18" class="spin" />
+          <AppSpinner :size="18" />
         </div>
         <button
           v-else-if="hasMore"
@@ -126,6 +123,8 @@
 </template>
 
 <script setup lang="ts">
+import AppSpinner from "@/components/ui/AppSpinner.vue"
+import SkeletonList from "@/components/ui/skeleton/SkeletonList.vue"
   import { ref, computed, watch } from "vue"
   import { useRoute, useRouter } from "vue-router"
   import {
@@ -134,7 +133,6 @@
     CheckCheck,
     Clapperboard,
     Heart,
-    Loader2,
     MessageCircle,
     PartyPopper,
     ThumbsUp,

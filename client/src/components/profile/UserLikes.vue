@@ -6,9 +6,7 @@
       <div class="rule" />
     </div>
 
-    <div v-if="loading" class="state-loading">
-      <div class="loader-bar"><div class="loader-fill" /></div>
-    </div>
+    <SkeletonGrid v-if="loading" :count="8" min-width="130px" />
 
     <div v-else-if="items.length === 0" class="state-empty">
       <Heart :size="28" :stroke-width="1.2" />
@@ -83,6 +81,7 @@
 </template>
 
 <script setup lang="ts">
+import SkeletonGrid from "@/components/ui/skeleton/SkeletonGrid.vue"
   import { onMounted, ref } from "vue"
   import { Heart, Film, X, Clock, Star } from "lucide-vue-next"
   import { mediaApi } from "@/api/endpoints/media"
@@ -216,36 +215,6 @@
     flex: 1;
     height: 1px;
     background: var(--c-border);
-  }
-
-  /* ── States ── */
-  .state-loading {
-    padding: 48px 0;
-    display: flex;
-    justify-content: center;
-  }
-  .loader-bar {
-    width: 100px;
-    height: 2px;
-    background: var(--c-border);
-    border-radius: 2px;
-    overflow: hidden;
-    position: relative;
-  }
-  .loader-fill {
-    height: 100%;
-    width: 40%;
-    background: var(--c-red);
-    position: absolute;
-    animation: sweep 1.4s infinite ease-in-out;
-  }
-  @keyframes sweep {
-    0% {
-      left: -40%;
-    }
-    100% {
-      left: 100%;
-    }
   }
 
   .state-empty {

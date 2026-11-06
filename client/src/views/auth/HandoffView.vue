@@ -9,9 +9,9 @@
 
       <template v-else-if="state === 'failed'">
         <p class="text text--error">{{ t("navigation.link.handoff.failed") }}</p>
-        <RouterLink to="/login" class="btn">
+        <AppButton to="/login" block>
           {{ t("navigation.link.handoff.backToLogin") }}
-        </RouterLink>
+        </AppButton>
       </template>
 
       <template v-else>
@@ -32,20 +32,15 @@
             autocomplete="current-password"
             :placeholder="t('navigation.link.handoff.password')"
           />
-          <button class="btn" type="submit" :disabled="busy || !password">
+          <AppButton type="submit" block :disabled="busy || !password">
             {{ t("navigation.link.handoff.confirmPassword") }}
-          </button>
+          </AppButton>
         </form>
 
         <div v-if="pending?.methods.includes('email_code')" class="block">
-          <button
-            class="btn btn--ghost"
-            type="button"
-            :disabled="busy"
-            @click="sendCode"
-          >
+          <AppButton variant="outline" block :disabled="busy" @click="sendCode">
             {{ t("navigation.link.handoff.sendCode") }}
-          </button>
+          </AppButton>
           <template v-if="codeSent">
             <p class="text text--ok">{{ t("navigation.link.handoff.codeSent") }}</p>
             <form class="block" @submit.prevent="submitCode">
@@ -57,9 +52,9 @@
                 autocomplete="one-time-code"
                 :placeholder="t('navigation.link.handoff.code')"
               />
-              <button class="btn" type="submit" :disabled="busy || code.length !== 6">
+              <AppButton type="submit" block :disabled="busy || code.length !== 6">
                 {{ t("navigation.link.handoff.confirmCode") }}
-              </button>
+              </AppButton>
             </form>
           </template>
         </div>
@@ -72,8 +67,9 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from "vue"
-import { RouterLink, useRouter } from "vue-router"
+import { useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
+import AppButton from "@/components/ui/AppButton.vue"
 import { linkApi } from "@/api/endpoints/link"
 import type { LinkConfirmRequired, LinkSessionResponse } from "@/api/endpoints/link"
 import { useAuthStore } from "@/stores/auth"
@@ -252,25 +248,5 @@ async function submitCode() {
   border-radius: 6px;
   color: #fff;
   font-size: 14px;
-}
-.btn {
-  display: block;
-  padding: 12px 16px;
-  background: var(--color-brand);
-  border: 0;
-  border-radius: 6px;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 700;
-  text-decoration: none;
-  cursor: pointer;
-}
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.btn--ghost {
-  background: transparent;
-  border: 1px solid #2a2a2a;
 }
 </style>

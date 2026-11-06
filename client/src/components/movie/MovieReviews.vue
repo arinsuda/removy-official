@@ -30,7 +30,7 @@
       </p>
     </div>
 
-    <div v-if="isLoadingReviews" class="reviews-status">กำลังโหลดรีวิว...</div>
+    <SkeletonList v-if="isLoadingReviews" avatar :count="3" />
 
     <div v-else-if="reviews.length" class="reviews-list">
       <div v-for="item in reviews" :key="item.id" class="review-card">
@@ -159,6 +159,7 @@
 </template>
 
 <script setup lang="ts">
+import SkeletonList from "@/components/ui/skeleton/SkeletonList.vue"
   import { followApi, reviewApi } from "@/api/api"
   import { useAuthStore } from "@/stores/auth"
   import { computed, onMounted, ref, watch } from "vue"
@@ -535,13 +536,6 @@
     margin: 0.5rem 0 0;
     font-size: 0.75rem;
     color: #8a8a8a;
-  }
-
-  .reviews-status {
-    text-align: center;
-    padding: 1.5rem;
-    color: #8a8a8a;
-    font-size: 0.875rem;
   }
 
   .reviews-list {

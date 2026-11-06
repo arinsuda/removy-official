@@ -7,7 +7,7 @@
 
       <!-- Loading State -->
       <div v-if="isLoading" class="bootstrap-status">
-        <div class="bootstrap-spinner" />
+        <LoadingBar />
         <p class="bootstrap-text">{{ $t("session.checking") }}</p>
       </div>
 
@@ -40,7 +40,7 @@
           :disabled="isRetrying"
           @click="handleRetry"
         >
-          <span v-if="isRetrying" class="btn-spinner" />
+          <AppSpinner v-if="isRetrying" />
           <span v-else>{{ $t("session.retry") }}</span>
         </button>
       </div>
@@ -49,6 +49,8 @@
 </template>
 
 <script setup lang="ts">
+import AppSpinner from "@/components/ui/AppSpinner.vue"
+import LoadingBar from "@/components/ui/LoadingBar.vue"
   import { ref, computed } from "vue"
   import { useAuthStore } from "@/stores/auth"
 
@@ -116,21 +118,6 @@
     gap: 1.25rem;
   }
 
-  .bootstrap-spinner {
-    width: 44px;
-    height: 44px;
-    border: 3px solid rgba(255, 255, 255, 0.1);
-    border-top-color: var(--color-brand);
-    border-radius: 50%;
-    animation: bootstrap-spin 0.8s linear infinite;
-  }
-
-  @keyframes bootstrap-spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
   .bootstrap-text {
     font-size: 1rem;
     color: #a3a3a3;
@@ -189,15 +176,6 @@
   .btn-retry:disabled {
     opacity: 0.7;
     cursor: not-allowed;
-  }
-
-  .btn-spinner {
-    width: 18px;
-    height: 18px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-top-color: #ffffff;
-    border-radius: 50%;
-    animation: bootstrap-spin 0.8s linear infinite;
   }
 
   @keyframes fadeIn {

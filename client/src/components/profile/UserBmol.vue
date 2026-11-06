@@ -154,9 +154,7 @@
 
     <!-- DEFAULT VIEW: Grouped Ranks Grid List -->
     <div v-else>
-      <div v-if="loading" class="state-loading">
-        <div class="loader-bar"><div class="loader-fill" /></div>
-      </div>
+      <SkeletonGrid v-if="loading" :count="5" min-width="130px" />
 
       <div v-else>
         <!-- ADD FORM: Search bar to add media to any rank (Owner only) -->
@@ -175,7 +173,7 @@
                 class="bmol-add-search-input"
               />
               <div v-if="bmolAddLoading" class="bmol-add-spinner">
-                <div class="small-ring" />
+                <AppSpinner :size="16" />
               </div>
 
               <!-- Search Results Dropdown -->
@@ -419,7 +417,7 @@
             <!-- SEARCH RESULTS (Bottom) -->
             <div class="spotlight-results">
               <div v-if="spotlightSearchLoading" class="spotlight-loading">
-                <div class="loader-ring small-ring mx-auto" />
+                <AppSpinner />
               </div>
               <div v-else-if="spotlightResults.length > 0" class="spotlight-results-list">
                 <div
@@ -491,6 +489,8 @@
 </template>
 
 <script setup lang="ts">
+import AppSpinner from "@/components/ui/AppSpinner.vue"
+import SkeletonGrid from "@/components/ui/skeleton/SkeletonGrid.vue"
 import { ref, computed, onMounted, watch, onBeforeUnmount } from "vue"
 import { useRouter } from "vue-router"
 import { useAuthStore } from "@/stores/auth"
@@ -1758,10 +1758,7 @@ onMounted(async () => {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-/* Common states */
-.state-loading, .state-empty {
+}.state-empty  {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1769,44 +1766,7 @@ onMounted(async () => {
   padding: 40px 0;
   color: var(--c-sub);
   text-align: center;
-}
-
-.loader-bar {
-  width: 100%;
-  max-width: 150px;
-  height: 2px;
-  background: var(--c-muted);
-  border-radius: 1px;
-  overflow: hidden;
-}
-
-.loader-fill {
-  height: 100%;
-  background: var(--c-red);
-  animation: load 1.2s infinite ease-in-out;
-  transform-origin: 0% 50%;
-}
-
-@keyframes load {
-  0% { transform: scaleX(0); }
-  50% { transform: scaleX(1); }
-  100% { transform: scaleX(0); }
-}
-
-.small-ring {
-  width: 20px;
-  height: 20px;
-  border: 2px solid rgba(225, 37, 27, 0.1);
-  border-top-color: var(--c-red);
-  border-radius: 50%;
-  animation: spin 1s infinite linear;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* ==============================
+}/* ==============================
    Manual Add Form Styling
    ============================== */
 .bmol-add-card {

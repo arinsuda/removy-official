@@ -57,7 +57,7 @@
 
             <!-- Loading overlay -->
             <div v-if="isPreparing || isExporting" class="export-overlay">
-              <i class="pi pi-spin pi-spinner" />
+              <AppSpinner :size="36" class="export-overlay__spinner" />
               <span>{{ isPreparing ? $t('share.preparingImage') : $t('share.generating') }}</span>
             </div>
           </div>
@@ -96,6 +96,7 @@
 </template>
 
 <script setup lang="ts">
+import AppSpinner from "@/components/ui/AppSpinner.vue"
 import { ref, watch, computed, onUnmounted, nextTick } from "vue"
 import type { RankGroup } from "./BolShareTemplate.vue"
 import type { MediaType } from "@/types/common"
@@ -493,9 +494,8 @@ input:checked + .slider:before {
   z-index: 5;
 }
 
-.export-overlay .pi-spinner {
-  font-size: 2.2rem;
-  color: #f5432c;
+.export-overlay__spinner {
+  color: var(--color-brand);
 }
 
 /* Actions */

@@ -45,7 +45,7 @@
 
             <!-- Loading overlay -->
             <div v-if="isExporting" class="export-overlay">
-              <i class="pi pi-spin pi-spinner" />
+              <AppSpinner :size="36" class="export-overlay__spinner" />
               <span>{{ $t('share.generating') }}</span>
             </div>
           </div>
@@ -88,6 +88,7 @@
 </template>
 
 <script setup lang="ts">
+import AppSpinner from "@/components/ui/AppSpinner.vue"
   import { ref, watch, computed, onUnmounted, nextTick } from "vue"
   import type { ShareMediaContext, ShareReviewContext } from "@/types/share"
   import { useShareImage } from "@/composables/useShareImage"
@@ -344,9 +345,9 @@
     z-index: 2;
   }
 
-  .export-overlay .pi-spinner {
-    font-size: 2rem;
-  }
+  .export-overlay__spinner {
+  color: var(--color-brand);
+}
 
   /* ── Actions ── */
   .modal-actions {

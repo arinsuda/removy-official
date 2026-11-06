@@ -13,10 +13,7 @@
     </div>
 
     <div class="noti-body" @scroll="onScroll">
-      <div v-if="store.loading" class="noti-state">
-        <Loader2 :size="18" class="spin" />
-        <span>กำลังโหลด...</span>
-      </div>
+      <SkeletonList v-if="store.loading" avatar :count="4" class="noti-skeleton" />
 
       <div v-else-if="store.error" class="noti-state noti-state--error">
         <span>{{ store.error }}</span>
@@ -89,7 +86,7 @@
         </div>
 
         <div v-if="store.loadingMore" class="noti-state noti-state--inline">
-          <Loader2 :size="15" class="spin" />
+          <AppSpinner :size="15" />
         </div>
         <button
           v-else-if="store.hasMore"
@@ -110,13 +107,14 @@
 </template>
 
 <script setup lang="ts">
+import AppSpinner from "@/components/ui/AppSpinner.vue"
+import SkeletonList from "@/components/ui/skeleton/SkeletonList.vue"
   import { useRouter } from "vue-router"
   import {
     Bell,
     BellOff,
     CheckCheck,
     Heart,
-    Loader2,
     MessageCircle,
     Trophy,
     UserPlus,
@@ -452,4 +450,7 @@
       max-height: calc(100vh - 80px);
     }
   }
+.noti-skeleton {
+  padding: 1rem;
+}
 </style>

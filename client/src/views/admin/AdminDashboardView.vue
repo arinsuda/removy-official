@@ -2,9 +2,13 @@
   <div class="admin-dashboard">
     <h1 class="page-title">{{ $t("admin.dashboard.title") }}</h1>
 
-    <div v-if="adminStore.isLoadingOverview" class="loading-state">
-      <div class="spinner" />
-    </div>
+    <SkeletonGrid
+      v-if="adminStore.isLoadingOverview"
+      :count="4"
+      min-width="220px"
+      aspect="2 / 1"
+      :caption="false"
+    />
 
     <template v-else-if="overview">
       <!-- Top Overview Metrics Grid -->
@@ -101,6 +105,7 @@
 </template>
 
 <script setup lang="ts">
+import SkeletonGrid from "@/components/ui/skeleton/SkeletonGrid.vue"
 import { computed, onMounted } from "vue"
 import { useAdminStore } from "@/stores/admin"
 import { Users, TrendingUp, Wifi, Activity } from "lucide-vue-next"
@@ -317,22 +322,4 @@ onMounted(() => {
   position: relative;
 }
 
-.loading-state {
-  display: flex;
-  justify-content: center;
-  padding: 4rem;
-}
-
-.spinner {
-  width: 36px;
-  height: 36px;
-  border: 3px solid rgba(255, 255, 255, 0.1);
-  border-top-color: var(--color-brand);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
 </style>

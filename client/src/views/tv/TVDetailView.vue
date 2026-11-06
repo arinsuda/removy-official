@@ -251,14 +251,12 @@
       </div>
     </main>
 
-    <div class="loading-state" v-if="isInitialLoading">
-      <i class="pi pi-spin pi-spinner spinner-icon"></i>
-      <p>กำลังโหลดข้อมูลภาพยนตร์...</p>
-    </div>
+    <SkeletonMediaDetail v-if="isInitialLoading" />
   </div>
 </template>
 
 <script setup lang="ts">
+import SkeletonMediaDetail from "@/components/ui/skeleton/SkeletonMediaDetail.vue"
   import { ref, onMounted, computed, watch, nextTick } from "vue"
   import { useRoute, useRouter } from "vue-router"
   import { movieApi } from "@/api/api"
@@ -1294,25 +1292,6 @@
     padding-top: 1.5rem;
     border-top: 1px solid var(--border);
   }
-  .loading-state {
-    position: fixed;
-    inset: 0;
-    background: var(--bg);
-    z-index: 100;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
-    color: var(--muted);
-    padding: 1rem;
-    text-align: center;
-  }
-  .spinner-icon {
-    font-size: 2rem;
-    color: var(--red);
-  }
-
   /* ============================================================
      RESPONSIVE BREAKPOINTS
      Desktop (>1024px) = ค่าเริ่มต้นด้านบน
@@ -1543,10 +1522,7 @@
       margin-top: 0.75rem;
       padding-top: 1.1rem;
     }
-    .loading-state p {
-      font-size: 0.85rem;
     }
-  }
 
   /* ── Extra small phone: ≤360px ── */
   @media (max-width: 360px) {

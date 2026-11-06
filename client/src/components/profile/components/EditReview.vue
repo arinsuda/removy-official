@@ -128,7 +128,7 @@
               :disabled="saving"
               @click="handleSave"
             >
-              <span v-if="saving" class="btn-loader" />
+              <AppSpinner v-if="saving" />
               <span v-else>Save Changes</span>
             </button>
           </div>
@@ -139,6 +139,7 @@
 </template>
 
 <script setup lang="ts">
+import AppSpinner from "@/components/ui/AppSpinner.vue"
   import { reactive, ref, onMounted, onBeforeUnmount } from "vue"
   import { Star, Film, X } from "lucide-vue-next"
   import { reviewApi } from "@/api/api"
@@ -465,20 +466,6 @@
     opacity: 0.5;
     cursor: not-allowed;
   }
-  .btn-loader {
-    width: 12px;
-    height: 12px;
-    border: 2px solid rgba(0, 0, 0, 0.25);
-    border-top-color: #000;
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-  }
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
   /* Transitions */
   .modal-enter-active {
     transition:
