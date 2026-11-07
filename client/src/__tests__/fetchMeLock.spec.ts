@@ -88,4 +88,19 @@ describe("fetchMe refresh lock", () => {
     expect(localStorage.getItem("access_token")).toBe("at1")
     expect(store.user?.id).toBe(2)
   })
+
+  it("logs only the status of a failed refresh, never the error object or its tokens", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined)
+    vi.mocked(authApi.refreshToken).mockRejectedValue({
+      response: { status: 503 },
+      config: { data: '{"refresh_token":"SECRET-RT"}', headers: { Authorization: "Bearer SECRET-AT" } },
+    })
+    setActivePinia(createPinia())
+    await useAuthStore().fetchMe()
+
+    const logged = log.mock.calls.flat()
+    expect(logged.every((a) => typeof a === "string" || typeof a === "number" || typeof a === "boolean" || a === undefined)).toBe(true)
+    expect(JSON.stringify(logged)).not.toContain("SECRET")
+    log.mockRestore()
+  })
 })

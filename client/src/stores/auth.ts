@@ -170,10 +170,10 @@ export const useAuthStore = defineStore("auth", () => {
       // Stale-request protection
       if (myGen !== _generation) return
 
-      console.log("[fetchMe] caught error:", e)
-
       const axiosErr = e as { response?: { status?: number }; code?: string }
       const status = axiosErr.response?.status
+      // Status only: the error object carries request headers and bodies with tokens.
+      console.log("[fetchMe] caught error, status:", status)
       if (status === 401 || status === 403) {
         clearUser()
         initError.value = "unauthenticated"
