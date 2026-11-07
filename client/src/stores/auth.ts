@@ -124,9 +124,15 @@ export const useAuthStore = defineStore("auth", () => {
     let sentRefresh: string | null = null
     initError.value = null
     try {
-      const urlParams = new URLSearchParams(window.location.search)
-      const urlAccess = urlParams.get("access_token")
-      const urlRefresh = urlParams.get("refresh_token")
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""))
+      const queryParams = new URLSearchParams(window.location.search)
+      const hashAccess = hashParams.get("access_token")
+      const hashRefresh = hashParams.get("refresh_token")
+      const queryAccess = queryParams.get("access_token")
+      const queryRefresh = queryParams.get("refresh_token")
+      const fromHash = !!(hashAccess && hashRefresh)
+      const urlAccess = fromHash ? hashAccess : queryAccess
+      const urlRefresh = fromHash ? hashRefresh : queryRefresh
       console.log(
         "[fetchMe] urlAccess:",
         !!urlAccess,
@@ -137,10 +143,24 @@ export const useAuthStore = defineStore("auth", () => {
       if (urlAccess && urlRefresh) {
         localStorage.setItem("access_token", urlAccess)
         localStorage.setItem("refresh_token", urlRefresh)
+        let nextSearch = window.location.search
+        if (queryParams.has("access_token") || queryParams.has("refresh_token")) {
+          queryParams.delete("access_token")
+          queryParams.delete("refresh_token")
+          const qs = queryParams.toString()
+          nextSearch = qs ? `?${qs}` : ""
+        }
+        let nextHash = window.location.hash
+        if (hashParams.has("access_token") || hashParams.has("refresh_token")) {
+          hashParams.delete("access_token")
+          hashParams.delete("refresh_token")
+          const hs = hashParams.toString()
+          nextHash = hs ? `#${hs}` : ""
+        }
         window.history.replaceState(
           {},
           document.title,
-          window.location.pathname,
+          `${window.location.pathname}${nextSearch}${nextHash}`,
         )
       }
 

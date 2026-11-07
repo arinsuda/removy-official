@@ -2,10 +2,16 @@ package auth_module
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/arinsuda/movie-hub/config"
 	"github.com/arinsuda/movie-hub/internal/user_module"
+	"github.com/gofiber/fiber/v3"
 )
 
 func TestOAuthTransactionStore(t *testing.T) {
@@ -113,5 +119,76 @@ func TestPasswordlessAccountSafety(t *testing.T) {
 
 	if user.Password != nil && *user.Password != "" {
 		t.Errorf("Expected password to be nil for passwordless account")
+	}
+}
+
+func TestGoogleCallbackDeliversTokensInFragment(t *testing.T) {
+	for _, frontendSuccessURL := range []string{
+		"https://app.popcorn.test/?from=google",
+		"https://app.popcorn.test/?from=google#stale-fragment",
+	} {
+		cfg := &config.Config{}
+		cfg.Google.Enabled = true
+		cfg.Google.FrontendSuccessURL = frontendSuccessURL
+		cfg.Google.FrontendErrorURL = "https://app.popcorn.test/login"
+		cfg.JWT.AccessTTL = 15 * time.Minute
+		cfg.JWT.RefreshTTL = 24 * time.Hour
+
+		h := &Handler{
+			cfg: cfg,
+			handleGoogleCallback: func(ctx context.Context, code, stateParam, cookieState, userAgent, ip string) (*TokenPair, *user_module.User, string, error) {
+				return &TokenPair{AccessToken: "acc+tok", RefreshToken: "ref/tok"}, &user_module.User{}, "/movies", nil
+			},
+		}
+
+		app := fiber.New()
+		app.Get("/api/auth/google/callback", h.GoogleCallback)
+
+		req := httptest.NewRequest(http.MethodGet, "/api/auth/google/callback?code=c1&state=s1", nil)
+		req.AddCookie(&http.Cookie{Name: "popcorn_oauth_state", Value: "s1"})
+		resp, err := app.Test(req)
+		if err != nil {
+			t.Fatalf("request failed: %v", err)
+		}
+		defer resp.Body.Close()
+
+		loc := resp.Header.Get("Location")
+		if loc == "" {
+			t.Fatal("expected Location header on callback redirect")
+		}
+		parsed, err := url.Parse(loc)
+		if err != nil {
+			t.Fatalf("invalid Location URL %q: %v", loc, err)
+		}
+		if parsed.Path != "/movies" {
+			t.Errorf("expected path /movies, got %q", parsed.Path)
+		}
+		if strings.Contains(parsed.RawQuery, "access_token") || strings.Contains(parsed.RawQuery, "refresh_token") {
+			t.Fatalf("tokens must not appear in query string: %q", parsed.RawQuery)
+		}
+		if parsed.RawQuery != "from=google" {
+			t.Errorf("expected query to keep only existing params (from=google), got %q", parsed.RawQuery)
+		}
+		frag, err := url.ParseQuery(parsed.EscapedFragment())
+		if err != nil {
+			t.Fatalf("failed to parse fragment %q: %v", parsed.EscapedFragment(), err)
+		}
+		if frag.Get("access_token") != "acc+tok" || frag.Get("refresh_token") != "ref/tok" {
+			t.Fatalf("expected tokens in fragment, got %q", parsed.EscapedFragment())
+		}
+		if strings.Contains(parsed.Fragment, "stale-fragment") {
+			t.Errorf("existing fragment was not stripped: %q", parsed.Fragment)
+		}
+
+		cookies := map[string]*http.Cookie{}
+		for _, ck := range resp.Cookies() {
+			cookies[ck.Name] = ck
+		}
+		if cookies["access_token"] == nil || cookies["access_token"].Value != "acc+tok" {
+			t.Errorf("expected access_token cookie to still be set, got %+v", cookies["access_token"])
+		}
+		if cookies["refresh_token"] == nil || cookies["refresh_token"].Value != "ref/tok" {
+			t.Errorf("expected refresh_token cookie to still be set, got %+v", cookies["refresh_token"])
+		}
 	}
 }

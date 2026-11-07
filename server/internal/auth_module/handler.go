@@ -1,6 +1,7 @@
 package auth_module
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -15,8 +16,9 @@ import (
 )
 
 type Handler struct {
-	svc *Service
-	cfg *config.Config
+	svc                  *Service
+	cfg                  *config.Config
+	handleGoogleCallback func(ctx context.Context, code, stateParam, cookieState, userAgent, ip string) (*TokenPair, *user_module.User, string, error)
 }
 
 func NewHandler(svc *Service, cfg *config.Config) *Handler {
@@ -294,7 +296,13 @@ func (h *Handler) GoogleCallback(c fiber.Ctx) error {
 		return c.Redirect().To(h.buildErrorRedirectURL("invalid_oauth_state", "/login"))
 	}
 
-	pair, _, returnURL, err := h.svc.HandleGoogleCallback(c.Context(), code, stateParam, cookieState, c.Get("User-Agent"), c.IP())
+	cb := func(ctx context.Context, code, stateParam, cookieState, userAgent, ip string) (*TokenPair, *user_module.User, string, error) {
+		return h.svc.HandleGoogleCallback(ctx, code, stateParam, cookieState, userAgent, ip)
+	}
+	if h.handleGoogleCallback != nil {
+		cb = h.handleGoogleCallback
+	}
+	pair, _, returnURL, err := cb(c.Context(), code, stateParam, cookieState, c.Get("User-Agent"), c.IP())
 	if err != nil {
 		errCode := "google_login_failed"
 		switch {
@@ -327,11 +335,8 @@ func (h *Handler) GoogleCallback(c fiber.Ctx) error {
 	}
 
 	if pair != nil {
-		sep := "?"
-		if strings.Contains(successURL, "?") {
-			sep = "&"
-		}
-		successURL = fmt.Sprintf("%s%saccess_token=%s&refresh_token=%s", successURL, sep, url.QueryEscape(pair.AccessToken), url.QueryEscape(pair.RefreshToken))
+		base, _, _ := strings.Cut(successURL, "#")
+		successURL = fmt.Sprintf("%s#access_token=%s&refresh_token=%s", base, url.QueryEscape(pair.AccessToken), url.QueryEscape(pair.RefreshToken))
 	}
 
 	return c.Redirect().To(successURL)
