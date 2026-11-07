@@ -225,4 +225,66 @@ describe("fetchMe refresh lock", () => {
     expect(JSON.stringify(logged)).not.toContain("SECRET")
     log.mockRestore()
   })
+
+  it("reads OAuth tokens from URL hash, stores them, and cleans the URL before network calls", async () => {
+    localStorage.clear()
+    window.history.replaceState({}, "", "/movies?sort=top#access_token=hash-at&refresh_token=hash-rt")
+    const replaceSpy = vi.spyOn(window.history, "replaceState")
+
+    let hashDuringRefresh = "not-checked"
+    let searchDuringRefresh = "not-checked"
+    let accessDuringRefresh: string | null = null
+    vi.mocked(authApi.refreshToken).mockImplementation(async (token?: string) => {
+      hashDuringRefresh = window.location.hash
+      searchDuringRefresh = window.location.search
+      accessDuringRefresh = localStorage.getItem("access_token")
+      expect(token).toBe("hash-rt")
+      return refreshReply(1)
+    })
+
+    setActivePinia(createPinia())
+    await useAuthStore().fetchMe()
+
+    expect(accessDuringRefresh).toBe("hash-at")
+    expect(hashDuringRefresh).toBe("")
+    expect(searchDuringRefresh).toBe("?sort=top")
+    expect(replaceSpy).toHaveBeenCalledWith({}, document.title, "/movies?sort=top")
+    expect(localStorage.getItem("access_token")).toBe("at1")
+    expect(localStorage.getItem("refresh_token")).toBe("rt1")
+
+    // Also preserves any non-token hash params alongside the tokens
+    window.history.replaceState({}, "", "/movies?sort=top#access_token=hash-at2&refresh_token=hash-rt2&tab=reviews")
+    replaceSpy.mockClear()
+    vi.mocked(authApi.refreshToken).mockImplementation(async (token?: string) => {
+      expect(token).toBe("hash-rt2")
+      return refreshReply(2)
+    })
+    await useAuthStore().fetchMe()
+    expect(replaceSpy).toHaveBeenCalledWith({}, document.title, "/movies?sort=top#tab=reviews")
+    replaceSpy.mockRestore()
+    window.history.replaceState({}, "", "/")
+  })
+
+  it("falls back to reading OAuth tokens from the query string and cleans them while preserving other params and hash", async () => {
+    localStorage.clear()
+    window.history.replaceState({}, "", "/movies?access_token=query-at&refresh_token=query-rt&sort=top#cast")
+    const replaceSpy = vi.spyOn(window.history, "replaceState")
+
+    let accessDuringRefresh: string | null = null
+    vi.mocked(authApi.refreshToken).mockImplementation(async (token?: string) => {
+      accessDuringRefresh = localStorage.getItem("access_token")
+      expect(token).toBe("query-rt")
+      return refreshReply(1)
+    })
+
+    setActivePinia(createPinia())
+    await useAuthStore().fetchMe()
+
+    expect(accessDuringRefresh).toBe("query-at")
+    expect(replaceSpy).toHaveBeenCalledWith({}, document.title, "/movies?sort=top#cast")
+    expect(window.location.search).toBe("?sort=top")
+    expect(window.location.hash).toBe("#cast")
+    replaceSpy.mockRestore()
+    window.history.replaceState({}, "", "/")
+  })
 })
