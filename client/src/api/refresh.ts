@@ -33,7 +33,10 @@ export async function runExclusiveRefresh(
 // Read the refresh token inside fn: a tab that waited must use the token the winner stored.
 export function withRefreshLock<T>(fn: () => Promise<T>): Promise<T> {
   if (typeof navigator !== "undefined" && navigator.locks) {
-    return navigator.locks.request(LOCK_NAME, { signal: AbortSignal.timeout(LOCK_WAIT_MS) }, fn);
+    // AbortSignal.timeout is missing in older browsers (Safari < 16): wait without a limit there.
+    const options: LockOptions =
+      typeof AbortSignal.timeout === "function" ? { signal: AbortSignal.timeout(LOCK_WAIT_MS) } : {};
+    return navigator.locks.request(LOCK_NAME, options, fn);
   }
   return fn();
 }

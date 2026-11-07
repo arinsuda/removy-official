@@ -95,6 +95,19 @@ describe("refresh timeouts", () => {
     expect(isSessionRejected(err)).toBe(false)
   })
 
+  it("requests the lock without a signal when AbortSignal.timeout is missing", async () => {
+    const original = AbortSignal.timeout
+    Object.defineProperty(AbortSignal, "timeout", { value: undefined, configurable: true, writable: true })
+    try {
+      const request = vi.fn(async (_n: string, _o: unknown, cb: () => Promise<string>) => cb())
+      Object.defineProperty(navigator, "locks", { configurable: true, value: { request } })
+      await expect(withRefreshLock(async () => "ok")).resolves.toBe("ok")
+      expect(request.mock.calls[0][1]).toEqual({})
+    } finally {
+      Object.defineProperty(AbortSignal, "timeout", { value: original, configurable: true, writable: true })
+    }
+  })
+
   it("sends the refresh POST with a timeout, and a timeout is not a rejected session", async () => {
     post.mockResolvedValue({})
     const { authApi } = await import("@/api/endpoints/auth")
