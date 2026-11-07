@@ -39,7 +39,6 @@ export function useSocket() {
     socket = io(SOCKET_URL, {
       withCredentials: true,
       auth: { token },
-      query: { token },
       transports: ["polling", "websocket"],
       reconnection: true,
       reconnectionAttempts: 10,
@@ -52,7 +51,6 @@ export function useSocket() {
       const fresh = localStorage.getItem("access_token")
       if (fresh && socket) {
         socket.auth = { token: fresh }
-        socket.io.opts.query = { token: fresh }
       }
     })
 
