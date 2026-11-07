@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"regexp"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -92,5 +93,43 @@ func TestN2_ClaimDisconnectsSocketsAndBlocksReconnect(t *testing.T) {
 	e.openSocket(t, srv.URL, e.accessToken(uid, 1))
 	if !waitCount(t, hub, 1) {
 		t.Fatal("a current token must still connect")
+	}
+}
+
+// revokeAfterFirstVerify delegates to the real verifier, then bumps the epoch once, as a
+// claim committing between the connect-time check and Join would.
+type revokeAfterFirstVerify struct {
+	inner notification_module.TokenVerifier
+	once  sync.Once
+	bump  func()
+}
+
+func (r *revokeAfterFirstVerify) VerifyToken(token string) (uint, error) {
+	id, err := r.inner.VerifyToken(token)
+	if err == nil {
+		r.once.Do(r.bump)
+	}
+	return id, err
+}
+
+// N2b: a revoke racing the handshake must not leave a live socket behind.
+func TestN2b_RevokeBetweenVerifyAndJoinDisconnects(t *testing.T) {
+	e := newEnv(t)
+	uid := seedUser(t, e.db, victim, true, "attacker-pass1")
+	v := &revokeAfterFirstVerify{
+		inner: middleware.NewTokenVerifier(e.cfg.JWT.AccessSecret, e.db),
+		bump:  func() { e.db.Exec(`UPDATE users SET token_version = token_version + 1 WHERE id = ?`, uid) },
+	}
+	hub := notification_module.NewHub(v, []string{"http://app.test"})
+	srv := httptest.NewServer(hub.Handler())
+	t.Cleanup(srv.Close)
+
+	e.openSocket(t, srv.URL, e.accessToken(uid, 0))
+	if !waitCount(t, hub, 0) {
+		t.Fatalf("socket revoked mid-handshake is still connected (online=%d)", hub.UniqueOnlineCount())
+	}
+	time.Sleep(300 * time.Millisecond)
+	if hub.UniqueOnlineCount() != 0 {
+		t.Fatal("socket came back")
 	}
 }

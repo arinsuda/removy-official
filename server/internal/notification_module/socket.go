@@ -75,6 +75,13 @@ func NewHub(verifier TokenVerifier, allowedOrigins []string) *Hub {
 		})
 
 		client.Join(roomFor(userID))
+
+		// A revoke that committed between the check above and Join ran DisconnectUser
+		// against a room this socket was not in yet. Look again now that it is in.
+		if _, err := verifier.VerifyToken(token); err != nil {
+			_ = client.Emit("error", "unauthorized")
+			client.Disconnect(true)
+		}
 	})
 
 	return h
