@@ -21,7 +21,7 @@ func RegisterRoutes(router fiber.Router, db *gorm.DB, cfg *config.Config, m *mai
 
 	auth := router.Group("/auth")
 	hops := cfg.TrustedProxyHops
-	ipKey := func(c fiber.Ctx) string { return "ip:" + shared.ClientIP(c, hops) }
+	ipKey := func(c fiber.Ctx) string { return "ip:" + shared.RateLimitIP(c, hops) }
 	emailKey := ratelimit.BodyKey(func(b []byte) string {
 		var req struct {
 			Email string `json:"email"`
@@ -36,9 +36,20 @@ func RegisterRoutes(router fiber.Router, db *gorm.DB, cfg *config.Config, m *mai
 	}
 
 	auth.Post("/register", ratelimit.New(5, time.Hour, ipKey), h.Register)
+	// Identifier+IP keeps a stranger from locking a victim out; the looser
+	// per-identifier cap only counts failures, so it bounds distributed guessing.
+	identifierKey := ratelimit.BodyKey(identifierOf)
+	identifierIPKey := func(c fiber.Ctx) string {
+		k := identifierKey(c)
+		if k == "" {
+			return ""
+		}
+		return k + "|" + shared.RateLimitIP(c, hops)
+	}
 	auth.Post("/login",
 		ratelimit.New(10, time.Minute, ipKey),
-		ratelimit.New(5, time.Minute, ratelimit.BodyKey(identifierOf)),
+		ratelimit.New(5, time.Minute, identifierIPKey),
+		ratelimit.NewFailedOnly(30, 15*time.Minute, identifierKey),
 		h.Login)
 	auth.Post("/refresh", h.Refresh)
 	auth.Post("/logout", h.Logout)
@@ -46,12 +57,12 @@ func RegisterRoutes(router fiber.Router, db *gorm.DB, cfg *config.Config, m *mai
 	auth.Post("/verify-email", ratelimit.New(20, time.Hour, ipKey), h.VerifyEmail)
 	auth.Post("/resend-verification",
 		ratelimit.New(3, time.Hour, ipKey),
-		ratelimit.New(3, time.Hour, emailKey),
+		ratelimit.New(5, time.Hour, emailKey),
 		h.ResendVerification)
 	auth.Post("/logout-all", mw.RequireAuth, h.LogoutAll)
 	auth.Post("/forgot-password",
 		ratelimit.New(3, time.Hour, ipKey),
-		ratelimit.New(3, time.Hour, emailKey),
+		ratelimit.New(5, time.Hour, emailKey),
 		h.ForgotPassword)
 	auth.Post("/reset-password", h.ResetPassword)
 

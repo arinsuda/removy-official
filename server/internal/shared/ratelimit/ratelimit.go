@@ -23,9 +23,20 @@ func HashKey(v string) string {
 // key; an empty key skips limiting for the request. Fiber sets Retry-After
 // before LimitReached runs.
 func New(max int, window time.Duration, keyFn func(fiber.Ctx) string) fiber.Handler {
+	return build(max, window, keyFn, false)
+}
+
+// NewFailedOnly is New, but responses with status < 400 are not counted, so
+// only failed attempts consume the budget.
+func NewFailedOnly(max int, window time.Duration, keyFn func(fiber.Ctx) string) fiber.Handler {
+	return build(max, window, keyFn, true)
+}
+
+func build(max int, window time.Duration, keyFn func(fiber.Ctx) string, failedOnly bool) fiber.Handler {
 	return limiter.New(limiter.Config{
-		Max:        max,
-		Expiration: window,
+		Max:                    max,
+		Expiration:             window,
+		SkipSuccessfulRequests: failedOnly,
 		Next: func(c fiber.Ctx) bool {
 			return keyFn(c) == ""
 		},

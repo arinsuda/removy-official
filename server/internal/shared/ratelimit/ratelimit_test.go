@@ -124,3 +124,33 @@ func TestBodyKeyMatchesDTOBinding(t *testing.T) {
 		}
 	}
 }
+
+func TestFailedOnlyIgnoresSuccesses(t *testing.T) {
+	app := fiber.New()
+	app.Post("/", NewFailedOnly(2, time.Hour, ipKey), func(c fiber.Ctx) error {
+		if c.Get("X-Fail") == "1" {
+			return c.SendStatus(401)
+		}
+		return c.SendString("ok")
+	})
+	do := func(fail string) int {
+		req := httptest.NewRequest("POST", "/", strings.NewReader("{}"))
+		req.Header.Set("X-Test-IP", "1.1.1.1")
+		req.Header.Set("X-Fail", fail)
+		resp, err := app.Test(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return resp.StatusCode
+	}
+	for i := 0; i < 5; i++ {
+		if got := do("0"); got != 200 {
+			t.Fatalf("success %d limited: %d", i, got)
+		}
+	}
+	for i, want := range []int{401, 401, 429} {
+		if got := do("1"); got != want {
+			t.Fatalf("failure %d: got %d want %d", i, got, want)
+		}
+	}
+}
