@@ -66,4 +66,26 @@ describe("fetchMe refresh lock", () => {
     expect(tabB.initError).toBeNull()
     expect(localStorage.getItem("refresh_token")).toBe("rt2")
   })
+
+  it("keeps the rotated tokens when login/logout made the call stale while it waited", async () => {
+    let release!: () => void
+    vi.mocked(authApi.refreshToken).mockImplementation(async () => {
+      await new Promise<void>((r) => (release = r))
+      return refreshReply(1)
+    })
+
+    setActivePinia(createPinia())
+    const store = useAuthStore()
+    const pending = store.fetchMe()
+    await vi.waitFor(() => expect(release).toBeTypeOf("function"))
+
+    // Bumps the generation without touching the stored tokens.
+    store.applySession({ user: { id: 2 } } as Parameters<typeof store.applySession>[0])
+    release()
+    await pending
+
+    expect(localStorage.getItem("refresh_token")).toBe("rt1")
+    expect(localStorage.getItem("access_token")).toBe("at1")
+    expect(store.user?.id).toBe(2)
+  })
 })
