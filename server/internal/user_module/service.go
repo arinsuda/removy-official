@@ -29,7 +29,11 @@ type Service struct {
 	emailVerifier       EmailVerificationSender
 	passwordResetMailer PasswordResetMailer
 	policy              privacy_policy.UserAccessPolicy
+	reissuer            SessionReissuer
 }
+
+// SetSessionReissuer wires the session issuer used to keep the caller signed in after a password change.
+func (s *Service) SetSessionReissuer(r SessionReissuer) { s.reissuer = r }
 
 func NewService(
 	db *gorm.DB,
@@ -360,7 +364,7 @@ func (s *Service) ChangePassword(targetUserID, requesterID uint, sessionVersion 
 		return err
 	}
 
-	return s.repo.db.Transaction(func(tx *gorm.DB) error {
+	err = s.repo.db.Transaction(func(tx *gorm.DB) error {
 		// A request that passed RequireAuth just before a claim must not write after it.
 		if err := identity_policy.EnsureSession(tx, targetUserID, sessionVersion, true); err != nil {
 			if errors.Is(err, identity_policy.ErrSessionStale) {
@@ -385,8 +389,18 @@ func (s *Service) ChangePassword(targetUserID, requesterID uint, sessionVersion 
 			return errors.New("new password must be different from current password")
 		}
 
-		return tx.Model(&User{}).Where("id = ?", targetUserID).Update("password", string(hashed)).Error
+		// A new password ends every session, this one included: the handler reissues it.
+		if err := tx.Exec(`UPDATE users SET password = ?, token_version = token_version + 1, updated_at = now() WHERE id = ?`,
+			string(hashed), targetUserID).Error; err != nil {
+			return err
+		}
+		return tx.Exec(`DELETE FROM refresh_tokens WHERE user_id = ?`, targetUserID).Error
 	})
+	if err != nil {
+		return err
+	}
+	identity_policy.Outcome{SessionsRevoked: true}.Publish(targetUserID)
+	return nil
 }
 
 func (s *Service) ForgotPassword(email string) error {

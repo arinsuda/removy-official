@@ -235,6 +235,7 @@ func newEnv(t *testing.T) *env {
 	e.users = user_module.RegisterRoutes(protected, db, nil, noStats{}, e.auth,
 		user_module.NewBrevoPasswordResetMailer(e.cfg.Brevo), privacy_policy.NewUserAccessPolicy(db), e.cfg.Brevo)
 	e.auth.SetUserService(e.users)
+	e.users.SetSessionReissuer(e.auth)
 	return e
 }
 

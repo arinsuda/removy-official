@@ -19,6 +19,7 @@ import (
 	"github.com/arinsuda/movie-hub/internal/notification_module"
 	"github.com/arinsuda/movie-hub/internal/shared/storage"
 	"github.com/arinsuda/movie-hub/internal/user_module"
+	"github.com/gofiber/fiber/v3"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -799,8 +800,35 @@ func (s *Service) Logout(rawRefresh string) error {
 	return s.repo.DeleteRefreshToken(hashed)
 }
 
+// LogoutAll ends every session of the user: refresh tokens go and token_version moves on,
+// so access tokens already issued stop working at once and live sockets are dropped.
 func (s *Service) LogoutAll(userID uint) error {
-	return s.repo.DeleteAllRefreshTokens(userID)
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec(`UPDATE users SET token_version = token_version + 1, updated_at = now() WHERE id = ? AND deleted_at IS NULL`, userID).Error; err != nil {
+			return err
+		}
+		return tx.Where("user_id = ?", userID).Delete(&user_module.RefreshToken{}).Error
+	})
+	if err != nil {
+		return err
+	}
+	identity_policy.Outcome{SessionsRevoked: true}.Publish(userID)
+	return nil
+}
+
+// ReissueSession starts a fresh session for userID and writes its cookies on c. It backs
+// the password change, which revokes every session including the caller's own.
+func (s *Service) ReissueSession(c fiber.Ctx, userID uint) (string, string, error) {
+	var u user_module.User
+	if err := s.db.Preload("Role").First(&u, userID).Error; err != nil {
+		return "", "", err
+	}
+	pair, err := s.IssueAndStoreTokens(&u, c.Get("User-Agent"), c.IP())
+	if err != nil {
+		return "", "", err
+	}
+	SetTokenCookies(c, s.cfg, pair)
+	return pair.AccessToken, pair.RefreshToken, nil
 }
 
 func (s *Service) SendVerification(userID uint, email string) error {

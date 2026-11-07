@@ -3,6 +3,7 @@ package user_module
 import (
 	"errors"
 	"fmt"
+	"log"
 	"mime/multipart"
 	"strconv"
 	"strings"
@@ -189,7 +190,18 @@ func (h *Handler) ChangePassword(c fiber.Ctx) error {
 		return handlePasswordError(c, err)
 	}
 
-	return c.JSON(fiber.Map{"message": "password changed successfully"})
+	// Every session was revoked by the change; give this device a fresh one so it stays signed in.
+	resp := fiber.Map{"message": "password changed successfully"}
+	if h.svc.reissuer != nil {
+		access, refresh, err := h.svc.reissuer.ReissueSession(c, claims.UserID)
+		if err != nil {
+			log.Printf("ERROR reissue session after password change for user %d: %v", claims.UserID, err)
+		} else {
+			resp["access_token"] = access
+			resp["refresh_token"] = refresh
+		}
+	}
+	return c.JSON(resp)
 }
 
 func handlePasswordError(c fiber.Ctx, err error) error {
