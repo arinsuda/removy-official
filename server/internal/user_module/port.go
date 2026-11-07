@@ -12,7 +12,9 @@ type EmailVerificationSender interface {
 
 // SessionReissuer starts a fresh session for the caller after their sessions were
 // revoked (password change), writing the new cookies on c and returning the tokens
-// for the response body.
+// for the response body. expectedVersion is the epoch the password change produced
+// (the caller's token version + 1): if a reset or claim moved it on since, no session
+// is issued.
 type SessionReissuer interface {
-	ReissueSession(c fiber.Ctx, userID uint) (accessToken, refreshToken string, err error)
+	ReissueSession(c fiber.Ctx, userID uint, expectedVersion int) (accessToken, refreshToken string, err error)
 }

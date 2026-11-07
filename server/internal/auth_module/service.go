@@ -824,12 +824,23 @@ func (s *Service) LogoutAll(userID uint) error {
 
 // ReissueSession starts a fresh session for userID and writes its cookies on c. It backs
 // the password change, which revokes every session including the caller's own.
-func (s *Service) ReissueSession(c fiber.Ctx, userID uint) (string, string, error) {
+// expectedVersion is the epoch that change produced; it is checked under the row lock in
+// the same transaction that issues the tokens, so a reset or claim that committed in
+// between yields ErrSessionStale and no tokens.
+func (s *Service) ReissueSession(c fiber.Ctx, userID uint, expectedVersion int) (string, string, error) {
 	var u user_module.User
 	if err := s.db.Preload("Role").First(&u, userID).Error; err != nil {
 		return "", "", err
 	}
-	pair, err := s.IssueAndStoreTokens(&u, c.Get("User-Agent"), c.IP())
+	var pair *TokenPair
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		if err := identity_policy.EnsureSession(tx, userID, expectedVersion, false); err != nil {
+			return err
+		}
+		var err error
+		pair, err = s.issueAndStoreTokensTx(tx, &u, c.Get("User-Agent"), c.IP())
+		return err
+	})
 	if err != nil {
 		return "", "", err
 	}

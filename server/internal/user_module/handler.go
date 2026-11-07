@@ -193,7 +193,7 @@ func (h *Handler) ChangePassword(c fiber.Ctx) error {
 	// Every session was revoked by the change; give this device a fresh one so it stays signed in.
 	resp := fiber.Map{"message": "password changed successfully"}
 	if h.svc.reissuer != nil {
-		access, refresh, err := h.svc.reissuer.ReissueSession(c, claims.UserID)
+		access, refresh, err := h.svc.reissuer.ReissueSession(c, claims.UserID, claims.TokenVersion+1)
 		if err != nil {
 			log.Printf("ERROR reissue session after password change for user %d: %v", claims.UserID, err)
 		} else {
