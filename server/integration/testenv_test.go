@@ -10,9 +10,11 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"regexp"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -32,15 +34,33 @@ import (
 type mailMsg struct{ To, Subject, HTML string }
 
 type mailbox struct {
-	mu    sync.Mutex
-	msgs  []mailMsg
-	local http.RoundTripper // only loopback hosts (the fake PLANZI) pass through
+	mu   sync.Mutex
+	msgs []mailMsg
+}
+
+// activeMail is the mailbox of the running test. The transport below is installed once in
+// TestMain, so background mail goroutines never race with a swap of http.DefaultTransport.
+var activeMail atomic.Pointer[mailbox]
+
+type mailRouter struct{ local http.RoundTripper }
+
+func (r mailRouter) RoundTrip(req *http.Request) (*http.Response, error) {
+	if h := req.URL.Hostname(); h == "127.0.0.1" || h == "localhost" {
+		return r.local.RoundTrip(req)
+	}
+	m := activeMail.Load()
+	if m == nil {
+		return nil, fmt.Errorf("no test mailbox is active, got call to %s", req.URL.Host)
+	}
+	return m.RoundTrip(req)
+}
+
+func TestMain(m *testing.M) {
+	http.DefaultTransport = mailRouter{local: http.DefaultTransport}
+	os.Exit(m.Run())
 }
 
 func (m *mailbox) RoundTrip(req *http.Request) (*http.Response, error) {
-	if h := req.URL.Hostname(); h == "127.0.0.1" || h == "localhost" {
-		return m.local.RoundTrip(req)
-	}
 	if req.URL.Host != "api.brevo.com" {
 		return nil, fmt.Errorf("integration tests may only call the fake mail host, got %s", req.URL.Host)
 	}
@@ -211,10 +231,8 @@ func newEnv(t *testing.T) *env {
 	db := newTestDB(t)
 	e := &env{t: t, db: db, cfg: testConfig(), mail: &mailbox{}, remote: newFakeRemote(t), google: &fakeGoogle{}}
 
-	prev := http.DefaultTransport
-	e.mail.local = prev
-	http.DefaultTransport = e.mail
-	t.Cleanup(func() { http.DefaultTransport = prev })
+	activeMail.Store(e.mail)
+	t.Cleanup(func() { activeMail.CompareAndSwap(e.mail, nil) })
 
 	e.cfg.Brevo = config.BrevoConfig{APIKey: "test", SenderEmail: "noreply@popcorn.test", SenderName: "POPCORN", Enabled: true}
 	e.cfg.Google = config.GoogleConfig{Enabled: true, ClientID: "cid", ClientSecret: "cs", RedirectURL: "http://app.test/cb"}
