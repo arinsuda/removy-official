@@ -162,7 +162,12 @@ export const useAuthStore = defineStore("auth", () => {
       })
 
       // Another tab (or this one) logged out or signed in as someone else meanwhile.
-      if (!refreshRes) return
+      // If this tab did not start a newer fetchMe, rerun with the current tokens so the
+      // bootstrap still finishes (as the new account, or as logged out).
+      if (!refreshRes) {
+        if (myGen === _generation) return fetchMe()
+        return
+      }
 
       // Stale-request protection: bail out if login/logout happened while waiting
       if (myGen !== _generation) return
@@ -191,7 +196,9 @@ export const useAuthStore = defineStore("auth", () => {
       // Status only: the error object carries request headers and bodies with tokens.
       console.log("[fetchMe] caught error, status:", status)
       if (status === 401 || status === 403) {
-        if (sessionUnchanged(sentRefresh, myGen)) clearUser()
+        // A stale 401 for a session another tab already replaced: retry with its tokens.
+        if (!sessionUnchanged(sentRefresh, myGen)) return fetchMe()
+        clearUser()
         initError.value = "unauthenticated"
       } else if (
         !axiosErr.response ||

@@ -113,15 +113,25 @@ describe("fetchMe refresh lock", () => {
     expect(store.user?.id).toBe(2)
   })
 
+  // Tab 1's first refresh waits for the test; any later refresh answers for whatever
+  // session is stored by then: B's token rotates, anything else is rejected.
+  const replyB = { data: { user: { id: 2, email: "b@x.test", is_verified: true }, access_token: "at-B2", refresh_token: "rt-B2" } } as Awaited<ReturnType<typeof authApi.refreshToken>>
+  const meB = { data: { user: { id: 2, username: "b", favorite_genres: "[]" } } } as Awaited<ReturnType<typeof userApi.me>>
+
   it.each([
-    ["logs out", () => localStorage.removeItem("refresh_token"), null],
-    ["logs in as B", () => localStorage.setItem("refresh_token", "rt-B"), "rt-B"],
-  ])("a refresh in tab 1 does not restore the session after tab 2 %s", async (_n, change, expected) => {
+    ["logs out", () => localStorage.removeItem("refresh_token"), null, false],
+    ["logs in as B", () => localStorage.setItem("refresh_token", "rt-B"), "rt-B2", true],
+  ])("a refresh in tab 1 never writes A's tokens after tab 2 %s", async (_n, change, expected, loggedIn) => {
     let release!: () => void
-    vi.mocked(authApi.refreshToken).mockImplementation(async () => {
-      await new Promise<void>((r) => (release = r))
-      return refreshReply(1)
+    vi.mocked(authApi.refreshToken).mockImplementation(async (token?: string) => {
+      if (token === "rt0") {
+        await new Promise<void>((r) => (release = r))
+        return refreshReply(1)
+      }
+      if (token === "rt-B") return replyB
+      throw { response: { status: 401 } }
     })
+    vi.mocked(userApi.me).mockResolvedValue(meB)
     setActivePinia(createPinia())
     const tab1 = useAuthStore()
     const pending = tab1.fetchMe()
@@ -132,17 +142,19 @@ describe("fetchMe refresh lock", () => {
     await pending
 
     expect(localStorage.getItem("refresh_token")).toBe(expected)
-    expect(localStorage.getItem("access_token")).toBeNull()
-    expect(tab1.user).toBeNull()
-    expect(userApi.me).not.toHaveBeenCalled()
+    expect(localStorage.getItem("access_token")).toBe(loggedIn ? "at-B2" : null)
+    expect(tab1.isInitialized).toBe(true)
+    expect(tab1.user?.id).toBe(loggedIn ? 2 : undefined)
   })
 
   it("a stale 401 in tab 1 does not clear the session tab 2 just created", async () => {
     let fail!: () => void
-    vi.mocked(authApi.refreshToken).mockImplementation(async () => {
+    vi.mocked(authApi.refreshToken).mockImplementation(async (token?: string) => {
+      if (token === "rt-B") return replyB
       await new Promise<void>((_r, rej) => (fail = () => rej({ response: { status: 401 } })))
       return refreshReply(1)
     })
+    vi.mocked(userApi.me).mockResolvedValue(meB)
     setActivePinia(createPinia())
     const tab1 = useAuthStore()
     const pending = tab1.fetchMe()
@@ -153,8 +165,50 @@ describe("fetchMe refresh lock", () => {
     fail()
     await pending
 
-    expect(localStorage.getItem("refresh_token")).toBe("rt-B")
-    expect(localStorage.getItem("access_token")).toBe("at-B")
+    // B's session survives and tab 1 adopts it instead of showing logged out.
+    expect(localStorage.getItem("refresh_token")).toBe("rt-B2")
+    expect(tab1.user?.id).toBe(2)
+    expect(tab1.initError).toBeNull()
+  })
+
+  it.each([
+    ["signs in as the other tab's account", "other-rt", true],
+    ["ends logged out", null, false],
+  ])("finishes bootstrap when another tab changes the session mid-refresh and it %s", async (_n, otherRt, loggedIn) => {
+    let release!: () => void
+    vi.mocked(authApi.refreshToken).mockImplementation(async (token?: string) => {
+      if (token === "rt0") {
+        await new Promise<void>((r) => (release = r))
+        throw { response: { status: 401 } }
+      }
+      if (token === "other-rt") {
+        return { data: { user: { id: 2, email: "b@x.test", is_verified: true }, access_token: "atB", refresh_token: "rtB" } } as Awaited<ReturnType<typeof authApi.refreshToken>>
+      }
+      throw { response: { status: 401 } }
+    })
+    vi.mocked(userApi.me).mockResolvedValue({
+      data: { user: { id: 2, username: "b", favorite_genres: "[]" } },
+    } as Awaited<ReturnType<typeof userApi.me>>)
+
+    setActivePinia(createPinia())
+    const store = useAuthStore()
+    const pending = store.fetchMe()
+    await vi.waitFor(() => expect(release).toBeTypeOf("function"))
+
+    // Another tab: no generation bump in this tab.
+    if (otherRt) localStorage.setItem("refresh_token", otherRt)
+    else localStorage.removeItem("refresh_token")
+    release()
+    await pending
+
+    expect(store.isInitialized).toBe(true)
+    expect(store.isLoggedIn).toBe(loggedIn)
+    if (loggedIn) {
+      expect(store.user?.id).toBe(2)
+      expect(store.initError).toBeNull()
+    } else {
+      expect(store.initError).toBe("unauthenticated")
+    }
   })
 
   it("logs only the status of a failed refresh, never the error object or its tokens", async () => {
