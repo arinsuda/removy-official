@@ -53,7 +53,7 @@ api.interceptors.response.use(
     const status = error.response?.status;
 
     // ป้องกัน refresh loop — ไม่ retry ถ้าเป็น request จาก auth routes เหล่านี้
-    const isAuthRoute = ["/auth/refresh", "/auth/login", "/auth/logout"].some(
+    const isAuthRoute = ["/auth/refresh", "/auth/login", "/auth/logout", "/auth/handoff"].some(
       (path) => originalRequest?.url?.includes(path),
     );
     if (isAuthRoute) {
