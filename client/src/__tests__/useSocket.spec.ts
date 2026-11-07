@@ -99,4 +99,33 @@ describe("useSocket", () => {
     expect(created[0].auth).toEqual({ token: "at-3" })
     expect(created[0].connect).toHaveBeenCalledTimes(1)
   })
+
+  describe("another tab changes the account", () => {
+    const jwt = (uid: number) => `h.${btoa(JSON.stringify({ uid }))}.s`
+    const storageEvent = () => window.dispatchEvent(new StorageEvent("storage", { key: "access_token" }))
+    let reload: ReturnType<typeof vi.fn>
+    beforeEach(() => {
+      reload = vi.fn()
+      vi.stubGlobal("location", { ...window.location, reload })
+      useSocket().disconnect()
+    })
+
+    it("reloads instead of resuming when the new token belongs to another user", () => {
+      localStorage.setItem("access_token", jwt(1))
+      useSocket().connect()
+      localStorage.setItem("access_token", jwt(2))
+      storageEvent()
+      expect(reload).toHaveBeenCalledTimes(1)
+      expect(created[0].connect).not.toHaveBeenCalled()
+    })
+
+    it("resumes without reloading when the same user refreshed", () => {
+      localStorage.setItem("access_token", jwt(1))
+      useSocket().connect()
+      localStorage.setItem("access_token", jwt(1) + "x")
+      storageEvent()
+      expect(reload).not.toHaveBeenCalled()
+      expect(created[0].connect).toHaveBeenCalledTimes(1)
+    })
+  })
 })

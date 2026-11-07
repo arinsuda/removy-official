@@ -21,6 +21,21 @@ let socket: Socket | null = null
 const isConnected = ref(false)
 const isConnecting = ref(false)
 let storageListenerBound = false
+// Account the socket was opened for; a token for another account means another tab switched.
+let socketUserId: number | null = null
+
+// The access token is a JWT whose "uid" claim names the account. No signature check:
+// this only tells accounts apart, the server still authenticates the token.
+function userIdFromToken(token: string | null): number | null {
+  if (!token) return null
+  try {
+    const payload = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")
+    const uid = JSON.parse(atob(payload)).uid
+    return typeof uid === "number" ? uid : null
+  } catch {
+    return null
+  }
+}
 
 /**
  * Reconnect a socket that the server dropped (revoked or expired token) once a newer
@@ -40,7 +55,15 @@ function bindStorageListener() {
   if (storageListenerBound || typeof window === "undefined") return
   storageListenerBound = true
   window.addEventListener("storage", e => {
-    if (e.key === "access_token") resume()
+    if (e.key !== "access_token") return
+    const incoming = userIdFromToken(localStorage.getItem("access_token"))
+    if (incoming !== null && socketUserId !== null && incoming !== socketUserId) {
+      // Another tab signed in as a different account: reload so every store and the
+      // socket start clean instead of mixing two accounts.
+      window.location.reload()
+      return
+    }
+    resume()
   })
 }
 
@@ -62,6 +85,7 @@ export function useSocket() {
     bindStorageListener()
 
     const token = localStorage.getItem("access_token")
+    socketUserId = userIdFromToken(token)
 
     socket = io(SOCKET_URL, {
       withCredentials: true,
@@ -119,6 +143,7 @@ export function useSocket() {
     socket?.removeAllListeners()
     socket?.disconnect()
     socket = null
+    socketUserId = null
     isConnected.value = false
     isConnecting.value = false
   }
