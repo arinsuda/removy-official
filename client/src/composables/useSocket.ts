@@ -65,6 +65,14 @@ export function useSocket() {
       if (import.meta.env.DEV) console.warn("[socket] disconnected:", reason)
     })
 
+    // The server rejected the token (revoked or expired session) and dropped us. Retrying
+    // with the same token only loops, so stop; the next connect() starts a fresh socket.
+    socket.on("error", (reason: unknown) => {
+      if (reason !== "unauthorized") return
+      if (import.meta.env.DEV) console.warn("[socket] unauthorized, not reconnecting")
+      disconnect()
+    })
+
     socket.on("connect_error", err => {
       isConnecting.value = false
       if (import.meta.env.DEV)

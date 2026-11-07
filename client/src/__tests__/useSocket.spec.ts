@@ -45,4 +45,20 @@ describe("useSocket", () => {
     expect(created[0].opts.auth).toEqual({ token: "at-1" })
     expect(created[0].opts).not.toHaveProperty("query")
   })
+
+  it("stops for good on 'unauthorized' instead of looping, and a later connect() starts fresh", () => {
+    const { connect, isConnecting } = useSocket()
+    connect()
+    const first = created[0]
+    const onError = first.handlers.error
+    first.handlers.error("something else")
+    expect(first.disconnect).not.toHaveBeenCalled()
+
+    onError("unauthorized")
+    expect(first.disconnect).toHaveBeenCalledTimes(1)
+    expect(isConnecting.value).toBe(false)
+
+    connect()
+    expect(created).toHaveLength(2)
+  })
 })
