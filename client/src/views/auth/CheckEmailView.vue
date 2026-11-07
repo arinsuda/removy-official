@@ -66,10 +66,10 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
   import { useI18n } from "vue-i18n"
   import { isRateLimited } from "@/utils/rateLimit"
 
-  const { t } = useI18n()
   import { gsap } from "gsap"
   import { MailCheck as IconMailCheck } from "lucide-vue-next"
 
+  const { t } = useI18n()
   const authStore = useAuthStore()
   const email = ref(authStore.user?.email ?? "")
 
