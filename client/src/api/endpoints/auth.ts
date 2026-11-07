@@ -1,4 +1,5 @@
 import api from "../index"
+import { REFRESH_POST_TIMEOUT_MS } from "../refresh"
 
 import type {
   AuthResponse,
@@ -27,7 +28,7 @@ export const authApi = {
   register: (data: RegisterRequest) =>
     api.post<AuthResponse>("/auth/register", data),
 
-  refreshToken: (token?: string) => api.post<AuthResponse>("/auth/refresh", { refresh_token: token }),
+  refreshToken: (token?: string) => api.post<AuthResponse>("/auth/refresh", { refresh_token: token }, { timeout: REFRESH_POST_TIMEOUT_MS }),
 
   logout: () => api.post("/auth/logout"),
 

@@ -1,6 +1,6 @@
 import axios from "axios";
 import { useAuthStore } from "@/stores/auth";
-import { isSessionRejected, runExclusiveRefresh } from "@/api/refresh";
+import { REFRESH_POST_TIMEOUT_MS, isSessionRejected, runExclusiveRefresh } from "@/api/refresh";
 
 const getBaseURL = () => {
   const envUrl = import.meta.env.VITE_API_BASE_URL;
@@ -83,7 +83,7 @@ api.interceptors.response.use(
         const refreshRes = await axios.post(
           refreshUrl,
           { refresh_token: storedRefresh },
-          { withCredentials: true },
+          { withCredentials: true, timeout: REFRESH_POST_TIMEOUT_MS },
         );
 
         if (refreshRes.data?.access_token) {

@@ -1,5 +1,11 @@
 const LOCK_NAME = "popcorn-auth-refresh";
 
+// A refresh POST that hangs must not hold the lock (and every other tab) forever, and a
+// tab waiting for the lock gives up after LOCK_WAIT_MS. Both failures carry no HTTP
+// status, so isSessionRejected() is false and the user stays signed in.
+export const REFRESH_POST_TIMEOUT_MS = 15000;
+export const LOCK_WAIT_MS = 20000;
+
 // Only a rejected session may log the user out. A 5xx (the server could not check the
 // session) or a network error says nothing about the refresh token, so it must not.
 export function isSessionRejected(error: unknown): boolean {
@@ -27,7 +33,7 @@ export async function runExclusiveRefresh(
 // Read the refresh token inside fn: a tab that waited must use the token the winner stored.
 export function withRefreshLock<T>(fn: () => Promise<T>): Promise<T> {
   if (typeof navigator !== "undefined" && navigator.locks) {
-    return navigator.locks.request(LOCK_NAME, fn);
+    return navigator.locks.request(LOCK_NAME, { signal: AbortSignal.timeout(LOCK_WAIT_MS) }, fn);
   }
   return fn();
 }
