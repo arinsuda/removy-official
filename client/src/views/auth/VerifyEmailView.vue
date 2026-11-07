@@ -254,7 +254,7 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
     color: #ffffff;
   }
   .status-text--error {
-    color: var(--color-danger);
+    color: var(--color-brand);
   }
   .status-text {
     font-size: 0.9rem;
