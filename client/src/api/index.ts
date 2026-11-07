@@ -74,18 +74,28 @@ api.interceptors.response.use(
     }
 
     isRefreshing = true;
+    let sentRefresh: string | null = null;
 
     try {
       const staleAccess =
         String(originalRequest.headers?.Authorization ?? "").replace(/^Bearer /, "") || null;
+      let sessionChanged = false;
       await runExclusiveRefresh(staleAccess, async () => {
         const storedRefresh = localStorage.getItem("refresh_token");
+        sentRefresh = storedRefresh;
         const refreshUrl = `${getBaseURL()}/auth/refresh`;
         const refreshRes = await axios.post(
           refreshUrl,
           { refresh_token: storedRefresh },
           { withCredentials: true, timeout: REFRESH_POST_TIMEOUT_MS },
         );
+
+        // Logout or another account's login happened while the POST was in flight: the
+        // reply belongs to a session that is gone, so it must not touch the stored tokens.
+        if (localStorage.getItem("refresh_token") !== storedRefresh) {
+          sessionChanged = true;
+          return;
+        }
 
         if (refreshRes.data?.access_token) {
           localStorage.setItem("access_token", refreshRes.data.access_token);
@@ -95,6 +105,13 @@ api.interceptors.response.use(
         }
         resumeSocket();
       });
+
+      if (sessionChanged) {
+        // Reject without logging out: the stored session is not the one that failed.
+        const superseded = new Error("Session changed during refresh");
+        processQueue(superseded);
+        return Promise.reject(superseded);
+      }
 
       processQueue();
 
@@ -111,6 +128,10 @@ api.interceptors.response.use(
       // 503 / network error: the server could not check the session. Keep the tokens and
       // the user signed in; the request just fails and can be retried.
       if (!isSessionRejected(refreshError)) {
+        return Promise.reject(refreshError);
+      }
+      // Clear only if the stored session is still the one that was rejected.
+      if (localStorage.getItem("refresh_token") !== sentRefresh) {
         return Promise.reject(refreshError);
       }
       localStorage.removeItem("access_token");
