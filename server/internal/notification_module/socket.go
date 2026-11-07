@@ -37,6 +37,21 @@ func NewHub(verifier TokenVerifier, allowedOrigins []string) *Hub {
 		userSockets: make(map[uint]map[string]bool),
 	}
 
+	// Reject at the handshake: the client gets connect_error("unauthorized") and stops,
+	// instead of connecting and being dropped in a loop.
+	io.Use(func(c *socket.Socket, next func(*socket.ExtendedError)) {
+		token := extractAccessTokenFromRequest(c.Handshake())
+		if token == "" {
+			next(socket.NewExtendedError("unauthorized", nil))
+			return
+		}
+		if _, err := verifier.VerifyToken(token); err != nil {
+			next(socket.NewExtendedError("unauthorized", nil))
+			return
+		}
+		next(nil)
+	})
+
 	io.On("connection", func(clients ...any) {
 		client := clients[0].(*socket.Socket)
 

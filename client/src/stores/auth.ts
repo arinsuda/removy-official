@@ -3,6 +3,7 @@ import { ref, computed } from "vue"
 
 import { authApi, userApi } from "@/api/api"
 import { withRefreshLock } from "@/api/refresh"
+import { resume as resumeSocket } from "@/composables/useSocket"
 
 import type { AuthResponse, AuthUser, LoginRequest, RegisterRequest } from "@/types"
 
@@ -91,6 +92,7 @@ export const useAuthStore = defineStore("auth", () => {
   function applySession(data: AuthResponse) {
     if (data.access_token) localStorage.setItem("access_token", data.access_token)
     if (data.refresh_token) localStorage.setItem("refresh_token", data.refresh_token)
+    resumeSocket()
     _generation++
     setUser(data.user)
     isInitialized.value = true
@@ -151,6 +153,7 @@ export const useAuthStore = defineStore("auth", () => {
       if (refreshRes.data.refresh_token) {
         localStorage.setItem("refresh_token", refreshRes.data.refresh_token)
       }
+      resumeSocket()
 
       const meRes = await userApi.me(userId)
 

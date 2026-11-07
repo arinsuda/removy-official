@@ -541,6 +541,7 @@ import {
 import type { UserProfile } from "@/types/user";
 import { authApi, userApi } from "@/api/api";
 import { useAuthStore } from "@/stores/auth";
+import { resume as resumeSocket } from "@/composables/useSocket";
 import LinkedAccounts from "@/components/profile/LinkedAccounts.vue";
 import ConfirmModal from "@/components/profile/components/ConfirmModal.vue";
 
@@ -717,6 +718,8 @@ async function handleChangePassword() {
     // Keep it, or the next request fails to refresh and signs the user out.
     if (data.access_token) localStorage.setItem("access_token", data.access_token);
     if (data.refresh_token) localStorage.setItem("refresh_token", data.refresh_token);
+    resumeSocket();
+    resumeSocket();
     pwSuccess.value = true;
     pwForm.old_password = "";
     pwForm.new_password = "";

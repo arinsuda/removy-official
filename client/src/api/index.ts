@@ -1,5 +1,6 @@
 import axios from "axios";
 import { useAuthStore } from "@/stores/auth";
+import { resume as resumeSocket } from "@/composables/useSocket";
 import { REFRESH_POST_TIMEOUT_MS, isSessionRejected, runExclusiveRefresh } from "@/api/refresh";
 
 const getBaseURL = () => {
@@ -92,6 +93,7 @@ api.interceptors.response.use(
         if (refreshRes.data?.refresh_token) {
           localStorage.setItem("refresh_token", refreshRes.data.refresh_token);
         }
+        resumeSocket();
       });
 
       processQueue();
