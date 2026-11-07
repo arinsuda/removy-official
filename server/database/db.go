@@ -33,9 +33,20 @@ import (
 
 var DB *gorm.DB
 
+// NewGormLogger logs slow queries and errors only, and never the bound values: Info level
+// printed every statement with its parameters (emails, password hashes, tokens).
+func NewGormLogger(w logger.Writer) logger.Interface {
+	return logger.New(w, logger.Config{
+		SlowThreshold:             200 * time.Millisecond,
+		LogLevel:                  logger.Warn,
+		IgnoreRecordNotFoundError: true,
+		ParameterizedQueries:      true,
+	})
+}
+
 func Connect(cfg *config.Config) {
 	db, err := gorm.Open(postgres.Open(cfg.DB.DSN()), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+		Logger: NewGormLogger(log.New(os.Stdout, "\r\n", log.LstdFlags)),
 		NowFunc: func() time.Time {
 			return time.Now().UTC()
 		},
