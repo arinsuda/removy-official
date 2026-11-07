@@ -138,6 +138,10 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
     X as IconX,
   } from "lucide-vue-next"
   import { authApi } from "@/api/api"
+  import { useI18n } from "vue-i18n"
+  import { isRateLimited } from "@/utils/rateLimit"
+
+  const { t } = useI18n()
 
   const email = ref("")
   const touched = ref(false)
@@ -205,8 +209,10 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
         { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" },
       )
       startCooldown()
-    } catch {
-      serverError.value = "Something went wrong. Please try again."
+    } catch (e) {
+      serverError.value = isRateLimited(e)
+        ? t("errors.rateLimited")
+        : "Something went wrong. Please try again."
       gsap.fromTo(
         formPanelRef.value,
         { x: -8 },
@@ -222,8 +228,8 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
     try {
       await authApi.forgotPassword({ email: submittedEmail.value })
       startCooldown()
-    } catch {
-      /* silent */
+    } catch (e) {
+      if (isRateLimited(e)) serverError.value = t("errors.rateLimited")
     }
   }
 

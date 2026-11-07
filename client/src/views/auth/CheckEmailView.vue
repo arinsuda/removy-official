@@ -42,6 +42,9 @@
             <span v-else-if="resendStatus === 'sent'">SENT SUCCESSFUL</span>
             <span v-else>ERROR, TRY AGAIN</span>
           </button>
+          <p v-if="rateLimited" class="status-text status-text--error" role="alert">
+            {{ t("errors.rateLimited") }}
+          </p>
 
           <p class="form-footer mt-4">
             <RouterLink to="/login" class="link-muted">
@@ -60,6 +63,10 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
   import { RouterLink } from "vue-router"
   import { useAuthStore } from "@/stores/auth"
   import { authApi } from "@/api/api"
+  import { useI18n } from "vue-i18n"
+  import { isRateLimited } from "@/utils/rateLimit"
+
+  const { t } = useI18n()
   import { gsap } from "gsap"
   import { MailCheck as IconMailCheck } from "lucide-vue-next"
 
@@ -68,6 +75,7 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
 
   type ResendStatus = "idle" | "sending" | "sent" | "failed"
   const resendStatus = ref<ResendStatus>("idle")
+  const rateLimited = ref(false)
 
   const containerRef = ref<HTMLElement | null>(null)
   const brandRef = ref<HTMLElement | null>(null)
@@ -100,11 +108,13 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
       email.value = input
     }
 
+    rateLimited.value = false
     resendStatus.value = "sending"
     try {
       await authApi.resendVerification(email.value)
       resendStatus.value = "sent"
-    } catch {
+    } catch (e) {
+      rateLimited.value = isRateLimited(e)
       resendStatus.value = "failed"
     }
   }

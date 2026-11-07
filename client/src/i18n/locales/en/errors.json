@@ -1,6 +1,7 @@
 {
   "generic": "Something went wrong. Please try again later.",
   "network": "Cannot connect to the server. Please check your internet connection.",
+  "rateLimited": "Too many attempts. Please wait a moment and try again.",
   "auth": {
     "invalidCredentials": "Invalid email or password",
     "emailAlreadyExists": "This email is already registered",
