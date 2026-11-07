@@ -265,22 +265,30 @@ describe("fetchMe refresh lock", () => {
     window.history.replaceState({}, "", "/")
   })
 
-  it("falls back to reading OAuth tokens from the query string and cleans them while preserving other params and hash", async () => {
+  it("ignores OAuth tokens in the query string without storing them, while still stripping them from the URL", async () => {
     localStorage.clear()
     window.history.replaceState({}, "", "/movies?access_token=query-at&refresh_token=query-rt&sort=top#cast")
     const replaceSpy = vi.spyOn(window.history, "replaceState")
 
-    let accessDuringRefresh: string | null = null
+    let accessDuringRefresh: string | null = "not-checked"
+    let refreshDuringRefresh: string | null = "not-checked"
+    let searchDuringRefresh = "not-checked"
     vi.mocked(authApi.refreshToken).mockImplementation(async (token?: string) => {
       accessDuringRefresh = localStorage.getItem("access_token")
-      expect(token).toBe("query-rt")
-      return refreshReply(1)
+      refreshDuringRefresh = localStorage.getItem("refresh_token")
+      searchDuringRefresh = window.location.search
+      expect(token).toBeUndefined()
+      throw { response: { status: 401 } }
     })
 
     setActivePinia(createPinia())
     await useAuthStore().fetchMe()
 
-    expect(accessDuringRefresh).toBe("query-at")
+    expect(accessDuringRefresh).toBeNull()
+    expect(refreshDuringRefresh).toBeNull()
+    expect(localStorage.getItem("access_token")).toBeNull()
+    expect(localStorage.getItem("refresh_token")).toBeNull()
+    expect(searchDuringRefresh).toBe("?sort=top")
     expect(replaceSpy).toHaveBeenCalledWith({}, document.title, "/movies?sort=top#cast")
     expect(window.location.search).toBe("?sort=top")
     expect(window.location.hash).toBe("#cast")

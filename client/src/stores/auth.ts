@@ -126,13 +126,8 @@ export const useAuthStore = defineStore("auth", () => {
     try {
       const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""))
       const queryParams = new URLSearchParams(window.location.search)
-      const hashAccess = hashParams.get("access_token")
-      const hashRefresh = hashParams.get("refresh_token")
-      const queryAccess = queryParams.get("access_token")
-      const queryRefresh = queryParams.get("refresh_token")
-      const fromHash = !!(hashAccess && hashRefresh)
-      const urlAccess = fromHash ? hashAccess : queryAccess
-      const urlRefresh = fromHash ? hashRefresh : queryRefresh
+      const urlAccess = hashParams.get("access_token")
+      const urlRefresh = hashParams.get("refresh_token")
       console.log(
         "[fetchMe] urlAccess:",
         !!urlAccess,
@@ -143,15 +138,22 @@ export const useAuthStore = defineStore("auth", () => {
       if (urlAccess && urlRefresh) {
         localStorage.setItem("access_token", urlAccess)
         localStorage.setItem("refresh_token", urlRefresh)
+      }
+
+      const hasQueryTokens =
+        queryParams.has("access_token") || queryParams.has("refresh_token")
+      const hasHashTokens =
+        hashParams.has("access_token") || hashParams.has("refresh_token")
+      if (hasQueryTokens || hasHashTokens) {
         let nextSearch = window.location.search
-        if (queryParams.has("access_token") || queryParams.has("refresh_token")) {
+        if (hasQueryTokens) {
           queryParams.delete("access_token")
           queryParams.delete("refresh_token")
           const qs = queryParams.toString()
           nextSearch = qs ? `?${qs}` : ""
         }
         let nextHash = window.location.hash
-        if (hashParams.has("access_token") || hashParams.has("refresh_token")) {
+        if (hasHashTokens) {
           hashParams.delete("access_token")
           hashParams.delete("refresh_token")
           const hs = hashParams.toString()
