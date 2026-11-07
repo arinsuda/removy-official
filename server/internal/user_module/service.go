@@ -405,7 +405,6 @@ func (s *Service) ChangePassword(targetUserID, requesterID uint, sessionVersion 
 
 func (s *Service) ForgotPassword(email string) error {
 	email = strings.TrimSpace(strings.ToLower(email))
-	log.Printf("DEBUG ForgotPassword: email=%s", email)
 
 	user, err := s.repo.FindByEmail(email)
 	if err != nil {
