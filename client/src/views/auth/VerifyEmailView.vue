@@ -253,13 +253,13 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
     font-weight: 700;
     color: #ffffff;
   }
-  .status-text--error {
-    color: var(--color-brand);
-  }
   .status-text {
     font-size: 0.9rem;
     color: #a3a3a3;
     line-height: 1.6;
     max-width: 320px;
+  }
+  .status-text--error {
+    color: var(--color-brand);
   }
 </style>
