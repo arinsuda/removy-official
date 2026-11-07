@@ -813,7 +813,8 @@ func (s *Service) LogoutAll(userID uint) error {
 		if err := tx.Exec(`UPDATE users SET token_version = token_version + 1, updated_at = now() WHERE id = ? AND deleted_at IS NULL`, userID).Error; err != nil {
 			return err
 		}
-		return tx.Where("user_id = ?", userID).Delete(&user_module.RefreshToken{}).Error
+		// Refresh tokens plus handoff, pending-link and mail tokens that could revive the session.
+		return identity_policy.RevokeSessionScope(tx, userID)
 	})
 	if err != nil {
 		return err
