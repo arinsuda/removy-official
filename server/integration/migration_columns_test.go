@@ -5,7 +5,9 @@ package integration
 import (
 	"testing"
 
+	"github.com/arinsuda/movie-hub/database"
 	"github.com/arinsuda/movie-hub/internal/user_module"
+	"gorm.io/gorm"
 )
 
 var securityColumns = map[string][]string{
@@ -52,24 +54,73 @@ func TestAutoMigrateDoesNotAddSecurityColumns(t *testing.T) {
 	}
 }
 
-// Rows written by the old binary (no new columns) stay readable and the
-// defaults hold; the new model reads NULL email columns without error.
+// legacyVersions are the migrations that add the new columns/indexes; forgetting them and
+// dropping the columns turns a freshly migrated database back into the pre-release one.
+var legacyVersions = []string{"20261107_account_security_columns", "20261108_email_verification_attempts"}
+
+// makeLegacy restores the schema the old binary left behind: the new columns are gone and
+// their migrations are unrecorded, so the next Migrate really runs them.
+func makeLegacy(t *testing.T, db *gorm.DB) {
+	t.Helper()
+	for _, q := range []string{
+		`ALTER TABLE users DROP COLUMN token_version, DROP COLUMN identity_reset_at`,
+		`ALTER TABLE email_verifications DROP COLUMN email, DROP COLUMN attempts`,
+		`ALTER TABLE password_reset_tokens DROP COLUMN email`,
+		`ALTER TABLE link_pending DROP COLUMN code_email`,
+		`ALTER TABLE email_change_requests DROP COLUMN new_otp_hash`,
+	} {
+		if err := db.Exec(q).Error; err != nil {
+			t.Fatalf("%s: %v", q, err)
+		}
+	}
+	if err := db.Exec(`DELETE FROM migration_history WHERE version IN ?`, legacyVersions).Error; err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Rows written by the old binary (no new columns) are seeded BEFORE the new migrations run,
+// then stay readable and the defaults hold; the new model reads NULL email columns without error.
 func TestLegacyRowsSurviveAdditiveMigration(t *testing.T) {
 	db := newTestDB(t)
-	uid := seedUser(t, db, "old@x.test", false, "pw-oldoldold")
+	makeLegacy(t, db)
+
+	// legacy rows, inserted with the old column set only
+	var uid uint
+	if err := db.Raw(`INSERT INTO users (created_at, updated_at, username, email, password, role_id, is_active)
+		VALUES (now(), now(), 'olduser', 'old@x.test', 'legacy-hash', 2, true) RETURNING id`).Scan(&uid).Error; err != nil {
+		t.Fatal(err)
+	}
 	if err := db.Exec(`INSERT INTO email_verifications (user_id, token, expires_at, created_at) VALUES (?, 'legacy-token', now() + interval '1 hour', now())`, uid).Error; err != nil {
 		t.Fatal(err)
 	}
+	if err := db.Exec(`INSERT INTO password_reset_tokens (user_id, hashed_token, expires_at, created_at) VALUES (?, 'legacy-hash', now() + interval '1 hour', now())`, uid).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	if err := database.Migrate(db, testConfig()); err != nil {
+		t.Fatalf("migrate over legacy rows: %v", err)
+	}
+
 	var u user_module.User
 	if err := db.First(&u, uid).Error; err != nil {
 		t.Fatal(err)
 	}
-	if u.TokenVersion != 0 || u.IdentityResetAt != nil {
-		t.Fatalf("defaults wrong: %d %v", u.TokenVersion, u.IdentityResetAt)
+	if u.TokenVersion != 0 || u.IdentityResetAt != nil || u.Email != "old@x.test" {
+		t.Fatalf("legacy row changed: version=%d reset=%v email=%s", u.TokenVersion, u.IdentityResetAt, u.Email)
 	}
 	var ev user_module.EmailVerification
 	if err := db.Where("token = 'legacy-token'").First(&ev).Error; err != nil || ev.Email != nil {
 		t.Fatalf("legacy verification: err=%v email=%v", err, ev.Email)
+	}
+	var attempts int
+	db.Raw(`SELECT attempts FROM email_verifications WHERE token = 'legacy-token'`).Scan(&attempts)
+	if attempts != 0 {
+		t.Fatalf("legacy verification attempts = %d, want 0", attempts)
+	}
+	var legacyResets int64
+	db.Raw(`SELECT count(*) FROM password_reset_tokens WHERE user_id = ? AND email IS NULL`, uid).Scan(&legacyResets)
+	if legacyResets != 1 {
+		t.Fatalf("legacy reset token rows = %d, want 1 with NULL email", legacyResets)
 	}
 	// creating through the model must never write the read-only epoch columns
 	nu := user_module.User{Username: "newu", Email: "new@x.test", RoleID: 2, IsActive: true}

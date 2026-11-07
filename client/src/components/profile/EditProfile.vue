@@ -726,7 +726,9 @@ async function handleChangePassword() {
     }, 4000);
   } catch (e: any) {
     const status = e?.response?.status;
-    if (status === 401) pwError.value = "Current password is incorrect.";
+    if (e?.response?.data?.code === "PASSWORD_NOT_SET")
+      pwError.value = t("profile.editProfile.passwordNotSet");
+    else if (status === 401) pwError.value = "Current password is incorrect.";
     else if (status === 400)
       pwError.value = e?.response?.data?.error ?? "Invalid request.";
     else pwError.value = "Something went wrong. Please try again.";

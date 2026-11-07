@@ -67,13 +67,6 @@ func (r *repository) findUser(query string, args ...any) (*user_module.User, err
 	return &user, err
 }
 
-func (r *repository) MarkEmailVerified(userID uint) error {
-	now := time.Now()
-	return r.db.Model(&user_module.User{}).
-		Where("id = ?", userID).
-		Update("verified_email_at", &now).Error
-}
-
 func (r *repository) CreateEmailVerification(ev *user_module.EmailVerification) error {
 	r.db.Where("user_id = ?", ev.UserID).Delete(&user_module.EmailVerification{})
 	return r.db.Create(ev).Error

@@ -104,19 +104,6 @@ func (r *repository) UpdateProfile(id uint, updates map[string]any) error {
 	return nil
 }
 
-func (r *repository) UpdatePassword(userID uint, hashedPassword string) error {
-	result := r.db.Model(&User{}).
-		Where("id = ?", userID).
-		Update("password", hashedPassword)
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return ErrUserNotFound
-	}
-	return nil
-}
-
 func (r *repository) DeleteUser(id uint) error {
 	result := r.db.Model(&User{}).Where("id = ?", id).Update("is_active", false)
 	if result.RowsAffected == 0 {

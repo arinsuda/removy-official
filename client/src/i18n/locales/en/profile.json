@@ -31,7 +31,8 @@
       "newCodeHint": "Code sent to your new email {email}",
       "currentCodeLabel": "Current email code",
       "newCodeLabel": "New email code"
-    }
+    },
+    "passwordNotSet": "This account has no password yet. Sign out, then use \"Forgot password\" on the login page to set one."
   },
   "actions": {
     "follow": "Follow",
