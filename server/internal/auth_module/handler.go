@@ -468,7 +468,7 @@ func (h *Handler) handleServiceError(c fiber.Ctx, err error) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	case errors.Is(err, ErrEmailTaken), errors.Is(err, ErrUsernameTaken):
 		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": err.Error()})
-	case errors.Is(err, ErrUserNotFound), errors.Is(err, ErrVerifyWrongPassword):
+	case errors.Is(err, ErrUserNotFound), errors.Is(err, ErrWrongPassword), errors.Is(err, ErrVerifyWrongPassword):
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid credentials"})
 	case errors.Is(err, ErrEmailUnverified):
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "please verify your email first"})
