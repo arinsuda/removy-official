@@ -1,6 +1,7 @@
 package auth_module
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/arinsuda/movie-hub/config"
@@ -21,12 +22,23 @@ func RegisterRoutes(router fiber.Router, db *gorm.DB, cfg *config.Config, m *mai
 	auth := router.Group("/auth")
 	hops := cfg.TrustedProxyHops
 	ipKey := func(c fiber.Ctx) string { return "ip:" + shared.ClientIP(c, hops) }
-	emailKey := ratelimit.BodyFieldKey("email")
+	emailKey := ratelimit.BodyKey(func(b []byte) string {
+		var req struct {
+			Email string `json:"email"`
+		}
+		_ = json.Unmarshal(b, &req)
+		return req.Email
+	})
+	identifierOf := func(b []byte) string {
+		var req LoginRequest
+		_ = json.Unmarshal(b, &req)
+		return req.Identifier
+	}
 
 	auth.Post("/register", ratelimit.New(5, time.Hour, ipKey), h.Register)
 	auth.Post("/login",
 		ratelimit.New(10, time.Minute, ipKey),
-		ratelimit.New(5, time.Minute, ratelimit.BodyFieldKey("identifier")),
+		ratelimit.New(5, time.Minute, ratelimit.BodyKey(identifierOf)),
 		h.Login)
 	auth.Post("/refresh", h.Refresh)
 	auth.Post("/logout", h.Logout)

@@ -5,7 +5,6 @@ package ratelimit
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"strings"
 	"time"
 
@@ -37,15 +36,14 @@ func New(max int, window time.Duration, keyFn func(fiber.Ctx) string) fiber.Hand
 	})
 }
 
-// BodyFieldKey keys a limiter by the SHA-256 of a JSON body field. The body is
-// read without consuming it. Requests without the field are not limited here.
-func BodyFieldKey(field string) func(fiber.Ctx) string {
+// BodyKey keys a limiter by the SHA-256 of the identifier that extract pulls
+// from the raw body. extract must unmarshal into the same DTO the handler
+// binds, so field matching (case-insensitive, last value wins) is identical
+// and the limiter cannot be bypassed with duplicate or re-cased keys. The body
+// is not consumed. An empty extract result skips limiting.
+func BodyKey(extract func(body []byte) string) func(fiber.Ctx) string {
 	return func(c fiber.Ctx) string {
-		var body map[string]any
-		if err := json.Unmarshal(c.Body(), &body); err != nil {
-			return ""
-		}
-		s, _ := body[field].(string)
+		s := extract(c.Body())
 		if strings.TrimSpace(s) == "" {
 			return ""
 		}

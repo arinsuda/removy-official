@@ -1,6 +1,7 @@
 package ratelimit
 
 import (
+	"encoding/json"
 	"io"
 	"net/http/httptest"
 	"strings"
@@ -63,7 +64,7 @@ func TestBodyFieldKeyHashesAndNormalizes(t *testing.T) {
 	var keys []string
 	app := fiber.New()
 	app.Post("/", func(c fiber.Ctx) error {
-		keys = append(keys, BodyFieldKey("email")(c))
+		keys = append(keys, BodyKey(emailExtract)(c))
 		return nil
 	})
 	for _, body := range []string{`{"email":"User@Example.com"}`, `{"email":"  user@example.com "}`, `{}`} {
@@ -87,7 +88,7 @@ func TestBodyFieldKeyHashesAndNormalizes(t *testing.T) {
 }
 
 func TestEmptyKeySkipsLimit(t *testing.T) {
-	app := newApp(BodyFieldKey("email"), 1)
+	app := newApp(BodyKey(emailExtract), 1)
 	for i := 0; i < 3; i++ {
 		if r := post(t, app, "1.1.1.1", "{}"); r.status != 200 {
 			t.Fatalf("unkeyed request limited: %d", r.status)
@@ -96,6 +97,30 @@ func TestEmptyKeySkipsLimit(t *testing.T) {
 	for i, want := range []int{200, 429} {
 		if r := post(t, app, "1.1.1.1", `{"email":"a@b.co"}`); r.status != want {
 			t.Fatalf("keyed request %d: got %d want %d", i, r.status, want)
+		}
+	}
+}
+
+func emailExtract(b []byte) string {
+	var req struct {
+		Email string `json:"email"`
+	}
+	_ = json.Unmarshal(b, &req)
+	return req.Email
+}
+
+func TestBodyKeyMatchesDTOBinding(t *testing.T) {
+	app := newApp(BodyKey(emailExtract), 1)
+	if r := post(t, app, "1.1.1.1", `{"email":"victim@x.co"}`); r.status != 200 {
+		t.Fatalf("first: %d", r.status)
+	}
+	for _, body := range []string{
+		`{"email":"decoy","EMAIL":"victim@x.co"}`,
+		`{"EMAIL":"victim@x.co"}`,
+		`{"Email":"victim@x.co"}`,
+	} {
+		if r := post(t, app, "1.1.1.1", body); r.status != 429 {
+			t.Fatalf("bypass with %s: got %d", body, r.status)
 		}
 	}
 }
