@@ -12,14 +12,15 @@ import (
 func RegisterRoutes(router fiber.Router, db *gorm.DB, cfg *config.Config, m *mailer.Mailer, s *storage.MinIOClient, notifSvc *notification_module.Service) *Service {
 	svc := NewService(db, cfg, m, s, notifSvc)
 	h := NewHandler(svc, cfg)
-	mw := NewMiddleware(cfg)
+	mw := NewMiddleware(cfg, db)
 
 	auth := router.Group("/auth")
 	auth.Post("/register", h.Register)
 	auth.Post("/login", h.Login)
 	auth.Post("/refresh", h.Refresh)
 	auth.Post("/logout", h.Logout)
-	auth.Get("/verify-email", h.VerifyEmail)
+	auth.Get("/verify-email", h.VerifyEmailLink)
+	auth.Post("/verify-email", h.VerifyEmail)
 	auth.Post("/resend-verification", h.ResendVerification)
 	auth.Post("/logout-all", mw.RequireAuth, h.LogoutAll)
 	auth.Post("/forgot-password", h.ForgotPassword)

@@ -14,10 +14,12 @@ import (
 	"time"
 
 	"github.com/arinsuda/movie-hub/config"
+	"github.com/arinsuda/movie-hub/internal/identity_policy"
 	"github.com/arinsuda/movie-hub/internal/mailer"
 	"github.com/arinsuda/movie-hub/internal/notification_module"
 	"github.com/arinsuda/movie-hub/internal/shared/storage"
 	"github.com/arinsuda/movie-hub/internal/user_module"
+	"github.com/gofiber/fiber/v3"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -29,6 +31,15 @@ var (
 	ErrCannotDisconnectFinalAuthMethod = errors.New("cannot disconnect your final authentication method")
 	ErrInvalidOAuthState               = errors.New("invalid or mismatched oauth state")
 	ErrUserInactive                    = errors.New("user account is inactive")
+	// ErrGoogleEmailVerificationRequired: Google did not vouch for the address, so the account
+	// exists but holds no session until its mailbox owner follows the verification link.
+	ErrGoogleEmailVerificationRequired = errors.New("google_email_verification_required")
+	// ErrVerifyWrongPassword: the typed password did not match; the verification token is still valid.
+	ErrVerifyWrongPassword = errors.New("wrong_password")
+	// ErrPasswordChoiceRequired: neither a password nor an explicit skip was sent.
+	ErrPasswordChoiceRequired = errors.New("password_or_skip_required")
+	// ErrVerifyAttemptsExceeded: too many wrong passwords on one token; the owner must resend the link.
+	ErrVerifyAttemptsExceeded = errors.New("verify_attempts_exceeded")
 )
 
 type Service struct {
@@ -92,6 +103,7 @@ func (s *Service) Register(req RegisterRequest) (*user_module.User, error) {
 		return nil, ErrPasswordMismatch
 	}
 
+	req.Email = NormalizeEmail(req.Email)
 	if _, err := s.repo.FindByEmail(req.Email); err == nil {
 		return nil, ErrEmailTaken
 	}
@@ -132,6 +144,7 @@ func (s *Service) Register(req RegisterRequest) (*user_module.User, error) {
 }
 
 func (s *Service) Login(req LoginRequest, userAgent, ip string) (*TokenPair, *user_module.User, error) {
+	req.Identifier = strings.TrimSpace(req.Identifier)
 	user, err := s.repo.FindByEmail(req.Identifier)
 	if err != nil {
 		user, err = s.repo.FindByUsername(req.Identifier)
@@ -239,14 +252,22 @@ func (s *Service) InitiateGoogleLogin(ctx context.Context, returnURL string) (au
 	return authURL, state, nil
 }
 
-func (s *Service) InitiateGoogleLink(ctx context.Context, userID uint, returnURL string) (authURL string, state string, err error) {
+// claimedVersion is the token_version of the caller's access token, not the current one:
+// a reset between the token being issued and this call must not be inherited.
+func (s *Service) InitiateGoogleLink(ctx context.Context, userID uint, claimedVersion int, returnURL string) (authURL string, state string, err error) {
 	if !s.cfg.Google.Enabled {
 		return "", "", ErrGoogleOAuthDisabled
 	}
 
-	var user user_module.User
-	if err := s.db.Where("id = ? AND is_active = true", userID).First(&user).Error; err != nil {
+	st, found, err := identity_policy.ReadSession(s.db, userID)
+	if err != nil {
+		return "", "", err
+	}
+	if !found || !st.Active || !st.Verified {
 		return "", "", ErrUserNotFound
+	}
+	if st.Version != claimedVersion {
+		return "", "", identity_policy.ErrSessionStale
 	}
 
 	state, err = GenerateCryptoString(32)
@@ -275,6 +296,7 @@ func (s *Service) InitiateGoogleLink(ctx context.Context, userID uint, returnURL
 		CodeChallenge: challenge,
 		Intent:        IntentLink,
 		UserID:        userID,
+		UserVersion:   claimedVersion,
 		ReturnURL:     validReturnURL,
 		CreatedAt:     time.Now(),
 		ExpiresAt:     time.Now().Add(10 * time.Minute),
@@ -322,6 +344,9 @@ func (s *Service) HandleGoogleCallback(ctx context.Context, code, stateStr, cook
 
 	var sessionUser *user_module.User
 	var tokenPair *TokenPair
+	var pendingVerification *user_module.User // account whose email nobody proved: verification mail, no session
+	var proofs []identity_policy.Outcome
+	var proofUsers []uint
 
 	err = s.db.Transaction(func(txDB *gorm.DB) error {
 		if tx.Intent == IntentLogin {
@@ -334,32 +359,33 @@ func (s *Service) HandleGoogleCallback(ctx context.Context, code, stateStr, cook
 				if err := txDB.Where("id = ? AND is_active = true", identity.UserID).First(&u).Error; err != nil {
 					return ErrUserInactive
 				}
+				if u.VerifiedEmailAt == nil && isProvenByGoogle(claims, u.Email) {
+					// Google vouches for the account's address: prove it through the policy
+					// (wipes anything planted while it was unverified) and keep this identity.
+					out, err := s.proveWithGoogle(txDB, &u, claims)
+					if err != nil {
+						return err
+					}
+					proofs, proofUsers = append(proofs, out), append(proofUsers, u.ID)
+				}
 				sessionUser = &u
 			} else {
 				// 2. Check if POPCORN user with matching email exists
-				normalizedEmail := strings.ToLower(strings.TrimSpace(claims.Email))
+				normalizedEmail := NormalizeEmail(claims.Email)
 				var existingUser user_module.User
-				err := txDB.Where("email = ? AND is_active = true", normalizedEmail).First(&existingUser).Error
+				err := txDB.Where("lower(email) = ? AND is_active = true", normalizedEmail).
+					Order("(verified_email_at IS NOT NULL) DESC, id ASC").First(&existingUser).Error
 
 				if err == nil {
 					// User exists with matching email
-					if IsAuthoritativeGoogleEmail(claims) {
-						// Auto-link Google identity to authoritative email
-						newIdentity := &user_module.UserIdentity{
-							UserID:          existingUser.ID,
-							Provider:        user_module.ProviderGoogle,
-							ProviderSubject: claims.Subject,
-							ProviderEmail:   claims.Email,
+					if isProvenByGoogle(claims, existingUser.Email) {
+						// Authoritative Google email: proves the address (wiping anything planted
+						// on an unverified account), then links this Google identity.
+						out, err := s.proveWithGoogle(txDB, &existingUser, claims)
+						if err != nil {
+							return err
 						}
-						if err := txDB.Create(newIdentity).Error; err != nil {
-							return fmt.Errorf("failed to link Google identity: %w", err)
-						}
-
-						if existingUser.VerifiedEmailAt == nil {
-							now := time.Now().UTC()
-							existingUser.VerifiedEmailAt = &now
-							txDB.Model(&existingUser).Update("verified_email_at", now)
-						}
+						proofs, proofUsers = append(proofs, out), append(proofUsers, existingUser.ID)
 						sessionUser = &existingUser
 					} else {
 						// Non-authoritative email: reject auto-link!
@@ -421,6 +447,12 @@ func (s *Service) HandleGoogleCallback(ctx context.Context, code, stateStr, cook
 				}
 			}
 
+			// No proof of the address, no session: the mailbox owner has to verify first.
+			if sessionUser.VerifiedEmailAt == nil {
+				pendingVerification = sessionUser
+				return nil
+			}
+
 			// Issue POPCORN token pair & store refresh token session inside transaction scope
 			pair, err := s.issueAndStoreTokensTx(txDB, sessionUser, userAgent, ip)
 			if err != nil {
@@ -431,6 +463,11 @@ func (s *Service) HandleGoogleCallback(ctx context.Context, code, stateStr, cook
 		} else if tx.Intent == IntentLink {
 			if tx.UserID == 0 {
 				return errors.New("link transaction missing user id")
+			}
+			// The callback is public and the transaction may be minutes old: only
+			// proceed while the initiating session is still the account's session.
+			if err := identity_policy.EnsureSession(txDB, tx.UserID, tx.UserVersion, true); err != nil {
+				return err
 			}
 
 			var identity user_module.UserIdentity
@@ -470,6 +507,19 @@ func (s *Service) HandleGoogleCallback(ctx context.Context, code, stateStr, cook
 	if err != nil {
 		return nil, nil, tx.ReturnURL, err
 	}
+	for i, out := range proofs {
+		out.Publish(proofUsers[i])
+	}
+
+	if pendingVerification != nil {
+		u := *pendingVerification
+		go func() {
+			if err := s.sendVerificationEmail(&u); err != nil {
+				log.Printf("ERROR: send verification email to %s: %v", u.Email, err)
+			}
+		}()
+		return nil, nil, tx.ReturnURL, ErrGoogleEmailVerificationRequired
+	}
 
 	// Attempt avatar import asynchronously (non-fatal)
 	if sessionUser != nil && sessionUser.AvatarURL == nil && claims.Picture != "" {
@@ -477,6 +527,56 @@ func (s *Service) HandleGoogleCallback(ctx context.Context, code, stateStr, cook
 	}
 
 	return tokenPair, sessionUser, tx.ReturnURL, nil
+}
+
+// isProvenByGoogle reports whether Google asserts ownership of email.
+func isProvenByGoogle(claims *GoogleIdentityClaims, email string) bool {
+	return claims.EmailVerified && IsAuthoritativeGoogleEmail(claims) && identity_policy.SameEmail(claims.Email, email)
+}
+
+// proveWithGoogle records Google's proof of u.Email and makes sure u has exactly
+// this Google identity. It reloads u so the caller sees the post-proof state.
+func (s *Service) proveWithGoogle(txDB *gorm.DB, u *user_module.User, claims *GoogleIdentityClaims) (identity_policy.Outcome, error) {
+	out, err := identity_policy.ProveEmail(txDB, identity_policy.Proof{
+		UserID: u.ID, Email: u.Email, Kind: identity_policy.KindGoogle,
+	})
+	if err != nil {
+		return out, fmt.Errorf("prove email: %w", err)
+	}
+
+	// The user row is locked until commit, so this check cannot race another proof.
+	var identity user_module.UserIdentity
+	err = txDB.Where("user_id = ? AND provider = ?", u.ID, user_module.ProviderGoogle).First(&identity).Error
+	switch {
+	case err == nil:
+		if identity.ProviderSubject != claims.Subject {
+			return out, ErrGoogleIdentityAlreadyConnected
+		}
+	case errors.Is(err, gorm.ErrRecordNotFound):
+		newIdentity := &user_module.UserIdentity{
+			UserID:          u.ID,
+			Provider:        user_module.ProviderGoogle,
+			ProviderSubject: claims.Subject,
+			ProviderEmail:   claims.Email,
+		}
+		if err := txDB.Create(newIdentity).Error; err != nil {
+			if isUniqueViolation(err) {
+				return out, ErrGoogleIdentityAlreadyConnected
+			}
+			return out, fmt.Errorf("failed to link Google identity: %w", err)
+		}
+	default:
+		return out, err
+	}
+	return out, txDB.Preload("Role").First(u, u.ID).Error
+}
+
+func isUniqueViolation(err error) bool {
+	if errors.Is(err, gorm.ErrDuplicatedKey) {
+		return true
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "duplicate key") || strings.Contains(msg, "23505")
 }
 
 func (s *Service) DisconnectGoogleIdentity(ctx context.Context, userID uint) error {
@@ -585,11 +685,34 @@ func (s *Service) importGoogleAvatar(ctx context.Context, pictureURL string, use
 	}
 }
 
+// IssueAndStoreTokens starts a session for user in its own transaction.
 func (s *Service) IssueAndStoreTokens(user *user_module.User, userAgent, ip string) (*TokenPair, error) {
-	return s.issueAndStoreTokensTx(s.db, user, userAgent, ip)
+	var pair *TokenPair
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		var err error
+		pair, err = s.issueAndStoreTokensTx(tx, user, userAgent, ip)
+		return err
+	})
+	return pair, err
 }
 
+// issueAndStoreTokensTx is the only place a session is created. It share-locks
+// the user row, so a concurrent ProveEmail (which bumps the epoch) finishes
+// first, and refuses unless the account is active and its email is proven.
+// The epoch in the tokens always comes from the locked row, never from the
+// caller's possibly stale user struct. tx must be a transaction.
 func (s *Service) issueAndStoreTokensTx(tx *gorm.DB, user *user_module.User, userAgent, ip string) (*TokenPair, error) {
+	st, found, err := identity_policy.LockSession(tx, user.ID, false)
+	if err != nil {
+		return nil, fmt.Errorf("lock session: %w", err)
+	}
+	if !found || !st.Active {
+		return nil, ErrUserNotFound
+	}
+	if !st.Verified {
+		return nil, ErrEmailUnverified
+	}
+
 	role := string(user.Role.RoleName)
 	if role == "" {
 		var r user_module.Role
@@ -598,7 +721,7 @@ func (s *Service) issueAndStoreTokensTx(tx *gorm.DB, user *user_module.User, use
 		}
 	}
 
-	pair, err := s.jwt.Issue(user.ID, role)
+	pair, err := s.jwt.Issue(user.ID, role, st.Version)
 	if err != nil {
 		return nil, fmt.Errorf("generate tokens: %w", err)
 	}
@@ -628,7 +751,10 @@ func (s *Service) Refresh(rawRefresh, userAgent, ip string) (*TokenPair, *user_m
 	hashed := HashToken(rawRefresh)
 	stored, err := s.repo.FindRefreshToken(hashed)
 	if err != nil {
-		return nil, nil, ErrInvalidToken
+		if errors.Is(err, ErrInvalidToken) {
+			return nil, nil, ErrInvalidToken
+		}
+		return nil, nil, fmt.Errorf("find refresh token: %w", err) // infrastructure failure, not a verdict on the token
 	}
 
 	if stored.IsExpired() {
@@ -636,18 +762,38 @@ func (s *Service) Refresh(rawRefresh, userAgent, ip string) (*TokenPair, *user_m
 		return nil, nil, ErrInvalidToken
 	}
 
-	user, err := s.repo.FindByID(claims.UserID)
-	if err != nil {
-		return nil, nil, ErrUserNotFound
-	}
+	var newPair *TokenPair
+	var user *user_module.User
+	err = s.db.Transaction(func(tx *gorm.DB) error {
+		// Lock the user first: a racing claim (ProveEmail) either finishes before
+		// this point, and then the token row below is gone, or waits for us.
+		if err := identity_policy.EnsureSession(tx, claims.UserID, claims.TokenVersion, true); err != nil {
+			if errors.Is(err, identity_policy.ErrSessionStale) {
+				return ErrInvalidToken
+			}
+			return err
+		}
 
-	if !user.IsActive {
-		return nil, nil, ErrUserNotFound
-	}
+		del := tx.Where("hashed_token = ?", hashed).Delete(&user_module.RefreshToken{})
+		if del.Error != nil {
+			return del.Error
+		}
+		if del.RowsAffected != 1 { // already rotated or wiped: a refresh token works once
+			return ErrInvalidToken
+		}
 
-	_ = s.repo.DeleteRefreshToken(hashed)
+		var u user_module.User
+		if err := tx.Preload("Role").First(&u, claims.UserID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrUserNotFound
+			}
+			return err
+		}
+		user = &u
 
-	newPair, err := s.IssueAndStoreTokens(user, userAgent, ip)
+		newPair, err = s.issueAndStoreTokensTx(tx, user, userAgent, ip)
+		return err
+	})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -660,8 +806,47 @@ func (s *Service) Logout(rawRefresh string) error {
 	return s.repo.DeleteRefreshToken(hashed)
 }
 
+// LogoutAll ends every session of the user: refresh tokens go and token_version moves on,
+// so access tokens already issued stop working at once and live sockets are dropped.
 func (s *Service) LogoutAll(userID uint) error {
-	return s.repo.DeleteAllRefreshTokens(userID)
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec(`UPDATE users SET token_version = token_version + 1, updated_at = now() WHERE id = ? AND deleted_at IS NULL`, userID).Error; err != nil {
+			return err
+		}
+		// Refresh tokens plus handoff, pending-link and mail tokens that could revive the session.
+		return identity_policy.RevokeSessionScope(tx, userID)
+	})
+	if err != nil {
+		return err
+	}
+	identity_policy.Outcome{SessionsRevoked: true}.Publish(userID)
+	return nil
+}
+
+// ReissueSession starts a fresh session for userID and writes its cookies on c. It backs
+// the password change, which revokes every session including the caller's own.
+// expectedVersion is the epoch that change produced; it is checked under the row lock in
+// the same transaction that issues the tokens, so a reset or claim that committed in
+// between yields ErrSessionStale and no tokens.
+func (s *Service) ReissueSession(c fiber.Ctx, userID uint, expectedVersion int) (string, string, error) {
+	var u user_module.User
+	if err := s.db.Preload("Role").First(&u, userID).Error; err != nil {
+		return "", "", err
+	}
+	var pair *TokenPair
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		if err := identity_policy.EnsureSession(tx, userID, expectedVersion, false); err != nil {
+			return err
+		}
+		var err error
+		pair, err = s.issueAndStoreTokensTx(tx, &u, c.Get("User-Agent"), c.IP())
+		return err
+	})
+	if err != nil {
+		return "", "", err
+	}
+	SetTokenCookies(c, s.cfg, pair)
+	return pair.AccessToken, pair.RefreshToken, nil
 }
 
 func (s *Service) SendVerification(userID uint, email string) error {
@@ -676,23 +861,77 @@ func (s *Service) SendVerification(userID uint, email string) error {
 	return s.sendVerificationEmail(user)
 }
 
-func (s *Service) VerifyEmail(token string) error {
-	record, err := s.repo.FindEmailVerification(token)
+// VerifyResult tells the client what the proof left behind.
+type VerifyResult struct {
+	// PasswordResetRequired: the address is proven but the current password was not,
+	// so the account has no password until the owner sets one through a reset link.
+	PasswordResetRequired bool
+}
+
+// MaxVerifyAttempts caps wrong-password tries per verification token.
+const MaxVerifyAttempts = 5
+
+// VerifyEmail consumes a verification token and proves the address it was
+// mailed to. A matching password keeps the account intact. A non-empty wrong
+// password changes nothing, keeps the token and counts one attempt (ErrVerifyWrongPassword).
+// Only skipPassword ("I don't know the password") wipes planted credentials.
+func (s *Service) VerifyEmail(token string, password *string, skipPassword bool) (VerifyResult, error) {
+	if token == "" {
+		return VerifyResult{}, ErrInvalidToken
+	}
+	if (password == nil || *password == "") && !skipPassword {
+		return VerifyResult{}, ErrPasswordChoiceRequired
+	}
+	// Reserve an attempt in its own committed statement: the proof below rolls back on a
+	// wrong password, and the count must survive that. Parallel guesses cannot share a slot.
+	reserve := s.db.Exec(`UPDATE email_verifications SET attempts = attempts + 1 WHERE token = ? AND attempts < ?`, token, MaxVerifyAttempts)
+	if reserve.Error != nil {
+		return VerifyResult{}, reserve.Error
+	}
+	if reserve.RowsAffected == 0 {
+		// Either no such token, or it is spent: reject it for good so the owner must resend.
+		del := s.db.Exec(`DELETE FROM email_verifications WHERE token = ? AND attempts >= ?`, token, MaxVerifyAttempts)
+		if del.Error == nil && del.RowsAffected > 0 {
+			return VerifyResult{}, ErrVerifyAttemptsExceeded
+		}
+		return VerifyResult{}, ErrInvalidToken
+	}
+	var out identity_policy.Outcome
+	var userID uint
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		var record user_module.EmailVerification
+		if err := tx.Where("token = ?", token).First(&record).Error; err != nil {
+			return ErrInvalidToken
+		}
+		// Consume first: concurrent clicks race on this row, only one deletes it.
+		del := tx.Delete(&user_module.EmailVerification{}, record.ID)
+		if del.Error != nil {
+			return del.Error
+		}
+		if del.RowsAffected != 1 || record.IsExpired() || record.Email == nil {
+			return ErrInvalidToken
+		}
+		userID = record.UserID
+		var err error
+		out, err = identity_policy.ProveEmail(tx, identity_policy.Proof{
+			UserID: record.UserID, Email: *record.Email, Kind: identity_policy.KindVerifyLink, PresentedPassword: password,
+		})
+		if err != nil {
+			if errors.Is(err, identity_policy.ErrWrongPassword) {
+				return ErrVerifyWrongPassword
+			}
+			if errors.Is(err, identity_policy.ErrEmailMismatch) || errors.Is(err, identity_policy.ErrUserNotFound) || errors.Is(err, identity_policy.ErrUserInactive) {
+				return ErrInvalidToken
+			}
+			return err
+		}
+		return nil
+	})
 	if err != nil {
-		return ErrInvalidToken
+		return VerifyResult{}, err
 	}
-
-	if record.IsExpired() {
-		_ = s.repo.DeleteEmailVerification(record.ID)
-		return ErrInvalidToken
-	}
-
-	if err := s.repo.MarkEmailVerified(record.UserID); err != nil {
-		return err
-	}
-
-	_ = s.repo.DeleteEmailVerification(record.ID)
-	return nil
+	out.Publish(userID)
+	return VerifyResult{PasswordResetRequired: out.CredentialsWiped}, nil
 }
 
 func (s *Service) ResendVerification(email string) error {
@@ -737,6 +976,7 @@ func (s *Service) sendVerificationEmail(u *user_module.User) error {
 		UserID:    u.ID,
 		Token:     rawToken,
 		ExpiresAt: time.Now().Add(24 * time.Hour),
+		Email:     &u.Email, // bound: the token only proves this address, not whatever the email becomes
 	}
 
 	if err := s.repo.CreateEmailVerification(ev); err != nil {

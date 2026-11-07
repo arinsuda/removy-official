@@ -15,6 +15,7 @@ import (
 
 	"github.com/arinsuda/movie-hub/config"
 	"github.com/arinsuda/movie-hub/internal/auth_module"
+	"github.com/arinsuda/movie-hub/internal/identity_policy"
 	"github.com/arinsuda/movie-hub/internal/mailer"
 	"github.com/arinsuda/movie-hub/internal/user_module"
 	"github.com/google/uuid"
@@ -35,6 +36,9 @@ var (
 	ErrCodeNotAllowed  = errors.New("could not send code")
 	ErrNotLinked       = errors.New("not linked")
 	ErrEmailNotAllowed = errors.New("email taken")
+	ErrSessionStale    = errors.New("session is no longer valid")
+	// ErrRemoteUnverified: the other platform has not verified this email, so no local account is created for it.
+	ErrRemoteUnverified = errors.New("remote email is not verified")
 )
 
 // ConfirmRequiredError is returned by Redeem when the user must prove ownership.
@@ -57,7 +61,12 @@ type Service struct {
 	auth   *auth_module.Service
 	mailer *mailer.Mailer
 	remote *remoteClient
+	// afterLinkLookup is a test seam: runs between the link lookup and the user load in resolveRemoteUser.
+	afterLinkLookup func()
 }
+
+// SetAfterLinkLookupHook installs a test seam that runs between the link lookup and the user load.
+func (s *Service) SetAfterLinkLookupHook(f func()) { s.afterLinkLookup = f }
 
 func NewService(db *gorm.DB, cfg config.LinkConfig, auth *auth_module.Service, m *mailer.Mailer) *Service {
 	if cfg.SelfPlatform != PlatformPlanzi {
@@ -84,7 +93,8 @@ func hashHex(v string) string {
 
 func (s *Service) findUserByEmail(db *gorm.DB, email string) (*user_module.User, error) {
 	var u user_module.User
-	err := db.Preload("Role").Where("lower(email) = lower(?)", strings.TrimSpace(email)).First(&u).Error
+	err := db.Preload("Role").Where("lower(email) = lower(?)", strings.TrimSpace(email)).
+		Order("(verified_email_at IS NOT NULL) DESC, id ASC").First(&u).Error
 	if err != nil {
 		return nil, err
 	}
@@ -112,33 +122,66 @@ func (s *Service) toRemoteUser(u *user_module.User) *RemoteUser {
 	if u.Password != nil {
 		ru.PasswordHash = *u.Password
 	}
+	ru.IdentityResetAt = u.IdentityResetAt
 	return ru
 }
 
 // ---- internal (server-to-server) endpoints ----
 
 // Introspect atomically consumes a handoff token minted for the remote platform.
+// It share-locks the user first, so a claim in flight (ProveEmail deletes the
+// user's handoff tokens) finishes before the token is looked at, and only hands
+// out accounts whose email is proven.
 func (s *Service) Introspect(token string) (*RemoteUser, error) {
 	if token == "" {
 		return nil, ErrInvalidToken
 	}
-	var uid uint
-	res := s.db.Raw(`UPDATE link_handoff_tokens SET used_at = ? WHERE token_hash = ? AND used_at IS NULL AND expires_at > ? AND target_platform = ? RETURNING user_id`,
-		time.Now(), hashHex(token), time.Now(), s.remotePlatform()).Scan(&uid)
-	if res.Error != nil || res.RowsAffected == 0 {
+	var ru *RemoteUser
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		var uid uint
+		res := tx.Raw(`SELECT user_id FROM link_handoff_tokens WHERE token_hash = ? AND target_platform = ?`,
+			hashHex(token), s.remotePlatform()).Scan(&uid)
+		if res.Error != nil || res.RowsAffected == 0 {
+			return ErrInvalidToken
+		}
+		st, found, err := identity_policy.LockSession(tx, uid, false)
+		if err != nil {
+			return err
+		}
+		if !found || !st.Active {
+			return ErrInvalidToken
+		}
+		var consumed uint
+		res = tx.Raw(`UPDATE link_handoff_tokens SET used_at = ? WHERE token_hash = ? AND used_at IS NULL AND expires_at > ? AND target_platform = ? RETURNING user_id`,
+			time.Now(), hashHex(token), time.Now(), s.remotePlatform()).Scan(&consumed)
+		if res.Error != nil || res.RowsAffected == 0 {
+			return ErrInvalidToken
+		}
+		if !st.Verified {
+			return ErrInvalidToken
+		}
+		var u user_module.User
+		if err := tx.Preload("Role").First(&u, uid).Error; err != nil {
+			return ErrInvalidToken
+		}
+		ru = s.toRemoteUser(&u)
+		return nil
+	})
+	if err != nil {
+		if errors.Is(err, ErrInvalidToken) {
+			return nil, ErrInvalidToken
+		}
+		log.Printf("ERROR link: introspect: %v", err)
 		return nil, ErrInvalidToken
 	}
-	u, err := s.loadUser(uid)
-	if err != nil || !u.IsActive {
-		return nil, ErrInvalidToken
-	}
-	return s.toRemoteUser(u), nil
+	return ru, nil
 }
 
-// VerifyPassword checks email+password of an active local user (verification not required).
+// VerifyPassword checks email+password of an active, verified local user. An
+// unverified account's password was set by whoever registered the address first.
 func (s *Service) VerifyPassword(email, password string) (*RemoteUser, bool) {
 	u, err := s.findUserByEmail(s.db, email)
-	if err != nil || !u.IsActive || u.Password == nil || *u.Password == "" {
+	if err != nil || !u.IsActive || u.VerifiedEmailAt == nil || u.Password == nil || *u.Password == "" {
 		return nil, false
 	}
 	if bcrypt.CompareHashAndPassword([]byte(*u.Password), []byte(password)) != nil {
@@ -149,7 +192,7 @@ func (s *Service) VerifyPassword(email, password string) (*RemoteUser, bool) {
 
 // ---- outgoing handoff ----
 
-func (s *Service) CreateHandoff(userID uint, target string) (string, int, error) {
+func (s *Service) CreateHandoff(userID uint, sessionVersion int, target string) (string, int, error) {
 	if !s.Enabled() {
 		return "", 0, ErrDisabled
 	}
@@ -168,7 +211,17 @@ func (s *Service) CreateHandoff(userID uint, target string) (string, int, error)
 		ExpiresAt:      time.Now().Add(HandoffTTL),
 		CreatedAt:      time.Now(),
 	}
-	if err := s.db.Create(row).Error; err != nil {
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		// Minting a handoff hands the account to another platform: only for a live session.
+		if err := identity_policy.EnsureSession(tx, userID, sessionVersion, false); err != nil {
+			if errors.Is(err, identity_policy.ErrSessionStale) {
+				return ErrSessionStale
+			}
+			return err
+		}
+		return tx.Create(row).Error
+	})
+	if err != nil {
 		return "", 0, err
 	}
 	// opportunistic cleanup of old rows
@@ -206,28 +259,45 @@ func (s *Service) Redeem(ctx context.Context, token string) (*Result, error) {
 }
 
 func (s *Service) resolveRemoteUser(ru *RemoteUser) (*Result, error) {
+	ru.Email = strings.ToLower(strings.TrimSpace(ru.Email))
 	if ru.Email == "" || ru.UserID == "" {
 		return nil, ErrInvalidToken
 	}
 	link, linkErr := s.findLinkByRemote(ru.UserID)
 	alreadyLinked := linkErr == nil
 
+	var local *user_module.User
 	if alreadyLinked {
+		if s.afterLinkLookup != nil {
+			s.afterLinkLookup()
+		}
 		u, err := s.loadUser(link.LocalUserID)
 		if err != nil || !u.IsActive {
 			return nil, ErrUserInactive
 		}
-		return &Result{User: u}, nil
+		local = u
+	} else {
+		u, lerr := s.findUserByEmail(s.db, ru.Email)
+		if lerr == nil {
+			if !u.IsActive {
+				return nil, ErrUserInactive
+			}
+			local = u
+		}
 	}
-
-	local, lerr := s.findUserByEmail(s.db, ru.Email)
-	localExists := lerr == nil
-	if localExists && !local.IsActive {
-		return nil, ErrUserInactive
-	}
+	localExists := local != nil
 	localVerified := localExists && local.VerifiedEmailAt != nil
 
-	switch Decide(false, localExists, localVerified, ru.EmailVerified) {
+	switch Decide(alreadyLinked, localExists, localVerified, ru.EmailVerified) {
+	case DecisionLoginLinked:
+		// A claim may have committed between the link lookup and the user load: the user
+		// then looks verified but the link we trusted is already wiped. Re-read it.
+		if err := s.linkStillHolds(link.LocalUserID, ru.UserID); err != nil {
+			return nil, err
+		}
+		return &Result{User: local}, nil
+	case DecisionReject:
+		return nil, ErrRemoteUnverified
 	case DecisionProvision:
 		u, err := s.provision(ru)
 		if err != nil {
@@ -240,7 +310,9 @@ func (s *Service) resolveRemoteUser(ru *RemoteUser) (*Result, error) {
 		}
 		return &Result{User: local}, nil
 	default:
-		if s.hasLinkTo(local.ID) {
+		// A link that already points at this local account is not a conflict; proving the
+		// mailbox replaces it. Any other existing link to this account is.
+		if !alreadyLinked && s.hasLinkTo(local.ID) {
 			return nil, ErrLinkConflict
 		}
 		p := &LinkPending{
@@ -261,6 +333,26 @@ func (s *Service) resolveRemoteUser(ru *RemoteUser) (*Result, error) {
 			Methods:   ConfirmMethods(local.Password != nil && *local.Password != "", localVerified),
 		}
 	}
+}
+
+// linkStillHolds re-reads the link under a share lock on the user row (which waits for a
+// claim in flight) and requires it to still point at the same local user.
+func (s *Service) linkStillHolds(localUserID uint, remoteUserID string) error {
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		st, found, err := identity_policy.LockSession(tx, localUserID, false)
+		if err != nil {
+			return err
+		}
+		if !found || !st.Active || !st.Verified {
+			return ErrInvalidToken
+		}
+		var l AccountLink
+		err = tx.Where("remote_platform = ? AND remote_user_id = ?", s.remotePlatform(), remoteUserID).First(&l).Error
+		if err != nil || l.LocalUserID != localUserID {
+			return ErrInvalidToken
+		}
+		return nil
+	})
 }
 
 func (s *Service) hasLinkTo(localUserID uint) bool {
@@ -288,6 +380,9 @@ func (s *Service) createLink(db *gorm.DB, localUserID uint, remoteUserID, via st
 
 // provision creates a local user from the remote one and links it. Never grants admin.
 func (s *Service) provision(ru *RemoteUser) (*user_module.User, error) {
+	if !ru.EmailVerified {
+		return nil, ErrRemoteUnverified // defence in depth: Decide already rejects this
+	}
 	hash := ru.PasswordHash
 	if !strings.HasPrefix(hash, "$2") {
 		raw := make([]byte, 32)
@@ -309,7 +404,7 @@ func (s *Service) provision(ru *RemoteUser) (*user_module.User, error) {
 		})
 		u := &user_module.User{
 			Username: username,
-			Email:    strings.TrimSpace(ru.Email),
+			Email:    strings.ToLower(strings.TrimSpace(ru.Email)),
 			Password: &hash,
 			RoleID:   2,
 			IsActive: true,
@@ -355,7 +450,8 @@ func (s *Service) LoginViaRemote(email, password string) (*user_module.User, err
 		log.Printf("WARN link: remote verify-password failed: %v", err)
 		return nil, nil
 	}
-	if ru == nil {
+	if ru == nil || !ru.EmailVerified {
+		// An unverified remote account proves nothing: the same as wrong credentials.
 		return nil, nil
 	}
 	// Never auto-link/sign into an existing local account via login fallback:
@@ -387,7 +483,7 @@ func (s *Service) claimAttempt(pendingID string) (*LinkPending, error) {
 	}
 	var p LinkPending
 	res := s.db.Raw(`UPDATE link_pending SET attempts = attempts + 1 WHERE id = ? AND attempts < ? AND expires_at > ?
-		RETURNING id, local_user_id, remote_platform, remote_user_id, remote_email, attempts, code_hash, code_expires_at, expires_at, created_at`,
+		RETURNING id, local_user_id, remote_platform, remote_user_id, remote_email, attempts, code_hash, code_expires_at, code_email, expires_at, created_at`,
 		pendingID, MaxAttempts, time.Now()).Scan(&p)
 	if res.Error != nil || res.RowsAffected == 0 {
 		return nil, ErrPendingInvalid
@@ -417,7 +513,9 @@ func (s *Service) Confirm(pendingID, method, password, code string) (*Result, er
 			return nil, ErrBadCredentials
 		}
 	case MethodEmail:
+		// The code only counts while it was mailed to the address the account has now.
 		if p.CodeHash == nil || p.CodeExpiresAt == nil || time.Now().After(*p.CodeExpiresAt) || len(code) != 6 ||
+			p.CodeEmail == nil || !identity_policy.SameEmail(*p.CodeEmail, u.Email) ||
 			subtle.ConstantTimeCompare([]byte(*p.CodeHash), []byte(codeHash(p.ID, code))) != 1 {
 			return nil, ErrBadCredentials
 		}
@@ -426,19 +524,32 @@ func (s *Service) Confirm(pendingID, method, password, code string) (*Result, er
 	if method == MethodEmail {
 		via = ViaEmailCode
 	}
+	var proof identity_policy.Outcome
 	err = s.db.Transaction(func(tx *gorm.DB) error {
+		if method == MethodEmail {
+			// The code proves the mailbox, not the person: the policy wipes whatever an
+			// unverified account carries before the link is created.
+			var err error
+			proof, err = identity_policy.ProveEmail(tx, identity_policy.Proof{
+				UserID: u.ID, Email: *p.CodeEmail, Kind: identity_policy.KindLinkCode,
+			})
+			if err != nil {
+				if errors.Is(err, identity_policy.ErrEmailMismatch) || errors.Is(err, identity_policy.ErrUserNotFound) || errors.Is(err, identity_policy.ErrUserInactive) {
+					return ErrBadCredentials
+				}
+				return err
+			}
+		}
 		if err := s.createLink(tx, u.ID, p.RemoteUserID, via); err != nil {
 			return err
 		}
-		if method == MethodEmail && u.VerifiedEmailAt == nil {
-			now := time.Now()
-			if err := tx.Model(&user_module.User{}).Where("id = ?", u.ID).Update("verified_email_at", now).Error; err != nil {
-				return err
-			}
-			u.VerifiedEmailAt = &now
-		}
 		return tx.Exec(`DELETE FROM link_pending WHERE id = ?`, p.ID).Error
 	})
+	if err != nil {
+		return nil, err
+	}
+	proof.Publish(u.ID)
+	u, err = s.loadUser(u.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -466,7 +577,7 @@ func (s *Service) SendCode(pendingID string) error {
 	code := fmt.Sprintf("%06d", n)
 	exp := time.Now().Add(CodeTTL)
 	if err := s.db.Model(&LinkPending{}).Where("id = ?", p.ID).
-		Updates(map[string]any{"code_hash": codeHash(p.ID, code), "code_expires_at": exp}).Error; err != nil {
+		Updates(map[string]any{"code_hash": codeHash(p.ID, code), "code_expires_at": exp, "code_email": u.Email}).Error; err != nil {
 		return err
 	}
 	if s.mailer == nil || !s.mailer.IsEnabled() {

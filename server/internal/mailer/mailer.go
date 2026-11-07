@@ -58,7 +58,7 @@ func (m *Mailer) SendLinkCodeEmail(toEmail, username, code string) error {
 
 func (m *Mailer) send(toEmail, username, subject, htmlBody string) error {
 	if !m.enabled {
-		log.Printf("WARN mailer disabled, skipping email to %s (subject: %s)", toEmail, subject)
+		log.Printf("WARN mailer disabled, skipping email (subject: %s)", subject)
 		return nil
 	}
 
@@ -96,16 +96,16 @@ func (m *Mailer) send(toEmail, username, subject, htmlBody string) error {
 
 	resp, err := m.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("mailer: brevo http request to %s failed: %w", toEmail, err)
+		return fmt.Errorf("mailer: brevo http request failed (subject: %s): %w", subject, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		respBody, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("mailer: brevo api returned status %d for %s: %s", resp.StatusCode, toEmail, string(respBody))
+		return fmt.Errorf("mailer: brevo api returned status %d (subject: %s): %s", resp.StatusCode, subject, string(respBody))
 	}
 
-	log.Printf("✅ Mailer: email sent successfully via Brevo to %s", toEmail)
+	log.Printf("✅ Mailer: email sent successfully via Brevo (subject: %s)", subject)
 	return nil
 }
 

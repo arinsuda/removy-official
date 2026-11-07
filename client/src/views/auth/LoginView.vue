@@ -34,6 +34,7 @@
 <script setup lang="ts">
   import { ref, onMounted } from "vue"
   import { useRouter, useRoute } from "vue-router"
+  import { useI18n } from "vue-i18n"
   import { User as IconUser, Lock as IconLock } from "lucide-vue-next"
   import AuthAlert from "@/components/auth/AuthAlert.vue"
   import AuthField from "@/components/auth/AuthField.vue"
@@ -43,6 +44,7 @@
   import { useAuthStore } from "@/stores/auth"
   import { authApi } from "@/api/api"
 
+  const { t } = useI18n()
   const router = useRouter()
   const route = useRoute()
   const authStore = useAuthStore()
@@ -64,6 +66,10 @@
         errorMsg.value = "บัญชี Google นี้ถูกเชื่อมต่อกับผู้ใช้อื่นในระบบแล้ว"
       } else if (errParam === "account_disabled") {
         errorMsg.value = "บัญชีผู้ใช้นี้ถูกระงับการใช้งาน"
+      } else if (errParam === "google_email_verification_required") {
+        errorMsg.value = t("auth.login.googleVerificationRequired")
+      } else if (errParam === "session_expired") {
+        errorMsg.value = t("auth.login.sessionExpired")
       } else {
         errorMsg.value = "เกิดข้อผิดพลาดในการเข้าสู่ระบบด้วย Google กรุณาลองใหม่อีกครั้ง"
       }

@@ -2,6 +2,8 @@ import { defineStore } from "pinia"
 import { ref, computed } from "vue"
 
 import { authApi, userApi } from "@/api/api"
+import { withRefreshLock } from "@/api/refresh"
+import { resume as resumeSocket } from "@/composables/useSocket"
 
 import type { AuthResponse, AuthUser, LoginRequest, RegisterRequest } from "@/types"
 
@@ -90,6 +92,7 @@ export const useAuthStore = defineStore("auth", () => {
   function applySession(data: AuthResponse) {
     if (data.access_token) localStorage.setItem("access_token", data.access_token)
     if (data.refresh_token) localStorage.setItem("refresh_token", data.refresh_token)
+    resumeSocket()
     _generation++
     setUser(data.user)
     isInitialized.value = true
@@ -107,8 +110,18 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
+  // The session a refresh started with is still the stored one. With no refresh token
+  // (cookie-only session) the stored value cannot tell, so fall back to this tab's generation.
+  function sessionUnchanged(sentRefresh: string | null, myGen: number): boolean {
+    return (
+      localStorage.getItem("refresh_token") === sentRefresh &&
+      (sentRefresh !== null || myGen === _generation)
+    )
+  }
+
   async function fetchMe() {
     const myGen = ++_generation
+    let sentRefresh: string | null = null
     initError.value = null
     try {
       const urlParams = new URLSearchParams(window.location.search)
@@ -131,21 +144,35 @@ export const useAuthStore = defineStore("auth", () => {
         )
       }
 
-      const storedRefresh = localStorage.getItem("refresh_token")
-      console.log("[fetchMe] storedRefresh exists:", !!storedRefresh)
-      const refreshRes = await authApi.refreshToken(storedRefresh || undefined)
+      // Read the refresh token inside the lock: another tab may have rotated it while
+      // we waited, and replaying the spent one would end the session everywhere.
+      // Store the rotated tokens inside the lock: the server already spent the old refresh
+      // token. A stale call may store them only while that token is still the current one,
+      // so it can never undo a logout or overwrite another account's login.
+      const refreshRes = await withRefreshLock(async () => {
+        const storedRefresh = localStorage.getItem("refresh_token")
+        sentRefresh = storedRefresh
+        console.log("[fetchMe] storedRefresh exists:", !!storedRefresh)
+        const res = await authApi.refreshToken(storedRefresh || undefined)
+        if (!sessionUnchanged(storedRefresh, myGen)) return null
+        if (res.data.access_token) localStorage.setItem("access_token", res.data.access_token)
+        if (res.data.refresh_token) localStorage.setItem("refresh_token", res.data.refresh_token)
+        resumeSocket()
+        return res
+      })
+
+      // Another tab (or this one) logged out or signed in as someone else meanwhile.
+      // If this tab did not start a newer fetchMe, rerun with the current tokens so the
+      // bootstrap still finishes (as the new account, or as logged out).
+      if (!refreshRes) {
+        if (myGen === _generation) return fetchMe()
+        return
+      }
 
       // Stale-request protection: bail out if login/logout happened while waiting
       if (myGen !== _generation) return
 
       const userId = refreshRes.data.user.id
-
-      if (refreshRes.data.access_token) {
-        localStorage.setItem("access_token", refreshRes.data.access_token)
-      }
-      if (refreshRes.data.refresh_token) {
-        localStorage.setItem("refresh_token", refreshRes.data.refresh_token)
-      }
 
       const meRes = await userApi.me(userId)
 
@@ -164,11 +191,13 @@ export const useAuthStore = defineStore("auth", () => {
       // Stale-request protection
       if (myGen !== _generation) return
 
-      console.log("[fetchMe] caught error:", e)
-
       const axiosErr = e as { response?: { status?: number }; code?: string }
       const status = axiosErr.response?.status
+      // Status only: the error object carries request headers and bodies with tokens.
+      console.log("[fetchMe] caught error, status:", status)
       if (status === 401 || status === 403) {
+        // A stale 401 for a session another tab already replaced: retry with its tokens.
+        if (!sessionUnchanged(sentRefresh, myGen)) return fetchMe()
         clearUser()
         initError.value = "unauthenticated"
       } else if (
@@ -180,7 +209,7 @@ export const useAuthStore = defineStore("auth", () => {
       } else if (status !== undefined && status >= 500) {
         initError.value = "server"
       } else {
-        clearUser()
+        if (sessionUnchanged(sentRefresh, myGen)) clearUser()
         initError.value = "unauthenticated"
       }
       isInitialized.value = true

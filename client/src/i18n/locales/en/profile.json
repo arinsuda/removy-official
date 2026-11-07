@@ -24,7 +24,15 @@
     "bioPlaceholder": "Tell us a bit about yourself...",
     "emailLabel": "Email (Cannot be modified)",
     "save": "Save Changes",
-    "success": "Your profile information has been successfully updated!"
+    "success": "Your profile information has been successfully updated!",
+    "emailChange": {
+      "inputHint": "Enter your new email. We will send a 6-digit code to your current email ({current}) and another to the new address, and you need both.",
+      "currentCodeHint": "Code sent to your current email {email}",
+      "newCodeHint": "Code sent to your new email {email}",
+      "currentCodeLabel": "Current email code",
+      "newCodeLabel": "New email code"
+    },
+    "passwordNotSet": "This account has no password yet. Sign out, then use \"Forgot password\" on the login page to set one."
   },
   "actions": {
     "follow": "Follow",

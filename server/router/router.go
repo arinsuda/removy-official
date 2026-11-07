@@ -17,6 +17,7 @@ import (
 	"github.com/arinsuda/movie-hub/internal/bmol_module"
 	"github.com/arinsuda/movie-hub/internal/feed_module"
 	"github.com/arinsuda/movie-hub/internal/follow_module"
+	"github.com/arinsuda/movie-hub/internal/identity_policy"
 	"github.com/arinsuda/movie-hub/internal/library_module"
 	"github.com/arinsuda/movie-hub/internal/like_module"
 	"github.com/arinsuda/movie-hub/internal/link_module"
@@ -54,9 +55,10 @@ func Register(app *fiber.App, db *gorm.DB, cfg *config.Config, m *mailer.Mailer)
 
 	userNotifAdapter := user_module.NewNotificationUserAdapter(db)
 
-	verifier := &jwtVerifier{secret: cfg.JWT.AccessSecret}
+	verifier := middleware.NewTokenVerifier(cfg.JWT.AccessSecret, db)
 
 	notifHub := notification_module.NewHub(verifier, cfg.CORS.AllowedOrigins)
+	identity_policy.SetSessionsRevokedHook(notifHub.DisconnectUser)
 	notifSvc := notification_module.NewService(db, userNotifAdapter, notifHub)
 
 	policy := privacy_policy.NewUserAccessPolicy(db)
@@ -74,11 +76,12 @@ func Register(app *fiber.App, db *gorm.DB, cfg *config.Config, m *mailer.Mailer)
 
 	link_module.RegisterRoutes(api, db, cfg, m, authSvc)
 
-	mw := middleware.NewAuthMiddleware(cfg)
+	mw := middleware.NewAuthMiddleware(cfg, db)
 	protected := api.Group("/", mw.RequireAuth)
 
 	userSvc := user_module.RegisterRoutes(protected, db, mc, statsSvc, authSvc, passwordResetMailer, policy, cfg.Brevo)
 	authSvc.SetUserService(userSvc)
+	userSvc.SetSessionReissuer(authSvc)
 
 	achieveModule.RegisterRoutes(api, mw.RequireAuth)
 	feedModule.RegisterRoutes(protected)
@@ -100,18 +103,6 @@ func Register(app *fiber.App, db *gorm.DB, cfg *config.Config, m *mailer.Mailer)
 	admin_module.RegisterRoutes(protected, db, notifHub, mc, mw.RequireCurrentAdmin(db))
 
 	return notifHub
-}
-
-type jwtVerifier struct {
-	secret string
-}
-
-func (v *jwtVerifier) VerifyToken(token string) (uint, error) {
-	claims, err := middleware.ParseAccess(token, v.secret)
-	if err != nil {
-		return 0, err
-	}
-	return claims.UserID, nil
 }
 
 func welcomeHandler(c fiber.Ctx) error {

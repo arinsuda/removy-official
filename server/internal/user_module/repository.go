@@ -2,6 +2,7 @@ package user_module
 
 import (
 	"errors"
+	"strings"
 
 	"gorm.io/gorm"
 )
@@ -21,6 +22,8 @@ var (
 	ErrPasswordResetTokenNotFound = errors.New("password reset token not found")
 	ErrPasswordResetTokenExpired  = errors.New("password reset token expired")
 	ErrPasswordResetTokenInvalid  = errors.New("password reset token invalid")
+	ErrPasswordNotSet             = errors.New("no password set, use password reset to create one")
+	ErrSessionStale               = errors.New("session is no longer valid")
 )
 
 type repository struct {
@@ -75,7 +78,8 @@ func (r *repository) FindByID(id uint) (*User, int, int, int, error) {
 func (r *repository) FindByEmail(email string) (*User, error) {
 	var user User
 	err := r.db.
-		Where("email = ? AND is_active = true", email).
+		Where("lower(email) = lower(?) AND is_active = true", strings.TrimSpace(email)).
+		Order("(verified_email_at IS NOT NULL) DESC, id ASC").
 		First(&user).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrUserNotFound
@@ -100,19 +104,6 @@ func (r *repository) UpdateProfile(id uint, updates map[string]any) error {
 	return nil
 }
 
-func (r *repository) UpdatePassword(userID uint, hashedPassword string) error {
-	result := r.db.Model(&User{}).
-		Where("id = ?", userID).
-		Update("password", hashedPassword)
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return ErrUserNotFound
-	}
-	return nil
-}
-
 func (r *repository) DeleteUser(id uint) error {
 	result := r.db.Model(&User{}).Where("id = ?", id).Update("is_active", false)
 	if result.RowsAffected == 0 {
@@ -127,6 +118,7 @@ func (r *repository) UpsertEmailChangeRequest(req *EmailChangeRequest) error {
 		Assign(EmailChangeRequest{
 			NewEmail:     req.NewEmail,
 			OTPHash:      req.OTPHash,
+			NewOTPHash:   req.NewOTPHash,
 			ExpiresAt:    req.ExpiresAt,
 			AttemptCount: 0,
 		}).
@@ -155,7 +147,7 @@ func (r *repository) DeleteEmailChangeRequest(userID uint) error {
 func (r *repository) IsEmailTaken(email string, excludeUserID uint) (bool, error) {
 	var count int64
 	err := r.db.Model(&User{}).
-		Where("email = ? AND id != ? AND is_active = true", email, excludeUserID).
+		Where("lower(email) = lower(?) AND id != ? AND is_active = true", email, excludeUserID).
 		Count(&count).Error
 	return count > 0, err
 }

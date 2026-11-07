@@ -216,10 +216,21 @@ export const useNotificationStore = defineStore("notification", () => {
     })
   }
 
+  // A dropped socket misses pushes, so when the tab becomes visible again, resync the
+  // badge over HTTP (a 401 there refreshes the token, which resumes the socket).
+  function onVisibilityChange() {
+    if (document.visibilityState !== "visible") return
+    const { isConnected, resume } = useSocket()
+    if (isConnected.value) return
+    resume()
+    fetchUnreadCount()
+  }
+
   function bindSocket() {
     if (socketBound) return
     const { connect, on } = useSocket()
     connect()
+    document.addEventListener("visibilitychange", onVisibilityChange)
 
     on<SocketNotificationNewPayload>("notification:new", payload => {
       prependNotification(payload)
@@ -248,6 +259,7 @@ export const useNotificationStore = defineStore("notification", () => {
   function unbindSocket() {
     const { disconnect } = useSocket()
     disconnect()
+    document.removeEventListener("visibilitychange", onVisibilityChange)
     socketBound = false
   }
 

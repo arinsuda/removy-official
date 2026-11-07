@@ -49,6 +49,7 @@ type LinkPending struct {
 	Attempts       int
 	CodeHash       *string
 	CodeExpiresAt  *time.Time
+	CodeEmail      *string // address the code was mailed to; the code only counts while it is still the user's email
 	ExpiresAt      time.Time
 	CreatedAt      time.Time
 }
@@ -63,4 +64,7 @@ type RemoteUser struct {
 	DisplayName   string `json:"display_name"`
 	EmailVerified bool   `json:"email_verified"`
 	PasswordHash  string `json:"password_hash"`
+	// IdentityResetAt is set when the owner of this account changed since it may have been linked
+	// (planted credentials wiped on proof of the mailbox). Additive: older peers ignore it.
+	IdentityResetAt *time.Time `json:"identity_reset_at,omitempty"`
 }

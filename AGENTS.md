@@ -9,6 +9,7 @@ The product is POPCORN (formerly REMOVY). A few identifiers intentionally keep o
 docker compose --env-file server/.env up -d  # postgres + MinIO (:9000, console :9001)
 cd server && go run main.go          # PORT from .env (8081 locally); run from server/ (relative paths); auto-migrates and seeds on boot
 cd server && go test ./...           # unit tests
+cd server && TEST_DATABASE_URL=postgres://user:pass@localhost:5432/postgres go test -tags integration ./integration/...  # real Postgres, localhost only; each test uses a throwaway database (CI has a postgres service)
 cd client && npm run dev             # :3000, proxies /api -> localhost:8081 (VITE_API_PROXY_TARGET)
 cd client && npm run type-check      # vue-tsc --build
 cd client && npm test                # Vitest (src/__tests__)
@@ -31,6 +32,7 @@ server/database/
 server/internal/
   <domain>_module/          router -> handler -> service -> repository, plus dto.go and model.go
   privacy_policy/           Shared visibility policy
+  identity_policy/          ProveEmail (the only place an email becomes verified) + session epoch checks
   shared/                   apierr.go, pgerr.go, media/user summaries, storage/ (MinIO)
   mailer/                   Brevo sender
 client/src/
@@ -76,6 +78,7 @@ client/src/
 5. Soft-deleted rows stay in the DB. Filter `deleted_at IS NULL` in raw SQL, as `RequireCurrentAdmin` does for users.
 6. Auth uses `access_token` and `refresh_token` HTTP-only cookies with rotation. Handoff tokens go in the URL fragment, never the query string, and are never logged.
 7. UI text goes in `i18n/locales/{en,th}`. Keep both languages in sync (`verify-locales` checks this).
+8. Account takeover guards. `users.verified_email_at` is set only by `identity_policy.ProveEmail`, which wipes credentials planted on an unverified account unless the person proves the current password. In the verify-email flow only an explicit `skip_password` ("I don't know it") wipes; a wrong password returns 400 `WRONG_PASSWORD`, changes nothing, keeps the token, and counts against `MaxVerifyAttempts` per token (then 429, resend needed). Sessions are created only in `auth_module.issueAndStoreTokensTx` (verified email required) and carry `ver` = `users.token_version`; `RequireAuth`, refresh and the socket handshake (re-checked after Join) reject a mismatch. Claims, resets, password changes and logout-all bump `token_version`; a password change reissues the caller's session. Verification, reset and link-code tokens are bound to the email they were mailed to. Sensitive writes call `identity_policy.EnsureSession` inside their transaction. Never set `verified_email_at` or `password` with a bare UPDATE outside these paths.
 
 ## Recipes
 **New endpoint:** dto -> service (+test) -> handler -> module `router.go` -> new module only: register in `router/router.go` -> `client/src/types` + `client/src/api/endpoints` -> view.

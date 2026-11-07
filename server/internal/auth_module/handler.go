@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/arinsuda/movie-hub/config"
+	"github.com/arinsuda/movie-hub/internal/identity_policy"
 	"github.com/arinsuda/movie-hub/internal/user_module"
 	"github.com/gofiber/fiber/v3"
 )
@@ -58,25 +59,35 @@ func (h *Handler) Login(c fiber.Ctx) error {
 	})
 }
 
-func (h *Handler) Refresh(c fiber.Ctx) error {
-	rawRefresh := c.Cookies("refresh_token")
-	if rawRefresh == "" {
-		var body struct {
-			RefreshToken string `json:"refresh_token"`
-		}
-		_ = c.Bind().JSON(&body)
-		if body.RefreshToken != "" {
-			rawRefresh = body.RefreshToken
-		}
+// refreshTokenFrom reads the refresh token from the cookie, falling back to the JSON body
+// for clients whose cookie is blocked or missing.
+func (h *Handler) refreshTokenFrom(c fiber.Ctx) string {
+	if raw := c.Cookies("refresh_token"); raw != "" {
+		return raw
 	}
+	var body struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+	_ = c.Bind().JSON(&body)
+	return body.RefreshToken
+}
+
+func (h *Handler) Refresh(c fiber.Ctx) error {
+	rawRefresh := h.refreshTokenFrom(c)
 	if rawRefresh == "" {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "missing refresh token"})
 	}
 
 	pair, user, err := h.svc.Refresh(rawRefresh, c.Get("User-Agent"), c.IP())
 	if err != nil {
-		h.clearTokenCookies(c)
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid session"})
+		// Only a verdict on the session may end it. A database or infrastructure failure
+		// answers 503 and keeps the cookies: the client would otherwise sign the user out.
+		if errors.Is(err, ErrInvalidToken) || errors.Is(err, ErrUserNotFound) || errors.Is(err, ErrEmailUnverified) {
+			h.clearTokenCookies(c)
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid session"})
+		}
+		log.Printf("ERROR refresh: %v", err)
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "service temporarily unavailable"})
 	}
 
 	h.setTokenCookies(c, pair)
@@ -89,7 +100,7 @@ func (h *Handler) Refresh(c fiber.Ctx) error {
 }
 
 func (h *Handler) Logout(c fiber.Ctx) error {
-	rawRefresh := c.Cookies("refresh_token")
+	rawRefresh := h.refreshTokenFrom(c)
 	if rawRefresh != "" {
 		_ = h.svc.Logout(rawRefresh)
 	}
@@ -99,22 +110,62 @@ func (h *Handler) Logout(c fiber.Ctx) error {
 
 func (h *Handler) LogoutAll(c fiber.Ctx) error {
 	claims := GetClaims(c)
-	_ = h.svc.LogoutAll(claims.UserID)
+	if err := h.svc.LogoutAll(claims.UserID); err != nil {
+		// Sessions may still be live: keep the cookies and tell the client it did not happen.
+		log.Printf("ERROR [%s %s] logout all for user %d: %v", c.Method(), c.Path(), claims.UserID, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal server error"})
+	}
 	h.clearTokenCookies(c)
 	return c.JSON(MessageResponse{Message: "logged out from all devices"})
 }
 
+// VerifyEmailLink answers GET /auth/verify-email without changing anything: mail
+// scanners and link previews fetch URLs, and verification must be a deliberate POST.
+func (h *Handler) VerifyEmailLink(c fiber.Ctx) error {
+	return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+		"code":  "VERIFY_EMAIL_REQUIRES_POST",
+		"error": "open the verification link in the app to confirm your email",
+	})
+}
+
+// VerifyEmail proves the mailbox. The optional password is the account's current
+// password: a match keeps the account intact, a wrong one is rejected with the token
+// kept. Planted credentials are wiped only for an explicit skip_password, and the client
+// is then told to send the owner through password reset.
 func (h *Handler) VerifyEmail(c fiber.Ctx) error {
-	token := c.Query("token")
-	if token == "" {
+	var req struct {
+		Token        string `json:"token"`
+		Password     string `json:"password"`
+		SkipPassword bool   `json:"skip_password"`
+	}
+	if err := c.Bind().JSON(&req); err != nil || req.Token == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "missing token"})
 	}
 
-	if err := h.svc.VerifyEmail(token); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid or expired token"})
+	var password *string
+	if req.Password != "" {
+		password = &req.Password
+	}
+	res, err := h.svc.VerifyEmail(req.Token, password, req.SkipPassword)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrInvalidToken):
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid or expired token"})
+		case errors.Is(err, ErrVerifyWrongPassword):
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"code": "WRONG_PASSWORD", "error": "wrong password"})
+		case errors.Is(err, ErrPasswordChoiceRequired):
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"code": "PASSWORD_OR_SKIP_REQUIRED", "error": "enter your password or choose to skip"})
+		case errors.Is(err, ErrVerifyAttemptsExceeded):
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{"code": "VERIFY_ATTEMPTS_EXCEEDED", "error": "too many wrong passwords, request a new verification email"})
+		}
+		log.Printf("ERROR verify email: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal server error"})
 	}
 
-	return c.JSON(MessageResponse{Message: "email verified successfully"})
+	return c.JSON(fiber.Map{
+		"message":                 "email verified successfully",
+		"password_reset_required": res.PasswordResetRequired,
+	})
 }
 
 func (h *Handler) ResendVerification(c fiber.Ctx) error {
@@ -204,8 +255,11 @@ func (h *Handler) GoogleLink(c fiber.Ctx) error {
 	}
 	_ = c.Bind().JSON(&req)
 
-	authURL, state, err := h.svc.InitiateGoogleLink(c.Context(), claims.UserID, req.ReturnURL)
+	authURL, state, err := h.svc.InitiateGoogleLink(c.Context(), claims.UserID, claims.TokenVersion, req.ReturnURL)
 	if err != nil {
+		if errors.Is(err, identity_policy.ErrSessionStale) {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "session is no longer valid"})
+		}
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
@@ -250,6 +304,10 @@ func (h *Handler) GoogleCallback(c fiber.Ctx) error {
 			errCode = "google_identity_already_connected"
 		case errors.Is(err, ErrUserInactive):
 			errCode = "account_disabled"
+		case errors.Is(err, ErrGoogleEmailVerificationRequired):
+			errCode = "google_email_verification_required"
+		case errors.Is(err, identity_policy.ErrSessionStale):
+			errCode = "session_expired"
 		case errors.Is(err, ErrInvalidOAuthState), errors.Is(err, ErrOAuthTransactionNotFound):
 			errCode = "invalid_oauth_state"
 		}
@@ -387,14 +445,21 @@ func SetTokenCookies(c fiber.Ctx, cfg *config.Config, pair *TokenPair) {
 	})
 }
 
+// clearTokenCookies expires the session cookies. A browser only replaces a cookie when
+// Domain and Path match, and with SameSite=None it also needs Secure, so every attribute
+// mirrors SetTokenCookies (API and SPA are on different sites in production).
 func (h *Handler) clearTokenCookies(c fiber.Ctx) {
 	for _, name := range []string{"access_token", "refresh_token"} {
 		c.Cookie(&fiber.Cookie{
-			Name:    name,
-			Value:   "",
-			MaxAge:  -1,
-			Expires: time.Unix(0, 0),
-			Path:    "/",
+			Name:     name,
+			Value:    "",
+			HTTPOnly: true,
+			Secure:   h.cfg.Cookie.Secure,
+			SameSite: h.cfg.Cookie.SameSite,
+			Domain:   h.cfg.Cookie.Domain,
+			MaxAge:   -1,
+			Expires:  time.Unix(0, 0),
+			Path:     "/",
 		})
 	}
 }
@@ -418,7 +483,7 @@ func (h *Handler) handleServiceError(c fiber.Ctx, err error) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	case errors.Is(err, ErrEmailTaken), errors.Is(err, ErrUsernameTaken):
 		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": err.Error()})
-	case errors.Is(err, ErrUserNotFound), errors.Is(err, ErrWrongPassword):
+	case errors.Is(err, ErrUserNotFound), errors.Is(err, ErrWrongPassword), errors.Is(err, ErrVerifyWrongPassword):
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid credentials"})
 	case errors.Is(err, ErrEmailUnverified):
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "please verify your email first"})

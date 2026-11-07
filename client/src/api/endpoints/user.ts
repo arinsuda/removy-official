@@ -31,5 +31,8 @@ export const userApi = {
     api.put<{ user: UserProfile }>(`/users/${userId}/email`, data),
 
   changePassword: (userId: number, data: ChangePassword) =>
-    api.patch<{ message: string }>(`/users/${userId}/password`, data),
+    api.patch<{ message: string; access_token?: string; refresh_token?: string }>(
+      `/users/${userId}/password`,
+      data,
+    ),
 }

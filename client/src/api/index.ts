@@ -1,5 +1,7 @@
 import axios from "axios";
 import { useAuthStore } from "@/stores/auth";
+import { resume as resumeSocket } from "@/composables/useSocket";
+import { REFRESH_POST_TIMEOUT_MS, isSessionRejected, runExclusiveRefresh } from "@/api/refresh";
 
 const getBaseURL = () => {
   const envUrl = import.meta.env.VITE_API_BASE_URL;
@@ -51,7 +53,7 @@ api.interceptors.response.use(
     const status = error.response?.status;
 
     // ป้องกัน refresh loop — ไม่ retry ถ้าเป็น request จาก auth routes เหล่านี้
-    const isAuthRoute = ["/auth/refresh", "/auth/login", "/auth/logout"].some(
+    const isAuthRoute = ["/auth/refresh", "/auth/login", "/auth/logout", "/auth/handoff"].some(
       (path) => originalRequest?.url?.includes(path),
     );
     if (isAuthRoute) {
@@ -72,21 +74,43 @@ api.interceptors.response.use(
     }
 
     isRefreshing = true;
+    let sentRefresh: string | null = null;
 
     try {
-      const storedRefresh = localStorage.getItem("refresh_token");
-      const refreshUrl = `${getBaseURL()}/auth/refresh`;
-      const refreshRes = await axios.post(
-        refreshUrl,
-        { refresh_token: storedRefresh },
-        { withCredentials: true },
-      );
+      const staleAccess =
+        String(originalRequest.headers?.Authorization ?? "").replace(/^Bearer /, "") || null;
+      let sessionChanged = false;
+      await runExclusiveRefresh(staleAccess, async () => {
+        const storedRefresh = localStorage.getItem("refresh_token");
+        sentRefresh = storedRefresh;
+        const refreshUrl = `${getBaseURL()}/auth/refresh`;
+        const refreshRes = await axios.post(
+          refreshUrl,
+          { refresh_token: storedRefresh },
+          { withCredentials: true, timeout: REFRESH_POST_TIMEOUT_MS },
+        );
 
-      if (refreshRes.data?.access_token) {
-        localStorage.setItem("access_token", refreshRes.data.access_token);
-      }
-      if (refreshRes.data?.refresh_token) {
-        localStorage.setItem("refresh_token", refreshRes.data.refresh_token);
+        // Logout or another account's login happened while the POST was in flight: the
+        // reply belongs to a session that is gone, so it must not touch the stored tokens.
+        if (localStorage.getItem("refresh_token") !== storedRefresh) {
+          sessionChanged = true;
+          return;
+        }
+
+        if (refreshRes.data?.access_token) {
+          localStorage.setItem("access_token", refreshRes.data.access_token);
+        }
+        if (refreshRes.data?.refresh_token) {
+          localStorage.setItem("refresh_token", refreshRes.data.refresh_token);
+        }
+        resumeSocket();
+      });
+
+      if (sessionChanged) {
+        // Reject without logging out: the stored session is not the one that failed.
+        const superseded = new Error("Session changed during refresh");
+        processQueue(superseded);
+        return Promise.reject(superseded);
       }
 
       processQueue();
@@ -101,6 +125,15 @@ api.interceptors.response.use(
       return api(originalRequest);
     } catch (refreshError) {
       processQueue(refreshError);
+      // 503 / network error: the server could not check the session. Keep the tokens and
+      // the user signed in; the request just fails and can be retried.
+      if (!isSessionRejected(refreshError)) {
+        return Promise.reject(refreshError);
+      }
+      // Clear only if the stored session is still the one that was rejected.
+      if (localStorage.getItem("refresh_token") !== sentRefresh) {
+        return Promise.reject(refreshError);
+      }
       localStorage.removeItem("access_token");
       localStorage.removeItem("refresh_token");
 
