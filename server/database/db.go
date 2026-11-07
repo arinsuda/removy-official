@@ -401,7 +401,17 @@ func runSQLMigrations(db *gorm.DB, cfg *config.Config) error {
 		return err
 	}
 
-	if err := runMigrationWithHistory(db, "20261107_user_identity_unique_ensure", migrate.UserIdentityUniqueEnsure); err != nil {
+	// Duplicates defer this migration (ERROR logged, version not recorded) instead of failing the boot.
+	if err := runSchemaMigrationTx(db, "20261107_user_identity_unique_ensure", cfg.DB.MigrationLockTimeoutMs, cfg.DB.MigrationStatementTimeoutMs, func(tx *gorm.DB) error {
+		missing, err := migrate.EnsureUserIdentityUniques(tx)
+		if err != nil {
+			return err
+		}
+		if len(missing) > 0 {
+			return errMigrationDeferred
+		}
+		return nil
+	}); err != nil {
 		return err
 	}
 

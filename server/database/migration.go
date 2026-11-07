@@ -1,12 +1,18 @@
 package database
 
 import (
+	"errors"
 	"fmt"
 	"hash/fnv"
 	"log"
 
 	"gorm.io/gorm"
 )
+
+// errMigrationDeferred is returned by a migration callback that chose not to apply
+// because the data needs a human first. The transaction commits, boot continues, and
+// the version is not recorded, so the next boot tries again.
+var errMigrationDeferred = errors.New("migration deferred")
 
 func runMigrationWithHistoryTx(
 	db *gorm.DB,
@@ -39,7 +45,7 @@ func runVersionedMigrationTx(
 	lockReviews bool,
 	migrate func(tx *gorm.DB) error,
 ) error {
-	var applied bool
+	var applied, deferred bool
 	err := db.Transaction(func(tx *gorm.DB) error {
 		// 1. Session-level advisory lock using FNV-1a hash of the name
 		if err := tx.Exec(`SELECT pg_advisory_xact_lock(?)`, hashString(migrationName)).Error; err != nil {
@@ -72,6 +78,10 @@ func runVersionedMigrationTx(
 
 		// 5. Run migration callback
 		if err := migrate(tx); err != nil {
+			if errors.Is(err, errMigrationDeferred) {
+				deferred = true
+				return nil
+			}
 			return err
 		}
 
@@ -85,7 +95,9 @@ func runVersionedMigrationTx(
 	})
 
 	if err == nil {
-		if applied {
+		if deferred {
+			log.Printf("WARN migration %s deferred: not recorded, it will run again on the next boot", migrationName)
+		} else if applied {
 			log.Printf("migration %s applied successfully", migrationName)
 		} else {
 			log.Printf("migration %s already applied", migrationName)
