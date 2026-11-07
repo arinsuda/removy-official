@@ -59,17 +59,21 @@ func (h *Handler) Login(c fiber.Ctx) error {
 	})
 }
 
-func (h *Handler) Refresh(c fiber.Ctx) error {
-	rawRefresh := c.Cookies("refresh_token")
-	if rawRefresh == "" {
-		var body struct {
-			RefreshToken string `json:"refresh_token"`
-		}
-		_ = c.Bind().JSON(&body)
-		if body.RefreshToken != "" {
-			rawRefresh = body.RefreshToken
-		}
+// refreshTokenFrom reads the refresh token from the cookie, falling back to the JSON body
+// for clients whose cookie is blocked or missing.
+func (h *Handler) refreshTokenFrom(c fiber.Ctx) string {
+	if raw := c.Cookies("refresh_token"); raw != "" {
+		return raw
 	}
+	var body struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+	_ = c.Bind().JSON(&body)
+	return body.RefreshToken
+}
+
+func (h *Handler) Refresh(c fiber.Ctx) error {
+	rawRefresh := h.refreshTokenFrom(c)
 	if rawRefresh == "" {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "missing refresh token"})
 	}
@@ -96,7 +100,7 @@ func (h *Handler) Refresh(c fiber.Ctx) error {
 }
 
 func (h *Handler) Logout(c fiber.Ctx) error {
-	rawRefresh := c.Cookies("refresh_token")
+	rawRefresh := h.refreshTokenFrom(c)
 	if rawRefresh != "" {
 		_ = h.svc.Logout(rawRefresh)
 	}

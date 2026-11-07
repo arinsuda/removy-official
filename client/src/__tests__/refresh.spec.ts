@@ -116,4 +116,13 @@ describe("refresh timeouts", () => {
     expect(REFRESH_POST_TIMEOUT_MS).toBe(15000)
     expect(isSessionRejected({ code: "ECONNABORTED", message: "timeout of 15000ms exceeded" })).toBe(false)
   })
+
+  it("logout sends the stored refresh token in the body", async () => {
+    post.mockResolvedValue({})
+    localStorage.setItem("refresh_token", "rt-stored")
+    const { authApi } = await import("@/api/endpoints/auth")
+    await authApi.logout()
+    expect(post).toHaveBeenCalledWith("/auth/logout", { refresh_token: "rt-stored" })
+    localStorage.clear()
+  })
 })

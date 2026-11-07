@@ -30,7 +30,8 @@ export const authApi = {
 
   refreshToken: (token?: string) => api.post<AuthResponse>("/auth/refresh", { refresh_token: token }, { timeout: REFRESH_POST_TIMEOUT_MS }),
 
-  logout: () => api.post("/auth/logout"),
+  // The stored refresh token goes in the body so the server can revoke it when the cookie is missing.
+  logout: () => api.post("/auth/logout", { refresh_token: localStorage.getItem("refresh_token") ?? undefined }),
 
   // POST, never GET: link scanners must not be able to verify an address.
   // Send the current password, or skipPassword: true for an explicit "I don't know it"
