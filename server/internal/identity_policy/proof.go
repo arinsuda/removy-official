@@ -119,7 +119,7 @@ func ProveEmail(tx *gorm.DB, p Proof) (Outcome, error) {
 
 	// A typed password that does not match is a typo, not consent to wipe: only an
 	// absent password (the caller's explicit "I don't know it") reaches the wipe below.
-	if p.Kind == KindVerifyLink && p.PresentedPassword != nil && *p.PresentedPassword != "" && u.Password != nil && *u.Password != "" {
+	if p.Kind == KindVerifyLink && p.PresentedPassword != nil && *p.PresentedPassword != "" {
 		return out, ErrWrongPassword
 	}
 

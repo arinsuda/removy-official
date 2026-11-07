@@ -139,3 +139,24 @@ func TestVerifyEmailGetIsReadOnlyAndPostVerifies(t *testing.T) {
 		t.Fatal("POST did not verify")
 	}
 }
+
+// A typed password on a passwordless account can never match: it is a wrong guess,
+// not consent to wipe, so nothing is verified or wiped.
+func TestVerifyPasswordlessAccountWithTypedPasswordIsWrong(t *testing.T) {
+	e := newEnv(t)
+	uid := seedUser(t, e.db, "gsuite@corp.test", false, "")
+	e.seedGoogleIdentity(uid, "planted-sub", "planted@gmail.com")
+	if err := e.auth.SendVerification(uid, "gsuite@corp.test"); err != nil {
+		t.Fatal(err)
+	}
+	tok := e.mail.last(t, "gsuite@corp.test", reVerifyToken)
+	if _, err := e.auth.VerifyEmail(tok, ptr("anything-123"), false); err != auth_module.ErrVerifyWrongPassword {
+		t.Fatalf("typed password on a passwordless account: %v", err)
+	}
+	if _, _, verified, ver := e.userRow(uid); verified || ver != 0 {
+		t.Fatal("wrong guess changed the account")
+	}
+	if e.count(`SELECT count(*) FROM user_identities WHERE user_id = ?`, uid) != 1 {
+		t.Fatal("wrong guess wiped identities")
+	}
+}
