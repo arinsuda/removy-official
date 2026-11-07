@@ -15,14 +15,19 @@ export async function runExclusiveRefresh(
   staleAccessToken: string | null,
   refresh: () => Promise<void>,
 ): Promise<"refreshed" | "already-refreshed"> {
-  const run = async () => {
+  return withRefreshLock(async () => {
     const current = localStorage.getItem("access_token");
     if (current && current !== staleAccessToken) return "already-refreshed" as const;
     await refresh();
     return "refreshed" as const;
-  };
+  });
+}
+
+// Runs fn under the cross-tab refresh lock (or directly when the Locks API is missing).
+// Read the refresh token inside fn: a tab that waited must use the token the winner stored.
+export function withRefreshLock<T>(fn: () => Promise<T>): Promise<T> {
   if (typeof navigator !== "undefined" && navigator.locks) {
-    return navigator.locks.request(LOCK_NAME, run);
+    return navigator.locks.request(LOCK_NAME, fn);
   }
-  return run();
+  return fn();
 }

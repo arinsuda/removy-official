@@ -2,6 +2,7 @@ import { defineStore } from "pinia"
 import { ref, computed } from "vue"
 
 import { authApi, userApi } from "@/api/api"
+import { withRefreshLock } from "@/api/refresh"
 
 import type { AuthResponse, AuthUser, LoginRequest, RegisterRequest } from "@/types"
 
@@ -131,9 +132,13 @@ export const useAuthStore = defineStore("auth", () => {
         )
       }
 
-      const storedRefresh = localStorage.getItem("refresh_token")
-      console.log("[fetchMe] storedRefresh exists:", !!storedRefresh)
-      const refreshRes = await authApi.refreshToken(storedRefresh || undefined)
+      // Read the refresh token inside the lock: another tab may have rotated it while
+      // we waited, and replaying the spent one would end the session everywhere.
+      const refreshRes = await withRefreshLock(() => {
+        const storedRefresh = localStorage.getItem("refresh_token")
+        console.log("[fetchMe] storedRefresh exists:", !!storedRefresh)
+        return authApi.refreshToken(storedRefresh || undefined)
+      })
 
       // Stale-request protection: bail out if login/logout happened while waiting
       if (myGen !== _generation) return
