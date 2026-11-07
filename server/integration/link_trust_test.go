@@ -112,8 +112,12 @@ func TestIntrospectEmitsIdentityResetAt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if ru.IdentityResetAt == nil || time.Since(*ru.IdentityResetAt) > time.Minute {
-		t.Fatalf("identity_reset_at = %v", ru.IdentityResetAt)
+	if ru.IdentityResetAt == nil {
+		t.Fatal("identity_reset_at not emitted")
+	}
+	// Judged by the database clock and the database value, never against the host clock.
+	if n := e.count(`SELECT count(*) FROM users WHERE id = ? AND identity_reset_at = ? AND identity_reset_at > now() - interval '1 minute'`, uid, *ru.IdentityResetAt); n != 1 {
+		t.Fatalf("emitted identity_reset_at %v is not the recent stored value", ru.IdentityResetAt)
 	}
 }
 
