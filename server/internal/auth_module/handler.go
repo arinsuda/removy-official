@@ -106,7 +106,11 @@ func (h *Handler) Logout(c fiber.Ctx) error {
 
 func (h *Handler) LogoutAll(c fiber.Ctx) error {
 	claims := GetClaims(c)
-	_ = h.svc.LogoutAll(claims.UserID)
+	if err := h.svc.LogoutAll(claims.UserID); err != nil {
+		// Sessions may still be live: keep the cookies and tell the client it did not happen.
+		log.Printf("ERROR [%s %s] logout all for user %d: %v", c.Method(), c.Path(), claims.UserID, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal server error"})
+	}
 	h.clearTokenCookies(c)
 	return c.JSON(MessageResponse{Message: "logged out from all devices"})
 }

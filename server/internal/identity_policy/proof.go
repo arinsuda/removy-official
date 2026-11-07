@@ -162,6 +162,13 @@ var resetScopeTables = []userScoped{
 	{"email_verifications", "user_id"},
 }
 
+// RevokeSessionScope ends everything that could continue a session or an in-flight
+// proof for the user (refresh, handoff, pending link and mail tokens) while keeping
+// identities and links. A verified reset and a password change both use it.
+func RevokeSessionScope(tx *gorm.DB, userID uint) error {
+	return deleteAll(tx, userID, resetScopeTables)
+}
+
 func deleteAll(tx *gorm.DB, userID uint, tables []userScoped) error {
 	for _, t := range tables {
 		if err := tx.Exec(`DELETE FROM `+t.table+` WHERE `+t.column+` = ?`, userID).Error; err != nil {

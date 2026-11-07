@@ -394,7 +394,7 @@ func (s *Service) ChangePassword(targetUserID, requesterID uint, sessionVersion 
 			string(hashed), targetUserID).Error; err != nil {
 			return err
 		}
-		return tx.Exec(`DELETE FROM refresh_tokens WHERE user_id = ?`, targetUserID).Error
+		return identity_policy.RevokeSessionScope(tx, targetUserID)
 	})
 	if err != nil {
 		return err
