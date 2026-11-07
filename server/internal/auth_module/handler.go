@@ -76,8 +76,14 @@ func (h *Handler) Refresh(c fiber.Ctx) error {
 
 	pair, user, err := h.svc.Refresh(rawRefresh, c.Get("User-Agent"), c.IP())
 	if err != nil {
-		h.clearTokenCookies(c)
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid session"})
+		// Only a verdict on the session may end it. A database or infrastructure failure
+		// answers 503 and keeps the cookies: the client would otherwise sign the user out.
+		if errors.Is(err, ErrInvalidToken) || errors.Is(err, ErrUserNotFound) || errors.Is(err, ErrEmailUnverified) {
+			h.clearTokenCookies(c)
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid session"})
+		}
+		log.Printf("ERROR refresh: %v", err)
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "service temporarily unavailable"})
 	}
 
 	h.setTokenCookies(c, pair)

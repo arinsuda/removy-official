@@ -751,7 +751,10 @@ func (s *Service) Refresh(rawRefresh, userAgent, ip string) (*TokenPair, *user_m
 	hashed := HashToken(rawRefresh)
 	stored, err := s.repo.FindRefreshToken(hashed)
 	if err != nil {
-		return nil, nil, ErrInvalidToken
+		if errors.Is(err, ErrInvalidToken) {
+			return nil, nil, ErrInvalidToken
+		}
+		return nil, nil, fmt.Errorf("find refresh token: %w", err) // infrastructure failure, not a verdict on the token
 	}
 
 	if stored.IsExpired() {
@@ -781,7 +784,10 @@ func (s *Service) Refresh(rawRefresh, userAgent, ip string) (*TokenPair, *user_m
 
 		var u user_module.User
 		if err := tx.Preload("Role").First(&u, claims.UserID).Error; err != nil {
-			return ErrUserNotFound
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrUserNotFound
+			}
+			return err
 		}
 		user = &u
 

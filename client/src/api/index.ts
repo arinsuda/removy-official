@@ -1,5 +1,6 @@
 import axios from "axios";
 import { useAuthStore } from "@/stores/auth";
+import { isSessionRejected, runExclusiveRefresh } from "@/api/refresh";
 
 const getBaseURL = () => {
   const envUrl = import.meta.env.VITE_API_BASE_URL;
@@ -74,20 +75,24 @@ api.interceptors.response.use(
     isRefreshing = true;
 
     try {
-      const storedRefresh = localStorage.getItem("refresh_token");
-      const refreshUrl = `${getBaseURL()}/auth/refresh`;
-      const refreshRes = await axios.post(
-        refreshUrl,
-        { refresh_token: storedRefresh },
-        { withCredentials: true },
-      );
+      const staleAccess =
+        String(originalRequest.headers?.Authorization ?? "").replace(/^Bearer /, "") || null;
+      await runExclusiveRefresh(staleAccess, async () => {
+        const storedRefresh = localStorage.getItem("refresh_token");
+        const refreshUrl = `${getBaseURL()}/auth/refresh`;
+        const refreshRes = await axios.post(
+          refreshUrl,
+          { refresh_token: storedRefresh },
+          { withCredentials: true },
+        );
 
-      if (refreshRes.data?.access_token) {
-        localStorage.setItem("access_token", refreshRes.data.access_token);
-      }
-      if (refreshRes.data?.refresh_token) {
-        localStorage.setItem("refresh_token", refreshRes.data.refresh_token);
-      }
+        if (refreshRes.data?.access_token) {
+          localStorage.setItem("access_token", refreshRes.data.access_token);
+        }
+        if (refreshRes.data?.refresh_token) {
+          localStorage.setItem("refresh_token", refreshRes.data.refresh_token);
+        }
+      });
 
       processQueue();
 
@@ -101,6 +106,11 @@ api.interceptors.response.use(
       return api(originalRequest);
     } catch (refreshError) {
       processQueue(refreshError);
+      // 503 / network error: the server could not check the session. Keep the tokens and
+      // the user signed in; the request just fails and can be retried.
+      if (!isSessionRejected(refreshError)) {
+        return Promise.reject(refreshError);
+      }
       localStorage.removeItem("access_token");
       localStorage.removeItem("refresh_token");
 

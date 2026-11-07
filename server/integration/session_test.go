@@ -5,6 +5,9 @@ package integration
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -12,6 +15,7 @@ import (
 	"github.com/arinsuda/movie-hub/internal/auth_module"
 	"github.com/arinsuda/movie-hub/internal/identity_policy"
 	"github.com/arinsuda/movie-hub/internal/link_module"
+	"github.com/arinsuda/movie-hub/internal/mailer"
 	"github.com/arinsuda/movie-hub/internal/user_module"
 	"github.com/arinsuda/movie-hub/middleware"
 	"github.com/gofiber/fiber/v3"
@@ -330,5 +334,45 @@ func TestN1b_GoogleLinkInitiateWithStaleTokenRejected(t *testing.T) {
 	}
 	if _, _, err := e.auth.InitiateGoogleLink(context.Background(), uid, 1, "/"); err != nil {
 		t.Fatalf("initiate with the current token: %v", err)
+	}
+}
+
+// A database failure on refresh must answer 503 and keep the cookies, never 401: the client signs the user out on 401.
+func TestRefreshDatabaseErrorIs503AndKeepsCookies(t *testing.T) {
+	e := newEnv(t)
+	seedUser(t, e.db, "me@x.test", true, "pw-secret-12")
+	pair := e.loginPair("me@x.test", "pw-secret-12")
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	app := fiber.New()
+	auth_module.RegisterRoutes(app.Group("/api"), e.db.WithContext(ctx), e.cfg, mailer.New(e.cfg.Brevo), nil, nil)
+	post := func(rt string) *http.Response {
+		req := httptest.NewRequest("POST", "/api/auth/refresh", strings.NewReader(`{"refresh_token":"`+rt+`"}`))
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := app.Test(req, fiber.TestConfig{Timeout: 10 * time.Second})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return resp
+	}
+	resp := post(pair.RefreshToken)
+	if resp.StatusCode != 503 {
+		t.Fatalf("db down: want 503, got %d", resp.StatusCode)
+	}
+	for _, c := range resp.Cookies() {
+		if c.MaxAge < 0 {
+			t.Fatalf("cookie %s cleared on a 503", c.Name)
+		}
+	}
+	// the token itself is untouched and works once the database is back
+	if _, _, err := e.auth.Refresh(pair.RefreshToken, "ua", "ip"); err != nil {
+		t.Fatalf("refresh token spent by a failed attempt: %v", err)
+	}
+	// control: a garbage token is still a 401
+	e2 := *e
+	e2.app = app
+	if code, _ := e2.do("POST", "/api/auth/refresh", `{"refresh_token":"garbage"}`, ""); code != 401 {
+		t.Fatalf("garbage token: want 401, got %d", code)
 	}
 }
