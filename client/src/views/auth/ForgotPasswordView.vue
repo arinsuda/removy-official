@@ -24,6 +24,10 @@
             >,<br />
             a reset link has been sent. Check your inbox.
           </p>
+          <div v-if="resendError" class="form-alert form-item" role="alert">
+            <span class="form-alert__icon"><IconAlertCircle :size="15" /></span>
+            <span class="form-alert__text">{{ resendError }}</span>
+          </div>
           <div class="sent-actions form-item">
             <button
               type="button"
@@ -148,6 +152,7 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
   const error = ref("")
   const isLoading = ref(false)
   const serverError = ref("")
+  const resendError = ref("")
   const sent = ref(false)
   const submittedEmail = ref("")
   const resendCooldown = ref(0)
@@ -225,11 +230,12 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
 
   async function handleResend() {
     if (resendCooldown.value > 0) return
+    resendError.value = ""
     try {
       await authApi.forgotPassword({ email: submittedEmail.value })
       startCooldown()
     } catch (e) {
-      if (isRateLimited(e)) serverError.value = t("errors.rateLimited")
+      if (isRateLimited(e)) resendError.value = t("errors.rateLimited")
     }
   }
 
