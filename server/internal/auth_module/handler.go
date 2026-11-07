@@ -441,14 +441,21 @@ func SetTokenCookies(c fiber.Ctx, cfg *config.Config, pair *TokenPair) {
 	})
 }
 
+// clearTokenCookies expires the session cookies. A browser only replaces a cookie when
+// Domain and Path match, and with SameSite=None it also needs Secure, so every attribute
+// mirrors SetTokenCookies (API and SPA are on different sites in production).
 func (h *Handler) clearTokenCookies(c fiber.Ctx) {
 	for _, name := range []string{"access_token", "refresh_token"} {
 		c.Cookie(&fiber.Cookie{
-			Name:    name,
-			Value:   "",
-			MaxAge:  -1,
-			Expires: time.Unix(0, 0),
-			Path:    "/",
+			Name:     name,
+			Value:    "",
+			HTTPOnly: true,
+			Secure:   h.cfg.Cookie.Secure,
+			SameSite: h.cfg.Cookie.SameSite,
+			Domain:   h.cfg.Cookie.Domain,
+			MaxAge:   -1,
+			Expires:  time.Unix(0, 0),
+			Path:     "/",
 		})
 	}
 }
