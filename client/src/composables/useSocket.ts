@@ -29,7 +29,7 @@ let socketUserId: number | null = null
 function userIdFromToken(token: string | null): number | null {
   if (!token) return null
   try {
-    const payload = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")
+    const payload = (token.split(".")[1] ?? "").replace(/-/g, "+").replace(/_/g, "/")
     const uid = JSON.parse(atob(payload)).uid
     return typeof uid === "number" ? uid : null
   } catch {
