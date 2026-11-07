@@ -241,8 +241,11 @@ func (h *Handler) GoogleLink(c fiber.Ctx) error {
 	}
 	_ = c.Bind().JSON(&req)
 
-	authURL, state, err := h.svc.InitiateGoogleLink(c.Context(), claims.UserID, req.ReturnURL)
+	authURL, state, err := h.svc.InitiateGoogleLink(c.Context(), claims.UserID, claims.TokenVersion, req.ReturnURL)
 	if err != nil {
+		if errors.Is(err, identity_policy.ErrSessionStale) {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "session is no longer valid"})
+		}
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 

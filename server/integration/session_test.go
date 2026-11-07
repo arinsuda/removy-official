@@ -237,7 +237,7 @@ func TestN1_GoogleLinkCallbackAfterClaimRejected(t *testing.T) {
 	e := newEnv(t)
 	uid := seedUser(t, e.db, victim, true, "attacker-pass1")
 	ctx := context.Background()
-	_, state, err := e.auth.InitiateGoogleLink(ctx, uid, "/")
+	_, state, err := e.auth.InitiateGoogleLink(ctx, uid, 0, "/")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -258,7 +258,7 @@ func TestGoogleLinkCallbackStillWorksForLiveSession(t *testing.T) {
 	e := newEnv(t)
 	uid := seedUser(t, e.db, "me@gmail.com", true, "my-password1")
 	ctx := context.Background()
-	_, state, err := e.auth.InitiateGoogleLink(ctx, uid, "/")
+	_, state, err := e.auth.InitiateGoogleLink(ctx, uid, 0, "/")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -315,5 +315,20 @@ func TestRequireAuthDatabaseErrorIs503(t *testing.T) {
 	e2.app = app
 	if code, _ := e2.do("GET", "/x", nil, e.accessToken(uid, 0)); code != 503 {
 		t.Fatalf("want 503, got %d", code)
+	}
+}
+
+// N1b: the epoch stored in the OAuth transaction is the one in the caller's token, so a reset
+// between token issue and Initiate cannot be inherited by the new transaction.
+func TestN1b_GoogleLinkInitiateWithStaleTokenRejected(t *testing.T) {
+	e := newEnv(t)
+	uid := seedUser(t, e.db, victim, true, "attacker-pass1")
+	e.claimByReset(uid, victim) // epoch 0 -> 1 after the token (version 0) was issued
+	_, _, err := e.auth.InitiateGoogleLink(context.Background(), uid, 0, "/")
+	if !errors.Is(err, identity_policy.ErrSessionStale) {
+		t.Fatalf("initiate with a pre-reset token: %v", err)
+	}
+	if _, _, err := e.auth.InitiateGoogleLink(context.Background(), uid, 1, "/"); err != nil {
+		t.Fatalf("initiate with the current token: %v", err)
 	}
 }

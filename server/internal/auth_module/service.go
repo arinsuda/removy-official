@@ -251,7 +251,9 @@ func (s *Service) InitiateGoogleLogin(ctx context.Context, returnURL string) (au
 	return authURL, state, nil
 }
 
-func (s *Service) InitiateGoogleLink(ctx context.Context, userID uint, returnURL string) (authURL string, state string, err error) {
+// claimedVersion is the token_version of the caller's access token, not the current one:
+// a reset between the token being issued and this call must not be inherited.
+func (s *Service) InitiateGoogleLink(ctx context.Context, userID uint, claimedVersion int, returnURL string) (authURL string, state string, err error) {
 	if !s.cfg.Google.Enabled {
 		return "", "", ErrGoogleOAuthDisabled
 	}
@@ -262,6 +264,9 @@ func (s *Service) InitiateGoogleLink(ctx context.Context, userID uint, returnURL
 	}
 	if !found || !st.Active || !st.Verified {
 		return "", "", ErrUserNotFound
+	}
+	if st.Version != claimedVersion {
+		return "", "", identity_policy.ErrSessionStale
 	}
 
 	state, err = GenerateCryptoString(32)
@@ -290,7 +295,7 @@ func (s *Service) InitiateGoogleLink(ctx context.Context, userID uint, returnURL
 		CodeChallenge: challenge,
 		Intent:        IntentLink,
 		UserID:        userID,
-		UserVersion:   st.Version,
+		UserVersion:   claimedVersion,
 		ReturnURL:     validReturnURL,
 		CreatedAt:     time.Now(),
 		ExpiresAt:     time.Now().Add(10 * time.Minute),
