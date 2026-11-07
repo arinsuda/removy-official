@@ -708,11 +708,15 @@ async function handleChangePassword() {
   pwSuccess.value = false;
   pwLoading.value = true;
   try {
-    await userApi.changePassword(props.user.id, {
+    const { data } = await userApi.changePassword(props.user.id, {
       old_password: pwForm.old_password,
       new_password: pwForm.new_password,
       confirm_password: pwForm.confirm_password,
     });
+    // The change ended every session, this one included; the server sends a fresh one.
+    // Keep it, or the next request fails to refresh and signs the user out.
+    if (data.access_token) localStorage.setItem("access_token", data.access_token);
+    if (data.refresh_token) localStorage.setItem("refresh_token", data.refresh_token);
     pwSuccess.value = true;
     pwForm.old_password = "";
     pwForm.new_password = "";

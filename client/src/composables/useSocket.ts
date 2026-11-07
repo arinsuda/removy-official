@@ -47,6 +47,15 @@ export function useSocket() {
       reconnectionDelayMax: 8000,
     })
 
+    // The server drops sockets when sessions are revoked; reconnect with the current token, not the one from connect().
+    socket.io.on("reconnect_attempt", () => {
+      const fresh = localStorage.getItem("access_token")
+      if (fresh && socket) {
+        socket.auth = { token: fresh }
+        socket.io.opts.query = { token: fresh }
+      }
+    })
+
     socket.on("connect", () => {
       isConnected.value = true
       isConnecting.value = false
