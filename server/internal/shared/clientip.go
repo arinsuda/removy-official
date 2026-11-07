@@ -31,3 +31,18 @@ func clientIPFromHeader(xff string, hops int, fallback string) string {
 	}
 	return ip.String()
 }
+
+// RateLimitIP is ClientIP shaped for limiter keys: IPv6 addresses collapse to
+// their /64 so a client cannot rotate through its own prefix to dodge limits.
+// IPv4 is unchanged.
+func RateLimitIP(c fiber.Ctx, hops int) string {
+	return limitKeyIP(ClientIP(c, hops))
+}
+
+func limitKeyIP(s string) string {
+	ip := net.ParseIP(s)
+	if ip == nil || ip.To4() != nil {
+		return s
+	}
+	return ip.Mask(net.CIDRMask(64, 128)).String() + "/64"
+}

@@ -46,3 +46,18 @@ func TestClientIPUsesHeader(t *testing.T) {
 		t.Fatalf("got %q", b)
 	}
 }
+
+func TestLimitKeyIP(t *testing.T) {
+	cases := map[string]string{
+		"203.0.113.7":                "203.0.113.7",
+		"2001:db8:1:2:aaaa:bbbb:c:d": "2001:db8:1:2::/64",
+		"2001:db8:1:2:1111:2222:3:4": "2001:db8:1:2::/64",
+		"::ffff:203.0.113.7":         "::ffff:203.0.113.7",
+		"not-an-ip":                  "not-an-ip",
+	}
+	for in, want := range cases {
+		if got := limitKeyIP(in); got != want {
+			t.Fatalf("%s: got %q want %q", in, got, want)
+		}
+	}
+}
