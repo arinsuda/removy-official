@@ -113,6 +113,50 @@ describe("fetchMe refresh lock", () => {
     expect(store.user?.id).toBe(2)
   })
 
+  it.each([
+    ["logs out", () => localStorage.removeItem("refresh_token"), null],
+    ["logs in as B", () => localStorage.setItem("refresh_token", "rt-B"), "rt-B"],
+  ])("a refresh in tab 1 does not restore the session after tab 2 %s", async (_n, change, expected) => {
+    let release!: () => void
+    vi.mocked(authApi.refreshToken).mockImplementation(async () => {
+      await new Promise<void>((r) => (release = r))
+      return refreshReply(1)
+    })
+    setActivePinia(createPinia())
+    const tab1 = useAuthStore()
+    const pending = tab1.fetchMe()
+    await vi.waitFor(() => expect(release).toBeTypeOf("function"))
+
+    change() // tab 2 acts on shared localStorage; tab 1's generation is untouched
+    release()
+    await pending
+
+    expect(localStorage.getItem("refresh_token")).toBe(expected)
+    expect(localStorage.getItem("access_token")).toBeNull()
+    expect(tab1.user).toBeNull()
+    expect(userApi.me).not.toHaveBeenCalled()
+  })
+
+  it("a stale 401 in tab 1 does not clear the session tab 2 just created", async () => {
+    let fail!: () => void
+    vi.mocked(authApi.refreshToken).mockImplementation(async () => {
+      await new Promise<void>((_r, rej) => (fail = () => rej({ response: { status: 401 } })))
+      return refreshReply(1)
+    })
+    setActivePinia(createPinia())
+    const tab1 = useAuthStore()
+    const pending = tab1.fetchMe()
+    await vi.waitFor(() => expect(fail).toBeTypeOf("function"))
+
+    localStorage.setItem("access_token", "at-B")
+    localStorage.setItem("refresh_token", "rt-B")
+    fail()
+    await pending
+
+    expect(localStorage.getItem("refresh_token")).toBe("rt-B")
+    expect(localStorage.getItem("access_token")).toBe("at-B")
+  })
+
   it("logs only the status of a failed refresh, never the error object or its tokens", async () => {
     const log = vi.spyOn(console, "log").mockImplementation(() => undefined)
     vi.mocked(authApi.refreshToken).mockRejectedValue({

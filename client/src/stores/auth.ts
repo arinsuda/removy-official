@@ -110,8 +110,18 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
+  // The session a refresh started with is still the stored one. With no refresh token
+  // (cookie-only session) the stored value cannot tell, so fall back to this tab's generation.
+  function sessionUnchanged(sentRefresh: string | null, myGen: number): boolean {
+    return (
+      localStorage.getItem("refresh_token") === sentRefresh &&
+      (sentRefresh !== null || myGen === _generation)
+    )
+  }
+
   async function fetchMe() {
     const myGen = ++_generation
+    let sentRefresh: string | null = null
     initError.value = null
     try {
       const urlParams = new URLSearchParams(window.location.search)
@@ -141,18 +151,18 @@ export const useAuthStore = defineStore("auth", () => {
       // so it can never undo a logout or overwrite another account's login.
       const refreshRes = await withRefreshLock(async () => {
         const storedRefresh = localStorage.getItem("refresh_token")
+        sentRefresh = storedRefresh
         console.log("[fetchMe] storedRefresh exists:", !!storedRefresh)
         const res = await authApi.refreshToken(storedRefresh || undefined)
-        const sessionUnchanged =
-          myGen === _generation ||
-          (storedRefresh !== null && localStorage.getItem("refresh_token") === storedRefresh)
-        if (sessionUnchanged) {
-          if (res.data.access_token) localStorage.setItem("access_token", res.data.access_token)
-          if (res.data.refresh_token) localStorage.setItem("refresh_token", res.data.refresh_token)
-          resumeSocket()
-        }
+        if (!sessionUnchanged(storedRefresh, myGen)) return null
+        if (res.data.access_token) localStorage.setItem("access_token", res.data.access_token)
+        if (res.data.refresh_token) localStorage.setItem("refresh_token", res.data.refresh_token)
+        resumeSocket()
         return res
       })
+
+      // Another tab (or this one) logged out or signed in as someone else meanwhile.
+      if (!refreshRes) return
 
       // Stale-request protection: bail out if login/logout happened while waiting
       if (myGen !== _generation) return
@@ -181,7 +191,7 @@ export const useAuthStore = defineStore("auth", () => {
       // Status only: the error object carries request headers and bodies with tokens.
       console.log("[fetchMe] caught error, status:", status)
       if (status === 401 || status === 403) {
-        clearUser()
+        if (sessionUnchanged(sentRefresh, myGen)) clearUser()
         initError.value = "unauthenticated"
       } else if (
         !axiosErr.response ||
@@ -192,7 +202,7 @@ export const useAuthStore = defineStore("auth", () => {
       } else if (status !== undefined && status >= 500) {
         initError.value = "server"
       } else {
-        clearUser()
+        if (sessionUnchanged(sentRefresh, myGen)) clearUser()
         initError.value = "unauthenticated"
       }
       isInitialized.value = true
