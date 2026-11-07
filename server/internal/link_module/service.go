@@ -61,7 +61,12 @@ type Service struct {
 	auth   *auth_module.Service
 	mailer *mailer.Mailer
 	remote *remoteClient
+	// afterLinkLookup is a test seam: runs between the link lookup and the user load in resolveRemoteUser.
+	afterLinkLookup func()
 }
+
+// SetAfterLinkLookupHook installs a test seam that runs between the link lookup and the user load.
+func (s *Service) SetAfterLinkLookupHook(f func()) { s.afterLinkLookup = f }
 
 func NewService(db *gorm.DB, cfg config.LinkConfig, auth *auth_module.Service, m *mailer.Mailer) *Service {
 	if cfg.SelfPlatform != PlatformPlanzi {
@@ -263,6 +268,9 @@ func (s *Service) resolveRemoteUser(ru *RemoteUser) (*Result, error) {
 
 	var local *user_module.User
 	if alreadyLinked {
+		if s.afterLinkLookup != nil {
+			s.afterLinkLookup()
+		}
 		u, err := s.loadUser(link.LocalUserID)
 		if err != nil || !u.IsActive {
 			return nil, ErrUserInactive
@@ -282,6 +290,11 @@ func (s *Service) resolveRemoteUser(ru *RemoteUser) (*Result, error) {
 
 	switch Decide(alreadyLinked, localExists, localVerified, ru.EmailVerified) {
 	case DecisionLoginLinked:
+		// A claim may have committed between the link lookup and the user load: the user
+		// then looks verified but the link we trusted is already wiped. Re-read it.
+		if err := s.linkStillHolds(link.LocalUserID, ru.UserID); err != nil {
+			return nil, err
+		}
 		return &Result{User: local}, nil
 	case DecisionReject:
 		return nil, ErrRemoteUnverified
@@ -320,6 +333,26 @@ func (s *Service) resolveRemoteUser(ru *RemoteUser) (*Result, error) {
 			Methods:   ConfirmMethods(local.Password != nil && *local.Password != "", localVerified),
 		}
 	}
+}
+
+// linkStillHolds re-reads the link under a share lock on the user row (which waits for a
+// claim in flight) and requires it to still point at the same local user.
+func (s *Service) linkStillHolds(localUserID uint, remoteUserID string) error {
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		st, found, err := identity_policy.LockSession(tx, localUserID, false)
+		if err != nil {
+			return err
+		}
+		if !found || !st.Active || !st.Verified {
+			return ErrInvalidToken
+		}
+		var l AccountLink
+		err = tx.Where("remote_platform = ? AND remote_user_id = ?", s.remotePlatform(), remoteUserID).First(&l).Error
+		if err != nil || l.LocalUserID != localUserID {
+			return ErrInvalidToken
+		}
+		return nil
+	})
 }
 
 func (s *Service) hasLinkTo(localUserID uint) bool {

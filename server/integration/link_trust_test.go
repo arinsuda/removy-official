@@ -204,3 +204,21 @@ func TestLoginFallbackRefusesUnverifiedRemote(t *testing.T) {
 		t.Fatalf("verified fallback: %v", err)
 	}
 }
+
+// A claim that commits between the link lookup and the user load must not yield a session
+// through the link it just wiped.
+func TestRedeemClaimMidRedeemDoesNotLoginLinked(t *testing.T) {
+	e := newEnv(t)
+	uid := e.squat("attacker-pass1")
+	e.db.Exec(`INSERT INTO account_links (local_user_id, remote_platform, remote_user_id, linked_via) VALUES (?, 'planzi', 'p-victim', 'auto')`, uid)
+	e.remote.mintToken("tok", link_module.RemoteUser{Platform: "planzi", UserID: "p-victim", Email: victim, EmailVerified: true})
+	e.link.SetAfterLinkLookupHook(func() {
+		if err := e.verify(e.mail.last(t, victim, reVerifyToken), nil); err != nil { // wipe claim commits
+			t.Errorf("claim: %v", err)
+		}
+	})
+	res, err := e.link.Redeem(context.Background(), "tok")
+	if res != nil || !errors.Is(err, link_module.ErrInvalidToken) {
+		t.Fatalf("expected no session after a mid-redeem claim, got res=%v err=%v", res, err)
+	}
+}
