@@ -11,3 +11,8 @@ ALTER TABLE password_reset_tokens ADD COLUMN IF NOT EXISTS email VARCHAR(100);
 ALTER TABLE link_pending ADD COLUMN IF NOT EXISTS code_email VARCHAR(255);
 ALTER TABLE email_change_requests ADD COLUMN IF NOT EXISTS new_otp_hash VARCHAR(255);
 `
+
+// EmailVerificationAttempts counts wrong-password tries per verification token.
+const EmailVerificationAttempts = `
+ALTER TABLE email_verifications ADD COLUMN IF NOT EXISTS attempts INTEGER NOT NULL DEFAULT 0;
+`

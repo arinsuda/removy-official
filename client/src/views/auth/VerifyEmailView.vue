@@ -15,8 +15,11 @@
       <div class="auth-form-panel" ref="formPanelRef">
         <template v-if="status === 'form'">
           <h1 class="auth-title">{{ t("auth.verifyEmail.title") }}</h1>
-          <form class="status-content" @submit.prevent="submit(password)">
+          <form v-if="!confirmingSkip" class="status-content" @submit.prevent="submit({ password })">
             <p class="status-text form-item">{{ t("auth.verifyEmail.passwordPrompt") }}</p>
+            <p v-if="wrongPassword" class="status-text status-text--error" role="alert">
+              {{ t("auth.verifyEmail.wrongPassword") }}
+            </p>
             <AuthField
               v-model="password"
               :label="t('auth.verifyEmail.passwordLabel')"
@@ -27,10 +30,19 @@
             <AppButton type="submit" size="lg" block class="form-item" :disabled="!password">
               {{ t("auth.verifyEmail.confirm") }}
             </AppButton>
-            <button type="button" class="link-muted form-item" @click="submit()">
+            <button type="button" class="link-muted form-item" @click="confirmingSkip = true">
               {{ t("auth.verifyEmail.skipPassword") }}
             </button>
           </form>
+          <div v-else class="status-content" role="alertdialog">
+            <p class="status-text status-text--error">{{ t("auth.verifyEmail.skipWarning") }}</p>
+            <AppButton size="lg" block @click="submit({ skipPassword: true })">
+              {{ t("auth.verifyEmail.skipConfirm") }}
+            </AppButton>
+            <button type="button" class="link-muted" @click="confirmingSkip = false">
+              {{ t("auth.verifyEmail.skipCancel") }}
+            </button>
+          </div>
         </template>
 
         <template v-else-if="status === 'loading'">
@@ -73,7 +85,10 @@
               <IconAlertCircle :size="48" />
             </div>
             <h2 class="status-subtitle">ลิงก์ไม่ถูกต้องหรือหมดอายุ</h2>
-            <p class="status-text">
+            <p v-if="attemptsExceeded" class="status-text">
+              {{ t("auth.verifyEmail.attemptsExceeded") }}
+            </p>
+            <p v-else class="status-text">
               กรุณาลองกดส่งลิงก์ยืนยันอีเมลใหม่อีกครั้งด้านล่าง
             </p>
 
@@ -125,6 +140,9 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
   const password = ref("")
   const token = ref("")
   const passwordResetRequired = ref(false)
+  const wrongPassword = ref(false)
+  const confirmingSkip = ref(false)
+  const attemptsExceeded = ref(false)
   const resendStatus = ref<ResendStatus>("idle")
   const email = ref("")
 
@@ -159,14 +177,23 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
     if (!token.value) status.value = "error"
   })
 
-  // password is the account's current password; without it planted credentials are wiped.
-  async function submit(currentPassword?: string) {
+  // A wrong password keeps the form (and the token); only an explicit skip wipes credentials.
+  async function submit(choice: { password: string } | { skipPassword: true }) {
     status.value = "loading"
+    wrongPassword.value = false
     try {
-      const { data } = await authApi.verifyEmail(token.value, currentPassword)
+      const { data } = await authApi.verifyEmail(token.value, choice)
       passwordResetRequired.value = data.password_reset_required
       status.value = "success"
-    } catch {
+    } catch (err) {
+      const code = (err as { response?: { data?: { code?: string } } }).response?.data?.code
+      if (code === "WRONG_PASSWORD") {
+        wrongPassword.value = true
+        confirmingSkip.value = false
+        status.value = "form"
+        return
+      }
+      attemptsExceeded.value = code === "VERIFY_ATTEMPTS_EXCEEDED"
       status.value = "error"
     }
   }
@@ -225,6 +252,9 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
     font-size: 1.25rem;
     font-weight: 700;
     color: #ffffff;
+  }
+  .status-text--error {
+    color: #ff5a52;
   }
   .status-text {
     font-size: 0.9rem;

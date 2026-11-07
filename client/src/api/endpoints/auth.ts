@@ -32,8 +32,15 @@ export const authApi = {
   logout: () => api.post("/auth/logout"),
 
   // POST, never GET: link scanners must not be able to verify an address.
-  verifyEmail: (token: string, password?: string) =>
-    api.post<VerifyEmailResponse>("/auth/verify-email", { token, password }),
+  // Send the current password, or skipPassword: true for an explicit "I don't know it"
+  // (the only choice that wipes the account's credentials).
+  verifyEmail: (token: string, choice: { password: string } | { skipPassword: true }) =>
+    api.post<VerifyEmailResponse>("/auth/verify-email", {
+      token,
+      ...("password" in choice
+        ? { password: choice.password }
+        : { skip_password: choice.skipPassword }),
+    }),
 
   resendVerification: (email: string) =>
     api.post("/auth/resend-verification", { email }),

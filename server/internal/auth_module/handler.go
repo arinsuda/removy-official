@@ -115,12 +115,14 @@ func (h *Handler) VerifyEmailLink(c fiber.Ctx) error {
 }
 
 // VerifyEmail proves the mailbox. The optional password is the account's current
-// password: a match keeps the account intact, otherwise planted credentials are wiped
-// and the client is told to send the owner through password reset.
+// password: a match keeps the account intact, a wrong one is rejected with the token
+// kept. Planted credentials are wiped only for an explicit skip_password, and the client
+// is then told to send the owner through password reset.
 func (h *Handler) VerifyEmail(c fiber.Ctx) error {
 	var req struct {
-		Token    string `json:"token"`
-		Password string `json:"password"`
+		Token        string `json:"token"`
+		Password     string `json:"password"`
+		SkipPassword bool   `json:"skip_password"`
 	}
 	if err := c.Bind().JSON(&req); err != nil || req.Token == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "missing token"})
@@ -130,10 +132,17 @@ func (h *Handler) VerifyEmail(c fiber.Ctx) error {
 	if req.Password != "" {
 		password = &req.Password
 	}
-	res, err := h.svc.VerifyEmail(req.Token, password)
+	res, err := h.svc.VerifyEmail(req.Token, password, req.SkipPassword)
 	if err != nil {
-		if errors.Is(err, ErrInvalidToken) {
+		switch {
+		case errors.Is(err, ErrInvalidToken):
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid or expired token"})
+		case errors.Is(err, ErrVerifyWrongPassword):
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"code": "WRONG_PASSWORD", "error": "wrong password"})
+		case errors.Is(err, ErrPasswordChoiceRequired):
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"code": "PASSWORD_OR_SKIP_REQUIRED", "error": "enter your password or choose to skip"})
+		case errors.Is(err, ErrVerifyAttemptsExceeded):
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{"code": "VERIFY_ATTEMPTS_EXCEEDED", "error": "too many wrong passwords, request a new verification email"})
 		}
 		log.Printf("ERROR verify email: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal server error"})
@@ -450,7 +459,7 @@ func (h *Handler) handleServiceError(c fiber.Ctx, err error) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	case errors.Is(err, ErrEmailTaken), errors.Is(err, ErrUsernameTaken):
 		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": err.Error()})
-	case errors.Is(err, ErrUserNotFound), errors.Is(err, ErrWrongPassword):
+	case errors.Is(err, ErrUserNotFound), errors.Is(err, ErrVerifyWrongPassword):
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid credentials"})
 	case errors.Is(err, ErrEmailUnverified):
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "please verify your email first"})

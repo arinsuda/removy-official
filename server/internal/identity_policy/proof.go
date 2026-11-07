@@ -33,6 +33,9 @@ var (
 	ErrUserInactive   = errors.New("identity: user inactive")
 	ErrEmailMismatch  = errors.New("identity: proven email is not the current email")
 	ErrMissingNewHash = errors.New("identity: password reset needs a new password hash")
+	// ErrWrongPassword: a non-empty current password was presented and does not match.
+	// Nothing was changed; the caller rolls back and lets the person retry or skip.
+	ErrWrongPassword = errors.New("identity: presented password does not match")
 )
 
 // Proof describes one successful email proof.
@@ -41,7 +44,8 @@ type Proof struct {
 	Email  string // the address that was proven
 	Kind   Kind
 	// PresentedPassword is the current password typed by the person proving the
-	// address. A match means the same person registered the account.
+	// address. A match means the same person registered the account; a non-empty
+	// mismatch is ErrWrongPassword (KindVerifyLink); nil or empty means "unknown".
 	PresentedPassword *string
 	// NewPasswordHash is required for KindPasswordReset only.
 	NewPasswordHash *string
@@ -111,6 +115,12 @@ func ProveEmail(tx *gorm.DB, p Proof) (Outcome, error) {
 			return out, err
 		}
 		return out, tx.Exec(`DELETE FROM email_verifications WHERE user_id = ?`, u.ID).Error
+	}
+
+	// A typed password that does not match is a typo, not consent to wipe: only an
+	// absent password (the caller's explicit "I don't know it") reaches the wipe below.
+	if p.Kind == KindVerifyLink && p.PresentedPassword != nil && *p.PresentedPassword != "" && u.Password != nil && *u.Password != "" {
+		return out, ErrWrongPassword
 	}
 
 	// Unverified and the person is not proven: whatever is on the account was

@@ -15,7 +15,7 @@ func TestT4b_VerifyWithCorrectPasswordKeepsEverything(t *testing.T) {
 	e.seedGoogleIdentity(uid, "my-google", "mine@gmail.com")
 	e.db.Exec(`INSERT INTO account_links (local_user_id, remote_platform, remote_user_id, linked_via) VALUES (?, 'planzi', 'p-mine', 'auto')`, uid)
 
-	res, err := e.auth.VerifyEmail(e.mail.last(t, victim, reVerifyToken), ptr("my-own-password1"))
+	res, err := e.auth.VerifyEmail(e.mail.last(t, victim, reVerifyToken), ptr("my-own-password1"), false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,42 +34,83 @@ func TestT4b_VerifyWithCorrectPasswordKeepsEverything(t *testing.T) {
 	}
 }
 
-func TestT4b_VerifyWithWrongPasswordWipesAndAsksForReset(t *testing.T) {
-	for name, pw := range map[string]*string{"wrong": ptr("not-the-password"), "none": nil} {
-		t.Run(name, func(t *testing.T) {
-			e := newEnv(t)
-			uid := e.squat("attacker-pass1")
-			e.seedGoogleIdentity(uid, "atk-google", "atk@gmail.com")
-			e.db.Exec(`INSERT INTO account_links (local_user_id, remote_platform, remote_user_id, linked_via) VALUES (?, 'planzi', 'p-atk', 'auto')`, uid)
+// Only an explicit skip wipes: the person said they do not know the password.
+func TestT4b_VerifySkipWipesAndAsksForReset(t *testing.T) {
+	e := newEnv(t)
+	uid := e.squat("attacker-pass1")
+	e.seedGoogleIdentity(uid, "atk-google", "atk@gmail.com")
+	e.db.Exec(`INSERT INTO account_links (local_user_id, remote_platform, remote_user_id, linked_via) VALUES (?, 'planzi', 'p-atk', 'auto')`, uid)
 
-			res, err := e.auth.VerifyEmail(e.mail.last(t, victim, reVerifyToken), pw)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !res.PasswordResetRequired {
-				t.Fatal("password_reset_required must be true")
-			}
-			_, stored, verified, ver := e.userRow(uid)
-			if !verified || stored != nil || ver != 1 {
-				t.Fatalf("verified=%v password=%v version=%d", verified, stored, ver)
-			}
-			if e.count(`SELECT count(*) FROM user_identities WHERE user_id = ?`, uid) != 0 || e.count(`SELECT count(*) FROM account_links WHERE local_user_id = ?`, uid) != 0 {
-				t.Fatal("planted identity or link survived")
-			}
-		})
+	res, err := e.auth.VerifyEmail(e.mail.last(t, victim, reVerifyToken), nil, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.PasswordResetRequired {
+		t.Fatal("password_reset_required must be true")
+	}
+	_, stored, verified, ver := e.userRow(uid)
+	if !verified || stored != nil || ver != 1 {
+		t.Fatalf("verified=%v password=%v version=%d", verified, stored, ver)
+	}
+	if e.count(`SELECT count(*) FROM user_identities WHERE user_id = ?`, uid) != 0 || e.count(`SELECT count(*) FROM account_links WHERE local_user_id = ?`, uid) != 0 {
+		t.Fatal("planted identity or link survived")
 	}
 }
 
-// A mistyped password burns the token: no second guess, so the link cannot be used to brute-force the password.
-func TestVerifyTokenIsSingleAttempt(t *testing.T) {
+// A typo is not consent to wipe: 4xx, nothing changes, the token still works.
+func TestT4b_WrongPasswordChangesNothingAndKeepsToken(t *testing.T) {
 	e := newEnv(t)
-	e.squat("attacker-pass1")
+	uid := e.squat("my-own-password1")
+	e.seedGoogleIdentity(uid, "g", "g@gmail.com")
 	tok := e.mail.last(t, victim, reVerifyToken)
-	if _, err := e.auth.VerifyEmail(tok, ptr("guess-1")); err != nil {
+
+	code, body := e.do("POST", "/api/auth/verify-email", map[string]any{"token": tok, "password": "typo"}, "")
+	if code != 400 || body["code"] != "WRONG_PASSWORD" {
+		t.Fatalf("wrong password: %d %v", code, body)
+	}
+	_, pw, verified, ver := e.userRow(uid)
+	if verified || pw == nil || ver != 0 || e.count(`SELECT count(*) FROM user_identities WHERE user_id = ?`, uid) != 1 {
+		t.Fatalf("a wrong password changed the account: verified=%v pw=%v ver=%d", verified, pw != nil, ver)
+	}
+	if e.count(`SELECT count(*) FROM email_verifications WHERE token = ?`, tok) != 1 {
+		t.Fatal("a wrong password consumed the token")
+	}
+	// neither password nor skip: refused without touching anything
+	if code, body = e.do("POST", "/api/auth/verify-email", map[string]any{"token": tok}, ""); code != 400 || body["code"] != "PASSWORD_OR_SKIP_REQUIRED" {
+		t.Fatalf("no choice: %d %v", code, body)
+	}
+	// retry with the right password still works
+	if code, body = e.do("POST", "/api/auth/verify-email", map[string]any{"token": tok, "password": "my-own-password1"}, ""); code != 200 || body["password_reset_required"] != false {
+		t.Fatalf("retry: %d %v", code, body)
+	}
+}
+
+// Wrong guesses are capped per token and the count survives the rollback; past the cap
+// even the right password is refused (no wipe) and the owner must resend.
+func TestVerifyTokenAttemptCap(t *testing.T) {
+	e := newEnv(t)
+	uid := e.squat("attacker-pass1")
+	tok := e.mail.last(t, victim, reVerifyToken)
+	for i := 0; i < auth_module.MaxVerifyAttempts; i++ {
+		if _, err := e.auth.VerifyEmail(tok, ptr("guess"), false); err != auth_module.ErrVerifyWrongPassword {
+			t.Fatalf("guess %d: %v", i, err)
+		}
+	}
+	if _, err := e.auth.VerifyEmail(tok, ptr("attacker-pass1"), false); err != auth_module.ErrVerifyAttemptsExceeded {
+		t.Fatalf("past the cap: %v", err)
+	}
+	if _, pw, verified, ver := e.userRow(uid); verified || pw == nil || ver != 0 {
+		t.Fatal("capped token changed the account")
+	}
+	if _, err := e.auth.VerifyEmail(tok, nil, true); err != auth_module.ErrInvalidToken {
+		t.Fatalf("a capped token must be gone, even for skip: %v", err)
+	}
+	// resend gives a fresh token with a fresh counter
+	if err := e.auth.ResendVerification(victim); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := e.auth.VerifyEmail(tok, ptr("attacker-pass1")); err != auth_module.ErrInvalidToken {
-		t.Fatalf("second attempt with the same token: %v", err)
+	if _, err := e.auth.VerifyEmail(e.mail.last(t, victim, reVerifyToken), ptr("attacker-pass1"), false); err != nil {
+		t.Fatalf("fresh token: %v", err)
 	}
 }
 

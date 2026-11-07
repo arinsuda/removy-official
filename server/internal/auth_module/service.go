@@ -33,6 +33,12 @@ var (
 	// ErrGoogleEmailVerificationRequired: Google did not vouch for the address, so the account
 	// exists but holds no session until its mailbox owner follows the verification link.
 	ErrGoogleEmailVerificationRequired = errors.New("google_email_verification_required")
+	// ErrVerifyWrongPassword: the typed password did not match; the verification token is still valid.
+	ErrVerifyWrongPassword = errors.New("wrong_password")
+	// ErrPasswordChoiceRequired: neither a password nor an explicit skip was sent.
+	ErrPasswordChoiceRequired = errors.New("password_or_skip_required")
+	// ErrVerifyAttemptsExceeded: too many wrong passwords on one token; the owner must resend the link.
+	ErrVerifyAttemptsExceeded = errors.New("verify_attempts_exceeded")
 )
 
 type Service struct {
@@ -811,11 +817,32 @@ type VerifyResult struct {
 	PasswordResetRequired bool
 }
 
+// MaxVerifyAttempts caps wrong-password tries per verification token.
+const MaxVerifyAttempts = 5
+
 // VerifyEmail consumes a verification token and proves the address it was
-// mailed to. password is the current password, when the person typed one: a
-// match keeps the account intact, otherwise planted credentials are wiped.
-func (s *Service) VerifyEmail(token string, password *string) (VerifyResult, error) {
+// mailed to. A matching password keeps the account intact. A non-empty wrong
+// password changes nothing, keeps the token and counts one attempt (ErrVerifyWrongPassword).
+// Only skipPassword ("I don't know the password") wipes planted credentials.
+func (s *Service) VerifyEmail(token string, password *string, skipPassword bool) (VerifyResult, error) {
 	if token == "" {
+		return VerifyResult{}, ErrInvalidToken
+	}
+	if (password == nil || *password == "") && !skipPassword {
+		return VerifyResult{}, ErrPasswordChoiceRequired
+	}
+	// Reserve an attempt in its own committed statement: the proof below rolls back on a
+	// wrong password, and the count must survive that. Parallel guesses cannot share a slot.
+	reserve := s.db.Exec(`UPDATE email_verifications SET attempts = attempts + 1 WHERE token = ? AND attempts < ?`, token, MaxVerifyAttempts)
+	if reserve.Error != nil {
+		return VerifyResult{}, reserve.Error
+	}
+	if reserve.RowsAffected == 0 {
+		// Either no such token, or it is spent: reject it for good so the owner must resend.
+		del := s.db.Exec(`DELETE FROM email_verifications WHERE token = ? AND attempts >= ?`, token, MaxVerifyAttempts)
+		if del.Error == nil && del.RowsAffected > 0 {
+			return VerifyResult{}, ErrVerifyAttemptsExceeded
+		}
 		return VerifyResult{}, ErrInvalidToken
 	}
 	var out identity_policy.Outcome
@@ -839,6 +866,9 @@ func (s *Service) VerifyEmail(token string, password *string) (VerifyResult, err
 			UserID: record.UserID, Email: *record.Email, Kind: identity_policy.KindVerifyLink, PresentedPassword: password,
 		})
 		if err != nil {
+			if errors.Is(err, identity_policy.ErrWrongPassword) {
+				return ErrVerifyWrongPassword
+			}
 			if errors.Is(err, identity_policy.ErrEmailMismatch) || errors.Is(err, identity_policy.ErrUserNotFound) || errors.Is(err, identity_policy.ErrUserInactive) {
 				return ErrInvalidToken
 			}
