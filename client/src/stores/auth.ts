@@ -137,14 +137,20 @@ export const useAuthStore = defineStore("auth", () => {
       // Read the refresh token inside the lock: another tab may have rotated it while
       // we waited, and replaying the spent one would end the session everywhere.
       // Store the rotated tokens inside the lock: the server already spent the old refresh
-      // token, so they must survive even if login/logout makes this call stale.
+      // token. A stale call may store them only while that token is still the current one,
+      // so it can never undo a logout or overwrite another account's login.
       const refreshRes = await withRefreshLock(async () => {
         const storedRefresh = localStorage.getItem("refresh_token")
         console.log("[fetchMe] storedRefresh exists:", !!storedRefresh)
         const res = await authApi.refreshToken(storedRefresh || undefined)
-        if (res.data.access_token) localStorage.setItem("access_token", res.data.access_token)
-        if (res.data.refresh_token) localStorage.setItem("refresh_token", res.data.refresh_token)
-        resumeSocket()
+        const sessionUnchanged =
+          myGen === _generation ||
+          (storedRefresh !== null && localStorage.getItem("refresh_token") === storedRefresh)
+        if (sessionUnchanged) {
+          if (res.data.access_token) localStorage.setItem("access_token", res.data.access_token)
+          if (res.data.refresh_token) localStorage.setItem("refresh_token", res.data.refresh_token)
+          resumeSocket()
+        }
         return res
       })
 

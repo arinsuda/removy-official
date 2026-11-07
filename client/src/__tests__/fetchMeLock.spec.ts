@@ -89,6 +89,30 @@ describe("fetchMe refresh lock", () => {
     expect(store.user?.id).toBe(2)
   })
 
+  it.each([
+    ["logout", () => localStorage.removeItem("refresh_token"), null],
+    ["another account's login", () => localStorage.setItem("refresh_token", "other-rt"), "other-rt"],
+  ])("does not overwrite the stored tokens after %s during a refresh", async (_name, change, expected) => {
+    let release!: () => void
+    vi.mocked(authApi.refreshToken).mockImplementation(async () => {
+      await new Promise<void>((r) => (release = r))
+      return refreshReply(1)
+    })
+
+    setActivePinia(createPinia())
+    const store = useAuthStore()
+    const pending = store.fetchMe()
+    await vi.waitFor(() => expect(release).toBeTypeOf("function"))
+
+    change()
+    store.applySession({ user: { id: 2 } } as Parameters<typeof store.applySession>[0])
+    release()
+    await pending
+
+    expect(localStorage.getItem("refresh_token")).toBe(expected)
+    expect(store.user?.id).toBe(2)
+  })
+
   it("logs only the status of a failed refresh, never the error object or its tokens", async () => {
     const log = vi.spyOn(console, "log").mockImplementation(() => undefined)
     vi.mocked(authApi.refreshToken).mockRejectedValue({
