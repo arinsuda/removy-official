@@ -23,6 +23,9 @@ type Claims struct {
 	UserID uint      `json:"uid"`
 	Role   string    `json:"role"`
 	Type   TokenType `json:"type"`
+	// TokenVersion is users.token_version at issue time; a mismatch revokes the token.
+	// Tokens issued before the field existed decode as 0, which matches every untouched user.
+	TokenVersion int `json:"ver"`
 	jwt.RegisteredClaims
 }
 
@@ -39,13 +42,13 @@ func newJWTManager(cfg config.JWTConfig) *jwtManager {
 	return &jwtManager{cfg: cfg}
 }
 
-func (j *jwtManager) Issue(userID uint, role string) (*TokenPair, error) {
-	access, err := j.sign(userID, role, AccessToken, j.cfg.AccessTTL, j.cfg.AccessSecret)
+func (j *jwtManager) Issue(userID uint, role string, version int) (*TokenPair, error) {
+	access, err := j.sign(userID, role, version, AccessToken, j.cfg.AccessTTL, j.cfg.AccessSecret)
 	if err != nil {
 		return nil, fmt.Errorf("jwt: issue access: %w", err)
 	}
 
-	refresh, err := j.sign(userID, role, RefreshToken, j.cfg.RefreshTTL, j.cfg.RefreshSecret)
+	refresh, err := j.sign(userID, role, version, RefreshToken, j.cfg.RefreshTTL, j.cfg.RefreshSecret)
 	if err != nil {
 		return nil, fmt.Errorf("jwt: issue refresh: %w", err)
 	}
@@ -61,7 +64,7 @@ func (j *jwtManager) ParseRefresh(tokenStr string) (*Claims, error) {
 	return j.parse(tokenStr, j.cfg.RefreshSecret, RefreshToken)
 }
 
-func (j *jwtManager) sign(userID uint, role string, tokenType TokenType, ttl time.Duration, secret string) (string, error) {
+func (j *jwtManager) sign(userID uint, role string, version int, tokenType TokenType, ttl time.Duration, secret string) (string, error) {
 	// A random ID keeps tokens unique when one user gets several in the same second;
 	// refresh tokens are stored under a unique hash.
 	idBytes := make([]byte, 16)
@@ -70,9 +73,10 @@ func (j *jwtManager) sign(userID uint, role string, tokenType TokenType, ttl tim
 	}
 	now := time.Now()
 	claims := Claims{
-		UserID: userID,
-		Role:   role,
-		Type:   tokenType,
+		UserID:       userID,
+		Role:         role,
+		Type:         tokenType,
+		TokenVersion: version,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ID:        hex.EncodeToString(idBytes),
 			IssuedAt:  jwt.NewNumericDate(now),

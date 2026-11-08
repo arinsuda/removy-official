@@ -24,6 +24,10 @@
             >,<br />
             a reset link has been sent. Check your inbox.
           </p>
+          <div v-if="resendError" class="form-alert form-item" role="alert">
+            <span class="form-alert__icon"><IconAlertCircle :size="15" /></span>
+            <span class="form-alert__text">{{ resendError }}</span>
+          </div>
           <div class="sent-actions form-item">
             <button
               type="button"
@@ -138,12 +142,17 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
     X as IconX,
   } from "lucide-vue-next"
   import { authApi } from "@/api/api"
+  import { useI18n } from "vue-i18n"
+  import { isRateLimited } from "@/utils/rateLimit"
+
+  const { t } = useI18n()
 
   const email = ref("")
   const touched = ref(false)
   const error = ref("")
   const isLoading = ref(false)
   const serverError = ref("")
+  const resendError = ref("")
   const sent = ref(false)
   const submittedEmail = ref("")
   const resendCooldown = ref(0)
@@ -205,8 +214,10 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
         { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" },
       )
       startCooldown()
-    } catch {
-      serverError.value = "Something went wrong. Please try again."
+    } catch (e) {
+      serverError.value = isRateLimited(e)
+        ? t("errors.rateLimited")
+        : "Something went wrong. Please try again."
       gsap.fromTo(
         formPanelRef.value,
         { x: -8 },
@@ -219,11 +230,12 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
 
   async function handleResend() {
     if (resendCooldown.value > 0) return
+    resendError.value = ""
     try {
       await authApi.forgotPassword({ email: submittedEmail.value })
       startCooldown()
-    } catch {
-      /* silent */
+    } catch (e) {
+      if (isRateLimited(e)) resendError.value = t("errors.rateLimited")
     }
   }
 

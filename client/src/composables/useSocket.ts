@@ -20,6 +20,52 @@ const SOCKET_URL = getSocketUrl()
 let socket: Socket | null = null
 const isConnected = ref(false)
 const isConnecting = ref(false)
+let storageListenerBound = false
+// Account the socket was opened for; a token for another account means another tab switched.
+let socketUserId: number | null = null
+
+// The access token is a JWT whose "uid" claim names the account. No signature check:
+// this only tells accounts apart, the server still authenticates the token.
+function userIdFromToken(token: string | null): number | null {
+  if (!token) return null
+  try {
+    const payload = (token.split(".")[1] ?? "").replace(/-/g, "+").replace(/_/g, "/")
+    const uid = JSON.parse(atob(payload)).uid
+    return typeof uid === "number" ? uid : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Reconnect a socket that the server dropped (revoked or expired token) once a newer
+ * token is available. No-op when connected, never connected, or signed out.
+ */
+export function resume() {
+  if (!socket || socket.connected) return
+  const token = localStorage.getItem("access_token")
+  if (!token) return
+  socket.auth = { token }
+  isConnecting.value = true
+  socket.connect()
+}
+
+// Another tab refreshed or re-logged in: pick up its token.
+function bindStorageListener() {
+  if (storageListenerBound || typeof window === "undefined") return
+  storageListenerBound = true
+  window.addEventListener("storage", e => {
+    if (e.key !== "access_token") return
+    const incoming = userIdFromToken(localStorage.getItem("access_token"))
+    if (incoming !== null && socketUserId !== null && incoming !== socketUserId) {
+      // Another tab signed in as a different account: reload so every store and the
+      // socket start clean instead of mixing two accounts.
+      window.location.reload()
+      return
+    }
+    resume()
+  })
+}
 
 export function useSocket() {
   /**
@@ -30,21 +76,33 @@ export function useSocket() {
    */
   // useSocket.ts
   function connect(): Socket {
-    if (socket?.connected || isConnecting.value) return socket as Socket
+    if (socket) {
+      resume()
+      return socket
+    }
 
     isConnecting.value = true
+    bindStorageListener()
 
     const token = localStorage.getItem("access_token")
+    socketUserId = userIdFromToken(token)
 
     socket = io(SOCKET_URL, {
       withCredentials: true,
       auth: { token },
-      query: { token },
       transports: ["polling", "websocket"],
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 1500,
       reconnectionDelayMax: 8000,
+    })
+
+    // Auto-reconnects (network blips) must use the current token, not the one from connect().
+    socket.io.on("reconnect_attempt", () => {
+      const fresh = localStorage.getItem("access_token")
+      if (fresh && socket) {
+        socket.auth = { token: fresh }
+      }
     })
 
     socket.on("connect", () => {
@@ -58,8 +116,22 @@ export function useSocket() {
       if (import.meta.env.DEV) console.warn("[socket] disconnected:", reason)
     })
 
+    // The server rejected the token (revoked or expired session). Retrying with the same
+    // token only loops, so stop reconnecting but keep the socket and its listeners;
+    // resume() reconnects it once a fresh token is written.
+    const stopUnauthorized = () => {
+      if (import.meta.env.DEV) console.warn("[socket] unauthorized, not reconnecting")
+      isConnecting.value = false
+      socket?.disconnect()
+    }
+
+    socket.on("error", (reason: unknown) => {
+      if (reason === "unauthorized") stopUnauthorized()
+    })
+
     socket.on("connect_error", err => {
       isConnecting.value = false
+      if (err.message === "unauthorized") stopUnauthorized()
       if (import.meta.env.DEV)
         console.error("[socket] connect_error:", err.message)
     })
@@ -71,6 +143,7 @@ export function useSocket() {
     socket?.removeAllListeners()
     socket?.disconnect()
     socket = null
+    socketUserId = null
     isConnected.value = false
     isConnecting.value = false
   }
@@ -93,5 +166,5 @@ export function useSocket() {
     socket.emit(event, payload)
   }
 
-  return { connect, disconnect, on, off, emit, isConnected, isConnecting }
+  return { connect, disconnect, resume, on, off, emit, isConnected, isConnecting }
 }

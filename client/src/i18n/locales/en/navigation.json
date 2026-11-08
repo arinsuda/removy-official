@@ -43,7 +43,8 @@
       "code": "6-digit code",
       "confirmCode": "Confirm with code",
       "wrong": "Incorrect credentials or too many attempts.",
-      "tooMany": "Too many requests. Please wait and try again."
+      "tooMany": "Too many requests. Please wait and try again.",
+      "remoteUnverified": "Your PLANZI email is not verified yet. Verify it on PLANZI first, then try switching again."
     }
   }
 }

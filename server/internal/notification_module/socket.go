@@ -37,6 +37,21 @@ func NewHub(verifier TokenVerifier, allowedOrigins []string) *Hub {
 		userSockets: make(map[uint]map[string]bool),
 	}
 
+	// Reject at the handshake: the client gets connect_error("unauthorized") and stops,
+	// instead of connecting and being dropped in a loop.
+	io.Use(func(c *socket.Socket, next func(*socket.ExtendedError)) {
+		token := extractAccessTokenFromRequest(c.Handshake())
+		if token == "" {
+			next(socket.NewExtendedError("unauthorized", nil))
+			return
+		}
+		if _, err := verifier.VerifyToken(token); err != nil {
+			next(socket.NewExtendedError("unauthorized", nil))
+			return
+		}
+		next(nil)
+	})
+
 	io.On("connection", func(clients ...any) {
 		client := clients[0].(*socket.Socket)
 
@@ -75,9 +90,22 @@ func NewHub(verifier TokenVerifier, allowedOrigins []string) *Hub {
 		})
 
 		client.Join(roomFor(userID))
+
+		// A revoke that committed between the check above and Join ran DisconnectUser
+		// against a room this socket was not in yet. Look again now that it is in.
+		if _, err := verifier.VerifyToken(token); err != nil {
+			_ = client.Emit("error", "unauthorized")
+			client.Disconnect(true)
+		}
 	})
 
 	return h
+}
+
+// DisconnectUser drops every live socket of the user. Called after a commit that
+// revoked their sessions, so a stolen connection stops receiving notifications.
+func (h *Hub) DisconnectUser(userID uint) {
+	h.io.In(roomFor(userID)).DisconnectSockets(true)
 }
 
 func (h *Hub) UniqueOnlineCount() int {

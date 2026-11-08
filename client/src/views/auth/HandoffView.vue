@@ -8,7 +8,7 @@
       </template>
 
       <template v-else-if="state === 'failed'">
-        <p class="text text--error">{{ t("navigation.link.handoff.failed") }}</p>
+        <p class="text text--error">{{ failedMessage }}</p>
         <AppButton to="/login" block>
           {{ t("navigation.link.handoff.backToLogin") }}
         </AppButton>
@@ -80,6 +80,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 const state = ref<"working" | "failed" | "confirm">("working")
+const failedMessage = ref("")
 const pending = ref<LinkConfirmRequired | null>(null)
 const password = ref("")
 const code = ref("")
@@ -109,6 +110,7 @@ onMounted(async () => {
   // never leave the one-time token in the address bar / history
   history.replaceState(history.state, "", window.location.pathname)
   if (!token) {
+    failedMessage.value = t("navigation.link.handoff.failed")
     state.value = "failed"
     void playPlatformEnter()
     return
@@ -126,6 +128,11 @@ onMounted(async () => {
       pending.value = resp.data
       state.value = "confirm"
     } else {
+      const code = (resp?.data as { code?: string } | undefined)?.code
+      failedMessage.value =
+        code === "REMOTE_EMAIL_UNVERIFIED"
+          ? t("navigation.link.handoff.remoteUnverified")
+          : t("navigation.link.handoff.failed")
       state.value = "failed"
     }
     void playPlatformEnter()

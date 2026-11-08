@@ -35,8 +35,23 @@ func (r *repository) FindByUsername(username string) (*user_module.User, error) 
 	return r.findUser("username = ?", username)
 }
 
+// FindByEmail matches case-insensitively. Mixed-case duplicates can exist until the
+// unique index is case-insensitive, so the verified row wins, then the oldest.
 func (r *repository) FindByEmail(email string) (*user_module.User, error) {
-	return r.findUser("email = ?", email)
+	var user user_module.User
+	err := r.db.Preload("Role").
+		Where("lower(email) = ?", NormalizeEmail(email)).
+		Order("(verified_email_at IS NOT NULL) DESC, id ASC").
+		First(&user).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrUserNotFound
+	}
+	return &user, err
+}
+
+// NormalizeEmail is the single spelling used to store and compare addresses.
+func NormalizeEmail(email string) string {
+	return strings.ToLower(strings.TrimSpace(email))
 }
 
 func (r *repository) FindByID(id uint) (*user_module.User, error) {
@@ -50,13 +65,6 @@ func (r *repository) findUser(query string, args ...any) (*user_module.User, err
 		return nil, ErrUserNotFound
 	}
 	return &user, err
-}
-
-func (r *repository) MarkEmailVerified(userID uint) error {
-	now := time.Now()
-	return r.db.Model(&user_module.User{}).
-		Where("id = ?", userID).
-		Update("verified_email_at", &now).Error
 }
 
 func (r *repository) CreateEmailVerification(ev *user_module.EmailVerification) error {

@@ -12,11 +12,11 @@ func TestIssueGivesUniqueRefreshTokensWithinSameSecond(t *testing.T) {
 		AccessSecret: "access-secret", RefreshSecret: "refresh-secret",
 		AccessTTL: time.Minute, RefreshTTL: time.Hour,
 	}}
-	first, err := j.Issue(1, "user")
+	first, err := j.Issue(1, "user", 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, err := j.Issue(1, "user")
+	second, err := j.Issue(1, "user", 0)
 	if err != nil {
 		t.Fatal(err)
 	}

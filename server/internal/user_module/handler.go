@@ -3,6 +3,7 @@ package user_module
 import (
 	"errors"
 	"fmt"
+	"log"
 	"mime/multipart"
 	"strconv"
 	"strings"
@@ -98,7 +99,7 @@ func (h *Handler) RequestEmailChange(c fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"message": "OTP has been sent to your current email address",
+		"message": "OTPs have been sent to your current and new email addresses",
 	})
 }
 
@@ -151,11 +152,11 @@ func (h *Handler) VerifyEmailChange(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
 	}
 
-	if req.OTP == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "otp is required"})
+	if req.OTP == "" || req.NewEmailOTP == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "otp and new_email_otp are required"})
 	}
 
-	profile, err := h.svc.VerifyEmailChange(targetID, claims.UserID, req.OTP)
+	profile, err := h.svc.VerifyEmailChange(targetID, claims.UserID, claims.TokenVersion, req.OTP, req.NewEmailOTP)
 	if err != nil {
 		return handleEmailChangeError(c, err)
 	}
@@ -185,11 +186,22 @@ func (h *Handler) ChangePassword(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "confirm_password is required"})
 	}
 
-	if err := h.svc.ChangePassword(targetID, claims.UserID, req); err != nil {
+	if err := h.svc.ChangePassword(targetID, claims.UserID, claims.TokenVersion, req); err != nil {
 		return handlePasswordError(c, err)
 	}
 
-	return c.JSON(fiber.Map{"message": "password changed successfully"})
+	// Every session was revoked by the change; give this device a fresh one so it stays signed in.
+	resp := fiber.Map{"message": "password changed successfully"}
+	if h.svc.reissuer != nil {
+		access, refresh, err := h.svc.reissuer.ReissueSession(c, claims.UserID, claims.TokenVersion+1)
+		if err != nil {
+			log.Printf("ERROR reissue session after password change for user %d: %v", claims.UserID, err)
+		} else {
+			resp["access_token"] = access
+			resp["refresh_token"] = refresh
+		}
+	}
+	return c.JSON(resp)
 }
 
 func handlePasswordError(c fiber.Ctx, err error) error {
@@ -200,6 +212,10 @@ func handlePasswordError(c fiber.Ctx, err error) error {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "forbidden"})
 	case errors.Is(err, ErrInvalidCredentials):
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "incorrect current password"})
+	case errors.Is(err, ErrSessionStale):
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	case errors.Is(err, ErrPasswordNotSet):
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": err.Error(), "code": "PASSWORD_NOT_SET"})
 	default:
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -225,6 +241,8 @@ func handleEmailChangeError(c fiber.Ctx, err error) error {
 		return c.Status(fiber.StatusGone).JSON(fiber.Map{"error": "otp has expired, please request a new one"})
 	case errors.Is(err, ErrOTPInvalid):
 		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{"error": "invalid otp"})
+	case errors.Is(err, ErrSessionStale):
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
 	case errors.Is(err, ErrOTPMaxAttempts):
 		return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{"error": "too many failed attempts, please request a new otp"})
 	default:

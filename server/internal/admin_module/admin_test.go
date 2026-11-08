@@ -288,7 +288,7 @@ func TestListUsersPaginationEnvelope(t *testing.T) {
 
 func TestHTTPAuthorizationMiddleware(t *testing.T) {
 	app := fiber.New()
-	mwAuth := middleware.NewAuthMiddleware(&config.Config{})
+	mwAuth := middleware.NewAuthMiddleware(&config.Config{}, nil)
 
 	mockClaimsSetter := func(token string) fiber.Handler {
 		return func(c fiber.Ctx) error {

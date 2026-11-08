@@ -1,12 +1,18 @@
 package database
 
 import (
+	"errors"
 	"fmt"
 	"hash/fnv"
 	"log"
 
 	"gorm.io/gorm"
 )
+
+// errMigrationDeferred is returned by a migration callback that chose not to apply
+// because the data needs a human first. The transaction commits, boot continues, and
+// the version is not recorded, so the next boot tries again.
+var errMigrationDeferred = errors.New("migration deferred")
 
 func runMigrationWithHistoryTx(
 	db *gorm.DB,
@@ -15,7 +21,31 @@ func runMigrationWithHistoryTx(
 	statementTimeoutMs int,
 	migrate func(tx *gorm.DB) error,
 ) error {
-	var applied bool
+	return runVersionedMigrationTx(db, migrationName, lockTimeoutMs, statementTimeoutMs, true, migrate)
+}
+
+// runSchemaMigrationTx is runMigrationWithHistoryTx without the reviews table
+// lock, for migrations that touch other tables. lock_timeout makes it fail the
+// boot instead of queueing behind a long-running transaction.
+func runSchemaMigrationTx(
+	db *gorm.DB,
+	migrationName string,
+	lockTimeoutMs int,
+	statementTimeoutMs int,
+	migrate func(tx *gorm.DB) error,
+) error {
+	return runVersionedMigrationTx(db, migrationName, lockTimeoutMs, statementTimeoutMs, false, migrate)
+}
+
+func runVersionedMigrationTx(
+	db *gorm.DB,
+	migrationName string,
+	lockTimeoutMs int,
+	statementTimeoutMs int,
+	lockReviews bool,
+	migrate func(tx *gorm.DB) error,
+) error {
+	var applied, deferred bool
 	err := db.Transaction(func(tx *gorm.DB) error {
 		// 1. Session-level advisory lock using FNV-1a hash of the name
 		if err := tx.Exec(`SELECT pg_advisory_xact_lock(?)`, hashString(migrationName)).Error; err != nil {
@@ -40,12 +70,18 @@ func runMigrationWithHistoryTx(
 		}
 
 		// 4. SHARE ROW EXCLUSIVE table lock on reviews (blocks writes, allows reads)
-		if err := tx.Exec(`LOCK TABLE reviews IN SHARE ROW EXCLUSIVE MODE`).Error; err != nil {
-			return fmt.Errorf("failed to lock reviews table: %w", err)
+		if lockReviews {
+			if err := tx.Exec(`LOCK TABLE reviews IN SHARE ROW EXCLUSIVE MODE`).Error; err != nil {
+				return fmt.Errorf("failed to lock reviews table: %w", err)
+			}
 		}
 
 		// 5. Run migration callback
 		if err := migrate(tx); err != nil {
+			if errors.Is(err, errMigrationDeferred) {
+				deferred = true
+				return nil
+			}
 			return err
 		}
 
@@ -59,7 +95,9 @@ func runMigrationWithHistoryTx(
 	})
 
 	if err == nil {
-		if applied {
+		if deferred {
+			log.Printf("WARN migration %s deferred: not recorded, it will run again on the next boot", migrationName)
+		} else if applied {
 			log.Printf("migration %s applied successfully", migrationName)
 		} else {
 			log.Printf("migration %s already applied", migrationName)

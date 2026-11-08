@@ -1,4 +1,5 @@
 import api from "../index"
+import { REFRESH_POST_TIMEOUT_MS } from "../refresh"
 
 import type {
   AuthResponse,
@@ -15,17 +16,33 @@ export interface GoogleStatusResponse {
   google_email?: string
 }
 
+export interface VerifyEmailResponse {
+  message: string
+  /** true when the password was not proven: the account has no password until a reset */
+  password_reset_required: boolean
+}
+
 export const authApi = {
   login: (data: LoginRequest) => api.post<AuthResponse>("/auth/login", data),
 
   register: (data: RegisterRequest) =>
     api.post<AuthResponse>("/auth/register", data),
 
-  refreshToken: (token?: string) => api.post<AuthResponse>("/auth/refresh", { refresh_token: token }),
+  refreshToken: (token?: string) => api.post<AuthResponse>("/auth/refresh", { refresh_token: token }, { timeout: REFRESH_POST_TIMEOUT_MS }),
 
-  logout: () => api.post("/auth/logout"),
+  // The stored refresh token goes in the body so the server can revoke it when the cookie is missing.
+  logout: () => api.post("/auth/logout", { refresh_token: localStorage.getItem("refresh_token") ?? undefined }),
 
-  verifyEmail: (token: string) => api.get(`/auth/verify-email?token=${token}`),
+  // POST, never GET: link scanners must not be able to verify an address.
+  // Send the current password, or skipPassword: true for an explicit "I don't know it"
+  // (the only choice that wipes the account's credentials).
+  verifyEmail: (token: string, choice: { password: string } | { skipPassword: true }) =>
+    api.post<VerifyEmailResponse>("/auth/verify-email", {
+      token,
+      ...("password" in choice
+        ? { password: choice.password }
+        : { skip_password: choice.skipPassword }),
+    }),
 
   resendVerification: (email: string) =>
     api.post("/auth/resend-verification", { email }),

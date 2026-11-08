@@ -33,9 +33,20 @@ import (
 
 var DB *gorm.DB
 
+// NewGormLogger logs slow queries and errors only, and never the bound values: Info level
+// printed every statement with its parameters (emails, password hashes, tokens).
+func NewGormLogger(w logger.Writer) logger.Interface {
+	return logger.New(w, logger.Config{
+		SlowThreshold:             200 * time.Millisecond,
+		LogLevel:                  logger.Warn,
+		IgnoreRecordNotFoundError: true,
+		ParameterizedQueries:      true,
+	})
+}
+
 func Connect(cfg *config.Config) {
 	db, err := gorm.Open(postgres.Open(cfg.DB.DSN()), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+		Logger: NewGormLogger(log.New(os.Stdout, "\r\n", log.LstdFlags)),
 		NowFunc: func() time.Time {
 			return time.Now().UTC()
 		},
@@ -56,21 +67,28 @@ func Connect(cfg *config.Config) {
 	DB = db
 	log.Println("✅ Database connected")
 
-	if err := autoMigrate(db); err != nil {
-		log.Fatalf("❌ AutoMigrate failed: %v", err)
-	}
-
-	if err := runSQLMigrations(db, cfg); err != nil {
-		log.Fatalf("❌ SQL migrations failed: %v", err)
-	}
-
-	if err := seedInitialData(db); err != nil {
-		log.Fatalf("❌ Seed roles failed: %v", err)
+	if err := Migrate(db, cfg); err != nil {
+		log.Fatalf("❌ Migration failed: %v", err)
 	}
 
 	if err := achievementsmodule.SeedFromFile(db, "database/seeder/achievement.json"); err != nil {
 		log.Fatalf("❌ Seed achievements failed: %v", err)
 	}
+}
+
+// Migrate runs AutoMigrate, the versioned SQL migrations and the role/admin seed.
+// It is the entry point shared by Connect and the Postgres integration tests.
+func Migrate(db *gorm.DB, cfg *config.Config) error {
+	if err := autoMigrate(db); err != nil {
+		return fmt.Errorf("automigrate: %w", err)
+	}
+	if err := runSQLMigrations(db, cfg); err != nil {
+		return fmt.Errorf("sql migrations: %w", err)
+	}
+	if err := seedInitialData(db); err != nil {
+		return fmt.Errorf("seed: %w", err)
+	}
+	return nil
 }
 
 func autoMigrate(db *gorm.DB) error {
@@ -390,6 +408,34 @@ func runSQLMigrations(db *gorm.DB, cfg *config.Config) error {
 	// Seeding upserts by name, so rename the row first to keep users' unlocked achievement.
 	if err := runMigrationWithHistoryTx(db, "20261106_rename_legend_achievement", cfg.DB.MigrationLockTimeoutMs, cfg.DB.MigrationStatementTimeoutMs, func(tx *gorm.DB) error {
 		return tx.Exec(`UPDATE achievements SET name = 'Popcorn Legend' WHERE name = 'Removy Legend'`).Error
+	}); err != nil {
+		return err
+	}
+
+	// Duplicates defer this migration (ERROR logged, version not recorded) instead of failing the boot.
+	if err := runSchemaMigrationTx(db, "20261107_user_identity_unique_ensure", cfg.DB.MigrationLockTimeoutMs, cfg.DB.MigrationStatementTimeoutMs, func(tx *gorm.DB) error {
+		missing, err := migrate.EnsureUserIdentityUniques(tx)
+		if err != nil {
+			return err
+		}
+		if len(missing) > 0 {
+			return errMigrationDeferred
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	// Additive only: new nullable or defaulted columns, no data is rewritten.
+	// Their model fields carry gorm:"-:migration" so AutoMigrate cannot add them first without lock_timeout.
+	if err := runSchemaMigrationTx(db, "20261107_account_security_columns", cfg.DB.MigrationLockTimeoutMs, cfg.DB.MigrationStatementTimeoutMs, func(tx *gorm.DB) error {
+		return tx.Exec(migrate.AccountSecurityColumns).Error
+	}); err != nil {
+		return err
+	}
+
+	if err := runSchemaMigrationTx(db, "20261108_email_verification_attempts", cfg.DB.MigrationLockTimeoutMs, cfg.DB.MigrationStatementTimeoutMs, func(tx *gorm.DB) error {
+		return tx.Exec(migrate.EmailVerificationAttempts).Error
 	}); err != nil {
 		return err
 	}

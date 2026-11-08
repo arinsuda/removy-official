@@ -49,7 +49,8 @@ type RequestEmailChangeRequest struct {
 }
 
 type VerifyEmailChangeRequest struct {
-	OTP string `json:"otp"`
+	OTP         string `json:"otp"`           // code mailed to the current address
+	NewEmailOTP string `json:"new_email_otp"` // code mailed to the new address
 }
 
 type ChangePasswordRequest struct {

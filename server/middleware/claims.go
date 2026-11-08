@@ -18,6 +18,9 @@ type Claims struct {
 	UserID uint      `json:"uid"`
 	Role   string    `json:"role"`
 	Type   TokenType `json:"type"`
+	// TokenVersion is users.token_version at issue time; a mismatch revokes the token.
+	// Tokens issued before the field existed decode as 0, which matches every untouched user.
+	TokenVersion int `json:"ver"`
 	jwt.RegisteredClaims
 }
 
