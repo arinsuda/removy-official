@@ -1,9 +1,21 @@
 <template>
-  <div class="star-rating" :class="{ 'star-rating--readonly': readonly }">
+  <div
+    class="star-rating"
+    :class="{ 'star-rating--readonly': readonly }"
+    :role="readonly ? 'img' : 'slider'"
+    :tabindex="readonly ? undefined : 0"
+    :aria-label="ariaLabel"
+    :aria-valuemin="readonly ? undefined : STEP"
+    :aria-valuemax="readonly ? undefined : max"
+    :aria-valuenow="readonly ? undefined : modelValue"
+    :aria-valuetext="`${modelValue} / ${max}`"
+    @keydown="onKeydown"
+  >
     <div
       v-for="n in max"
       :key="n"
       class="star-slot"
+      :style="{ width: `${size}px`, height: `${size}px` }"
       @mouseleave="!readonly && (hoverValue = 0)"
     >
       <template v-if="!readonly">
@@ -72,8 +84,10 @@
       max?: number
       readonly?: boolean
       showLabel?: boolean
+      size?: number
+      ariaLabel?: string
     }>(),
-    { max: 5, readonly: false, showLabel: true },
+    { max: 5, readonly: false, showLabel: true, size: 22, ariaLabel: "Rating" },
   )
 
   const emit = defineEmits<{
@@ -87,8 +101,26 @@
   const hoverValue = ref(0)
   const displayValue = computed(() => hoverValue.value || props.modelValue)
 
+  const STEP = 0.5
+
   function select(value: number) {
     emit("update:modelValue", value)
+  }
+
+  function onKeydown(e: KeyboardEvent) {
+    if (props.readonly) return
+    const keys: Record<string, number> = {
+      ArrowRight: Math.min(props.max, props.modelValue + STEP),
+      ArrowUp: Math.min(props.max, props.modelValue + STEP),
+      ArrowLeft: Math.max(STEP, props.modelValue - STEP),
+      ArrowDown: Math.max(STEP, props.modelValue - STEP),
+      Home: STEP,
+      End: props.max,
+    }
+    const next = keys[e.key]
+    if (next === undefined) return
+    e.preventDefault()
+    select(next)
   }
 
   function clipPathFor(n: number) {
@@ -105,7 +137,7 @@
     align-items: center;
     gap: 0.35rem;
     font-size: 0.85rem;
-    color: #8a8a8a;
+    color: var(--color-text-muted);
   }
 
   .stars-wrap,
@@ -116,8 +148,6 @@
 
   .star-slot {
     position: relative;
-    width: 22px;
-    height: 22px;
     flex-shrink: 0;
   }
   .star-rating:not(.star-rating--readonly) .star-slot {
@@ -140,7 +170,7 @@
     color: rgba(255, 255, 255, 0.2);
   }
   .fill--on {
-    color: #f5c518;
+    color: var(--color-rating);
   }
   .fill--off {
     color: transparent;
@@ -163,7 +193,7 @@
 
   .rating-label {
     font-size: 0.85rem;
-    color: #8a8a8a;
+    color: var(--color-text-muted);
     min-width: 40px;
   }
 </style>

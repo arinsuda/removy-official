@@ -132,14 +132,12 @@
               <span class="inline-rating-num">{{
                 review.rating.toFixed(1)
               }}</span>
-              <div class="stars">
-                <Star
-                  v-for="n in 5"
-                  :key="n"
-                  :size="9"
-                  :class="n <= review.rating ? 'star-on' : 'star-off'"
-                />
-              </div>
+              <StarRatingInput
+                :model-value="review.rating"
+                readonly
+                :show-label="false"
+                :size="11"
+              />
             </div>
           </div>
 
@@ -237,6 +235,7 @@
 
 <script setup lang="ts">
 import AppTabs from "@/components/ui/AppTabs.vue"
+import StarRatingInput from "@/components/movie/Starratinginput.vue"
 import SkeletonList from "@/components/ui/skeleton/SkeletonList.vue"
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import {
@@ -800,17 +799,6 @@ onMounted(fetchReviews);
   color: var(--c-star);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
-}
-.stars {
-  display: flex;
-  gap: 2px;
-}
-.star-on {
-  color: var(--c-star);
-  fill: var(--c-star);
-}
-.star-off {
-  color: var(--c-muted);
 }
 
 /* Meta row: created date + private icon + watched date */
