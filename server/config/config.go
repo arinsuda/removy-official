@@ -121,7 +121,10 @@ func Load() (*Config, error) {
 
 	devMailLog := false
 	if getEnv("DEV_MAIL_LOG", "") == "true" {
-		if DevMailLogAllowed(allowedOrigins, getEnv("APP_BASE_URL", "http://localhost:3000"), getEnv("FRONTEND_BASE_URL", "http://localhost:3000")) {
+		// Secure cookies mean HTTPS, i.e. a deployed environment: never print mail there.
+		if getEnv("COOKIE_SECURE", "false") == "true" {
+			log.Printf("WARN DEV_MAIL_LOG ignored: COOKIE_SECURE=true")
+		} else if DevMailLogAllowed(allowedOrigins, getEnv("APP_BASE_URL", "http://localhost:3000"), getEnv("FRONTEND_BASE_URL", "http://localhost:3000")) {
 			devMailLog = true
 			log.Printf("DEV_MAIL_LOG active — emails are printed, not sent")
 		} else {
