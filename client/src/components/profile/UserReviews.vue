@@ -8,19 +8,7 @@
 
     <!-- Unified filter toolbar -->
     <div class="filter-toolbar">
-      <div class="filter-rail" role="tablist">
-        <button
-          v-for="f in filters"
-          :key="f.key"
-          class="filter-pill"
-          :class="{ 'filter-pill--active': activeFilter === f.key }"
-          :aria-selected="activeFilter === f.key"
-          role="tab"
-          @click="activeFilter = f.key"
-        >
-          {{ f.label }}
-        </button>
-      </div>
+      <AppTabs v-model="activeFilter" :tabs="filters" :controls="false" />
 
       <div class="toolbar-right">
         <!-- Visibility: compact icon-only segmented control -->
@@ -248,6 +236,7 @@
 </template>
 
 <script setup lang="ts">
+import AppTabs from "@/components/ui/AppTabs.vue"
 import SkeletonList from "@/components/ui/skeleton/SkeletonList.vue"
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import {
@@ -555,35 +544,6 @@ onMounted(fetchReviews);
   margin-bottom: 22px;
   padding-bottom: 16px;
   border-bottom: 1px solid var(--c-border);
-}
-
-.filter-rail {
-  display: flex;
-  gap: 6px;
-}
-.filter-pill {
-  font-family: var(--font-sans);
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--c-sub);
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--c-border);
-  padding: 6px 14px;
-  border-radius: 20px;
-  cursor: pointer;
-  transition: all 0.2s var(--ease);
-}
-.filter-pill:hover {
-  color: var(--c-text);
-  border-color: var(--c-border-h);
-}
-.filter-pill--active {
-  color: #000;
-  background: #fff;
-  border-color: #fff;
-}
-.filter-pill--active:hover {
-  color: #000;
 }
 
 .toolbar-right {
