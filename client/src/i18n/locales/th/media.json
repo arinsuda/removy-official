@@ -57,5 +57,18 @@
     "moviesTab": "ภาพยนตร์ ({count})",
     "tvTab": "ซีรีส์ ({count})",
     "peopleTab": "บุคคล ({count})"
+  },
+  "rating": {
+    "popcornScore": "คะแนน POPCORN {score} จาก 5",
+    "tmdbScore": "คะแนน TMDB {score} จาก 10",
+    "imdbScore": "คะแนน IMDb {score} จาก 10",
+    "rtScore": "คะแนน Rotten Tomatoes {score} เปอร์เซ็นต์",
+    "reviewCount": "{count} รีวิว | {count} รีวิว",
+    "tier": {
+      "none": "ยังไม่มีคะแนน",
+      "stale": "ป๊อปเหี่ยว",
+      "fresh": "ป๊อปสด",
+      "hot": "ป๊อปร้อน"
+    }
   }
 }

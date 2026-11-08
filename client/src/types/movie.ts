@@ -5,6 +5,21 @@ export interface Genre {
   name: string
 }
 
+export interface RatingSource {
+  average: number | null
+  count: number
+  available: boolean
+  scale: number
+}
+
+/** POPCORN (0-5, from reviews) is primary; the others are secondary. imdb and rotten_tomatoes exist on detail only. */
+export interface MediaRatings {
+  popcorn: RatingSource
+  tmdb: RatingSource
+  imdb?: RatingSource
+  rotten_tomatoes?: RatingSource
+}
+
 export interface Movie {
   id: number
   title: string
@@ -18,6 +33,7 @@ export interface Movie {
   popularity: number
   genre_ids: number[]
   adult: boolean
+  ratings?: MediaRatings
 }
 
 export interface MovieDetail extends Movie {
@@ -45,6 +61,7 @@ export interface TVSeries {
   popularity: number
   genre_ids: number[]
   adult: boolean
+  ratings?: MediaRatings
 }
 
 export interface TVSeriesDetail extends TVSeries {
@@ -98,6 +115,7 @@ export interface MediaSummary {
   media_type: MediaType
   genres: Genre[] 
   vote_average: number
+  ratings?: MediaRatings
   created_at: string
 }
 

@@ -57,5 +57,18 @@
     "moviesTab": "Movies ({count})",
     "tvTab": "TV Series ({count})",
     "peopleTab": "People ({count})"
+  },
+  "rating": {
+    "popcornScore": "POPCORN score {score} out of 5",
+    "tmdbScore": "TMDB score {score} out of 10",
+    "imdbScore": "IMDb score {score} out of 10",
+    "rtScore": "Rotten Tomatoes score {score} percent",
+    "reviewCount": "{count} review | {count} reviews",
+    "tier": {
+      "none": "No ratings yet",
+      "stale": "Stale",
+      "fresh": "Fresh Pop",
+      "hot": "Hot Pop"
+    }
   }
 }
