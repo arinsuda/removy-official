@@ -1,7 +1,10 @@
-import { ref, shallowRef, watch, type Ref } from "vue"
+import { onScopeDispose, ref, shallowRef, watch, type Ref } from "vue"
 import { isAxiosError } from "axios"
 import { mediaApi } from "@/api/endpoints/media"
 import type { DetailConfig, DetailData } from "@/components/detail/detailConfig"
+
+const RATINGS_RETRY_DELAY = 1500
+const RATINGS_MAX_RETRIES = 2
 
 export type DetailStatus = "loading" | "ready" | "error" | "notFound"
 
@@ -15,9 +18,33 @@ export function useMediaDetail(config: DetailConfig, idRef: Ref<number>) {
   const data = shallowRef<DetailData | null>(null)
   let requestSeq = 0
   const viewRecorded = new Set<number>()
+  let retryTimer: ReturnType<typeof setTimeout> | null = null
+
+  function cancelRatingsRetry() {
+    if (retryTimer) clearTimeout(retryTimer)
+    retryTimer = null
+  }
+
+  /** IMDb / Rotten Tomatoes may still be loading server-side; re-ask and merge only ratings. */
+  function scheduleRatingsRetry(id: number, seq: number, attempt: number) {
+    if (attempt >= RATINGS_MAX_RETRIES) return
+    cancelRatingsRetry()
+    retryTimer = setTimeout(async () => {
+      retryTimer = null
+      try {
+        const fresh = await config.fetch(id)
+        if (seq !== requestSeq || !data.value) return
+        data.value = { ...data.value, ratings: fresh.ratings }
+        if (fresh.ratings?.external_pending) scheduleRatingsRetry(id, seq, attempt + 1)
+      } catch {
+        // Silent: keep the ratings already shown.
+      }
+    }, RATINGS_RETRY_DELAY)
+  }
 
   async function load() {
     const seq = ++requestSeq
+    cancelRatingsRetry()
     const id = idRef.value
     if (!Number.isInteger(id) || id <= 0) {
       data.value = null
@@ -31,6 +58,7 @@ export function useMediaDetail(config: DetailConfig, idRef: Ref<number>) {
       if (seq !== requestSeq) return
       data.value = result
       status.value = "ready"
+      if (result.ratings?.external_pending) scheduleRatingsRetry(id, seq, 0)
       if (!viewRecorded.has(id)) {
         viewRecorded.add(id)
         mediaApi.recordMediaView(config.type, id).catch(err => console.warn("record view failed:", err))
@@ -48,6 +76,7 @@ export function useMediaDetail(config: DetailConfig, idRef: Ref<number>) {
     }
   }
 
+  onScopeDispose(cancelRatingsRetry)
   watch(idRef, load, { immediate: true })
 
   return { status, data, reload: load }

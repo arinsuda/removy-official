@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch, nextTick, onBeforeUnmount, useId } from "vue";
 import { useI18n } from "vue-i18n";
 import { Globe, Users, Lock, ChevronDown } from "lucide-vue-next";
 import { useClickOutside } from "@/composables/useClickOutside";
@@ -26,6 +26,44 @@ const { t } = useI18n();
 
 const isOpen = ref(false);
 const selectorRef = ref<HTMLElement | null>(null);
+const menuRef = ref<HTMLElement | null>(null);
+const menuId = `visibility-menu-${useId()}`;
+
+const MENU_WIDTH = 256;
+const MENU_FALLBACK_HEIGHT = 200;
+const EDGE = 8;
+const alignLeft = ref(false);
+const openUp = ref(false);
+
+// Keep the menu inside the viewport: align to the side with room, flip up near the bottom.
+function updatePlacement() {
+  const trigger = selectorRef.value;
+  if (!trigger) return;
+  const rect = trigger.getBoundingClientRect();
+  const width = Math.min(MENU_WIDTH, window.innerWidth - 2 * 16);
+  alignLeft.value = rect.right < width + EDGE;
+  const height = menuRef.value?.offsetHeight || MENU_FALLBACK_HEIGHT;
+  const below = window.innerHeight - rect.bottom;
+  openUp.value = below < height + EDGE && rect.top > below;
+}
+
+watch(isOpen, async (open) => {
+  if (open) {
+    updatePlacement();
+    window.addEventListener("resize", updatePlacement);
+    window.addEventListener("scroll", updatePlacement, { passive: true, capture: true });
+    await nextTick();
+    updatePlacement();
+  } else {
+    stopTracking();
+  }
+});
+
+function stopTracking() {
+  window.removeEventListener("resize", updatePlacement);
+  window.removeEventListener("scroll", updatePlacement, { capture: true });
+}
+onBeforeUnmount(stopTracking);
 
 useClickOutside(selectorRef, () => {
   isOpen.value = false;
@@ -121,13 +159,14 @@ const sizeClasses = computed(() => {
     <button
       type="button"
       :class="[
-        'flex items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900 font-medium text-neutral-200 transition-colors hover:bg-neutral-800 hover:text-white focus:outline-none focus:ring-2 focus:ring-primary-500',
+        'flex items-center gap-2 rounded-md border border-border-strong bg-surface-2 font-medium text-text-secondary transition-colors hover:bg-surface-3 hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-focus',
         sizeClasses,
         disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
       ]"
       @click="toggleMenu"
       @keydown="handleKeyDown"
       :aria-expanded="isOpen"
+      :aria-controls="menuId"
       aria-haspopup="listbox"
       :disabled="disabled"
     >
@@ -146,7 +185,14 @@ const sizeClasses = computed(() => {
     >
       <div
         v-if="isOpen"
-        class="absolute right-0 z-50 mt-1 w-64 origin-top-right rounded-md border border-neutral-700 bg-neutral-900 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+        :id="menuId"
+        ref="menuRef"
+        :class="[
+          'absolute z-50 w-64 max-w-[calc(100vw-2rem)] rounded-md border border-border-strong bg-surface-2 shadow-lg focus:outline-none',
+          alignLeft ? 'left-0' : 'right-0',
+          openUp ? 'bottom-full mb-1' : 'top-full mt-1',
+          alignLeft ? (openUp ? 'origin-bottom-left' : 'origin-top-left') : (openUp ? 'origin-bottom-right' : 'origin-top-right'),
+        ]"
         role="listbox"
         tabindex="-1"
       >
@@ -156,9 +202,9 @@ const sizeClasses = computed(() => {
             :key="option.value"
             @click="selectOption(option.value)"
             type="button"
-            class="flex w-full items-start gap-3 px-4 py-2 text-left hover:bg-neutral-800"
+            class="flex w-full items-start gap-3 px-4 py-2 text-left hover:bg-surface-3"
             :class="[
-              modelValue === option.value ? 'bg-neutral-800/50 text-primary-400' : 'text-neutral-300'
+              modelValue === option.value ? 'bg-surface-3/50 text-brand' : 'text-text-secondary'
             ]"
             role="option"
             :aria-selected="modelValue === option.value"
@@ -166,7 +212,7 @@ const sizeClasses = computed(() => {
             <component :is="option.icon" class="mt-0.5 h-4 w-4 shrink-0" />
             <div class="flex flex-col">
               <span class="text-sm font-medium">{{ option.title }}</span>
-              <span class="text-xs text-neutral-400">{{ option.desc }}</span>
+              <span class="text-xs text-text-muted">{{ option.desc }}</span>
             </div>
           </button>
         </div>

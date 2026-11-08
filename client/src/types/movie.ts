@@ -18,6 +18,8 @@ export interface MediaRatings {
   tmdb: RatingSource
   imdb?: RatingSource
   rotten_tomatoes?: RatingSource
+  /** True while the server's IMDb/RT lookup is still running; ask again shortly. */
+  external_pending?: boolean
 }
 
 export interface Movie {

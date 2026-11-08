@@ -19,7 +19,7 @@ const (
 	freshTTL        = 7 * 24 * time.Hour
 	notFoundTTL     = 24 * time.Hour
 	requestTimeout  = 3 * time.Second
-	coldMissWait    = 700 * time.Millisecond
+	coldMissWait    = 1500 * time.Millisecond
 	dailyBudget     = 900
 	defaultOMDbURL  = "https://www.omdbapi.com"
 	MediaTypeMovie  = "movie"
@@ -45,6 +45,8 @@ type Ratings struct {
 	IMDbRating *float64
 	IMDbVotes  int
 	RTScore    *int
+	// Pending means the lookup was still running when we gave up waiting; ask again shortly.
+	Pending bool
 }
 
 // budget is an in-memory per-day request counter (UTC day).
@@ -149,7 +151,7 @@ func (s *Service) Get(ctx context.Context, mediaType string, tmdbID int, knownIM
 		}
 		return toRatings(res.Val.(*ExternalRating))
 	case <-timer.C:
-		return Ratings{}
+		return Ratings{Pending: true}
 	case <-ctx.Done():
 		return Ratings{}
 	}
