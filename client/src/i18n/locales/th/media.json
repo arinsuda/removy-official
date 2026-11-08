@@ -63,6 +63,7 @@
     "tmdbScore": "คะแนน TMDB {score} จาก 10",
     "imdbScore": "คะแนน IMDb {score} จาก 10",
     "rtScore": "คะแนน Rotten Tomatoes {score} เปอร์เซ็นต์",
+    "unavailable": "ไม่มีคะแนนจาก {source}",
     "reviewCount": "{count} รีวิว | {count} รีวิว",
     "outOfReviews": "จาก 5 · {count} รีวิว | จาก 5 · {count} รีวิว",
     "tier": {

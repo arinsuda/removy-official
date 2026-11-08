@@ -1,32 +1,45 @@
 <template>
   <div
-    class="media-rating inline-flex"
-    :class="variant === 'detail' ? 'flex-col items-start gap-2' : 'items-center gap-1.5'"
+    class="media-rating @container inline-flex"
+    :class="variant === 'detail' ? 'w-full' : 'items-center gap-1.5'"
     :data-variant="variant"
   >
-    <div class="flex items-center" :class="variant === 'detail' ? 'gap-3' : ''">
-      <PopcornScoreBadge :average="popcorn.average" :count="popcorn.count" :size="variant" />
-      <span v-if="variant === 'detail'" data-test="review-count" class="text-caption text-text-muted">
-        {{ t("media.rating.outOfReviews", { count: popcorn.count }, popcorn.count) }}
-      </span>
-    </div>
-
-    <ul
-      v-if="secondary.length"
-      class="m-0 flex list-none flex-wrap items-center p-0 text-text-muted"
-      :class="variant === 'detail' ? 'gap-x-3 gap-y-1 text-caption' : 'gap-x-2 text-[10px] leading-none'"
-    >
-      <li
-        v-for="s in secondary"
-        :key="s.key"
-        :data-source="s.key"
-        :aria-label="s.aria"
-        class="inline-flex items-baseline gap-1 whitespace-nowrap"
+    <template v-if="variant === 'detail'">
+      <div class="flex w-full flex-col items-stretch gap-3 min-[360px]:flex-row min-[360px]:items-center">
+        <div class="flex flex-1 flex-col items-center gap-1 text-center">
+          <PopcornScoreBadge :average="popcorn.average" :count="popcorn.count" size="detail" />
+          <span data-test="review-count" class="text-caption text-text-muted">
+            {{ t("media.rating.outOfReviews", { count: popcorn.count }, popcorn.count) }}
+          </span>
+        </div>
+        <ul
+          class="m-0 flex list-none flex-col justify-center gap-2 border-t border-border p-0 pt-3 min-[360px]:border-l min-[360px]:border-t-0 min-[360px]:pl-4 min-[360px]:pt-0"
+        >
+          <li
+            v-for="s in secondary"
+            :key="s.key"
+            :data-source="s.key"
+            :aria-label="s.aria"
+            class="flex items-center gap-2 whitespace-nowrap text-caption"
+          >
+            <RatingSourceMark :source="s.key" class="w-[44px] justify-start" />
+            <span aria-hidden="true" class="tabular-nums" :class="s.value ? 'font-semibold text-text-primary' : 'text-text-muted'">{{ s.value ?? "—" }}</span>
+          </li>
+        </ul>
+      </div>
+    </template>
+    <template v-else>
+      <PopcornScoreBadge :average="popcorn.average" :count="popcorn.count" size="card" />
+      <ul
+        v-if="secondary[0]?.value"
+        class="m-0 flex list-none flex-wrap items-center gap-x-2 p-0 text-[10px] leading-none text-text-muted"
       >
-        <span aria-hidden="true" class="font-semibold uppercase tracking-wide">{{ s.name }}</span>
-        <span aria-hidden="true">{{ s.value }}</span>
-      </li>
-    </ul>
+        <li :data-source="secondary[0].key" :aria-label="secondary[0].aria" class="inline-flex items-baseline gap-1 whitespace-nowrap">
+          <span aria-hidden="true" class="font-semibold uppercase tracking-wide">TMDB</span>
+          <span aria-hidden="true">{{ secondary[0].short }}</span>
+        </li>
+      </ul>
+    </template>
   </div>
 </template>
 
@@ -35,6 +48,7 @@ import { computed } from "vue"
 import { useI18n } from "vue-i18n"
 import type { MediaRatings, RatingSource } from "@/types/movie"
 import PopcornScoreBadge from "./PopcornScoreBadge.vue"
+import RatingSourceMark from "./RatingSourceMark.vue"
 
 const props = withDefaults(
   defineProps<{
@@ -58,36 +72,24 @@ const tmdbScore = computed(() => {
   return props.voteAverage && props.voteAverage > 0 ? props.voteAverage : null
 })
 
-interface Secondary {
+interface Row {
   key: "tmdb" | "imdb" | "rt"
-  name: string
-  value: string
+  /** Display text, or null when the source has no score (rendered as an em dash). */
+  value: string | null
+  short: string
   aria: string
 }
 
-const secondary = computed<Secondary[]>(() => {
-  const out: Secondary[] = []
-  if (tmdbScore.value !== null) {
-    const v = tmdbScore.value.toFixed(1)
-    out.push({
-      key: "tmdb",
-      name: "TMDB",
-      value: props.variant === "detail" ? `${v}/10` : v,
-      aria: t("media.rating.tmdbScore", { score: v }),
-    })
-  }
-  if (props.variant === "detail") {
-    const imdb = props.ratings?.imdb
-    if (imdb?.available && imdb.average) {
-      const v = imdb.average.toFixed(1)
-      out.push({ key: "imdb", name: "IMDb", value: `${v}/10`, aria: t("media.rating.imdbScore", { score: v }) })
-    }
-    const rt = props.ratings?.rotten_tomatoes
-    if (rt?.available && rt.average !== null) {
-      const v = String(Math.round(rt.average))
-      out.push({ key: "rt", name: "RT", value: `${v}%`, aria: t("media.rating.rtScore", { score: v }) })
-    }
-  }
-  return out
+const secondary = computed<Row[]>(() => {
+  const tmdb = tmdbScore.value?.toFixed(1)
+  const imdbSrc = props.ratings?.imdb
+  const imdb = imdbSrc?.available && imdbSrc.average ? imdbSrc.average.toFixed(1) : undefined
+  const rtSrc = props.ratings?.rotten_tomatoes
+  const rt = rtSrc?.available && rtSrc.average !== null ? String(Math.round(rtSrc.average)) : undefined
+  return [
+    { key: "tmdb", value: tmdb ? `${tmdb}/10` : null, short: tmdb ?? "", aria: tmdb ? t("media.rating.tmdbScore", { score: tmdb }) : t("media.rating.unavailable", { source: "TMDB" }) },
+    { key: "imdb", value: imdb ? `${imdb}/10` : null, short: imdb ?? "", aria: imdb ? t("media.rating.imdbScore", { score: imdb }) : t("media.rating.unavailable", { source: "IMDb" }) },
+    { key: "rt", value: rt ? `${rt}%` : null, short: rt ?? "", aria: rt ? t("media.rating.rtScore", { score: rt }) : t("media.rating.unavailable", { source: "Rotten Tomatoes" }) },
+  ]
 })
 </script>

@@ -1,6 +1,7 @@
-import { inject, onBeforeUnmount, onMounted, provide, ref, type InjectionKey, type Ref } from "vue"
+import { inject, onBeforeUnmount, onMounted, provide, ref, shallowReactive, type InjectionKey, type Ref } from "vue"
 import { movieApi } from "@/api/api"
 import type { Video } from "@/types"
+import type { MediaRatings } from "@/types/movie"
 import type { HomeMedia } from "@/components/home/homeMedia"
 import { resolveTrailerCandidates, useTrailerPreview } from "@/composables/useTrailerPreview"
 
@@ -17,6 +18,8 @@ export interface HomePopup {
   anchor: Ref<PopupAnchor>
   isDesktop: Ref<boolean>
   getState(item: HomeMedia): TrailerState
+  /** Ratings from the detail endpoint (adds IMDb / Rotten Tomatoes), once fetched. */
+  detailRatings(item: HomeMedia): MediaRatings | undefined
   /** Hover enter. */
   show(item: HomeMedia, key: string, el: HTMLElement): void
   /** Keyboard focus; ignored unless the browser reports :focus-visible. */
@@ -42,6 +45,9 @@ export function provideHomePopup(): HomePopup {
 
   const states = new Map<string, TrailerState>()
   const videoCache = new Map<string, Video[]>()
+  // Detail ratings cached per media key; list endpoints do not carry imdb/rt.
+  const ratingsCache = shallowReactive(new Map<string, MediaRatings>())
+  const ratingsRequested = new Set<string>()
   let hoveredKey: string | null = null
   let insidePopup = false
   let showTimer: ReturnType<typeof setTimeout> | null = null
@@ -78,6 +84,20 @@ export function provideHomePopup(): HomePopup {
     }
   }
 
+  async function loadRatings(item: HomeMedia) {
+    if (ratingsRequested.has(item.key)) return
+    ratingsRequested.add(item.key)
+    try {
+      const ratings =
+        item.type === "tv"
+          ? (await movieApi.getSeriesById(item.id)).data?.series?.ratings
+          : (await movieApi.getById(item.id)).data?.movie?.ratings
+      if (ratings) ratingsCache.set(item.key, ratings)
+    } catch {
+      // Silent: the popup keeps the list-endpoint ratings.
+    }
+  }
+
   function place(el: HTMLElement) {
     const rect = el.getBoundingClientRect()
     const maxLeft = Math.max(EDGE, window.innerWidth - POPUP_WIDTH - EDGE)
@@ -103,6 +123,7 @@ export function provideHomePopup(): HomePopup {
     showTimer = setTimeout(() => {
       place(el)
       openKey.value = key
+      void loadRatings(item)
       if (getState(item).currentTrailer.value) getState(item).scheduleMount()
     }, SHOW_DELAY)
   }
@@ -166,6 +187,7 @@ export function provideHomePopup(): HomePopup {
     anchor,
     isDesktop,
     getState,
+    detailRatings: (item) => ratingsCache.get(item.key),
     show,
     focus,
     leave,

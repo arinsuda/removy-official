@@ -63,6 +63,7 @@
     "tmdbScore": "TMDB score {score} out of 10",
     "imdbScore": "IMDb score {score} out of 10",
     "rtScore": "Rotten Tomatoes score {score} percent",
+    "unavailable": "{source} score unavailable",
     "reviewCount": "{count} review | {count} reviews",
     "outOfReviews": "out of 5 · {count} review | out of 5 · {count} reviews",
     "tier": {

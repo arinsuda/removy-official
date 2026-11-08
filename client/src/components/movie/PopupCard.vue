@@ -58,7 +58,7 @@
     <MediaRating
       class="popup__rating"
       variant="detail"
-      :ratings="movie.ratings"
+      :ratings="ratings ?? movie.ratings"
       :vote-average="movie.vote_average"
     />
 
@@ -156,9 +156,12 @@ import { libraryApi } from "@/api/endpoints/library";
 import { useAuthStore } from "@/stores/auth";
 import { mediaApi } from "@/api/endpoints/media";
 import MediaRating from "./MediaRating.vue";
+import type { MediaRatings } from "@/types/movie";
 
 const props = defineProps<{
   movie: Movie | TVSeries;
+  /** Fuller ratings (with IMDb / RT) fetched from the detail endpoint; overrides `movie.ratings`. */
+  ratings?: MediaRatings;
   // ── Trailer/player state: มาจาก useTrailerPreview instance ของการ์ดนี้ ──
   currentTrailer: ResolvedTrailer | null;
   trailerUnavailable: boolean;
