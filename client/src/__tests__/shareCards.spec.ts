@@ -6,7 +6,7 @@ import en from "@/i18n/locales/en/share.json"
 import ShareImageModal from "@/components/share/ShareImageModal.vue"
 import TakeCard from "@/components/share/cards/TakeCard.vue"
 import PosterStoryCard from "@/components/share/cards/PosterStoryCard.vue"
-import { availableTemplates, publicExcerpt, shareTier } from "@/components/share/shareCards"
+import { availableTemplates, publicExcerpt, shareTier, truncateExcerpt } from "@/components/share/shareCards"
 import { useShareImage } from "@/composables/useShareImage"
 import type { ShareMediaContext, ShareReviewContext, ShareStatsContext } from "@/types/share"
 
@@ -63,6 +63,24 @@ describe("privacy", () => {
     expect(publicExcerpt("private", "hi")).toBeNull()
     expect(publicExcerpt(null, "hi")).toBeNull()
     expect(publicExcerpt("public", "   ")).toBeNull()
+  })
+
+  it("truncateExcerpt cuts on a word boundary and adds an ellipsis", () => {
+    expect(truncateExcerpt("short text", 90)).toBe("short text")
+    const long = "Visually stunning and emotionally huge. The sandworm ride alone is worth the ticket, and the score gave me goosebumps."
+    const out = truncateExcerpt(long, 90)
+    expect(out.endsWith("…")).toBe(true)
+    expect(Array.from(out).length).toBeLessThanOrEqual(91)
+    expect(out).toBe("Visually stunning and emotionally huge. The sandworm ride alone is worth the ticket, and…")
+    expect(truncateExcerpt("ก".repeat(200), 90)).toBe(`${"ก".repeat(90)}…`)
+  })
+
+  it("My take card shows an ellipsis for long public reviews", () => {
+    const w = mount(TakeCard, {
+      props: { media, stats: { ...stats, reviewVisibility: "public", reviewBody: "word ".repeat(60) }, posterUrl: null, theme: "dark", shortUrl: "x/y" },
+      global: { plugins: [i18n] },
+    })
+    expect(w.find("[data-test=share-excerpt]").text().endsWith("…")).toBe(true)
   })
 
   it("My take card never prints non-public review text", () => {

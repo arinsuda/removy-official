@@ -108,3 +108,16 @@ export function titleSizeClass(title: string): string {
   if (len > 18) return "sc-title--md"
   return "sc-title--lg"
 }
+
+/**
+ * Cut text to at most `max` characters on a word boundary and append "…".
+ * Text without spaces (e.g. Thai) is cut at `max`. Text that fits is returned as is.
+ */
+export function truncateExcerpt(text: string, max: number): string {
+  const chars = Array.from(text)
+  if (chars.length <= max) return text
+  const head = chars.slice(0, max).join("")
+  const space = head.lastIndexOf(" ")
+  const cut = space >= max * 0.6 ? head.slice(0, space) : head
+  return `${cut.trimEnd().replace(/[,;:.\-–—]+$/, "")}…`
+}

@@ -46,7 +46,7 @@
 import { computed } from "vue"
 import { useI18n } from "vue-i18n"
 import type { ShareMediaContext, ShareStatsContext, ShareTheme } from "@/types/share"
-import { publicExcerpt, shareGenres, shareScore, shareTier, titleSizeClass } from "../shareCards"
+import { publicExcerpt, shareGenres, shareScore, shareTier, titleSizeClass, truncateExcerpt } from "../shareCards"
 import ShareCardFooter from "./ShareCardFooter.vue"
 import ShareStars from "./ShareStars.vue"
 import ShareTierBadge from "./ShareTierBadge.vue"
@@ -59,6 +59,8 @@ const props = defineProps<{
   theme: ShareTheme
   shortUrl: string
 }>()
+// Sized so the quote fits 3 lines at export size (42px, ~34 chars per line).
+const EXCERPT_MAX_CHARS = 90
 const { t, locale } = useI18n()
 
 const score = computed(() => shareScore(props.media))
@@ -68,8 +70,7 @@ const meta = computed(() => [props.media.releaseYear, ...shareGenres(props.media
 const excerpt = computed(() => {
   const text = publicExcerpt(props.stats.reviewVisibility, props.stats.reviewBody)
   if (!text) return null
-  const chars = Array.from(text)
-  return chars.length > 130 ? `${chars.slice(0, 130).join("").trimEnd()}…` : text
+  return truncateExcerpt(text, EXCERPT_MAX_CHARS)
 })
 const lastDate = computed(() => {
   const raw = props.stats.lastWatchedOn
