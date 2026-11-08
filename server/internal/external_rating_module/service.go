@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"regexp"
 	"sync"
 	"time"
 
@@ -18,10 +19,16 @@ const (
 	freshTTL        = 7 * 24 * time.Hour
 	notFoundTTL     = 24 * time.Hour
 	requestTimeout  = 3 * time.Second
+	coldMissWait    = 700 * time.Millisecond
 	dailyBudget     = 900
 	defaultOMDbURL  = "https://www.omdbapi.com"
 	MediaTypeMovie  = "movie"
 	MediaTypeSeries = "tv"
+)
+
+var (
+	errBudgetExhausted = errors.New("daily OMDb budget exhausted")
+	imdbIDPattern      = regexp.MustCompile(`^tt\d{1,10}$`)
 )
 
 // Store persists cached external ratings.
@@ -69,7 +76,8 @@ type Service struct {
 	resolver IMDbIDResolver
 	budget   *budget
 	group    singleflight.Group
-	timeout  time.Duration
+	timeout  time.Duration // upstream fetch deadline
+	wait     time.Duration // max time a cold-miss request waits for the fetch
 	now      func() time.Time
 }
 
@@ -79,6 +87,7 @@ func NewService(store Store, apiKey string, resolver IMDbIDResolver) *Service {
 		store:    store,
 		resolver: resolver,
 		timeout:  requestTimeout,
+		wait:     coldMissWait,
 		now:      time.Now,
 	}
 	s.budget = &budget{limit: dailyBudget, now: func() time.Time { return s.now() }}
@@ -96,7 +105,8 @@ func (s *Service) Enabled() bool { return s != nil && s.client != nil }
 
 // Get returns external ratings for a title. It never returns an error: on any
 // failure it falls back to stale cache, then to an empty (unavailable) result.
-// knownIMDbID may be empty. The wait is bounded by the service timeout.
+// knownIMDbID may be empty. A stale row is returned immediately and refreshed in
+// the background; a cold miss waits at most coldMissWait.
 func (s *Service) Get(ctx context.Context, mediaType string, tmdbID int, knownIMDbID string) Ratings {
 	if !s.Enabled() {
 		return Ratings{}
@@ -110,29 +120,38 @@ func (s *Service) Get(ctx context.Context, mediaType string, tmdbID int, knownIM
 	if row != nil && s.fresh(row) {
 		return toRatings(row)
 	}
-	if !s.budget.take() {
-		return toRatings(row)
-	}
-
 	key := fmt.Sprintf("%s:%d", mediaType, tmdbID)
-	// The fetch runs detached so a slow upstream still fills the cache for next time.
+	// Fetches run detached from the request so a slow upstream still fills the cache.
 	ch := s.group.DoChan(key, func() (any, error) {
+		// The budget is taken inside the singleflight call so concurrent
+		// requests for one title spend a single unit. It is in-memory, per instance.
+		if !s.budget.take() {
+			return nil, errBudgetExhausted
+		}
 		return s.refresh(mediaType, tmdbID, knownIMDbID, row)
 	})
 
-	timer := time.NewTimer(s.timeout)
+	if row != nil {
+		// Stale: serve it now, the refresh continues in the background.
+		return toRatings(row)
+	}
+
+	// Cold miss: wait briefly, then report unavailable while the fetch keeps going.
+	timer := time.NewTimer(s.wait)
 	defer timer.Stop()
 	select {
 	case res := <-ch:
 		if res.Err != nil {
-			log.Printf("external ratings: refresh %s failed: %v", key, res.Err)
-			return toRatings(row)
+			if !errors.Is(res.Err, errBudgetExhausted) {
+				log.Printf("external ratings: refresh %s failed: %v", key, res.Err)
+			}
+			return Ratings{}
 		}
 		return toRatings(res.Val.(*ExternalRating))
 	case <-timer.C:
-		return toRatings(row)
+		return Ratings{}
 	case <-ctx.Done():
-		return toRatings(row)
+		return Ratings{}
 	}
 }
 
@@ -162,7 +181,8 @@ func (s *Service) refresh(mediaType string, tmdbID int, knownIMDbID string, prev
 
 	row := &ExternalRating{MediaType: mediaType, TMDBID: tmdbID, IMDbID: imdbID, FetchedAt: s.now()}
 
-	if imdbID == "" {
+	if !imdbIDPattern.MatchString(imdbID) {
+		row.IMDbID = "" // never persist or send anything but a well-formed id
 		row.NotFound = true
 	} else {
 		res, err := s.client.fetch(ctx, imdbID)
