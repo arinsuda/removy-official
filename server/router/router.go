@@ -65,7 +65,7 @@ func Register(app *fiber.App, db *gorm.DB, cfg *config.Config, m *mailer.Mailer)
 	app.Get("/health", healthHandler)
 
 	api := app.Group("/api")
-	api.Get("/share/proxy-image", shareImageProxyHandler())
+	api.Get("/share/proxy-image", shareImageProxyHandler(cfg.TrustedProxyHops))
 
 	authSvc := auth_module.RegisterRoutes(api, db, cfg, m, mc, notifSvc)
 

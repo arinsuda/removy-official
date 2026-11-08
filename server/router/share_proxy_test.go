@@ -50,7 +50,7 @@ func (f rtFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r)
 
 func testProxyApp(rt http.RoundTripper, inflight, rate int) *fiber.App {
 	app := fiber.New()
-	app.Get("/p", newShareImageProxyHandler(&http.Client{Transport: rt}, inflight, rate))
+	app.Get("/p", newShareImageProxyHandler(&http.Client{Transport: rt}, inflight, rate, 0))
 	return app
 }
 

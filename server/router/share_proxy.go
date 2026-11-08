@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
+
+	"github.com/arinsuda/movie-hub/internal/shared"
 )
 
 const (
@@ -107,19 +109,19 @@ func shareImageSizeAllowed(u *url.URL) bool {
 
 // shareImageProxyHandler re-serves TMDB images with permissive CORS so the
 // share cards can be rasterised without tainting the canvas.
-func shareImageProxyHandler() fiber.Handler {
+func shareImageProxyHandler(proxyHops int) fiber.Handler {
 	return newShareImageProxyHandler(&http.Client{
 		Timeout: 10 * time.Second,
 		// A redirect could leave the allowlisted host; treat it as a failure.
 		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
-	}, shareProxyMaxInflight, shareProxyRatePerMin)
+	}, shareProxyMaxInflight, shareProxyRatePerMin, proxyHops)
 }
 
-func newShareImageProxyHandler(client *http.Client, maxInflight, ratePerMin int) fiber.Handler {
+func newShareImageProxyHandler(client *http.Client, maxInflight, ratePerMin, proxyHops int) fiber.Handler {
 	sem := make(chan struct{}, maxInflight)
 	limiter := newIPLimiter(ratePerMin, shareProxyMaxClients)
 	return func(c fiber.Ctx) error {
-		if !limiter.allow(c.IP()) {
+		if !limiter.allow(shared.RateLimitIP(c, proxyHops)) {
 			c.Set("Retry-After", "60")
 			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{"error": "too many requests"})
 		}
