@@ -27,5 +27,37 @@
   "styleColor": "Dominant Color",
   "styleBars": "Bookshelf",
   "showUsername": "Show Username",
-  "rankLabel": "Rank #{rank}"
+  "rankLabel": "Rank #{rank}",
+  "imageLoadFailed": "Couldn't load the poster. Check your connection and try again.",
+  "retry": "Try again",
+  "templatesLabel": "Card style",
+  "previewLabel": "Share card preview",
+  "shareTo": "Share to…",
+  "downloadPng": "Download PNG",
+  "copyImage": "Copy image",
+  "imageCopied": "Image copied!",
+  "copyImageUnsupported": "Your browser can't copy images. Download it instead.",
+  "nativeShareFailed": "Couldn't open the share sheet",
+  "myTake": "My take",
+  "myRating": "My rating",
+  "watched": "Watched",
+  "lastWatched": "Last watched",
+  "templates": {
+    "poster": "Poster",
+    "take": "My take",
+    "sticker": "Sticker",
+    "square": "Square",
+    "review": "Review"
+  },
+  "tier": {
+    "hot": "Hot",
+    "fresh": "Fresh",
+    "stale": "Stale"
+  },
+  "theme": {
+    "label": "Card color",
+    "dark": "Dark",
+    "light": "Light",
+    "brand": "POPCORN red"
+  }
 }

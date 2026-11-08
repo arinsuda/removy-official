@@ -99,6 +99,10 @@ function onKeydown(e: KeyboardEvent) {
   background: var(--color-text-primary);
   border-color: var(--color-text-primary);
 }
+.app-tabs__tab.is-active:hover:not(:disabled) {
+  color: var(--color-surface);
+  border-color: var(--color-text-primary);
+}
 .app-tabs__tab:disabled {
   opacity: 0.5;
   cursor: not-allowed;
