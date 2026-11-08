@@ -19,7 +19,12 @@ export function dedupeMedia(items: HomeMedia[]): HomeMedia[] {
 export function interleave(...lists: HomeMedia[][]): HomeMedia[] {
   const out: HomeMedia[] = []
   const longest = Math.max(0, ...lists.map((l) => l.length))
-  for (let i = 0; i < longest; i++) for (const l of lists) if (l[i]) out.push(l[i])
+  for (let i = 0; i < longest; i++) {
+    for (const l of lists) {
+      const item = l[i]
+      if (item) out.push(item)
+    }
+  }
   return dedupeMedia(out)
 }
 
