@@ -53,7 +53,7 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, ref, useId, useTemplateRef, watch } from "vue"
+import { nextTick, onBeforeUnmount, ref, useId, useTemplateRef, watch } from "vue"
 import { useI18n } from "vue-i18n"
 import { ChevronLeft, ChevronRight } from "lucide-vue-next"
 import type { RouteLocationRaw } from "vue-router"
@@ -122,7 +122,6 @@ watch(track, async (el) => {
     resizeObserver.observe(el)
   }
 })
-onMounted(measure)
 onBeforeUnmount(() => resizeObserver?.disconnect())
 </script>
 
@@ -176,7 +175,6 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
   overscroll-behavior-x: contain;
   scroll-snap-type: x proximity;
   scrollbar-width: none;
-  /* Room for the hover lift and focus ring that overflow would clip. */
   padding: 6px 2px 8px;
   margin: -6px -2px -8px;
 }

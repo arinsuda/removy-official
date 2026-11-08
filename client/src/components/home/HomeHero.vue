@@ -80,11 +80,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue"
+import { computed, ref } from "vue"
 import { useI18n } from "vue-i18n"
 import { Compass, Flame, Info, Pause, Play, Sparkles } from "lucide-vue-next"
 import AppButton from "@/components/ui/AppButton.vue"
 import MediaRating from "@/components/movie/MediaRating.vue"
+import { useCarouselAutoplay } from "@/composables/useCarouselAutoplay"
 import { backdropSrc, detailRoute, type HomeMedia } from "./homeMedia"
 
 const props = defineProps<{
@@ -95,60 +96,10 @@ const props = defineProps<{
 }>()
 const { t } = useI18n()
 
-const AUTOPLAY_MS = 6000
-const index = ref(0)
 const failed = ref(new Set<string>())
-const hovering = ref(false)
-const focused = ref(false)
-const userPaused = ref(false)
-const tabHidden = ref(false)
-const reduceMotion = ref(false)
+const { index, userPaused, hovering, focused, playing } = useCarouselAutoplay(() => props.items.length)
 
 const current = computed(() => props.items[index.value] ?? props.items[0]!)
-const playing = computed(
-  () =>
-    props.items.length > 1 &&
-    !reduceMotion.value &&
-    !userPaused.value &&
-    !hovering.value &&
-    !focused.value &&
-    !tabHidden.value,
-)
-
-let timer: ReturnType<typeof setInterval> | null = null
-function stop() {
-  if (timer) clearInterval(timer)
-  timer = null
-}
-function schedule() {
-  stop()
-  if (!playing.value) return
-  timer = setInterval(() => (index.value = (index.value + 1) % props.items.length), AUTOPLAY_MS)
-}
-// Restarting on every index change gives a manual pick a full interval.
-watch([playing, index, () => props.items.length], schedule)
-watch(
-  () => props.items,
-  () => (index.value = 0),
-)
-
-let motionQuery: MediaQueryList | null = null
-const syncMotion = () => (reduceMotion.value = motionQuery?.matches ?? false)
-const syncVisibility = () => (tabHidden.value = document.hidden)
-
-onMounted(() => {
-  motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)")
-  syncMotion()
-  syncVisibility()
-  motionQuery.addEventListener("change", syncMotion)
-  document.addEventListener("visibilitychange", syncVisibility)
-  schedule()
-})
-onBeforeUnmount(() => {
-  stop()
-  motionQuery?.removeEventListener("change", syncMotion)
-  document.removeEventListener("visibilitychange", syncVisibility)
-})
 </script>
 
 <style scoped>
@@ -159,13 +110,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
   background: var(--color-surface);
 }
-.hero--loading {
-  background: var(--color-surface-2);
-}
-.hero__slide {
-  position: absolute;
-  inset: 0;
-}
+.hero__slide,
 .hero__media {
   position: absolute;
   inset: 0;
@@ -176,9 +121,7 @@ onBeforeUnmount(() => {
   object-fit: cover;
   object-position: center 25%;
 }
-.hero__backdrop--fallback {
-  background: var(--color-surface-2);
-}
+.hero__backdrop--fallback,
 .hero__overlay {
   position: absolute;
   inset: 0;
@@ -232,7 +175,6 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: var(--text-small);
   color: var(--color-text-secondary);
 }
 .hero__overview {
