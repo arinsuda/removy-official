@@ -1,6 +1,7 @@
 <template>
+  <div v-if="!items.length && loading" class="hero hero--loading" aria-hidden="true" />
   <section
-    v-if="items.length"
+    v-else-if="items.length"
     class="hero"
     :aria-label="t('home.hero.label')"
     aria-roledescription="carousel"
@@ -90,6 +91,7 @@ const props = defineProps<{
   items: HomeMedia[]
   /** "hot" = ป๊อปร้อน titles, "popular" = TMDB fallback. */
   source: "hot" | "popular"
+  loading?: boolean
 }>()
 const { t } = useI18n()
 
@@ -156,6 +158,9 @@ onBeforeUnmount(() => {
   height: 380px;
   overflow: hidden;
   background: var(--color-surface);
+}
+.hero--loading {
+  background: var(--color-surface-2);
 }
 .hero__slide {
   position: absolute;

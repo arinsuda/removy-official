@@ -6,7 +6,14 @@
     "badge": "Featured",
     "details": "View details",
     "explore": "Explore all",
-    "slide": "Slide {n}: {title}"
+    "slide": "Slide {n}: {title}",
+    "eyebrow": {
+      "hot": "Hot on POPCORN",
+      "popular": "Popular now"
+    },
+    "play": "Start slideshow",
+    "pause": "Pause slideshow",
+    "slides": "Choose a slide"
   },
   "sections": {
     "popularMovies": "Popular Movies",
@@ -19,7 +26,9 @@
   "rail": {
     "seeAll": "See all",
     "error": "Could not load this list",
-    "empty": "Nothing here yet"
+    "empty": "Nothing here yet",
+    "prev": "Scroll left",
+    "next": "Scroll right"
   },
   "genres": {
     "label": "Quick genres",
@@ -33,7 +42,10 @@
   },
   "recommended": {
     "title": "Recommended for you",
-    "subtitle": "Picked from the genres you love"
+    "subtitle": "Picked from the genres you love",
+    "ctaTitle": "Tell us which genres you love",
+    "ctaDescription": "Pick your favorite genres and we will line up titles for you",
+    "ctaAction": "Pick genres"
   },
   "popular": {
     "title": "Popular movies",
@@ -46,5 +58,27 @@
   "topRated": {
     "title": "Top rated",
     "subtitle": "Highest rated by viewers worldwide"
+  },
+  "popcorn": {
+    "title": "Hot on POPCORN",
+    "subtitle": "Movies and series the community is actually rating",
+    "tabs": "POPCORN score tier",
+    "empty": "Nothing in this tier yet",
+    "tiers": {
+      "hot": "Hot",
+      "fresh": "Fresh",
+      "stale": "Stale"
+    }
+  },
+  "friends": {
+    "title": "What friends are popping",
+    "subtitle": "Latest activity from people you follow",
+    "emptyTitle": "No activity from friends yet",
+    "emptyDescription": "Follow friends to see what they are popping right now",
+    "findPeople": "Find people"
+  },
+  "unrated": {
+    "title": "Nobody has popped yet",
+    "subtitle": "In theaters with no reviews. Be the first to review"
   }
 }

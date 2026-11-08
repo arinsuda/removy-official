@@ -1,6 +1,6 @@
 <template>
   <div class="home">
-    <HomeHero :items="data.hero.value.items" :source="data.hero.value.source" />
+    <HomeHero :items="data.hero.value.items" :source="data.hero.value.source" :loading="data.poolLoading.value" />
 
     <div class="home__content">
       <HomeTierRail
