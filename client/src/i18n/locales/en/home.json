@@ -11,6 +11,7 @@
       "hot": "Hot on POPCORN",
       "popular": "Popular now"
     },
+    "beFirst": "Be the first to pop",
     "play": "Start slideshow",
     "pause": "Pause slideshow",
     "slides": "Choose a slide"
@@ -64,6 +65,7 @@
     "subtitle": "Movies and series the community is actually rating",
     "tabs": "POPCORN score tier",
     "empty": "Nothing in this tier yet",
+    "backfill": "Not hot yet, try these",
     "tiers": {
       "hot": "Hot",
       "fresh": "Fresh",

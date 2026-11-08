@@ -14,7 +14,12 @@
         <HomeGenreChips />
       </div>
     </template>
-    <HomePosterCard v-for="item in shown" :key="item.key" :item="item" rail="popcorn" />
+    <template v-for="(item, i) in shown" :key="item.key">
+      <div v-if="i === backfillAt" class="tier-divider" role="separator">
+        <span>{{ t("home.popcorn.backfill") }}</span>
+      </div>
+      <HomePosterCard :item="item" rail="popcorn" />
+    </template>
   </HomeRail>
 </template>
 
@@ -26,7 +31,7 @@ import HomeGenreChips from "./HomeGenreChips.vue"
 import HomePosterCard from "./HomePosterCard.vue"
 import HomeRail from "./HomeRail.vue"
 import type { HomeMedia } from "./homeMedia"
-import { countByTier, filterByTier } from "./popcornHome"
+import { countByTier, tierWithBackfill } from "./popcornHome"
 
 type TabTier = "hot" | "fresh" | "stale"
 const TIERS: TabTier[] = ["hot", "fresh", "stale"]
@@ -40,7 +45,9 @@ const counts = computed(() => countByTier(props.items))
 const tabs = computed(() =>
   TIERS.map((key) => ({ key, label: t(`home.popcorn.tiers.${key}`), disabled: counts.value[key] === 0 })),
 )
-const shown = computed(() => filterByTier(props.items, tier.value))
+const filled = computed(() => tierWithBackfill(props.items, tier.value))
+const shown = computed(() => filled.value.items)
+const backfillAt = computed(() => filled.value.backfillAt)
 
 // Land on the first tier that has titles once data arrives.
 watch(
@@ -53,6 +60,21 @@ watch(
 </script>
 
 <style scoped>
+.tier-divider.tier-divider {
+  flex: 0 0 112px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  gap: 8px;
+  padding: 0 12px;
+  border-left: 1px dashed var(--color-border-strong);
+  color: var(--color-text-muted);
+  font-size: var(--text-caption);
+  line-height: 1.4;
+  text-align: center;
+}
 .tier-toolbar {
   display: flex;
   flex-direction: column;

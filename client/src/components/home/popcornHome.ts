@@ -60,3 +60,22 @@ export function pickHeroItems(pool: HomeMedia[], fallback: HomeMedia[]): HeroPic
   if (hot.length >= HERO_MIN_HOT) return { items: hot.slice(0, HERO_MAX), source: "hot" }
   return { items: fallback.slice(0, HERO_MAX), source: "popular" }
 }
+
+export const TIER_MIN_ITEMS = 6
+
+export interface TierRailItems {
+  items: HomeMedia[]
+  /** Index where backfilled titles start, or -1 when nothing was added. */
+  backfillAt: number
+}
+
+/** The tier's own titles, topped up with fresh then popular others when fewer than `min`. */
+export function tierWithBackfill(items: HomeMedia[], tier: PopcornTier, min = TIER_MIN_ITEMS, limit = 20): TierRailItems {
+  const own = filterByTier(items, tier, limit)
+  if (own.length >= min) return { items: own, backfillAt: -1 }
+  const taken = new Set(own.map((m) => m.key))
+  const rest = items.filter((m) => !taken.has(m.key))
+  const extra = [...filterByTier(rest, "fresh", limit), ...rest.filter((m) => mediaTier(m) !== "fresh")]
+  const filled = extra.slice(0, Math.max(0, min - own.length))
+  return { items: [...own, ...filled], backfillAt: filled.length ? own.length : -1 }
+}

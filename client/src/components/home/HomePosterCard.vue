@@ -23,8 +23,11 @@
           <span>{{ item.title }}</span>
         </div>
         <div class="rating-badge">
-          <MediaRating :ratings="item.ratings" :vote-average="item.vote_average" />
+          <PopcornScoreBadge :average="popcorn.average" :count="popcorn.count" />
         </div>
+        <span v-if="tmdb" class="tmdb-pill" :aria-label="t('media.rating.tmdbScore', { score: tmdb })">
+          <span aria-hidden="true">TMDB {{ tmdb }}</span>
+        </span>
       </div>
       <div class="poster-info">
         <h3 class="poster-title">{{ item.title }}</h3>
@@ -60,7 +63,8 @@
 
 <script setup lang="ts">
 import { computed, ref, useTemplateRef } from "vue"
-import MediaRating from "@/components/movie/MediaRating.vue"
+import { useI18n } from "vue-i18n"
+import PopcornScoreBadge from "@/components/movie/PopcornScoreBadge.vue"
 import PopupCard from "@/components/movie/PopupCard.vue"
 import { popcornTier } from "@/components/movie/popcornTier"
 import { useHomePopup } from "@/composables/useHomePopup"
@@ -72,12 +76,19 @@ const props = defineProps<{
   rail: string
 }>()
 
+const { t } = useI18n()
 const popup = useHomePopup()
 const wrap = useTemplateRef<HTMLElement>("wrap")
 const failed = ref(false)
 
 const popupKey = computed(() => `${props.rail}:${props.item.key}`)
 const state = computed(() => popup.getState(props.item))
+const popcorn = computed(() => props.item.ratings?.popcorn ?? { average: 0, count: 0 })
+const tmdb = computed(() => {
+  const src = props.item.ratings?.tmdb
+  const v = src ? (src.available ? src.average : 0) : props.item.vote_average
+  return v && v > 0 ? v.toFixed(1) : null
+})
 const tier = computed(() => {
   const p = props.item.ratings?.popcorn
   return popcornTier(p?.average, p?.count)
@@ -156,7 +167,20 @@ const tier = computed(() => {
 .rating-badge {
   position: absolute;
   top: 6px;
+  left: 6px;
+}
+.tmdb-pill {
+  position: absolute;
+  top: 6px;
   right: 6px;
+  padding: 2px 6px;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--color-surface) 80%, transparent);
+  color: var(--color-text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
 }
 .poster-fallback {
   display: flex;
