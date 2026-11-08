@@ -238,3 +238,20 @@ export interface PersonTVCredits {
   crew: TVSeries[]
 }
 
+
+export interface WatchProvider {
+  provider_id: number
+  provider_name: string
+  logo_path: string
+  display_priority: number
+}
+
+export interface WatchProviders {
+  region: string
+  link: string
+  flatrate: WatchProvider[]
+  free: WatchProvider[]
+  ads: WatchProvider[]
+  rent: WatchProvider[]
+  buy: WatchProvider[]
+}

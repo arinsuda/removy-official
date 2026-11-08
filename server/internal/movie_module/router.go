@@ -22,6 +22,7 @@ func RegisterRoutes(router fiber.Router, ratingRepo shared.RatingStatsReader, ex
 	movies.Get("/recommended", h.GetRecommended)
 	movies.Get("/:id", h.GetByID)
 	movies.Get("/:id/similar", h.GetSimilar)
+	movies.Get("/:id/watch-providers", h.GetMovieWatchProviders)
 
 	series := router.Group("/tv")
 	series.Get("/popular", h.GetPopularSeries)
@@ -31,6 +32,7 @@ func RegisterRoutes(router fiber.Router, ratingRepo shared.RatingStatsReader, ex
 	series.Get("/genres", h.GetSeriesGenres)
 	series.Get("/:id", h.GetSeriesByID)
 	series.Get("/:id/similar", h.GetSimilarSeries)
+	series.Get("/:id/watch-providers", h.GetSeriesWatchProviders)
 
 	actors := router.Group("/actors")
 	actors.Get("/search", h.SearchActor)

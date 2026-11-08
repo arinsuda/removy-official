@@ -75,6 +75,18 @@
     "showLess": "ย่อลง",
     "reviews": "รีวิวจาก POPCORN",
     "similar": "เรื่องที่คล้ายกัน",
+    "providers": {
+      "title": "ดูได้ที่ไหน",
+      "region": "ประเทศ",
+      "stream": "สตรีมมิ่ง",
+      "free": "ฟรี / มีโฆษณา",
+      "rent": "เช่า",
+      "buy": "ซื้อ",
+      "empty": "ยังไม่มีให้รับชมในประเทศ {region}",
+      "error": "โหลดข้อมูลแหล่งรับชมไม่สำเร็จ",
+      "open": "ดูตัวเลือกทั้งหมดบน TMDB",
+      "attribution": "ข้อมูลจาก JustWatch"
+    },
     "status": {
       "Released": "เข้าฉายแล้ว",
       "PostProduction": "หลังการถ่ายทำ",

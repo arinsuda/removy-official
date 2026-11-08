@@ -56,6 +56,7 @@
             :is-watched="activity.isWatched.value"
             :is-liked="activity.isLiked.value"
           />
+          <DetailWatchProviders class="detail__providers" :type="config.type" :id="data.id" />
           <RatingDistribution class="detail__distribution" :reviews="reviewList" />
           <DetailFacts class="detail__facts" :facts="data.facts" :homepage="data.homepage" />
         </aside>
@@ -127,6 +128,7 @@ import DetailFacts from "./DetailFacts.vue"
 import DetailHero from "./DetailHero.vue"
 import DetailOverview from "./DetailOverview.vue"
 import DetailVideos from "./DetailVideos.vue"
+import DetailWatchProviders from "./DetailWatchProviders.vue"
 import PopcornMeter from "./PopcornMeter.vue"
 import RatingDistribution from "./RatingDistribution.vue"
 import TvSeasonsRail from "./TvSeasonsRail.vue"
@@ -270,13 +272,14 @@ watch(displayId, (_id, prev) => {
 .detail__meter { order: 1; }
 .detail__activity { order: 2; }
 .detail__overview { order: 3; }
-.detail__seasons { order: 4; }
-.detail__cast { order: 5; }
-.detail__videos { order: 6; }
-.detail__reviews { order: 7; scroll-margin-top: 5rem; }
-.detail__distribution { order: 8; }
-.detail__facts { order: 9; }
-.detail__similar { order: 10; margin-inline: -1rem; }
+.detail__providers { order: 4; }
+.detail__seasons { order: 5; }
+.detail__cast { order: 6; }
+.detail__videos { order: 7; }
+.detail__reviews { order: 8; scroll-margin-top: 5rem; }
+.detail__distribution { order: 9; }
+.detail__facts { order: 10; }
+.detail__similar { order: 11; margin-inline: -1rem; }
 
 @media (min-width: 640px) {
   .detail__body { padding-inline: 1.5rem; }

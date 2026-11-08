@@ -12,13 +12,16 @@ import (
 type MovieService struct {
 	ratingRepo shared.RatingStatsReader
 	external   *external.Service
+
+	providers      *providersCache
+	fetchProviders func(kind string, id int, region string) (*tmdb.WatchProviders, error)
 }
 
 // SetExternalRatings enables IMDb and Rotten Tomatoes on detail responses.
 func (s *MovieService) SetExternalRatings(ext *external.Service) { s.external = ext }
 
 func NewMovieService(repo shared.RatingStatsReader) *MovieService {
-	return &MovieService{ratingRepo: repo}
+	return &MovieService{ratingRepo: repo, providers: newProvidersCache(), fetchProviders: tmdb.GetWatchProviders}
 }
 
 func (s *MovieService) GetPopular(ctx context.Context, page int) (*tmdb.PaginatedResult[MovieDTO], error) {
