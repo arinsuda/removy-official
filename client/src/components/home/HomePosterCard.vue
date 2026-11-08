@@ -46,6 +46,7 @@
         >
           <PopupCard
             :movie="item.source"
+            :ratings="popup.detailRatings(item)"
             :media-type="item.type"
             :current-trailer="state.currentTrailer.value"
             :trailer-unavailable="state.trailerUnavailable.value"

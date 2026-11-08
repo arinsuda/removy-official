@@ -114,7 +114,7 @@ describe("MediaRating", () => {
     expect(w.get("[data-source=rt]").text()).toContain("94%")
   })
 
-  it("hides unavailable sources", () => {
+  it("detail variant keeps a stable row per source and shows an em dash when unavailable", () => {
     const ratings: MediaRatings = {
       ...full,
       imdb: { average: null, count: 0, available: false, scale: 10 },
@@ -122,7 +122,9 @@ describe("MediaRating", () => {
       tmdb: src(null),
     }
     const w = mountIt({ variant: "detail", ratings })
-    expect(w.find("[data-source]").exists()).toBe(false)
+    expect(w.findAll("[data-source]").map((e) => e.attributes("data-source"))).toEqual(["tmdb", "imdb", "rt"])
+    expect(w.get("[data-source=imdb]").text()).toContain("—")
+    expect(w.get("[data-source=rt]").text()).toContain("—")
   })
 
   it("uses legacy voteAverage for TMDB when ratings.tmdb is absent", () => {

@@ -3,6 +3,14 @@
 @theme static {
   --breakpoint-xs: 30rem;
 
+  /* Rating source brand marks (RatingSourceMark.vue only) */
+  --color-mark-tmdb-from: #90cea1;
+  --color-mark-tmdb-to: #01b4e4;
+  --color-mark-tmdb-ink: #0d253f;
+  --color-mark-imdb: #f5c518;
+  --color-mark-rt: #fa320a;
+  --color-mark-rt-leaf: #5ba826;
+
   --color-surface: #0b0b0c;
   --color-surface-2: #151517;
   --color-surface-3: #202023;
