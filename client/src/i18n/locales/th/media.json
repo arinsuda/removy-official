@@ -33,22 +33,108 @@
       "voteCount": "({count} รีวิว)",
       "tmdbRating": "TMDB Rating",
       "popcornRating": "POPCORN Rating",
-      "firstAirDate": "เริ่มออกอากาศ"
+      "firstAirDate": "เริ่มออกอากาศ",
+      "runtimeHours": "{h} ชม. {m} นาที",
+      "seasons": "{count} ซีซัน | {count} ซีซัน",
+      "episodes": "{count} ตอน | {count} ตอน"
     },
     "actions": {
-      "like": "ถูกใจ",
+      "like": "ถูกใจเรื่องนี้",
       "liked": "ถูกใจแล้ว",
       "watchlist": "อยากดู",
       "inWatchlist": "อยากดูแล้ว",
       "watched": "ดูแล้ว",
       "inWatched": "ดูแล้ว",
       "writeReview": "เขียนรีวิวของคุณ",
-      "playTrailer": "ดูตัวอย่าง"
+      "playTrailer": "ดูตัวอย่าง",
+      "label": "การกระทำกับเรื่องนี้",
+      "rate": "ให้คะแนน",
+      "editRating": "แก้คะแนน",
+      "log": "บันทึกการดู",
+      "unlike": "ยกเลิกถูกใจ"
     },
     "noOverview": "ไม่มีเรื่องย่ออย่างเป็นทางการ",
     "noCast": "ไม่พบข้อมูลนักแสดงสำหรับเรื่องนี้",
     "noTrailers": "ไม่มีตัวอย่างวิดีโอให้บริการ",
-    "noSimilar": "ไม่พบเรื่องอื่นที่คล้ายกัน"
+    "noSimilar": "ไม่พบเรื่องอื่นที่คล้ายกัน",
+    "loginRequired": "กรุณาเข้าสู่ระบบก่อนใช้งาน",
+    "actionFailed": "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง",
+    "back": "ย้อนกลับ",
+    "loadFailed": "โหลดข้อมูลเรื่องนี้ไม่สำเร็จ",
+    "notFound": {
+      "movie": "ไม่พบภาพยนตร์เรื่องนี้",
+      "tv": "ไม่พบซีรีส์เรื่องนี้",
+      "hint": "เรื่องนี้อาจถูกลบไปแล้ว หรือลิงก์ไม่ถูกต้อง",
+      "browse": {
+        "movie": "ดูภาพยนตร์ทั้งหมด",
+        "tv": "ดูซีรีส์ทั้งหมด"
+      }
+    },
+    "overview": "เรื่องย่อ",
+    "readMore": "อ่านเพิ่ม",
+    "showLess": "ย่อลง",
+    "reviews": "รีวิวจาก POPCORN",
+    "similar": "เรื่องที่คล้ายกัน",
+    "status": {
+      "Released": "เข้าฉายแล้ว",
+      "PostProduction": "หลังการถ่ายทำ",
+      "InProduction": "กำลังถ่ายทำ",
+      "Planned": "วางแผนสร้าง",
+      "Rumored": "ข่าวลือ",
+      "Canceled": "ยกเลิก",
+      "ReturningSeries": "ยังออกอากาศต่อ",
+      "Ended": "จบแล้ว",
+      "Pilot": "ตอนนำร่อง"
+    },
+    "crew": {
+      "director": "กำกับโดย",
+      "creator": "สร้างโดย"
+    },
+    "meter": {
+      "noReviews": "ยังไม่มีรีวิว มาให้คะแนนเป็นคนแรกสิ"
+    },
+    "distribution": {
+      "title": "สัดส่วนคะแนน",
+      "empty": "ยังไม่มีรีวิวสาธารณะ",
+      "row": "{value} ดาว: {count} รีวิว | {value} ดาว: {count} รีวิว",
+      "basedOn": "จากรีวิวสาธารณะ {count} รายการ | จากรีวิวสาธารณะ {count} รายการ"
+    },
+    "activity": {
+      "title": "กิจกรรมของคุณ",
+      "guest": "เข้าสู่ระบบเพื่อให้คะแนน บันทึกการดู และเก็บเรื่องที่ชอบ",
+      "signIn": "เข้าสู่ระบบ",
+      "rating": "คะแนนของคุณ",
+      "notRated": "ยังไม่ได้ให้คะแนน",
+      "watched": "ดูแล้ว",
+      "watchCount": "{count} ครั้ง | {count} ครั้ง",
+      "last": "ล่าสุด {date}",
+      "notWatched": "ยังไม่ได้บันทึกการดู",
+      "lists": "รายการ",
+      "noLists": "ยังไม่อยู่ในรายการใด"
+    },
+    "facts": {
+      "title": "รายละเอียด",
+      "homepage": "เว็บไซต์",
+      "originalTitle": "ชื่อต้นฉบับ",
+      "status": "สถานะ",
+      "releaseDate": "วันที่เข้าฉาย",
+      "firstAirDate": "ออกอากาศครั้งแรก",
+      "lastAirDate": "ออกอากาศล่าสุด",
+      "budget": "ทุนสร้าง",
+      "revenue": "รายได้รวม",
+      "networks": "เครือข่าย",
+      "seasons": "จำนวนซีซัน",
+      "episodes": "จำนวนตอน"
+    },
+    "cast": {
+      "title": "นักแสดง"
+    },
+    "videos": {
+      "title": "วิดีโอ"
+    },
+    "seasons": {
+      "title": "ซีซัน"
+    }
   },
   "search": {
     "title": "ผลการค้นหาสำหรับ \"{query}\"",
