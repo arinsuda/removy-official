@@ -41,6 +41,7 @@ func RegisterRoutes(api fiber.Router, db *gorm.DB, cfg *config.Config, m *mailer
 	api.Post("/auth/handoff/confirm", public, h.Confirm)
 	api.Post("/auth/handoff/send-code", rateLimit(cfg.TrustedProxyHops, 5, time.Minute), h.SendCode)
 
+	api.Get("/link/remote", h.Remote)
 	api.Post("/link/handoff", mw.RequireAuth, h.CreateHandoff)
 	api.Get("/link/status", mw.RequireAuth, h.Status)
 	api.Delete("/link/:platform", mw.RequireAuth, h.Unlink)

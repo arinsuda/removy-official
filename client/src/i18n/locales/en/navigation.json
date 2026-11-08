@@ -46,6 +46,7 @@
       "title": "Linking account",
       "working": "Signing you in...",
       "failed": "The link is invalid or has expired. Please go back and try again.",
+      "backToPlanzi": "Back to PLANZI",
       "backToLogin": "Back to login",
       "confirmTitle": "Confirm it's you",
       "confirmDesc": "An account with {email} already exists on POPCORN. Confirm ownership to link it with PLANZI.",

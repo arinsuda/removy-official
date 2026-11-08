@@ -195,3 +195,13 @@ func (h *Handler) fail(c fiber.Ctx, err error) error {
 		return errJSON(c, fiber.StatusInternalServerError, "internal server error")
 	}
 }
+
+// Remote returns the other platform's public web URL so the handoff page can offer a way back.
+// Public and token-free; hidden (404) when linking is disabled or no URL is configured.
+func (h *Handler) Remote(c fiber.Ctx) error {
+	if !h.svc.Enabled() || h.cfg.Link.RemoteWebURL == "" {
+		return errJSON(c, fiber.StatusNotFound, "not found")
+	}
+	c.Set(fiber.HeaderCacheControl, "public, max-age=300")
+	return c.JSON(fiber.Map{"web_url": h.cfg.Link.RemoteWebURL})
+}

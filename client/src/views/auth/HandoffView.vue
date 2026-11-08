@@ -12,6 +12,7 @@
         <AppButton to="/login" block>
           {{ t("navigation.link.handoff.backToLogin") }}
         </AppButton>
+        <HandoffBackLink :url="planziUrl" />
       </template>
 
       <template v-else>
@@ -64,6 +65,7 @@
         </p>
 
         <p v-if="errorMsg" class="text text--error">{{ errorMsg }}</p>
+        <HandoffBackLink :url="planziUrl" />
       </template>
     </div>
   </div>
@@ -74,9 +76,11 @@ import { onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
 import AppButton from "@/components/ui/AppButton.vue"
+import HandoffBackLink from "@/components/auth/HandoffBackLink.vue"
 import { linkApi } from "@/api/endpoints/link"
 import type { LinkConfirmRequired, LinkSessionResponse } from "@/api/endpoints/link"
 import { useAuthStore } from "@/stores/auth"
+import { safeWebUrl } from "@/utils/safeWebUrl"
 import { handoffErrorKey } from "@/utils/handoffError"
 import { playPlatformEnter } from "@/utils/platformTransition"
 
@@ -92,6 +96,15 @@ const code = ref("")
 const codeSent = ref(false)
 const busy = ref(false)
 const errorMsg = ref("")
+const planziUrl = ref("")
+
+async function loadPlanziUrl() {
+  try {
+    planziUrl.value = safeWebUrl((await linkApi.remote()).data.web_url)
+  } catch {
+    planziUrl.value = "" // linking disabled or unreachable: hide the button
+  }
+}
 
 function done(data: LinkSessionResponse) {
   authStore.applySession(data)
@@ -108,6 +121,7 @@ function errorFor(err: unknown): string {
 }
 
 onMounted(async () => {
+  void loadPlanziUrl()
   const token = readToken()
   // never leave the one-time token in the address bar / history
   history.replaceState(history.state, "", window.location.pathname)
