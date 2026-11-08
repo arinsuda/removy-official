@@ -113,6 +113,34 @@ type TVSeriesDetail struct {
 	Homepage            string              `json:"homepage"`
 	Genres              []Genre             `json:"genres"`
 	ProductionCompanies []ProductionCompany `json:"production_companies"`
+	Seasons             []Season            `json:"seasons"`
+	LastAirDate         string              `json:"last_air_date"`
+	EpisodeRunTime      []int               `json:"episode_run_time"`
+	Networks            []Network           `json:"networks"`
+	CreatedBy           []Creator           `json:"created_by"`
+	InProduction        bool                `json:"in_production"`
+}
+
+type Season struct {
+	ID           int    `json:"id"`
+	Name         string `json:"name"`
+	SeasonNumber int    `json:"season_number"`
+	EpisodeCount int    `json:"episode_count"`
+	AirDate      string `json:"air_date"`
+	PosterPath   string `json:"poster_path"`
+	Overview     string `json:"overview"`
+}
+
+type Network struct {
+	ID       int    `json:"id"`
+	Name     string `json:"name"`
+	LogoPath string `json:"logo_path"`
+}
+
+type Creator struct {
+	ID          int    `json:"id"`
+	Name        string `json:"name"`
+	ProfilePath string `json:"profile_path"`
 }
 
 type Person struct {

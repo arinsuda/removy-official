@@ -1,0 +1,198 @@
+import { computed, ref, watch, type Ref } from "vue"
+import { useI18n } from "vue-i18n"
+import { isAxiosError } from "axios"
+import { useRoute, useRouter } from "vue-router"
+import { libraryApi } from "@/api/endpoints/library"
+import { mediaApi } from "@/api/endpoints/media"
+import { watchLogApi } from "@/api/endpoints/watchLog"
+import { useAuthStore } from "@/stores/auth"
+import { useToast } from "@/composables/useToast"
+import type { MediaStats } from "@/types/movie"
+import type { WatchSummaryResponse } from "@/types/watchLog"
+
+type MediaKind = "movie" | "tv"
+type ListKind = "watchlist" | "watched"
+type PendingAction = "like" | "watchlist" | "watched"
+
+/**
+ * The signed-in user's relationship to one title: stats, like, watchlist,
+ * watched and watch-log summary. Actions always act on the id the ref holds
+ * when they run; pass 0 to keep it idle.
+ */
+export function useMediaActivity(type: MediaKind, idRef: Ref<number>) {
+  const { t } = useI18n()
+  const auth = useAuthStore()
+  const router = useRouter()
+  const route = useRoute()
+  const toast = useToast()
+
+  const stats = ref<MediaStats | null>(null)
+  const itemIds = ref<Record<ListKind, number | null>>({ watchlist: null, watched: null })
+  const watchSummary = ref<WatchSummaryResponse | null>(null)
+  const pending = ref(new Set<PendingAction>())
+
+  const isLiked = computed(() => Boolean(stats.value?.liked_at))
+  const isWatchlisted = computed(() => itemIds.value.watchlist !== null)
+  const isWatched = computed(() => itemIds.value.watched !== null)
+
+  function reset() {
+    stats.value = null
+    itemIds.value = { watchlist: null, watched: null }
+    watchSummary.value = null
+    pending.value = new Set()
+  }
+
+  async function loadStats(id: number) {
+    try {
+      const res = await mediaApi.getMediaStats(type, id)
+      if (id !== idRef.value) return
+      stats.value = res.data.stats
+    } catch (err) {
+      console.error("load media stats failed:", err)
+    }
+  }
+
+  async function loadLists(id: number) {
+    if (!auth.isLoggedIn) return
+    try {
+      const res = await libraryApi.getOwnMediaStatus(id, type)
+      if (id !== idRef.value) return
+      const lists = res.data?.in_lists ?? []
+      itemIds.value = {
+        watchlist: lists.find(l => l.list_type === "watchlist")?.item_id ?? null,
+        watched: lists.find(l => l.list_type === "watched")?.item_id ?? null,
+      }
+    } catch (err) {
+      console.error("load library status failed:", err)
+    }
+  }
+
+  async function loadWatchSummary(id: number) {
+    if (!auth.isLoggedIn) return
+    try {
+      const res = await watchLogApi.getMyWatchLogs(type, id)
+      if (id !== idRef.value) return
+      watchSummary.value = res.data.summary
+    } catch (err) {
+      console.error("load watch summary failed:", err)
+    }
+  }
+
+  async function load() {
+    const id = idRef.value
+    reset()
+    if (!id) return
+    await Promise.all([loadStats(id), loadLists(id), loadWatchSummary(id)])
+  }
+
+  /** Returns true when signed in; otherwise explains and sends the guest to login. */
+  function requireLogin(): boolean {
+    if (auth.isLoggedIn) return true
+    toast.error(t("media.detail.loginRequired"))
+    router.push({ name: "login", query: { redirect: route.fullPath } })
+    return false
+  }
+
+  /** Runs `fn` for the current id unless the same action is already in flight. */
+  async function guarded(action: PendingAction, fn: (id: number) => Promise<void>) {
+    const id = idRef.value
+    if (!id || !requireLogin() || pending.value.has(action)) return
+    pending.value.add(action)
+    try {
+      await fn(id)
+    } catch (err) {
+      console.error(`${action} failed:`, err)
+      toast.error(t("media.detail.actionFailed"))
+    } finally {
+      pending.value.delete(action)
+    }
+  }
+
+  function bumpStat(key: "like_count" | "watchlist_count", delta: number) {
+    if (stats.value) stats.value = { ...stats.value, [key]: Math.max(0, stats.value[key] + delta) }
+  }
+
+  const toggleLike = () =>
+    guarded("like", async id => {
+      if (isLiked.value) {
+        await mediaApi.unlikeMedia(type, id)
+        if (id !== idRef.value) return
+        if (stats.value) stats.value = { ...stats.value, liked_at: null }
+        bumpStat("like_count", -1)
+      } else {
+        await mediaApi.likeMedia(type, id)
+        if (id !== idRef.value) return
+        if (stats.value) stats.value = { ...stats.value, liked_at: new Date().toISOString() }
+        bumpStat("like_count", 1)
+      }
+    })
+
+  /** Adds to a list, treating "already in list" (409) as success. Returns the item id when known. */
+  async function addToList(id: number, list: ListKind): Promise<number | null> {
+    try {
+      const res = await libraryApi.addItem({
+        media_id: id,
+        media_type: type,
+        list_type: list,
+        ...(list === "watched" ? { watched_at: new Date().toISOString().split("T")[0] } : {}),
+      })
+      return res.data?.item?.id ?? null
+    } catch (err) {
+      if (isAxiosError(err) && err.response?.status === 409) return null
+      throw err
+    }
+  }
+
+  const toggleWatchlist = () =>
+    guarded("watchlist", async id => {
+      const current = itemIds.value.watchlist
+      if (current !== null) {
+        await libraryApi.removeItem(current)
+        if (id !== idRef.value) return
+        itemIds.value = { ...itemIds.value, watchlist: null }
+        bumpStat("watchlist_count", -1)
+        return
+      }
+      const itemId = await addToList(id, "watchlist")
+      if (id !== idRef.value) return
+      itemIds.value = { ...itemIds.value, watchlist: itemId }
+      bumpStat("watchlist_count", 1)
+      if (itemId === null) await loadLists(id)
+    })
+
+  /** Called after the WatchLogModal saved a log: mark watched too, then refresh the summary. */
+  const markLogged = () =>
+    guarded("watched", async id => {
+      if (itemIds.value.watched === null) {
+        const itemId = await addToList(id, "watched")
+        if (id === idRef.value) {
+          itemIds.value = { ...itemIds.value, watched: itemId }
+          if (itemId === null) await loadLists(id)
+        }
+      }
+      await loadWatchSummary(id)
+    })
+
+  watch(
+    [idRef, () => auth.isLoggedIn],
+    () => {
+      load()
+    },
+    { immediate: true },
+  )
+
+  return {
+    stats,
+    watchSummary,
+    isLiked,
+    isWatchlisted,
+    isWatched,
+    pending,
+    requireLogin,
+    toggleLike,
+    toggleWatchlist,
+    markLogged,
+    reload: load,
+    refreshStats: () => (idRef.value ? loadStats(idRef.value) : Promise.resolve()),
+  }
+}

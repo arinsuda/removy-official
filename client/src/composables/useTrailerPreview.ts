@@ -33,7 +33,7 @@ const PRIORITY_MAP: Record<string, TrailerPriority> = {
   Clip: "clip",
 }
 
-function buildEmbedUrl(key: string): string {
+export function buildEmbedUrl(key: string): string {
   const p = new URLSearchParams({
     autoplay: "1",
     mute: "0",

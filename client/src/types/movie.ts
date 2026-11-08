@@ -72,6 +72,34 @@ export interface TVSeriesDetail extends TVSeries {
   tagline: string
   homepage: string
   genres: Genre[]
+  seasons?: TVSeason[]
+  last_air_date?: string
+  episode_run_time?: number[]
+  networks?: TVNetwork[]
+  created_by?: TVCreator[]
+  in_production?: boolean
+}
+
+export interface TVSeason {
+  id: number
+  name: string
+  season_number: number
+  episode_count: number
+  air_date: string
+  poster_path: string
+  overview: string
+}
+
+export interface TVNetwork {
+  id: number
+  name: string
+  logo_path: string
+}
+
+export interface TVCreator {
+  id: number
+  name: string
+  profile_path: string
 }
 
 export interface Cast {
