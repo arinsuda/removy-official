@@ -52,9 +52,9 @@
               item.genres.slice(0, 2).join(" · ")
             }}</span>
             <div class="overlay-bottom">
-              <span class="overlay-rating flex items-center gap-0.5"
-                ><Star :size="9" class="fill-amber-500 text-amber-500" /> {{ item.rating.toFixed(1) }}</span
-              >
+              <span class="overlay-rating">
+                <MediaRating :ratings="item.ratings" :vote-average="item.rating" />
+              </span>
               <span class="overlay-date"
                 ><Clock :size="9" /> {{ item.addedAt }}</span
               >
@@ -80,9 +80,11 @@
 </template>
 
 <script setup lang="ts">
+import MediaRating from "@/components/movie/MediaRating.vue"
+import type { MediaRatings } from "@/types/movie"
 import SkeletonGrid from "@/components/ui/skeleton/SkeletonGrid.vue"
   import { onMounted, ref } from "vue"
-  import { Heart, Film, X, Clock, Star } from "lucide-vue-next"
+  import { Heart, Film, X, Clock } from "lucide-vue-next"
   import { mediaApi } from "@/api/endpoints/media"
   import { useRouter } from "vue-router"
   import type { LikeItem, ListType } from "@/types"
@@ -111,6 +113,7 @@ import SkeletonGrid from "@/components/ui/skeleton/SkeletonGrid.vue"
     coverUrl: string
     genres: string[]
     rating: number
+    ratings?: MediaRatings
     addedAt: string
   }
 
@@ -130,6 +133,7 @@ import SkeletonGrid from "@/components/ui/skeleton/SkeletonGrid.vue"
           : "",
         genres: item.media.genres?.map(g => g.name) ?? [],
         rating: item.media.vote_average ?? 0,
+        ratings: item.media.ratings,
         addedAt: new Date(item.created_at).toLocaleDateString(),
       }))
     } catch (err) {

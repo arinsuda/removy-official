@@ -92,8 +92,13 @@ func (s *Service) GetUserBMOL(ctx context.Context, userID uint, mediaType *movie
 	}
 
 	responses := make([]BMOLItemResponse, len(items))
+	media := make([]*shared.MediaSummary, len(items))
 	for i, item := range items {
 		responses[i] = *s.toResponse(&item)
+		media[i] = &responses[i].Media
+	}
+	if err := shared.AttachRatings(ctx, s.db, media); err != nil {
+		return nil, err
 	}
 	return responses, nil
 }

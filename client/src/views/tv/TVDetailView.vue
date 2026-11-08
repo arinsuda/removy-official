@@ -108,15 +108,13 @@
               <i class="pi pi-clock"></i>
               {{ formatRuntime(tv.runtime) }}
             </span>
-            <span class="meta-badge rating-tmdb" v-if="tv.vote_average">
-              <i class="pi pi-star-fill"></i>
-              TMDB: {{ tv.vote_average.toFixed(1) }}
-            </span>
-            <span class="meta-badge rating-popcorn" v-if="popcornStats.average_rating > 0">
-              <PopcornRatingIcon :size="12" style="margin-right: 4px;" />
-              POPCORN: {{ popcornStats.average_rating.toFixed(1) }}/5
-            </span>
           </div>
+            <MediaRating
+              class="detail-rating"
+              variant="detail"
+              :ratings="detailRatings"
+              :vote-average="tv.vote_average"
+            />
 
           <div class="genres-list" v-if="tv.genres?.length">
             <span v-for="genre in tv.genres" :key="genre.id" class="genre-tag">
@@ -270,7 +268,8 @@ import SkeletonMediaDetail from "@/components/ui/skeleton/SkeletonMediaDetail.vu
   import { resolveTrailer } from "@/composables/useTrailerPreview"
   import { useAuthStore } from "@/stores/auth"
   import { mediaApi } from "@/api/endpoints/media"
-  import PopcornRatingIcon from "@/components/movie/PopcornRatingIcon.vue"
+  import MediaRating from "@/components/movie/MediaRating.vue"
+  import { withLiveStats } from "@/utils/mediaRatings"
 
   const route = useRoute()
   const router = useRouter()
@@ -339,6 +338,7 @@ import SkeletonMediaDetail from "@/components/ui/skeleton/SkeletonMediaDetail.vu
   }
 
   const popcornStats = ref(createDefaultStats())
+  const detailRatings = computed(() => withLiveStats(tv.value?.ratings, popcornStats.value))
 
   const isLiked = computed(() => popcornStats.value.liked_at !== null)
 
@@ -1056,23 +1056,8 @@ import SkeletonMediaDetail from "@/components/ui/skeleton/SkeletonMediaDetail.vu
     font-size: 0.75rem;
     color: var(--muted);
   }
-  .rating-tmdb {
-    background: rgba(245, 197, 24, 0.1);
-    border-color: rgba(245, 197, 24, 0.25);
-    color: var(--gold);
-    font-weight: 600;
-  }
-  .rating-tmdb i {
-    color: var(--gold);
-  }
-  .rating-popcorn {
-    background: rgba(255, 42, 42, 0.15);
-    border-color: rgba(255, 0, 0, 0.3);
-    color: var(--red);
-    font-weight: 600;
-  }
-  .rating-popcorn i {
-    color: var(--red);
+  .detail-rating {
+    margin-top: 0.75rem;
   }
   .genres-list {
     display: flex;

@@ -4,6 +4,7 @@ import { createPinia, setActivePinia } from "pinia"
 import { i18n } from "../i18n"
 import PopupCard from "../components/movie/PopupCard.vue"
 import PopcornRatingIcon from "../components/movie/PopcornRatingIcon.vue"
+import PopcornScoreBadge from "../components/movie/PopcornScoreBadge.vue"
 import { mediaApi } from "../api/endpoints/media"
 import { libraryApi } from "../api/endpoints/library"
 
@@ -115,8 +116,9 @@ describe("Phase 1 Frontend Requirements", () => {
         }
       })
 
-      expect(wrapper.findComponent(PopcornRatingIcon).exists()).toBe(true)
-      expect(wrapper.text()).toContain("4.2/5")
+      expect(wrapper.findComponent(PopcornScoreBadge).attributes("data-tier")).toBe("hot")
+      expect(wrapper.text()).toContain("4.2")
+      expect(wrapper.text()).not.toContain("4.2/5")
     })
 
     it("falls back to TMDB rating if POPCORN is not available", () => {
@@ -134,7 +136,8 @@ describe("Phase 1 Frontend Requirements", () => {
         }
       })
 
-      expect(wrapper.findComponent(PopcornRatingIcon).exists()).toBe(false)
+      expect(wrapper.findComponent(PopcornScoreBadge).attributes("data-tier")).toBe("none")
+      expect(wrapper.text()).toContain("0.0")
       expect(wrapper.text()).toContain("8.1")
     })
 

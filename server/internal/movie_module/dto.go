@@ -1,6 +1,7 @@
 package movie_module
 
 import (
+	external "github.com/arinsuda/movie-hub/internal/external_rating_module"
 	"github.com/arinsuda/movie-hub/internal/shared"
 	tmdb "github.com/arinsuda/movie-hub/internal/tmdb_module"
 )
@@ -25,9 +26,13 @@ type RatingSourceResponse struct {
 	Scale     float64  `json:"scale"`
 }
 
+// MediaRatingsResponse always carries popcorn and tmdb. IMDb and Rotten Tomatoes are
+// only set on movie and TV detail responses.
 type MediaRatingsResponse struct {
-	POPCORN RatingSourceResponse `json:"popcorn"`
-	TMDB    RatingSourceResponse `json:"tmdb"`
+	POPCORN        RatingSourceResponse  `json:"popcorn"`
+	TMDB           RatingSourceResponse  `json:"tmdb"`
+	IMDb           *RatingSourceResponse `json:"imdb,omitempty"`
+	RottenTomatoes *RatingSourceResponse `json:"rotten_tomatoes,omitempty"`
 }
 
 type MovieDTO struct {
@@ -45,12 +50,38 @@ type TVSeriesDTO struct {
 	Ratings MediaRatingsResponse `json:"ratings"`
 }
 
+type TVSeriesDetailDTO struct {
+	tmdb.TVSeriesDetail
+	Ratings MediaRatingsResponse `json:"ratings"`
+}
+
+type PersonMovieCreditItemDTO struct {
+	tmdb.PersonMovieCreditItem
+	Ratings MediaRatingsResponse `json:"ratings"`
+}
+
+type PersonMovieCreditsDTO struct {
+	Cast []PersonMovieCreditItemDTO `json:"cast"`
+	Crew []MovieDTO                 `json:"crew"`
+}
+
+type PersonTVCreditItemDTO struct {
+	tmdb.PersonTVCreditItem
+	Ratings MediaRatingsResponse `json:"ratings"`
+}
+
+type PersonTVCreditsDTO struct {
+	Cast []PersonTVCreditItemDTO `json:"cast"`
+	Crew []TVSeriesDTO           `json:"crew"`
+}
+
 func NewMediaRatingsResponse(popcornStats shared.RatingStats, tmdbAvg float32, tmdbVotes int) MediaRatingsResponse {
-	var popcornAvg *float64
+	// No reviews reads as 0 (not null) with available=false, so clients can show "0.0".
+	popcornAvg := new(float64)
 	if popcornStats.Average != nil {
 		popcornAvg = popcornStats.Average
 	}
-	popcornAvailable := popcornAvg != nil && popcornStats.Count > 0
+	popcornAvailable := popcornStats.Average != nil && popcornStats.Count > 0
 
 	var tmdbAvgPtr *float64
 	if tmdbVotes > 0 {
@@ -73,4 +104,16 @@ func NewMediaRatingsResponse(popcornStats shared.RatingStats, tmdbAvg float32, t
 			Scale:     10.0,
 		},
 	}
+}
+
+// WithExternal adds IMDb (scale 10) and Rotten Tomatoes (percent) sources.
+func (r MediaRatingsResponse) WithExternal(ext external.Ratings) MediaRatingsResponse {
+	imdb := RatingSourceResponse{Average: ext.IMDbRating, Count: ext.IMDbVotes, Available: ext.IMDbRating != nil, Scale: 10}
+	rt := RatingSourceResponse{Available: ext.RTScore != nil, Scale: 100}
+	if ext.RTScore != nil {
+		v := float64(*ext.RTScore)
+		rt.Average = &v
+	}
+	r.IMDb, r.RottenTomatoes = &imdb, &rt
+	return r
 }

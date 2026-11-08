@@ -17,6 +17,7 @@ type Config struct {
 	CORS       CORSConfig
 	DB         DBConfig
 	TMDB       TMDBConfig
+	OMDb       OMDbConfig
 	JWT        JWTConfig
 	Brevo      BrevoConfig
 	Cookie     CookieConfig
@@ -70,6 +71,11 @@ type DBConfig struct {
 type TMDBConfig struct {
 	BaseURL string
 	APIKey  string
+}
+
+// OMDbConfig powers IMDb and Rotten Tomatoes ratings. An empty APIKey disables the feature.
+type OMDbConfig struct {
+	APIKey string
 }
 
 type JWTConfig struct {
@@ -137,6 +143,7 @@ func Load() (*Config, error) {
 			BaseURL: requireEnv("THE_MOVIE_BASE_API"),
 			APIKey:  requireEnv("THE_MOVIE_API_KEY"),
 		},
+		OMDb: OMDbConfig{APIKey: os.Getenv("OMDB_API_KEY")},
 		JWT: JWTConfig{
 			AccessSecret:  requireEnv("JWT_ACCESS_SECRET"),
 			RefreshSecret: requireEnv("JWT_REFRESH_SECRET"),

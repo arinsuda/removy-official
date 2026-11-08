@@ -125,6 +125,7 @@ func (s *Service) GetLikes(ctx context.Context, ownerID, requesterID uint) ([]Li
 	}
 
 	responses := make([]LikeResponse, len(likes))
+	summaries := make([]*shared.MediaSummary, len(likes))
 	for i, like := range likes {
 		media := shared.MediaSummary{
 			ID:        like.MediaID,
@@ -154,6 +155,10 @@ func (s *Service) GetLikes(ctx context.Context, ownerID, requesterID uint) ([]Li
 			Media:     media,
 			CreatedAt: like.CreatedAt,
 		}
+		summaries[i] = &responses[i].Media
+	}
+	if err := shared.AttachRatings(ctx, s.db, summaries); err != nil {
+		return nil, err
 	}
 
 	return responses, nil

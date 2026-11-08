@@ -165,14 +165,24 @@ func (s *Service) GetLibrary(ctx context.Context, userID, requesterID uint, list
 
 	if userID == requesterID {
 		responses := make([]OwnLibraryItemResponse, len(items))
+		media := make([]*shared.MediaSummary, len(items))
 		for i, item := range items {
 			responses[i] = *toOwnResponse(&item)
+			media[i] = &responses[i].Media
+		}
+		if err := shared.AttachRatings(ctx, s.db, media); err != nil {
+			return nil, err
 		}
 		return responses, nil
 	} else {
 		responses := make([]PublicLibraryItemResponse, len(items))
+		media := make([]*shared.MediaSummary, len(items))
 		for i, item := range items {
 			responses[i] = *toPublicResponse(&item)
+			media[i] = &responses[i].Media
+		}
+		if err := shared.AttachRatings(ctx, s.db, media); err != nil {
+			return nil, err
 		}
 		return responses, nil
 	}

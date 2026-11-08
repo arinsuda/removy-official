@@ -11,4 +11,5 @@ type MediaSummary struct {
 	MediaType   MediaType          `json:"media_type"`
 	Genres      []tmdbmodule.Genre `json:"genres"`
 	VoteAverage float32            `json:"vote_average"`
+	Ratings     *SummaryRatings    `json:"ratings,omitempty"`
 }

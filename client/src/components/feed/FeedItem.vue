@@ -135,10 +135,8 @@
           <p class="truncate text-base font-semibold text-white group-hover/media:text-red-500 transition-colors duration-200">
             {{ item.media.title }}
           </p>
-          <div v-if="item.media.vote_average" class="mt-1 flex items-center gap-1 text-xs text-white/50">
-            <Star class="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
-            <span class="font-medium text-white/80">{{ item.media.vote_average.toFixed(1) }}</span>
-            <span class="text-white/30">/ 10</span>
+          <div class="mt-1">
+            <MediaRating :ratings="item.media.ratings" :vote-average="item.media.vote_average" />
           </div>
         </div>
       </RouterLink>
@@ -169,13 +167,14 @@
 </template>
 
 <script setup lang="ts">
+import MediaRating from "@/components/movie/MediaRating.vue"
 import { computed, ref } from "vue";
 import type { FeedItemResponse } from "@/types/feed";
 import { getActivityMeta, mediaRoutePrefix } from "@/utils/feedActivity";
 import { formatRelativeTime } from "@/utils/relativeTime";
 import { useClickOutside } from "@/composables/useClickOutside";
 import AppAvatar from "@/components/ui/AppAvatar.vue";
-import { Globe, Users, Lock, Compass, Trash2, Star } from "lucide-vue-next";
+import { Globe, Users, Lock, Compass, Trash2 } from "lucide-vue-next";
 
 const props = defineProps<{
   item: FeedItemResponse;

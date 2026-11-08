@@ -136,7 +136,7 @@
             {{ item.media.title }}
           </router-link>
           <div class="media-details-row">
-            <span class="media-rating-badge"><Star :size="12" class="inline-star" /> {{ item.media.vote_average.toFixed(1) }}</span>
+            <span class="media-rating-badge"><MediaRating :ratings="item.media.ratings" :vote-average="item.media.vote_average" /></span>
             <span class="save-date">{{ formatDate(item.created_at) }}</span>
           </div>
           <!-- User tags if present -->
@@ -204,6 +204,7 @@
 </template>
 
 <script setup lang="ts">
+import MediaRating from "@/components/movie/MediaRating.vue"
 import { ref, computed, watch, onMounted } from "vue"
 import { useI18n } from "vue-i18n"
 import { Search, Film, ArrowUpDown, Heart, Star, Bookmark, Film as FilmIcon, Eye, Plus, History } from "lucide-vue-next"

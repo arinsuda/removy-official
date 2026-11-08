@@ -39,7 +39,7 @@ func (h *Handler) GetPopular(c fiber.Ctx) error {
 	}
 
 	if withGenres != "" {
-		result, err := tmdb.DiscoverMovies(withGenres, page)
+		result, err := h.svc.DiscoverMovies(c.Context(), withGenres, page)
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": "ดึงข้อมูลหนังไม่สำเร็จ"})
 		}
@@ -61,7 +61,7 @@ func (h *Handler) GetNowPlaying(c fiber.Ctx) error {
 	}
 
 	if withGenres != "" {
-		result, err := tmdb.DiscoverMovies(withGenres, page)
+		result, err := h.svc.DiscoverMovies(c.Context(), withGenres, page)
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": "ดึงข้อมูลหนังไม่สำเร็จ"})
 		}
@@ -88,7 +88,7 @@ func (h *Handler) GetTopRated(c fiber.Ctx) error {
 	}
 
 	if withGenres != "" {
-		result, err := tmdb.DiscoverMovies(withGenres, page)
+		result, err := h.svc.DiscoverMovies(c.Context(), withGenres, page)
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": "ดึงข้อมูลหนังไม่สำเร็จ"})
 		}
@@ -273,7 +273,7 @@ func (h *Handler) GetSimilar(c fiber.Ctx) error {
 
 	page, _ := strconv.Atoi(c.Query("page", "1"))
 
-	result, err := tmdb.GetSimilar(id, page)
+	result, err := h.svc.GetSimilar(c.Context(), id, page)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "ดึงข้อมูลไม่สำเร็จ"})
 	}
@@ -282,7 +282,7 @@ func (h *Handler) GetSimilar(c fiber.Ctx) error {
 
 func (h *Handler) GetPopularSeries(c fiber.Ctx) error {
 	page, _ := strconv.Atoi(c.Query("page", "1"))
-	result, err := tmdb.GetPopularSeries(page)
+	result, err := h.svc.GetPopularSeries(c.Context(), page)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "ดึงข้อมูลซีรีส์ไม่สำเร็จ"})
 	}
@@ -291,7 +291,7 @@ func (h *Handler) GetPopularSeries(c fiber.Ctx) error {
 
 func (h *Handler) GetNowAiringSeries(c fiber.Ctx) error {
 	page, _ := strconv.Atoi(c.Query("page", "1"))
-	result, err := tmdb.GetNowAiringSeries(page)
+	result, err := h.svc.GetNowAiringSeries(c.Context(), page)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "ดึงข้อมูลซีรีส์ไม่สำเร็จ"})
 	}
@@ -300,7 +300,7 @@ func (h *Handler) GetNowAiringSeries(c fiber.Ctx) error {
 
 func (h *Handler) GetTopRatedSeries(c fiber.Ctx) error {
 	page, _ := strconv.Atoi(c.Query("page", "1"))
-	result, err := tmdb.GetTopRatedSeries(page)
+	result, err := h.svc.GetTopRatedSeries(c.Context(), page)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "ดึงข้อมูลซีรีส์ไม่สำเร็จ"})
 	}
@@ -313,7 +313,7 @@ func (h *Handler) SearchSeries(c fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "กรุณาระบุคำค้นหา"})
 	}
 	page, _ := strconv.Atoi(c.Query("page", "1"))
-	result, err := tmdb.SearchSeries(query, page)
+	result, err := h.svc.SearchSeries(c.Context(), query, page)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "ค้นหาไม่สำเร็จ"})
 	}
@@ -334,7 +334,7 @@ func (h *Handler) GetSeriesByID(c fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "ID ไม่ถูกต้อง"})
 	}
 
-	series, err := tmdb.GetSeriesByID(id)
+	series, err := h.svc.GetSeriesByID(c.Context(), id)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "ไม่พบซีรีส์"})
 	}
@@ -355,7 +355,7 @@ func (h *Handler) GetSimilarSeries(c fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "ID ไม่ถูกต้อง"})
 	}
 	page, _ := strconv.Atoi(c.Query("page", "1"))
-	result, err := tmdb.GetSimilarSeries(id, page)
+	result, err := h.svc.GetSimilarSeries(c.Context(), id, page)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "ดึงข้อมูลไม่สำเร็จ"})
 	}
@@ -389,8 +389,13 @@ func (h *Handler) GetRecommended(c fiber.Ctx) error {
 		allResults = allResults[:10]
 	}
 
+	enriched, err := h.svc.EnrichMovies(c.Context(), &tmdb.PaginatedResult[tmdb.Movie]{Results: allResults})
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "ดึงข้อมูลหนังไม่สำเร็จ"})
+	}
+
 	return c.JSON(fiber.Map{
-		"results":       allResults,
+		"results":       enriched.Results,
 		"total_results": len(allResults),
 	})
 }
@@ -435,7 +440,7 @@ func (h *Handler) GetMoviesByActor(c fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "ID ไม่ถูกต้อง"})
 	}
 
-	result, err := tmdb.GetPersonMovieCredits(personID)
+	result, err := h.svc.GetPersonMovieCredits(c.Context(), personID)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "ดึงข้อมูลผลงานไม่สำเร็จ"})
 	}
@@ -448,7 +453,7 @@ func (h *Handler) GetSeriesByActor(c fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "ID ไม่ถูกต้อง"})
 	}
 
-	result, err := tmdb.GetPersonTVCredits(personID)
+	result, err := h.svc.GetPersonTVCredits(c.Context(), personID)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "ดึงข้อมูลผลงานไม่สำเร็จ"})
 	}

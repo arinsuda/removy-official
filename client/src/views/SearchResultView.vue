@@ -92,9 +92,8 @@
                   {{ item.mediaType === "movie" ? "หนัง" : "ซีรีส์" }}
                 </span>
 
-                <span class="media-rating" v-if="item.voteAverage > 0">
-                  <i class="pi pi-star-fill"></i>
-                  {{ item.voteAverage.toFixed(1) }}
+                <span class="media-rating">
+                  <MediaRating :ratings="item.raw.ratings" :vote-average="item.voteAverage" />
                 </span>
 
                 <div class="media-overlay">
@@ -187,9 +186,8 @@
                       {{ item.mediaType === "movie" ? "หนัง" : "ซีรีส์" }}
                     </span>
 
-                    <span class="media-rating" v-if="item.voteAverage > 0">
-                      <i class="pi pi-star-fill"></i>
-                      {{ item.voteAverage.toFixed(1) }}
+                    <span class="media-rating">
+                      <MediaRating :ratings="item.raw.ratings" :vote-average="item.voteAverage" />
                     </span>
 
                     <div class="media-overlay">
@@ -246,6 +244,7 @@ import SkeletonGrid from "@/components/ui/skeleton/SkeletonGrid.vue"
 import { ref, computed, watch, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { movieApi } from "@/api/api";
+import MediaRating from "@/components/movie/MediaRating.vue";
 import { getTmdbImageUrlOrPlaceholder } from "@/utils/image";
 import PopupCard from "@/components/movie/PopupCard.vue";
 import { useHoverPreviewGrid } from "@/composables/useHoverPreviewGrid";
@@ -572,7 +571,7 @@ onMounted(() => {
   font-size: 0.7rem;
   font-weight: 700;
   background: rgba(0, 0, 0, 0.6);
-  color: #f5c518;
+  color: var(--color-text-muted);
   padding: 0.22rem 0.5rem;
   border-radius: 6px;
   backdrop-filter: blur(6px);

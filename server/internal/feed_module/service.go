@@ -31,6 +31,7 @@ type Service interface {
 }
 
 type service struct {
+	db    *gorm.DB
 	repo  *repository
 	hub   *noti.Hub
 	minio *storage.MinIOClient
@@ -38,6 +39,7 @@ type service struct {
 
 func NewService(db *gorm.DB, hub *noti.Hub, minio *storage.MinIOClient) Service {
 	return &service{
+		db:    db,
 		repo:  newRepository(db),
 		hub:   hub,
 		minio: minio,
@@ -83,7 +85,7 @@ func (s *service) GetFeed(ctx context.Context, userID uint, pq PaginationQuery) 
 	if err != nil {
 		return nil, err
 	}
-	return toFeedListResponse(rows, pq, total, s.minio), nil
+	return s.withRatings(ctx, toFeedListResponse(rows, pq, total, s.minio))
 }
 
 func (s *service) GetUserActivities(ctx context.Context, targetUserID, requesterID uint, pq PaginationQuery) (*FeedListResponse, error) {
@@ -92,7 +94,7 @@ func (s *service) GetUserActivities(ctx context.Context, targetUserID, requester
 	if err != nil {
 		return nil, err
 	}
-	return toFeedListResponse(rows, pq, total, s.minio), nil
+	return s.withRatings(ctx, toFeedListResponse(rows, pq, total, s.minio))
 }
 
 func (s *service) UpdateActivityVisibility(ctx context.Context, activityID, requesterID uint, visibility privacy_policy.ActivityVisibility) error {
@@ -346,4 +348,18 @@ func presignAvatar(avatarURL *string, minio *storage.MinIOClient) *string {
 
 func (s *service) IsActivityEnabled(ctx context.Context, userID uint, activityType ActivityType) (bool, error) {
 	return s.repo.IsEnabled(ctx, userID, activityType)
+}
+
+// withRatings attaches popcorn ratings to every feed item that carries media (one query per media type).
+func (s *service) withRatings(ctx context.Context, list *FeedListResponse) (*FeedListResponse, error) {
+	var media []*shared.MediaSummary
+	for i := range list.Items {
+		if list.Items[i].Media != nil {
+			media = append(media, list.Items[i].Media)
+		}
+	}
+	if err := shared.AttachRatings(ctx, s.db, media); err != nil {
+		return nil, err
+	}
+	return list, nil
 }
