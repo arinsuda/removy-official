@@ -33,22 +33,108 @@
       "voteCount": "({count} reviews)",
       "tmdbRating": "TMDB Rating",
       "popcornRating": "POPCORN Rating",
-      "firstAirDate": "First Air Date"
+      "firstAirDate": "First Air Date",
+      "runtimeHours": "{h}h {m}m",
+      "seasons": "{count} season | {count} seasons",
+      "episodes": "{count} episode | {count} episodes"
     },
     "actions": {
-      "like": "Like",
+      "like": "Like this title",
       "liked": "Liked",
       "watchlist": "Watchlist",
       "inWatchlist": "In Watchlist",
       "watched": "Watched",
       "inWatched": "Watched",
       "writeReview": "Write a Review",
-      "playTrailer": "Watch Trailer"
+      "playTrailer": "Watch Trailer",
+      "label": "Title actions",
+      "rate": "Rate",
+      "editRating": "Edit rating",
+      "log": "Log",
+      "unlike": "Remove like"
     },
     "noOverview": "No overview is available.",
     "noCast": "No cast members found for this title.",
     "noTrailers": "No trailers available.",
-    "noSimilar": "No similar titles found."
+    "noSimilar": "No similar titles found.",
+    "loginRequired": "Sign in to do that.",
+    "actionFailed": "Something went wrong. Please try again.",
+    "back": "Back",
+    "loadFailed": "Could not load this title.",
+    "notFound": {
+      "movie": "We could not find that movie",
+      "tv": "We could not find that series",
+      "hint": "It may have been removed, or the link is wrong.",
+      "browse": {
+        "movie": "Browse movies",
+        "tv": "Browse series"
+      }
+    },
+    "overview": "Overview",
+    "readMore": "Read more",
+    "showLess": "Show less",
+    "reviews": "POPCORN reviews",
+    "similar": "More like this",
+    "status": {
+      "Released": "Released",
+      "PostProduction": "Post production",
+      "InProduction": "In production",
+      "Planned": "Planned",
+      "Rumored": "Rumored",
+      "Canceled": "Canceled",
+      "ReturningSeries": "Returning series",
+      "Ended": "Ended",
+      "Pilot": "Pilot"
+    },
+    "crew": {
+      "director": "Directed by",
+      "creator": "Created by"
+    },
+    "meter": {
+      "noReviews": "No reviews yet. Be the first to rate it."
+    },
+    "distribution": {
+      "title": "Rating breakdown",
+      "empty": "No public reviews yet.",
+      "row": "{value} stars: {count} review | {value} stars: {count} reviews",
+      "basedOn": "Based on {count} public review | Based on {count} public reviews"
+    },
+    "activity": {
+      "title": "Your activity",
+      "guest": "Sign in to rate, log and save titles.",
+      "signIn": "Sign in",
+      "rating": "Your rating",
+      "notRated": "Not rated yet",
+      "watched": "Watched",
+      "watchCount": "{count} time | {count} times",
+      "last": "last on {date}",
+      "notWatched": "Not logged yet",
+      "lists": "Lists",
+      "noLists": "Not in any list"
+    },
+    "facts": {
+      "title": "Details",
+      "homepage": "Website",
+      "originalTitle": "Original title",
+      "status": "Status",
+      "releaseDate": "Release date",
+      "firstAirDate": "First aired",
+      "lastAirDate": "Last aired",
+      "budget": "Budget",
+      "revenue": "Revenue",
+      "networks": "Networks",
+      "seasons": "Seasons",
+      "episodes": "Episodes"
+    },
+    "cast": {
+      "title": "Cast"
+    },
+    "videos": {
+      "title": "Videos"
+    },
+    "seasons": {
+      "title": "Seasons"
+    }
   },
   "search": {
     "title": "Search results for \"{query}\"",

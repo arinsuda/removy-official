@@ -26,6 +26,35 @@
   "errors": {
     "alreadyExists": "You have already reviewed this media",
     "invalidRating": "Rating must be between 0.5 and 5.0",
-    "notRated": "NR"
-  }
+    "notRated": "NR",
+    "loginRequired": "Sign in to write a review",
+    "submitFailed": "Could not post your review. Please try again.",
+    "updateFailed": "Could not update your review. Please try again."
+  },
+  "composer": {
+    "title": "Write a review",
+    "ratingLabel": "Your rating",
+    "ratingRequired": "Pick a rating to submit",
+    "bodyLabel": "Your review",
+    "placeholder": {
+      "movie": "What did you think of this movie?",
+      "tv": "What did you think of this series?"
+    }
+  },
+  "own": {
+    "title": "Your review",
+    "saved": "Review updated"
+  },
+  "follow": {
+    "none": "Follow",
+    "pending": "Requested",
+    "accepted": "Following"
+  },
+  "actions": {
+    "like": "Like",
+    "helpful": "Helpful",
+    "comments": "{count} comment | {count} comments"
+  },
+  "guestPrompt": "Sign in to write a review.",
+  "loadFailed": "Could not load reviews."
 }
