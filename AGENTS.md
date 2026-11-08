@@ -77,7 +77,7 @@ Tokens live in `client/src/assets/styles/main.css` (`@theme static`); use them a
 | `surface` / `surface-2` / `surface-3` | #0b0b0c / #151517 / #202023 | page root / cards / fills |
 | `border` / `border-strong` | white 8% / 14% | hairlines / emphasized edges |
 | `text-primary` / `text-secondary` / `text-muted` | #f5f5f7 / #a1a1aa / #8a8a8e | text |
-| `brand` / `brand-hover` / `on-brand` | #f5432c / #ff5a42 / #fff | actions |
+| `brand` / `brand-hover` / `on-brand` | #d6341f / #c42d19 / #fff (white on brand 4.81:1, on hover 5.62:1; hover is darker because a lighter red fails 4.5:1) | actions |
 | `success` / `warning` / `danger` / `info` | #34c759 / #fbbf24 / #ff5a52 / #38abeb | status (`danger` = destructive) |
 | `rating`, `focus`, `accent` | #fbbf24, #f5f5f7, #ffd93b | stars, focus ring, highlight |
 | `font-sans` | Noto Sans Thai first | only font stack; loaded once from `index.html` |
