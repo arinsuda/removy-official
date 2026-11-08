@@ -789,20 +789,19 @@ import SkeletonMediaDetail from "@/components/ui/skeleton/SkeletonMediaDetail.vu
 </script>
 
 <style scoped>
-  @import url("https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap");
 
   .movie-detail-page {
     --red: var(--color-brand);
     --gold: #f5c518;
     --neon-pink: #ff2a74;
-    --bg: #080808;
-    --surface: #121212;
-    --surface2: #1c1c1c;
+    --bg: var(--color-surface);
+    --surface: var(--color-surface-2);
+    --surface2: var(--color-surface-3);
     --border: rgba(255, 255, 255, 0.08);
     --text: #f0f0f0;
     --muted: #8a8a8a;
 
-    font-family: "Noto Sans Thai", sans-serif;
+    font-family: var(--font-sans);
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;

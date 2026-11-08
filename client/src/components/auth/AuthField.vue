@@ -9,6 +9,7 @@
         v-model="model"
         :type="inputType"
         class="field__input"
+        data-focus-custom
         :aria-invalid="!!error || undefined"
         :aria-describedby="error ? errorId : undefined"
       />

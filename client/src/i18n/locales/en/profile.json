@@ -46,5 +46,44 @@
     "watchlist": "Has not added any movies to their watchlist yet.",
     "likes": "Has not liked any movies yet.",
     "achievements": "No achievements unlocked yet."
+  },
+  "confirmModal": {
+    "processing": "Processing...",
+    "likes": {
+      "title": "Remove from Favorites?",
+      "description": "You're about to unlike",
+      "suffix": ". You can always like it again later.",
+      "confirm": "Unlike"
+    },
+    "watchlist": {
+      "title": "Remove from Watchlist?",
+      "description": "Remove",
+      "suffix": " from your watchlist. You can add it back anytime.",
+      "confirm": "Remove"
+    },
+    "watched": {
+      "title": "Remove from Watched?",
+      "description": "Mark",
+      "suffix": " as unwatched. Your watch history will be updated.",
+      "confirm": "Mark Unwatched"
+    },
+    "email_change": {
+      "title": "Change Email?",
+      "description": "We'll send a verification code to",
+      "suffix": ". Enter it to confirm your identity.",
+      "confirm": "Send OTP"
+    },
+    "unfollow": {
+      "title": "Unfollow User?",
+      "description": "You're about to unfollow",
+      "suffix": ". You can follow them again at any time.",
+      "confirm": "Unfollow"
+    },
+    "bmol_delete": {
+      "title": "Remove from Best Movies?",
+      "description": "Remove",
+      "suffix": " from your Best Movies of Life list.",
+      "confirm": "Remove"
+    }
   }
 }

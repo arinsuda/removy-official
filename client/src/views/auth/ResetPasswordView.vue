@@ -305,7 +305,7 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    background: #0a0a0a;
+    background: var(--color-surface);
   }
   .auth-bg {
     position: absolute;
@@ -349,7 +349,7 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
     text-align: center;
   }
   .brand-logo {
-    font-family: "Noto Sans Thai", "Arial Black", sans-serif;
+    font-family: var(--font-sans);
     font-size: 3.5rem;
     font-weight: 900;
     letter-spacing: -1px;
@@ -382,7 +382,7 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
     padding: 3rem 2.5rem;
   }
   .auth-title {
-    font-family: "Noto Sans Thai", "Arial Black", sans-serif;
+    font-family: var(--font-sans);
     font-size: 2rem;
     font-weight: 900;
     letter-spacing: 3px;
@@ -624,7 +624,7 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
     color: #fff;
     border: none;
     border-radius: 9999px;
-    font-family: "Noto Sans Thai", "Arial Black", sans-serif;
+    font-family: var(--font-sans);
     font-size: 1.1rem;
     font-weight: 900;
     letter-spacing: 2px;

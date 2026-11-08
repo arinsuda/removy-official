@@ -160,7 +160,7 @@
     position: relative;
     overflow: hidden;
     background: #0a0a0a;
-    font-family: "Noto Sans Thai", "Inter", system-ui, sans-serif;
+    font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
     display: flex;

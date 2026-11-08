@@ -13,5 +13,11 @@
   "noResults": "No results found",
   "success": "Success",
   "error": "Error",
-  "warning": "Warning"
+  "warning": "Warning",
+  "notFound": {
+    "title": "Page not found",
+    "heading": "404 - Page not found",
+    "message": "The page you're looking for doesn't exist or has been moved.",
+    "home": "Back to home"
+  }
 }

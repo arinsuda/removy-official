@@ -242,26 +242,25 @@
 </script>
 
 <style scoped>
-  @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Noto+Sans+Thai:wght@300;400;500;600;700;800;900&display=swap");
 
   .about-page {
-    --c-bg: #0a0a0a;
-    --c-surface: #111113;
-    --c-card: rgba(255, 255, 255, 0.03);
-    --c-card-hover: rgba(255, 255, 255, 0.06);
-    --c-border: rgba(255, 255, 255, 0.06);
-    --c-border-hover: rgba(255, 255, 255, 0.12);
-    --c-red: #e1251b;
-    --c-red-glow: rgba(225, 37, 27, 0.3);
-    --c-text: #f5f5f7;
-    --c-text-secondary: #a1a1aa;
-    --c-text-muted: #52525b;
+    --c-bg: var(--color-surface);
+    --c-surface: var(--color-surface-2);
+    --c-card: var(--color-surface-2);
+    --c-card-hover: var(--color-surface-3);
+    --c-border: var(--color-border);
+    --c-border-hover: var(--color-border-strong);
+    --c-red: var(--color-brand);
+    --c-red-glow: color-mix(in srgb, var(--color-brand) 30%, transparent);
+    --c-text: var(--color-text-primary);
+    --c-text-secondary: var(--color-text-secondary);
+    --c-text-muted: var(--color-text-muted);
     --radius-lg: 20px;
     --radius-md: 14px;
     --radius-sm: 10px;
     --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
-    font-family: "Inter", "Noto Sans Thai", -apple-system, sans-serif;
+    font-family: var(--font-sans);
     color: var(--c-text);
     max-width: 960px;
     margin: 0 auto;

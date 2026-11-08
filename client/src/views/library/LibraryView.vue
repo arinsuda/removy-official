@@ -238,8 +238,8 @@ watch(userId, () => {
 
 <style scoped>
 .library-root {
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background-color: #0c0c0e;
+  font-family: var(--font-sans);
+  background-color: var(--color-surface);
   color: #f3f4f6;
   min-height: 100vh;
   padding: 2.5rem 2rem;

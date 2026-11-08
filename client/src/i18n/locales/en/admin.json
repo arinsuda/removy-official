@@ -88,5 +88,10 @@
     "showing": "Showing {from}–{to} of {total}",
     "previous": "Previous",
     "next": "Next"
+  },
+  "confirmModal": {
+    "processing": "Processing...",
+    "reasonLabel": "Reason (optional)",
+    "reasonPlaceholder": "Enter the reason for this action..."
   }
 }

@@ -88,5 +88,10 @@
     "showing": "แสดง {from}–{to} จาก {total}",
     "previous": "ก่อนหน้า",
     "next": "ถัดไป"
+  },
+  "confirmModal": {
+    "processing": "กำลังดำเนินการ...",
+    "reasonLabel": "เหตุผลประกอบ (ไม่จำเป็นต้องระบุ)",
+    "reasonPlaceholder": "ระบุเหตุผลในการดำเนินรายการ..."
   }
 }

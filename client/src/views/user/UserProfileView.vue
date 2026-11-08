@@ -19,10 +19,10 @@
           <div class="avatar-shell">
             <div class="avatar-ring">
               <div class="avatar-inner">
-                <Avatar
+                <img
                   v-if="user?.avatar_url"
-                  :image="user.avatar_url"
-                  shape="circle"
+                  :src="user.avatar_url"
+                  alt=""
                   class="avatar-img"
                 />
                 <div v-else class="avatar-fallback">
@@ -186,7 +186,6 @@ import SkeletonProfile from "@/components/ui/skeleton/SkeletonProfile.vue"
   import { computed, ref, watch, onBeforeUnmount } from "vue"
   import { useRoute } from "vue-router"
 
-  import Avatar from "primevue/avatar"
 
   import {
     Star,
@@ -407,22 +406,18 @@ import SkeletonProfile from "@/components/ui/skeleton/SkeletonProfile.vue"
 
 <style scoped>
   .profile-root {
-    --c-bg: #0d0d11;
-    --c-surface: #141419;
-    --c-card: #141419;
-    --c-border: rgba(255, 255, 255, 0.07);
-    --c-border-h: rgba(255, 255, 255, 0.15);
-    --c-red: #e1251b;
-    --c-red-dim: rgba(225, 37, 27, 0.08);
-    --c-text: #f0f0f0;
-    --c-sub: #8a8a8e;
-    --c-muted: #3a3a3c;
-    --font-display:
-      "Geist", "Inter", "Noto Sans Thai", -apple-system, BlinkMacSystemFont,
-      "Segoe UI", sans-serif;
-    --font-ui:
-      "Inter", "Noto Sans Thai", -apple-system, BlinkMacSystemFont,
-      "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
+    --c-bg: var(--color-surface);
+    --c-surface: var(--color-surface-2);
+    --c-card: var(--color-surface-2);
+    --c-border: var(--color-border);
+    --c-border-h: var(--color-border-strong);
+    --c-red: var(--color-brand);
+    --c-red-dim: color-mix(in srgb, var(--color-brand) 8%, transparent);
+    --c-text: var(--color-text-primary);
+    --c-sub: var(--color-text-secondary);
+    --c-muted: var(--color-text-muted);
+    --font-display: var(--font-sans);
+    --font-ui: var(--font-sans);
     --radius: 10px;
     --ease: cubic-bezier(0.16, 1, 0.3, 1);
     --profile-gutter: 24px;
@@ -433,7 +428,7 @@ import SkeletonProfile from "@/components/ui/skeleton/SkeletonProfile.vue"
     overflow-x: hidden;
     background: var(--c-bg);
     color: var(--c-text);
-    font-family: var(--font-ui);
+    font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -554,10 +549,6 @@ import SkeletonProfile from "@/components/ui/skeleton/SkeletonProfile.vue"
   }
 
   .avatar-img {
-    width: 100% !important;
-    height: 100% !important;
-  }
-  .avatar-img :deep(img) {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -599,7 +590,7 @@ import SkeletonProfile from "@/components/ui/skeleton/SkeletonProfile.vue"
   }
 
   .display-name {
-    font-family: var(--font-display);
+    font-family: var(--font-sans);
     font-size: 2rem;
     font-weight: 700;
     color: #fff;
@@ -641,7 +632,7 @@ import SkeletonProfile from "@/components/ui/skeleton/SkeletonProfile.vue"
     gap: 2px;
   }
   .hstat-val {
-    font-family: var(--font-display);
+    font-family: var(--font-sans);
     font-size: 1.1rem;
     font-weight: 700;
     color: #fff;
@@ -675,7 +666,7 @@ import SkeletonProfile from "@/components/ui/skeleton/SkeletonProfile.vue"
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    font-family: var(--font-ui);
+    font-family: var(--font-sans);
     font-size: 0.78rem;
     font-weight: 500;
     padding: 9px 18px;
@@ -753,7 +744,7 @@ import SkeletonProfile from "@/components/ui/skeleton/SkeletonProfile.vue"
     border-radius: 7px;
     border: none;
     background: none;
-    font-family: var(--font-ui);
+    font-family: var(--font-sans);
     font-size: 0.8rem;
     color: var(--c-sub);
     cursor: pointer;

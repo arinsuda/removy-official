@@ -1,5 +1,6 @@
 <template>
-  <div class="toast-container">
+  <Teleport to="body">
+  <div class="toast-container" aria-live="polite">
     <TransitionGroup name="toast-list">
       <div
         v-for="toast in toasts"
@@ -15,7 +16,6 @@
         </div>
 
         <div class="toast-content">
-          <div v-if="toast.title" class="toast-title">{{ toast.title }}</div>
           <div class="toast-message">{{ toast.message }}</div>
         </div>
 
@@ -25,78 +25,30 @@
       </div>
     </TransitionGroup>
   </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
-  import { ref, onMounted, onUnmounted } from "vue"
+  import { storeToRefs } from "pinia"
   import { CheckCircle, XCircle, AlertCircle, Info, X } from "lucide-vue-next"
+  import { useUIStore } from "@/stores/ui"
 
-  // กำหนดโครงสร้างข้อมูล Toast
-  interface Toast {
-    id: string
-    title?: string
-    message: string
-    type: "success" | "error" | "info" | "warning"
-    duration?: number
-  }
-
-  const toasts = ref<Toast[]>([])
-  const emit = defineEmits(["toast-added"])
-
-  // ฟังก์ชันสุ่มหรือเจน ID
-  const generateId = () => Math.random().toString(36).substring(2, 9)
-
-  // ฟังก์ชันหลักในการเพิ่ม Toast (สามารถเรียกใช้ผ่าน global window หรือ export สโตร์)
-  function addToast(options: Omit<Toast, "id">) {
-    const id = generateId()
-    const newToast: Toast = { ...options, id }
-
-    // ดันเข้าอาเรย์ (แบบ Queue ตัวใหม่จะสไลด์ลงมาต่อท้ายด้านบน หรือแทรกตัวที่ index 0)
-    toasts.value.unshift(newToast)
-
-    // ส่งสัญญาณไปให้กระดิ่งที่ MainLayout รับรู้เพื่อเพิ่มตัวเลข Badge
-    emit("toast-added")
-
-    // ตั้งเวลาลบตัวเองอัตโนมัติ
-    const duration = options.duration ?? 4000
-    setTimeout(() => {
-      removeToast(id)
-    }, duration)
-  }
-
-  function removeToast(id: string) {
-    toasts.value = toasts.value.filter(t => t.id !== id)
-  }
-
-  // ผูกฟังก์ชันไว้กับ window object เพื่อให้เรียกใช้จากหน้าไหนในโปรเจกต์ก็ได้แบบง่ายๆ
-  // (หรือคุณสามารถปรับไปใช้ Pinia Store ตามโครงสร้างระบบของคุณได้เช่นกัน)
-  onMounted(() => {
-    ;(window as any).$toast = {
-      show: addToast,
-      success: (msg: string, title?: string) =>
-        addToast({ message: msg, title, type: "success" }),
-      error: (msg: string, title?: string) =>
-        addToast({ message: msg, title, type: "error" }),
-      info: (msg: string, title?: string) =>
-        addToast({ message: msg, title, type: "info" }),
-      warning: (msg: string, title?: string) =>
-        addToast({ message: msg, title, type: "warning" }),
-    }
-  })
-
-  onUnmounted(() => {
-    delete (window as any).$toast
-  })
+  // Single renderer for the ui store's toasts; mounted once in App.vue so every layout shows them.
+  const ui = useUIStore()
+  const { toasts } = storeToRefs(ui)
+  const removeToast = ui.removeToast
 </script>
 
 <style scoped>
   /* Container วางตำแหน่งอยู่ภายใต้ปุ่มกระดิ่งแบบ Absolute */
   .toast-container {
-    position: absolute;
-    top: calc(100% + 12px);
-    right: -10px; /* ขยับเยื้องให้บาลานซ์กับขอบมุมขวาของจอ */
+    /* Teleported to body: inside the fixed navbar it could never rise above a modal. */
+    position: fixed;
+    top: 76px;
+    right: 16px;
     width: 320px;
-    z-index: 110; /* สูงกว่า Navbar เล็กน้อย */
+    max-width: calc(100vw - 32px);
+    z-index: var(--z-toast);
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
@@ -110,13 +62,13 @@
     align-items: flex-start;
     gap: 0.75rem;
     padding: 0.85rem 1rem;
-    background: rgba(26, 26, 26, 0.96);
+    background: var(--color-surface-2);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--color-border);
     border-radius: 10px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    color: #fff;
+    color: var(--color-text-primary);
     position: relative;
     overflow: hidden;
   }
@@ -132,10 +84,10 @@
   }
 
   .toast-item--success::before {
-    background: #10b981;
+    background: var(--color-success);
   }
   .toast-item--success .toast-icon {
-    color: #10b981;
+    color: var(--color-success);
   }
 
   .toast-item--error::before {
@@ -146,17 +98,17 @@
   }
 
   .toast-item--warning::before {
-    background: #f59e0b;
+    background: var(--color-warning);
   }
   .toast-item--warning .toast-icon {
-    color: #f59e0b;
+    color: var(--color-warning);
   }
 
   .toast-item--info::before {
-    background: #3b82f6;
+    background: var(--color-info);
   }
   .toast-item--info .toast-icon {
-    color: #3b82f6;
+    color: var(--color-info);
   }
 
   /* ภายใน Toast */
@@ -171,18 +123,11 @@
     padding-right: 0.75rem;
   }
 
-  .toast-title {
-    font-size: 0.85rem;
-    font-weight: 700;
-    letter-spacing: 0.3px;
-    margin-bottom: 0.15rem;
-    color: #ffffff;
-  }
 
   .toast-message {
     font-size: 0.8rem;
     font-weight: 400;
-    color: #cccccc;
+    color: var(--color-text-secondary);
     line-height: 1.4;
   }
 
@@ -190,7 +135,7 @@
     background: none;
     border: none;
     cursor: pointer;
-    color: #666;
+    color: var(--color-text-muted);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -203,8 +148,8 @@
   }
 
   .toast-close-btn:hover {
-    color: #fff;
-    background: rgba(255, 255, 255, 0.08);
+    color: var(--color-text-primary);
+    background: var(--color-border);
   }
 
   /* ─── อนิเมชันการสไลด์เรียงตัว (Transition Group) ─── */

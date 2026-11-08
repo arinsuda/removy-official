@@ -8,19 +8,7 @@
 
     <!-- Unified filter toolbar -->
     <div class="filter-toolbar">
-      <div class="filter-rail" role="tablist">
-        <button
-          v-for="f in filters"
-          :key="f.key"
-          class="filter-pill"
-          :class="{ 'filter-pill--active': activeFilter === f.key }"
-          :aria-selected="activeFilter === f.key"
-          role="tab"
-          @click="activeFilter = f.key"
-        >
-          {{ f.label }}
-        </button>
-      </div>
+      <AppTabs v-model="activeFilter" :tabs="filters" :controls="false" />
 
       <div class="toolbar-right">
         <!-- Visibility: compact icon-only segmented control -->
@@ -144,14 +132,12 @@
               <span class="inline-rating-num">{{
                 review.rating.toFixed(1)
               }}</span>
-              <div class="stars">
-                <Star
-                  v-for="n in 5"
-                  :key="n"
-                  :size="9"
-                  :class="n <= review.rating ? 'star-on' : 'star-off'"
-                />
-              </div>
+              <StarRatingInput
+                :model-value="review.rating"
+                readonly
+                :show-label="false"
+                :size="11"
+              />
             </div>
           </div>
 
@@ -248,6 +234,8 @@
 </template>
 
 <script setup lang="ts">
+import AppTabs from "@/components/ui/AppTabs.vue"
+import StarRatingInput from "@/components/movie/Starratinginput.vue"
 import SkeletonList from "@/components/ui/skeleton/SkeletonList.vue"
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import {
@@ -503,20 +491,18 @@ onMounted(fetchReviews);
 
 <style scoped>
 .reviews-root {
-  --c-card: #161616;
-  --c-border: rgba(255, 255, 255, 0.06);
-  --c-border-h: rgba(255, 255, 255, 0.12);
-  --c-red: #e1251b;
-  --c-text: #f0f0f0;
-  --c-sub: #8a8a8e;
-  --c-muted: #3a3a3c;
-  --c-star: #fbbf24;
-  --c-green: #34c759;
-  --font:
-    "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui,
-    sans-serif;
+  --c-card: var(--color-surface-2);
+  --c-border: var(--color-border);
+  --c-border-h: var(--color-border-strong);
+  --c-red: var(--color-brand);
+  --c-text: var(--color-text-primary);
+  --c-sub: var(--color-text-secondary);
+  --c-muted: var(--color-text-muted);
+  --c-star: var(--color-rating);
+  --c-green: var(--color-success);
+  --font: var(--font-sans);
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
-  font-family: var(--font);
+  font-family: var(--font-sans);
   color: var(--c-text);
 }
 
@@ -557,35 +543,6 @@ onMounted(fetchReviews);
   margin-bottom: 22px;
   padding-bottom: 16px;
   border-bottom: 1px solid var(--c-border);
-}
-
-.filter-rail {
-  display: flex;
-  gap: 6px;
-}
-.filter-pill {
-  font-family: var(--font);
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--c-sub);
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--c-border);
-  padding: 6px 14px;
-  border-radius: 20px;
-  cursor: pointer;
-  transition: all 0.2s var(--ease);
-}
-.filter-pill:hover {
-  color: var(--c-text);
-  border-color: var(--c-border-h);
-}
-.filter-pill--active {
-  color: #000;
-  background: #fff;
-  border-color: #fff;
-}
-.filter-pill--active:hover {
-  color: #000;
 }
 
 .toolbar-right {
@@ -640,7 +597,7 @@ onMounted(fetchReviews);
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--c-border);
   color: var(--c-sub);
-  font-family: var(--font);
+  font-family: var(--font-sans);
   font-size: 0.7rem;
   font-weight: 500;
   cursor: pointer;
@@ -707,7 +664,7 @@ onMounted(fetchReviews);
 .date-input {
   flex: 1;
   min-width: 0;
-  font-family: var(--font);
+  font-family: var(--font-sans);
   font-size: 0.7rem;
   color: var(--c-text);
   background: rgba(255, 255, 255, 0.04);
@@ -843,17 +800,6 @@ onMounted(fetchReviews);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
 }
-.stars {
-  display: flex;
-  gap: 2px;
-}
-.star-on {
-  color: var(--c-star);
-  fill: var(--c-star);
-}
-.star-off {
-  color: var(--c-muted);
-}
 
 /* Meta row: created date + private icon + watched date */
 .meta-row {
@@ -985,7 +931,7 @@ onMounted(fetchReviews);
   width: 100%;
   padding: 7px 10px;
   border-radius: 5px;
-  font-family: var(--font);
+  font-family: var(--font-sans);
   font-size: 0.75rem;
   font-weight: 500;
   color: var(--c-sub);

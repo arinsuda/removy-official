@@ -136,9 +136,6 @@
               @close="notificationStore.closePanel()"
             />
           </Transition>
-
-          <!-- Toast แบบ ephemeral (สไลด์เด้ง 4 วิ) แยกจากศูนย์การแจ้งเตือนถาวรด้านบน -->
-          <ToastContainer />
         </div>
 
         <div class="user-menu" v-if="authStore.user" ref="userMenuRef">
@@ -350,7 +347,6 @@ import { useAuthStore } from "@/stores/auth";
 import { useAdminStore } from "@/stores/admin";
 import { useNotificationStore } from "@/stores/notification";
 import { useLocale, i18n } from "@/i18n";
-import ToastContainer from "@/components/common/ToastContainer.vue";
 import NotificationPanel from "@/components/common/NotificationPanel.vue";
 import { movieApi } from "@/api/endpoints/movie";
 import { linkApi } from "@/api/endpoints/link";
@@ -591,7 +587,7 @@ onUnmounted(() => {
 <style scoped>
 .app-shell {
   min-height: 100vh;
-  background: #141414;
+  background: var(--color-surface);
 }
 
 /* ── Navbar ─────────────────────────────────────────── */
@@ -636,7 +632,7 @@ onUnmounted(() => {
 }
 
 .nav-logo {
-  font-family: "Noto Sans Thai", "Arial Black", sans-serif;
+  font-family: var(--font-sans);
   font-size: 1.5rem;
   font-weight: 900;
   text-decoration: none;
@@ -1192,7 +1188,7 @@ onUnmounted(() => {
     gap: 0;
   }
   .user-trigger .rotate-180,
-  .user-trigger svg:last-child {
+  .user-trigger > svg:last-child {
     display: none;
   }
   .dropdown-menu {

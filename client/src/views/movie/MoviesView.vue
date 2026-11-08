@@ -359,7 +359,7 @@ onUnmounted(() => {
 
 <style scoped>
 .list-page {
-  background: #141414;
+  background: var(--color-surface);
   min-height: 100vh;
 }
 .page-header {
@@ -368,7 +368,7 @@ onUnmounted(() => {
   margin: 0 auto;
 }
 .page-title {
-  font-family: "Noto Sans Thai", "Arial Black", sans-serif;
+  font-family: var(--font-sans);
   font-size: 1.75rem;
   font-weight: 900;
   letter-spacing: 2px;

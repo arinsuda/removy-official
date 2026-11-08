@@ -46,14 +46,6 @@
             <X :size="11" />
           </button>
 
-          <ConfirmModal
-            v-model="showModal"
-            :list-type="listType"
-            :item-name="selectedItem?.title"
-            @confirm="doRemove"
-            @cancel="showModal = false"
-          />
-
           <div class="poster-overlay">
             <p class="overlay-name">{{ item.title }}</p>
             <span class="overlay-genre">{{
@@ -117,6 +109,13 @@
       :media-type="activeHistoryMedia.type"
       @close="showHistoryPanel = false"
       @changed="onWatchHistoryChanged"
+    />
+    <ConfirmModal
+      v-model="showModal"
+      :list-type="listType"
+      :item-name="selectedItem?.title"
+      @confirm="doRemove"
+      @cancel="showModal = false"
     />
   </div>
 </template>
@@ -304,18 +303,17 @@ import SkeletonGrid from "@/components/ui/skeleton/SkeletonGrid.vue"
 
 <style scoped>
   .wl-root {
-    --c-card: #161616;
-    --c-border: rgba(255, 255, 255, 0.06);
-    --c-border-h: rgba(255, 255, 255, 0.13);
-    --c-red: #e1251b;
-    --c-text: #f0f0f0;
-    --c-sub: #8a8a8e;
-    --c-muted: #3a3a3c;
-    --font:
-      -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    --c-card: var(--color-surface-2);
+    --c-border: var(--color-border);
+    --c-border-h: var(--color-border-strong);
+    --c-red: var(--color-brand);
+    --c-text: var(--color-text-primary);
+    --c-sub: var(--color-text-secondary);
+    --c-muted: var(--color-text-muted);
+    --font: var(--font-sans);
     --ease: cubic-bezier(0.16, 1, 0.3, 1);
 
-    font-family: var(--font);
+    font-family: var(--font-sans);
     color: var(--c-text);
   }
 

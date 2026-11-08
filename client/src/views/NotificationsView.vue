@@ -29,20 +29,13 @@
     <div class="notifications-page-body">
       <SkeletonList v-if="loading" avatar :count="7" />
 
-      <div
-        v-else-if="error"
-        class="notifications-page-state notifications-page-state--error"
-      >
-        <span>{{ error }}</span>
-        <button class="notifications-page-retry" @click="fetchList(1)">
-          ลองใหม่
-        </button>
-      </div>
+      <AppErrorState v-else-if="error" :title="error" @retry="fetchList(1)" />
 
-      <div v-else-if="items.length === 0" class="notifications-page-state">
-        <BellOff :size="36" />
-        <span>ยังไม่มีการแจ้งเตือนในหมวดนี้</span>
-      </div>
+      <AppEmptyState
+        v-else-if="items.length === 0"
+        :icon="BellOff"
+        title="ยังไม่มีการแจ้งเตือนในหมวดนี้"
+      />
 
       <template v-else>
         <div
@@ -123,6 +116,8 @@
 </template>
 
 <script setup lang="ts">
+import AppEmptyState from "@/components/ui/AppEmptyState.vue"
+import AppErrorState from "@/components/ui/AppErrorState.vue"
 import AppSpinner from "@/components/ui/AppSpinner.vue"
 import SkeletonList from "@/components/ui/skeleton/SkeletonList.vue"
   import { ref, computed, watch } from "vue"
@@ -362,19 +357,6 @@ import SkeletonList from "@/components/ui/skeleton/SkeletonList.vue"
   .notifications-page-state--inline {
     padding: 1rem;
   }
-  .notifications-page-state--error {
-    color: var(--color-brand);
-  }
-  .notifications-page-retry {
-    background: rgba(255, 255, 255, 0.08);
-    border: none;
-    color: #fff;
-    font-size: 0.8rem;
-    padding: 0.4rem 0.9rem;
-    border-radius: 6px;
-    cursor: pointer;
-  }
-
   .spin {
     animation: spin 0.8s linear infinite;
   }

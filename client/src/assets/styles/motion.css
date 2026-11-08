@@ -11,21 +11,32 @@
   --motion-wave-text: 400ms;
   --ease-water: cubic-bezier(0.37, 0, 0.63, 1);
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
-  --focus-ring-color: var(--color-accent);
-  --focus-input-shadow: 0 0 0 2px var(--color-brand), 0 0 0 6px rgb(245 67 44 / 20%),
-    0 8px 24px rgb(245 67 44 / 18%);
+  --focus-ring-color: var(--color-focus);
+  --focus-input-shadow: 0 0 0 2px var(--color-brand),
+    0 0 0 6px color-mix(in srgb, var(--color-brand) 20%, transparent),
+    0 8px 24px color-mix(in srgb, var(--color-brand) 18%, transparent);
   --slide-fill: var(--color-accent);
-  --slide-fill-text: #141414;
+  --slide-fill-text: var(--color-surface);
 }
 
 /*
  * Keyboard focus ring. :where keeps specificity at zero, so components can
  * still override it. An outline is used because overflow: hidden cannot clip it.
+ *
+ * Form controls are the deliberate exception: many scoped styles set
+ * outline: none, which would beat a zero-specificity rule, so their ring uses
+ * !important. Opt out with data-focus-custom when a control draws its own
+ * focus style. The negative offset keeps the ring inside overflow clipping.
  */
 :where(a, button, summary, [role="button"], [tabindex]):focus-visible {
   outline: 2px solid var(--focus-ring-color);
   outline-offset: 3px;
   animation: focus-ring-in 220ms var(--ease-out-soft);
+}
+
+:where(input, textarea, select):not([data-focus-custom]):focus-visible {
+  outline: 2px solid var(--focus-ring-color) !important;
+  outline-offset: -2px;
 }
 
 @keyframes focus-ring-in {

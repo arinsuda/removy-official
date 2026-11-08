@@ -525,7 +525,6 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
 </script>
 
 <style scoped>
-  @import url("https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap");
 
   *,
   *::before,
@@ -538,9 +537,9 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
     --red-dim: rgba(245, 67, 44, 0.15);
     --gold: #f5c518;
     --green: #22c55e;
-    --bg: #080808;
-    --surface: #101010;
-    --surface2: #181818;
+    --bg: var(--color-surface);
+    --surface: var(--color-surface-2);
+    --surface2: var(--color-surface-3);
     --surface3: #202020;
     --border: rgba(255, 255, 255, 0.07);
     --border-md: rgba(255, 255, 255, 0.12);
@@ -548,7 +547,7 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
     --muted: #5a5a5a;
     --muted2: #8a8a8a;
 
-    font-family: "Noto Sans Thai", sans-serif;
+    font-family: var(--font-sans);
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
@@ -807,7 +806,7 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
     font-size: 1.35rem;
     font-weight: 700;
     color: #fff;
-    font-family: monospace;
+    font-family: var(--font-sans);
     line-height: 1.1;
   }
   .countdown-num--sec {

@@ -964,15 +964,15 @@ onMounted(async () => {
 
 <style scoped>
 .bmol-root {
-  --c-card: #161616;
-  --c-border: rgba(255, 255, 255, 0.06);
-  --c-border-h: rgba(255, 255, 255, 0.13);
-  --c-red: #e1251b;
-  --c-text: #f0f0f0;
-  --c-sub: #8a8a8e;
-  --c-muted: #3a3a3c;
-  --font: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
-  font-family: var(--font);
+  --c-card: var(--color-surface-2);
+  --c-border: var(--color-border);
+  --c-border-h: var(--color-border-strong);
+  --c-red: var(--color-brand);
+  --c-text: var(--color-text-primary);
+  --c-sub: var(--color-text-secondary);
+  --c-muted: var(--color-text-muted);
+  --font: var(--font-sans);
+  font-family: var(--font-sans);
   color: var(--c-text);
   display: flex;
   flex-direction: column;
@@ -1088,7 +1088,7 @@ onMounted(async () => {
 }
 .count-chip {
   font-size: 0.65rem;
-  background: var(--c-muted);
+  background: var(--color-surface-3);
   color: var(--c-text);
   padding: 2px 6px;
   border-radius: 4px;

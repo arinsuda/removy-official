@@ -7,30 +7,21 @@
       </SkeletonRegion>
 
       <!-- 2. Error Message -->
-      <div
+      <AppErrorState
         v-else-if="error && items.length === 0"
         key="error"
-        class="flex flex-col items-center gap-3 py-16 text-center"
-      >
-        <p class="text-sm text-white/50">{{ error }}</p>
-        <button
-          type="button"
-          class="rounded-md bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20"
-          @click="emit('retry')"
-        >
-          ลองอีกครั้ง
-        </button>
-      </div>
+        :title="error"
+        class="py-16"
+        @retry="emit('retry')"
+      />
 
       <!-- 3. Empty State -->
-      <div
+      <AppEmptyState
         v-else-if="isEmpty"
         key="empty"
-        class="flex flex-col items-center gap-2 py-20 text-center text-white/40"
-      >
-        <p class="text-sm">ยังไม่มีความเคลื่อนไหวในฟีด</p>
-        <p class="text-xs">ติดตามเพื่อน ๆ เพิ่ม เพื่อดูกิจกรรมของพวกเขาที่นี่</p>
-      </div>
+        title="ยังไม่มีความเคลื่อนไหวในฟีด"
+        description="ติดตามเพื่อน ๆ เพิ่ม เพื่อดูกิจกรรมของพวกเขาที่นี่"
+      />
 
       <!-- 4. Content List -->
       <div v-else key="content">
@@ -82,6 +73,8 @@ import SkeletonRegion from "@/components/ui/skeleton/SkeletonRegion.vue"
 import { computed, ref } from "vue";
 import type { FeedItemResponse } from "@/types/feed";
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
+import AppEmptyState from "@/components/ui/AppEmptyState.vue";
+import AppErrorState from "@/components/ui/AppErrorState.vue";
 import FeedItem from "./FeedItem.vue";
 import FeedItemSkeleton from "./FeedItemSkeleton.vue";
 

@@ -1,42 +1,64 @@
 @import "tailwindcss";
 
-@theme {
-  --color-brand: #f5432c;
-  --color-brand-hover: #ff5a42;
-  --color-accent: #ffd93b;
-  --color-info: #38abeb;
-  --color-surface: #141414;
-  --color-surface-2: #1f1f1f;
-  --color-surface-3: #2a2a2a;
-  --color-border: #2a2a2a;
-  --color-text-primary: #ffffff;
-  --color-text-secondary: #a3a3a3;
-  --color-text-muted: #666666;
+@theme static {
+  --breakpoint-xs: 30rem;
 
-  /* ปรับให้รองรับ Noto Sans Thai เป็นอันดับแรก */
-  --font-sans: "Noto Sans Thai", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --color-surface: #0b0b0c;
+  --color-surface-2: #151517;
+  --color-surface-3: #202023;
+  --color-border: rgb(255 255 255 / 8%);
+  --color-border-strong: rgb(255 255 255 / 14%);
+  --color-text-primary: #f5f5f7;
+  --color-text-secondary: #a1a1aa;
+  --color-text-muted: #8a8a8e;
+  --color-brand: #d6341f;
+  --color-brand-hover: #c42d19;
+  --color-on-brand: #ffffff;
+  --color-success: #34c759;
+  --color-warning: #fbbf24;
+  --color-danger: #ff5a52;
+  --color-info: #38abeb;
+  --color-rating: #fbbf24;
+  --color-focus: #f5f5f7;
+  --color-accent: #ffd93b;
+
+  /* One font stack for the whole app; Noto Sans Thai first */
+  --font-sans: "Noto Sans Thai", ui-sans-serif, system-ui, sans-serif;
+
+  /* Type scale tokens (existing sizes are not migrated yet) */
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1.5;
+  --text-small: 0.875rem;
+  --text-small--line-height: 1.5;
+  --text-body: 1rem;
+  --text-body--line-height: 1.6;
+  --text-title: 1.25rem;
+  --text-title--line-height: 1.4;
+  --text-heading: 1.5rem;
+  --text-heading--line-height: 1.3;
+  --text-page: 2rem;
+  --text-page--line-height: 1.25;
+  --text-display: 3rem;
+  --text-display--line-height: 1.25;
 
   --radius-card: 0.75rem;
   --radius-btn: 9999px;
 }
 
 @layer base {
-  /* โหลด Google Fonts สำหรับภาษาไทย */
-  @import url("https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap");
-
   html {
     color-scheme: dark;
   }
 
   body {
-    @apply bg-[#141414] text-white font-sans antialiased;
+    @apply bg-surface text-text-primary font-sans antialiased;
     margin: 0;
     padding: 0;
     max-width: 100%; /* ลบ max-width 1280px เดิมออกเพื่อให้ยืดเต็มหน้าจอ */
   }
 
   * {
-    @apply border-[#2a2a2a];
+    @apply border-border;
   }
 
   /* Custom Scrollbar */
@@ -48,23 +70,23 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    @apply bg-[#3a3a3a] rounded-full;
+    @apply bg-border-strong rounded-full;
   }
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-[#555];
+    @apply bg-text-muted;
   }
 }
 
 @layer utilities {
   .text-gradient {
-    background: linear-gradient(135deg, #f5432c, #ff6b6b);
+    background: linear-gradient(135deg, var(--color-brand), #ff6b6b);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
   .glass {
-    background: rgba(20, 20, 20, 0.8);
+    background: color-mix(in srgb, var(--color-surface) 80%, transparent);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
   }
@@ -74,25 +96,50 @@
   }
 }
 
-.dp__theme_dark {
-  --dp-background-color: #141414;
-  --dp-text-color: #ffffff;
-  --dp-hover-color: #2a2a2a;
-  --dp-hover-text-color: #ffffff;
-  --dp-primary-color: #f5432c;
-  --dp-primary-disabled-color: #7f2c20;
-  --dp-primary-text-color: #ffffff;
-  --dp-secondary-color: #a3a3a3;
-  --dp-border-color: #2a2a2a;
-  --dp-menu-border-color: #2a2a2a;
-  --dp-border-color-hover: #f5432c;
-  --dp-border-color-focus: #f5432c;
-  --dp-disabled-color: #333333;
-  --dp-disabled-color-text: #666666;
-  --dp-icon-color: #a3a3a3;
-  --dp-danger-color: #e53935;
-  --dp-marker-color: #f5432c;
-  --dp-highlight-color: rgb(229 9 20 / 20%);
+/*
+ * Shared z-index scale for layers that must stack across components.
+ *   header 100 < legacy modals 9999-99999 < AppModal (--z-modal-base + 10 per open modal)
+ *   < popovers teleported to body (datepicker menus) < toasts.
+ * AppModal stays above the legacy 99999 modals on purpose. Legacy modals have
+ * not migrated yet; do not add new hard-coded z-index values above 1000.
+ */
+:root {
+  --z-modal-base: 100000;
+  --z-popover: 300000;
+  --z-toast: 400000;
+}
+
+/* The datepicker hard-codes z-index 99999, which would sit under an AppModal. */
+body .dp--menu-wrapper {
+  z-index: var(--z-popover);
+}
+
+/* vue-datepicker v14 names its dark theme class dp--theme-dark. `body` outranks the
+   library's own single-class rule regardless of stylesheet order. */
+body .dp--theme-dark {
+  --dp-background-color: var(--color-surface-2);
+  --dp-text-color: var(--color-text-primary);
+  --dp-hover-color: var(--color-border-strong);
+  --dp-hover-text-color: var(--color-text-primary);
+  --dp-primary-color: var(--color-brand);
+  --dp-primary-disabled-color: color-mix(in srgb, var(--color-brand) 50%, var(--color-surface-2));
+  --dp-hover-icon-color: var(--color-text-primary);
+  --dp-scroll-bar-background: var(--color-surface-2);
+  --dp-scroll-bar-color: var(--color-surface-3);
+  --dp-tooltip-color: var(--color-surface-3);
+  --dp-success-color: var(--color-success);
+  --dp-primary-text-color: var(--color-on-brand);
+  --dp-secondary-color: var(--color-text-secondary);
+  --dp-border-color: var(--color-border-strong);
+  --dp-menu-border-color: var(--color-border-strong);
+  --dp-border-color-hover: var(--color-brand);
+  --dp-border-color-focus: var(--color-brand);
+  --dp-disabled-color: var(--color-surface-3);
+  --dp-disabled-color-text: var(--color-text-muted);
+  --dp-icon-color: var(--color-text-secondary);
+  --dp-danger-color: var(--color-danger);
+  --dp-marker-color: var(--color-brand);
+  --dp-highlight-color: color-mix(in srgb, var(--color-brand) 20%, transparent);
 }
 
 /* ─── Global Page Transitions ─── */

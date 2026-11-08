@@ -429,7 +429,7 @@ import SkeletonList from "@/components/ui/skeleton/SkeletonList.vue"
     flex-direction: column;
     gap: 1.5rem;
     margin-top: 0.5rem;
-    font-family: "Noto Sans Thai", sans-serif;
+    font-family: var(--font-sans);
   }
 
   .write-review-box {
@@ -446,7 +446,7 @@ import SkeletonList from "@/components/ui/skeleton/SkeletonList.vue"
     border-radius: 8px;
     padding: 0.75rem;
     color: #fff;
-    font-family: inherit;
+    font-family: var(--font-sans);
     font-size: 0.9rem;
     resize: none;
     outline: none;
@@ -777,51 +777,6 @@ import SkeletonList from "@/components/ui/skeleton/SkeletonList.vue"
     flex-wrap: wrap;
   }
 
-  .watched-at-field {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    font-size: 0.78rem;
-    color: var(--muted, #8a8a8a);
-    flex: 1 1 220px;
-    min-width: 0;
-  }
-
-  .watched-at-field label {
-    white-space: nowrap;
-  }
-
-  .watched-at-field :deep(.dp__main) {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-
-  .watched-at-field :deep(.dp__input) {
-    background: rgba(0, 0, 0, 0.35);
-    border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
-    border-radius: 6px;
-    padding: 0.4rem 0.7rem 0.4rem 2.2rem;
-    color: #fff;
-    font-family: inherit;
-    font-size: 0.8rem;
-    min-height: unset;
-    width: 150px;
-    max-width: 100%;
-    box-sizing: border-box;
-  }
-
-  .watched-at-field :deep(.dp__input:hover) {
-    border-color: rgba(255, 255, 255, 0.2);
-  }
-
-  .watched-at-field :deep(.dp__input_focus) {
-    border-color: var(--red, var(--color-brand));
-  }
-
-  .watched-at-field :deep(.dp__icon) {
-    color: var(--muted, #8a8a8a);
-  }
-
   .visibility-toggle {
     display: inline-flex;
     align-items: center;
@@ -893,14 +848,6 @@ import SkeletonList from "@/components/ui/skeleton/SkeletonList.vue"
 
     .extra-fields-row {
       gap: 0.75rem;
-    }
-
-    .watched-at-field {
-      flex: 1 1 100%;
-    }
-
-    .watched-at-field :deep(.dp__input) {
-      width: 100%;
     }
 
     .visibility-toggle {
@@ -990,12 +937,6 @@ import SkeletonList from "@/components/ui/skeleton/SkeletonList.vue"
       margin-top: 0.7rem;
       padding-top: 0.7rem;
       gap: 0.6rem;
-    }
-
-    .watched-at-field {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 0.35rem;
     }
 
     .rating-input {
@@ -1115,143 +1056,6 @@ import SkeletonList from "@/components/ui/skeleton/SkeletonList.vue"
 
     .comment-count {
       justify-content: center;
-    }
-  }
-
-  /* ============================================================
-   Minimal calendar redesign for VueDatePicker
-   ============================================================ */
-
-  :deep(.movie-dp-menu.dp__menu) {
-    background: #111113;
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 16px;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
-    padding: 0.5rem;
-    font-family: inherit;
-    --dp-primary-color: var(--color-brand);
-    --dp-primary-text-color: #fff;
-    --dp-border-color: transparent;
-    --dp-border-color-hover: transparent;
-    --dp-menu-border-color: transparent;
-  }
-
-  :deep(.movie-dp-menu .dp__arrow_top) {
-    display: none;
-  }
-
-  :deep(.movie-dp-menu .dp__calendar_header) {
-    color: #6b6b6b;
-    font-size: 0.7rem;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-
-  :deep(.movie-dp-menu .dp__calendar_header_separator) {
-    display: none;
-  }
-
-  :deep(.movie-dp-menu .dp__month_year_row) {
-    padding: 0.35rem 0.4rem 0.75rem;
-  }
-
-  :deep(.movie-dp-menu .dp__month_year_select) {
-    color: #fff;
-    font-size: 0.9rem;
-    font-weight: 600;
-    border-radius: 8px;
-    transition: background 0.15s;
-  }
-  :deep(.movie-dp-menu .dp__month_year_select:hover) {
-    background: rgba(255, 255, 255, 0.06);
-  }
-
-  :deep(.movie-dp-menu .dp__inner_nav) {
-    color: #8a8a8a;
-    border-radius: 999px;
-    transition:
-      background 0.15s,
-      color 0.15s;
-  }
-  :deep(.movie-dp-menu .dp__inner_nav:hover) {
-    background: rgba(255, 255, 255, 0.08);
-    color: #fff;
-  }
-  :deep(.movie-dp-menu .dp__inner_nav svg) {
-    width: 14px;
-    height: 14px;
-  }
-
-  :deep(.movie-dp-menu .dp__calendar_item) {
-    padding: 1px;
-  }
-
-  :deep(.movie-dp-menu .dp__cell_inner) {
-    height: 34px;
-    width: 34px;
-    font-size: 0.82rem;
-    font-weight: 400;
-    color: #d4d4d4;
-    border-radius: 999px;
-    border: none;
-    transition:
-      background 0.15s,
-      color 0.15s;
-  }
-
-  :deep(.movie-dp-menu .dp__cell_inner:hover) {
-    background: rgba(255, 255, 255, 0.08);
-  }
-
-  :deep(.movie-dp-menu .dp__cell_offset) {
-    color: #3d3d3d;
-  }
-
-  :deep(.movie-dp-menu .dp__today) {
-    border: 1px solid rgba(245, 197, 24, 0.5);
-    color: #f5c518;
-    font-weight: 600;
-  }
-
-  :deep(.movie-dp-menu .dp__active_date) {
-    background: var(--red, var(--color-brand));
-    color: #fff;
-    font-weight: 600;
-  }
-  :deep(.movie-dp-menu .dp__active_date:hover) {
-    background: var(--color-brand-hover);
-  }
-
-  :deep(.movie-dp-menu .dp__cell_disabled) {
-    color: #3d3d3d;
-    opacity: 0.5;
-  }
-
-  :deep(.movie-dp-menu .dp__action_row) {
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
-    padding: 0.6rem 0.4rem 0.2rem;
-    margin-top: 0.35rem;
-  }
-
-  :deep(.movie-dp-menu .dp__action_button) {
-    font-size: 0.78rem;
-    font-weight: 600;
-    border-radius: 8px;
-    padding: 0.4rem 0.9rem;
-  }
-
-  :deep(.movie-dp-menu .dp__select) {
-    background: var(--red, var(--color-brand));
-    color: #fff;
-  }
-  :deep(.movie-dp-menu .dp__select:hover) {
-    background: var(--color-brand-hover);
-  }
-
-  @media (max-width: 420px) {
-    :deep(.movie-dp-menu.dp__menu) {
-      max-width: calc(100vw - 2rem);
     }
   }
 </style>

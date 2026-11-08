@@ -220,7 +220,7 @@ onMounted(() => {
 }
 
 .meta-code {
-  font-family: monospace;
+  font-family: var(--font-sans);
   font-size: 0.75rem;
   background: rgba(0, 0, 0, 0.3);
   padding: 0.15rem 0.4rem;

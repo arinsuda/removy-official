@@ -1,13 +1,21 @@
 <template>
   <component
     :is="tag"
-    :to="to"
-    :href="href"
+    :to="isRouterLink ? to : undefined"
+    v-bind="linkHref ? { href: linkHref } : {}"
+    :role="!isNativeButton && isInert ? 'link' : undefined"
     :type="isNativeButton ? type : undefined"
     :disabled="isNativeButton ? isInert : undefined"
+    :aria-disabled="!isNativeButton && isInert ? 'true' : undefined"
+    :tabindex="!isNativeButton && isInert ? -1 : undefined"
     :aria-busy="loading || undefined"
     class="app-btn slide-fill"
-    :class="[`app-btn--${variant}`, `app-btn--${size}`, { 'app-btn--block': block }]"
+    :class="[
+      `app-btn--${variant}`,
+      `app-btn--${size}`,
+      { 'app-btn--block': block, 'app-btn--icon': iconOnly },
+    ]"
+    @click.capture="blockInertLink"
   >
     <AppSpinner v-if="loading" />
     <slot v-else />
@@ -16,26 +24,47 @@
 
 <script setup lang="ts">
 import AppSpinner from "@/components/ui/AppSpinner.vue"
-import { computed } from "vue"
+import { computed, onMounted, useAttrs } from "vue"
 import { RouterLink, type RouteLocationRaw } from "vue-router"
 
 const props = withDefaults(
   defineProps<{
-    variant?: "primary" | "outline"
-    size?: "md" | "lg"
+    variant?: "primary" | "outline" | "ghost" | "danger"
+    size?: "sm" | "md" | "lg"
     type?: "button" | "submit" | "reset"
     to?: RouteLocationRaw
     href?: string
     disabled?: boolean
     loading?: boolean
     block?: boolean
+    /** Square button with an icon only; needs an aria-label. */
+    iconOnly?: boolean
   }>(),
   { variant: "primary", size: "md", type: "button" },
 )
 
-const tag = computed(() => (props.to ? RouterLink : props.href ? "a" : "button"))
-const isNativeButton = computed(() => tag.value === "button")
+const isLink = computed(() => Boolean(props.to || props.href))
 const isInert = computed(() => props.disabled || props.loading)
+// An inert link drops its href (RouterLink would always render one), so it is
+// no longer a navigable target for middle-click, drag, or "open in new tab".
+const isRouterLink = computed(() => Boolean(props.to) && !isInert.value)
+const linkHref = computed(() => (isInert.value ? undefined : props.href))
+const tag = computed(() => (isRouterLink.value ? RouterLink : isLink.value ? "a" : "button"))
+const isNativeButton = computed(() => !isLink.value)
+const attrs = useAttrs()
+
+// Links have no disabled attribute, so block activation by hand.
+function blockInertLink(event: Event) {
+  if (isNativeButton.value || !isInert.value) return
+  event.preventDefault()
+  event.stopImmediatePropagation()
+}
+
+onMounted(() => {
+  if (import.meta.env.DEV && props.iconOnly && !attrs["aria-label"] && !attrs["aria-labelledby"]) {
+    console.warn("[AppButton] icon-only buttons need an aria-label.")
+  }
+})
 </script>
 
 <style scoped>
@@ -55,7 +84,8 @@ const isInert = computed(() => props.disabled || props.loading)
   cursor: pointer;
 }
 
-.app-btn:disabled {
+.app-btn:disabled,
+.app-btn[aria-disabled="true"] {
   opacity: 0.55;
   cursor: not-allowed;
 }
@@ -65,34 +95,66 @@ const isInert = computed(() => props.disabled || props.loading)
   width: 100%;
 }
 
+.app-btn--sm {
+  min-height: 36px;
+  padding: 6px 14px;
+  font-size: 13px;
+}
+
+/* Touch targets stay at 44px. */
+@media (pointer: coarse) {
+  .app-btn--sm {
+    min-height: 44px;
+  }
+}
+
 .app-btn--lg {
   min-height: 48px;
   font-size: 15px;
 }
 
+.app-btn--icon {
+  min-width: 44px;
+  padding: 0;
+}
+
+.app-btn--icon.app-btn--sm {
+  min-width: 36px;
+}
+
+.app-btn--icon.app-btn--lg {
+  min-width: 48px;
+}
+
+@media (pointer: coarse) {
+  .app-btn--icon.app-btn--sm {
+    min-width: 44px;
+  }
+}
+
 .app-btn--primary {
+  --slide-fill: var(--color-accent);
   background: var(--color-brand);
-  color: #fff;
+  color: var(--color-on-brand);
 }
 
 .app-btn--outline {
+  --slide-fill: var(--color-accent);
   background: transparent;
-  border-color: var(--color-surface-3);
+  border-color: var(--color-border-strong);
   color: var(--color-text-primary);
 }
 
-.app-btn__spinner {
-  width: 18px;
-  height: 18px;
-  border: 2px solid rgb(255 255 255 / 30%);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: app-btn-spin 0.7s linear infinite;
+.app-btn--ghost {
+  --slide-fill: var(--color-surface-3);
+  --slide-fill-text: var(--color-text-primary);
+  background: transparent;
+  color: var(--color-text-secondary);
 }
 
-@keyframes app-btn-spin {
-  to {
-    transform: rotate(360deg);
-  }
+.app-btn--danger {
+  --slide-fill: var(--color-accent);
+  background: var(--color-danger);
+  color: var(--color-on-brand);
 }
 </style>

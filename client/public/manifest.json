@@ -4,8 +4,8 @@
   "description": "ศูนย์รวมรีวิวภาพยนตร์และซีรีส์ยอดนิยม",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#050505",
-  "theme_color": "#050505",
+  "background_color": "#0b0b0c",
+  "theme_color": "#0b0b0c",
   "icons": [
     {
       "src": "/popcorn-icon-512.png",

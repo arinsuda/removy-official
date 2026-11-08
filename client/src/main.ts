@@ -10,7 +10,6 @@ import "@vuepic/vue-datepicker/dist/main.css"
 import "./assets/styles/main.css"
 import "./assets/styles/motion.css"
 import "primeicons/primeicons.css"
-import PrimeVue from "primevue/config"
 import { i18n, getSavedLocale, setLocale } from "./i18n"
 
 async function bootstrap() {
@@ -22,7 +21,6 @@ async function bootstrap() {
 
   const pinia = createPinia()
   app.use(pinia)
-  app.use(PrimeVue, { ripple: true })
   app.use(i18n)
   app.component("VueDatePicker", VueDatePicker)
 
