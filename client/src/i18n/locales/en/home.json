@@ -1,7 +1,12 @@
 {
   "hero": {
     "playTrailer": "Play Trailer",
-    "viewDetail": "View Details"
+    "viewDetail": "View Details",
+    "label": "Featured on home",
+    "badge": "Featured",
+    "details": "View details",
+    "explore": "Explore all",
+    "slide": "Slide {n}: {title}"
   },
   "sections": {
     "popularMovies": "Popular Movies",
@@ -10,5 +15,36 @@
     "topRatedTV": "Top Rated TV Series",
     "nowPlaying": "Now Playing",
     "upcoming": "Upcoming Movies"
+  },
+  "rail": {
+    "seeAll": "See all",
+    "error": "Could not load this list",
+    "empty": "Nothing here yet"
+  },
+  "genres": {
+    "label": "Quick genres",
+    "action": "Action",
+    "scifi": "Sci-Fi",
+    "comedy": "Comedy",
+    "horror": "Horror",
+    "drama": "Drama",
+    "animation": "Animation",
+    "thriller": "Thriller"
+  },
+  "recommended": {
+    "title": "Recommended for you",
+    "subtitle": "Picked from the genres you love"
+  },
+  "popular": {
+    "title": "Popular movies",
+    "subtitle": "What everyone is watching right now"
+  },
+  "nowPlaying": {
+    "title": "Now in theaters",
+    "subtitle": "This week's latest releases"
+  },
+  "topRated": {
+    "title": "Top rated",
+    "subtitle": "Highest rated by viewers worldwide"
   }
 }
