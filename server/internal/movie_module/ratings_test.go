@@ -42,3 +42,16 @@ func TestWithExternalShape(t *testing.T) {
 	assert.False(t, off.IMDb.Available)
 	assert.False(t, off.RottenTomatoes.Available)
 }
+
+func TestWithExternalPendingFlag(t *testing.T) {
+	base := NewMediaRatingsResponse(shared.RatingStats{}, 0, 0)
+	b, _ := json.Marshal(base.WithExternal(external.Ratings{Pending: true}))
+	var m map[string]any
+	require.NoError(t, json.Unmarshal(b, &m))
+	assert.Equal(t, true, m["external_pending"])
+
+	b, _ = json.Marshal(base.WithExternal(external.Ratings{}))
+	m = nil
+	require.NoError(t, json.Unmarshal(b, &m))
+	assert.NotContains(t, m, "external_pending")
+}

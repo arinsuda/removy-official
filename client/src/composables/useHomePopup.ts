@@ -36,6 +36,8 @@ const SHOW_DELAY = 220
 const LEAVE_DELAY = 80
 const POPUP_WIDTH = 320
 const EDGE = 8
+const RATINGS_RETRY_DELAY = 1500
+const RATINGS_MAX_RETRIES = 2
 
 /** Call once in the home view; cards read it with `useHomePopup()`. */
 export function provideHomePopup(): HomePopup {
@@ -52,6 +54,7 @@ export function provideHomePopup(): HomePopup {
   let insidePopup = false
   let showTimer: ReturnType<typeof setTimeout> | null = null
   let leaveTimer: ReturnType<typeof setTimeout> | null = null
+  let ratingsTimer: ReturnType<typeof setTimeout> | null = null
   let media: MediaQueryList | null = null
 
   const syncViewport = () => {
@@ -84,17 +87,35 @@ export function provideHomePopup(): HomePopup {
     }
   }
 
-  async function loadRatings(item: HomeMedia) {
-    if (ratingsRequested.has(item.key)) return
-    ratingsRequested.add(item.key)
+  async function fetchRatings(item: HomeMedia): Promise<MediaRatings | undefined> {
+    return item.type === "tv"
+      ? (await movieApi.getSeriesById(item.id)).data?.series?.ratings
+      : (await movieApi.getById(item.id)).data?.movie?.ratings
+  }
+
+  async function loadRatings(item: HomeMedia, attempt = 0) {
+    if (attempt === 0) {
+      if (ratingsRequested.has(item.key)) return
+      ratingsRequested.add(item.key)
+    }
+    let pending = false
     try {
-      const ratings =
-        item.type === "tv"
-          ? (await movieApi.getSeriesById(item.id)).data?.series?.ratings
-          : (await movieApi.getById(item.id)).data?.movie?.ratings
+      const ratings = await fetchRatings(item)
       if (ratings) ratingsCache.set(item.key, ratings)
+      pending = !!ratings?.external_pending
     } catch {
       // Silent: the popup keeps the list-endpoint ratings.
+    }
+    if (!pending) return
+    if (attempt < RATINGS_MAX_RETRIES && hoveredKey === item.key) {
+      ratingsTimer = setTimeout(() => {
+        ratingsTimer = null
+        if (hoveredKey === item.key) void loadRatings(item, attempt + 1)
+        else ratingsRequested.delete(item.key)
+      }, RATINGS_RETRY_DELAY)
+    } else {
+      // Gave up while OMDb was still pending; allow a later hover to ask again.
+      ratingsRequested.delete(item.key)
     }
   }
 
@@ -178,6 +199,7 @@ export function provideHomePopup(): HomePopup {
     document.removeEventListener("keydown", onKeydown)
     window.removeEventListener("scroll", onScroll, { capture: true })
     clearTimers()
+    if (ratingsTimer) clearTimeout(ratingsTimer)
     states.forEach((s) => s.unmount())
     states.clear()
   })

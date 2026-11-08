@@ -33,6 +33,8 @@ type MediaRatingsResponse struct {
 	TMDB           RatingSourceResponse  `json:"tmdb"`
 	IMDb           *RatingSourceResponse `json:"imdb,omitempty"`
 	RottenTomatoes *RatingSourceResponse `json:"rotten_tomatoes,omitempty"`
+	// ExternalPending is set while the IMDb/RT lookup is still running; clients should ask again.
+	ExternalPending bool `json:"external_pending,omitempty"`
 }
 
 type MovieDTO struct {
@@ -115,5 +117,6 @@ func (r MediaRatingsResponse) WithExternal(ext external.Ratings) MediaRatingsRes
 		rt.Average = &v
 	}
 	r.IMDb, r.RottenTomatoes = &imdb, &rt
+	r.ExternalPending = ext.Pending
 	return r
 }

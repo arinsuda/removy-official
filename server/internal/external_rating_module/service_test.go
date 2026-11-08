@@ -191,7 +191,7 @@ func TestColdMissTimesOutThenFillsCache(t *testing.T) {
 	s := newTestService(store, &calls, func() (string, error) { <-release; return okBody, nil })
 	s.wait = 30 * time.Millisecond
 
-	assert.Equal(t, Ratings{}, s.Get(context.Background(), "movie", 3, "tt3"))
+	assert.Equal(t, Ratings{Pending: true}, s.Get(context.Background(), "movie", 3, "tt3"))
 	close(release)
 	require.Eventually(t, func() bool {
 		row, _ := store.Find(context.Background(), "movie", 3)
@@ -283,7 +283,7 @@ func TestTimeoutFallsBackQuickly(t *testing.T) {
 	start := time.Now()
 	r := s.Get(context.Background(), "movie", 3, "tt3")
 	assert.Less(t, time.Since(start), time.Second)
-	assert.Equal(t, Ratings{}, r)
+	assert.Equal(t, Ratings{Pending: true}, r)
 }
 
 func TestTVResolvesIMDbIDWhenUnknown(t *testing.T) {
