@@ -15,6 +15,7 @@ import (
 	"github.com/arinsuda/movie-hub/internal/analytics_module"
 	"github.com/arinsuda/movie-hub/internal/auth_module"
 	"github.com/arinsuda/movie-hub/internal/bmol_module"
+	"github.com/arinsuda/movie-hub/internal/external_rating_module"
 	"github.com/arinsuda/movie-hub/internal/feed_module"
 	"github.com/arinsuda/movie-hub/internal/follow_module"
 	"github.com/arinsuda/movie-hub/internal/identity_policy"
@@ -97,7 +98,9 @@ func Register(app *fiber.App, db *gorm.DB, cfg *config.Config, m *mailer.Mailer)
 
 	analytics_module.RegisterRoutes(protected, db)
 	ratingRepo := review_module.NewRatingStatsReader(db)
-	movie_module.RegisterRoutes(protected, ratingRepo)
+	extRatings := external_rating_module.NewService(
+		external_rating_module.NewGormStore(db), cfg.OMDb.APIKey, movie_module.SeriesIMDbResolver)
+	movie_module.RegisterRoutes(protected, ratingRepo, extRatings)
 	media_stats_module.RegisterRoutes(protected, db)
 	user_stats_module.RegisterRoutes(protected, db)
 	admin_module.RegisterRoutes(protected, db, notifHub, mc, mw.RequireCurrentAdmin(db))

@@ -43,6 +43,7 @@ type Movie struct {
 type MovieDetail struct {
 	Movie
 	EnglishTitle        string              `json:"english_title,omitempty"`
+	IMDbID              string              `json:"imdb_id,omitempty"`
 	Runtime             int                 `json:"runtime"`
 	Status              string              `json:"status"`
 	Tagline             string              `json:"tagline"`

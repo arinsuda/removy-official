@@ -14,6 +14,7 @@ import (
 	achievementsmodule "github.com/arinsuda/movie-hub/internal/achievements_module"
 	"github.com/arinsuda/movie-hub/internal/admin_module"
 	"github.com/arinsuda/movie-hub/internal/bmol_module"
+	"github.com/arinsuda/movie-hub/internal/external_rating_module"
 	"github.com/arinsuda/movie-hub/internal/feed_module"
 	"github.com/arinsuda/movie-hub/internal/follow_module"
 	"github.com/arinsuda/movie-hub/internal/library_module"
@@ -127,6 +128,9 @@ func autoMigrate(db *gorm.DB) error {
 		&bmol_module.BMOLItem{},
 		&admin_module.AdminAuditLog{},
 		&watch_log_module.MediaWatchLog{},
+
+		// external_rating_module: cached IMDb / Rotten Tomatoes ratings (additive table)
+		&external_rating_module.ExternalRating{},
 	)
 	if err != nil {
 		return err

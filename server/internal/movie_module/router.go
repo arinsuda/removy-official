@@ -1,12 +1,14 @@
 package movie_module
 
 import (
+	external "github.com/arinsuda/movie-hub/internal/external_rating_module"
 	"github.com/arinsuda/movie-hub/internal/shared"
 	"github.com/gofiber/fiber/v3"
 )
 
-func RegisterRoutes(router fiber.Router, ratingRepo shared.RatingStatsReader) {
+func RegisterRoutes(router fiber.Router, ratingRepo shared.RatingStatsReader, ext *external.Service) {
 	svc := NewMovieService(ratingRepo)
+	svc.SetExternalRatings(ext)
 	h := NewHandler(svc)
 
 	movies := router.Group("/movies")

@@ -236,6 +236,20 @@ func GetSeriesByID(tmdbID int) (*TVSeriesDetail, error) {
 	return &series, nil
 }
 
+// GetSeriesIMDbID returns the IMDb id from /tv/{id}/external_ids ("" when TMDB has none).
+func GetSeriesIMDbID(tmdbID int) (string, error) {
+	var ids struct {
+		IMDbID *string `json:"imdb_id"`
+	}
+	if err := get(fmt.Sprintf("/tv/%d/external_ids", tmdbID), nil, &ids); err != nil {
+		return "", fmt.Errorf("GetSeriesIMDbID(%d): %w", tmdbID, err)
+	}
+	if ids.IMDbID == nil {
+		return "", nil
+	}
+	return *ids.IMDbID, nil
+}
+
 func GetSeriesCredits(tmdbID int) (*Credits, error) {
 	var credits Credits
 	if err := get(fmt.Sprintf("/tv/%d/credits", tmdbID), nil, &credits); err != nil {
