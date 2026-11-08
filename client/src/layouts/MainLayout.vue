@@ -88,9 +88,8 @@
                   <span class="suggestion-type">{{
                     item.type === "movie" ? $t("navigation.movie") : $t("navigation.series")
                   }}</span>
-                  <span v-if="item.rating" class="suggestion-rating">
-                    <Star :size="11" fill="#f5c518" color="#f5c518" />
-                    {{ item.rating.toFixed(1) }}
+                  <span class="suggestion-rating">
+                    <MediaRating :ratings="item.ratings" :vote-average="item.rating" />
                   </span>
                 </div>
               </div>
@@ -344,6 +343,8 @@
 import { ref, onMounted, onUnmounted, nextTick, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import MediaRating from "@/components/movie/MediaRating.vue";
+import type { MediaRatings } from "@/types/movie";
 import { useAdminStore } from "@/stores/admin";
 import { useNotificationStore } from "@/stores/notification";
 import { useLocale, i18n } from "@/i18n";
@@ -362,7 +363,6 @@ import {
   Trophy,
   Rss,
   LogOut,
-  Star,
   X,
   Shield,
   } from "lucide-vue-next";
@@ -373,6 +373,7 @@ interface SearchSuggestion {
   title: string;
   poster_path: string | null;
   rating: number | null;
+  ratings?: MediaRatings;
 }
 
 const router = useRouter();
@@ -401,6 +402,7 @@ function mapMovie(m: Movie): SearchSuggestion {
     title: m.title,
     poster_path: m.poster_path ? getTmdbImageUrl(m.poster_path) : null,
     rating: m.vote_average,
+    ratings: m.ratings,
   };
 }
 
@@ -411,6 +413,7 @@ function mapSeries(s: TVSeries): SearchSuggestion {
     title: s.name,
     poster_path: s.poster_path ? getTmdbImageUrl(s.poster_path) : null,
     rating: s.vote_average,
+    ratings: s.ratings,
   };
 }
 
@@ -810,7 +813,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 2px;
   font-size: 0.78rem;
-  color: #f5c518;
+  color: var(--color-text-muted);
   font-weight: 600;
 }
 .search-suggestion-viewall {

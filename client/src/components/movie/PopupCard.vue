@@ -53,12 +53,14 @@
       >
         <h3 class="popup__title">{{ displayTitle }}</h3>
       </RouterLink>
-      <div class="popup__rating" :class="{ 'popup__rating--unrated': !ratingInfo.available }">
-        <PopcornRatingIcon v-if="ratingInfo.available && ratingInfo.isPopcorn" :size="12" class="popup__star" />
-        <Star v-else-if="ratingInfo.available" :size="11" class="popup__star" />
-        <span>{{ ratingInfo.display }}</span>
-      </div>
     </div>
+
+    <MediaRating
+      class="popup__rating"
+      variant="detail"
+      :ratings="movie.ratings"
+      :vote-average="movie.vote_average"
+    />
 
     <div class="popup__meta" v-if="releaseYear">
       <span class="popup__chip">{{ releaseYear }}</span>
@@ -139,7 +141,6 @@ import {
 } from "vue";
 import {
   Film,
-  Star,
   Eye,
   CheckCircle2,
   PenLine,
@@ -154,8 +155,7 @@ import type { ResolvedTrailer } from "@/composables/useTrailerPreview";
 import { libraryApi } from "@/api/endpoints/library";
 import { useAuthStore } from "@/stores/auth";
 import { mediaApi } from "@/api/endpoints/media";
-import PopcornRatingIcon from "./PopcornRatingIcon.vue";
-import { useI18n } from "vue-i18n";
+import MediaRating from "./MediaRating.vue";
 
 const props = defineProps<{
   movie: Movie | TVSeries;
@@ -228,44 +228,6 @@ onMounted(() => {
   }
 });
 
-const { t } = useI18n();
-
-// ─── Computed Rating Info ──────────────────────────────────────────────────
-const ratingInfo = computed(() => {
-  const m = props.movie as any;
-  if (m.ratings) {
-    if (m.ratings.popcorn && m.ratings.popcorn.available) {
-      return {
-        available: true,
-        isPopcorn: true,
-        display: `${m.ratings.popcorn.average.toFixed(1)}/5`
-      };
-    }
-    if (m.ratings.tmdb && m.ratings.tmdb.available) {
-      return {
-        available: true,
-        isPopcorn: false,
-        display: `${m.ratings.tmdb.average.toFixed(1)}`
-      };
-    }
-  }
-
-  // Fallback to legacy vote_average
-  const legacyAvg = m.vote_average ?? m.voteAverage;
-  if (typeof legacyAvg === "number" && legacyAvg > 0) {
-    return {
-      available: true,
-      isPopcorn: false,
-      display: legacyAvg.toFixed(1)
-    };
-  }
-
-  return {
-    available: false,
-    isPopcorn: false,
-    display: t("reviews.errors.notRated")
-  };
-});
 
 // ─── Reactive Stats State ─────────────────────────────────────────────────
 const stats = ref({
@@ -640,17 +602,7 @@ function fmtRuntime(mins: number) {
   transition: color 0.15s;
 }
 .popup__rating {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  flex-shrink: 0;
-  margin-top: 2px;
-  font-size: 0.76rem;
-  font-weight: 700;
-  color: #f59e0b;
-}
-.popup__star {
-  color: #f59e0b;
+  margin-bottom: 0.5rem;
 }
 .popup__meta {
   display: flex;

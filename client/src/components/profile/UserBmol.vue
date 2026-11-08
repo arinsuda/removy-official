@@ -111,7 +111,7 @@
             <h4 class="bmol-title" @click="goToDetail(item.media.id, item.media_type)">
               {{ item.media.title }}
             </h4>
-            <span class="bmol-rating">★ {{ item.media.vote_average.toFixed(1) }}</span>
+            <span class="bmol-rating"><MediaRating :ratings="item.media.ratings" :vote-average="item.media.vote_average" /></span>
 
             <!-- Actions (Only for Owner) -->
             <div v-if="isOwner" class="bmol-actions">
@@ -275,7 +275,7 @@
                   <h4 class="bmol-title" @click="goToDetail(item.media.id, item.media_type)">
                     {{ item.media.title }}
                   </h4>
-                  <span class="bmol-rating">★ {{ item.media.vote_average.toFixed(1) }}</span>
+                  <span class="bmol-rating"><MediaRating :ratings="item.media.ratings" :vote-average="item.media.vote_average" /></span>
 
                   <!-- Actions (Only for Owner) -->
                   <div v-if="isOwner" class="bmol-actions">
@@ -489,6 +489,7 @@
 </template>
 
 <script setup lang="ts">
+import MediaRating from "@/components/movie/MediaRating.vue"
 import AppSpinner from "@/components/ui/AppSpinner.vue"
 import SkeletonGrid from "@/components/ui/skeleton/SkeletonGrid.vue"
 import { ref, computed, onMounted, watch, onBeforeUnmount } from "vue"
@@ -614,7 +615,8 @@ async function submitBmolAdd() {
       id: media.id,
       title: getMediaTitle(media),
       poster_url: media.poster_path || "",
-      vote_average: media.vote_average || 0
+      vote_average: media.vote_average || 0,
+      ratings: media.ratings
     }
   } as BMOLItemResponse
 
@@ -764,7 +766,8 @@ async function saveSpotlightItems() {
         id: media.id,
         title: getMediaTitle(media),
         poster_url: media.poster_path || "",
-        vote_average: media.vote_average || 0
+        vote_average: media.vote_average || 0,
+        ratings: media.ratings
       }
     } as BMOLItemResponse
   })

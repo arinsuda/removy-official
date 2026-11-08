@@ -61,9 +61,8 @@
               <i class="pi pi-image"></i>
             </div>
 
-            <span class="similar-rating" v-if="hasRating(item)">
-              <i class="pi pi-star-fill"></i>
-              {{ formatRating(item.vote_average) }}
+            <span class="similar-rating">
+              <MediaRating :ratings="item.ratings" :vote-average="item.vote_average" />
             </span>
           </div>
 
@@ -95,6 +94,8 @@ import SkeletonBlock from "@/components/ui/skeleton/SkeletonBlock.vue"
   import { useRouter } from "vue-router"
   import { gsap } from "gsap"
   import { movieApi } from "@/api/api"
+  import MediaRating from "@/components/movie/MediaRating.vue"
+  import type { MediaRatings } from "@/types/movie"
 
   type MediaType = "movie" | "tv"
 
@@ -106,6 +107,7 @@ import SkeletonBlock from "@/components/ui/skeleton/SkeletonBlock.vue"
     release_date?: string | null
     first_air_date?: string | null
     vote_average?: number | null
+    ratings?: MediaRatings | null
   }
 
   const props = defineProps<{
@@ -140,14 +142,6 @@ import SkeletonBlock from "@/components/ui/skeleton/SkeletonBlock.vue"
     return dateStr.split("-")[0] || "-"
   }
 
-  function hasRating(item: SimilarMediaItem): boolean {
-    return typeof item.vote_average === "number" && item.vote_average > 0
-  }
-
-  function formatRating(value?: number | null): string {
-    if (typeof value !== "number") return "-"
-    return value.toFixed(1)
-  }
 
   function goToMedia(id: number) {
     if (props.movieType === "tv") {
@@ -381,7 +375,7 @@ import SkeletonBlock from "@/components/ui/skeleton/SkeletonBlock.vue"
     gap: 0.3rem;
     background: rgba(0, 0, 0, 0.7);
     border: 1px solid rgba(245, 197, 24, 0.35);
-    color: var(--sim-gold);
+    color: var(--color-text-muted);
     font-size: 0.7rem;
     font-weight: 600;
     padding: 0.2rem 0.5rem;

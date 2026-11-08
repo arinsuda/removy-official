@@ -58,6 +58,7 @@ client/src/
 | Auth, email verification, Google OAuth, sessions | auth_module, user_module (password reset, email change mailers) | views/auth/, components/auth/ (AuthShell, AuthField, AuthAlert, GoogleSignInButton, PasswordStrength), stores/auth.ts, composables/useAuth.ts |
 | Account linking PLANZI<->POPCORN (HMAC server-to-server, handoff token in URL fragment; contract in `../LINKING_SPEC.md`; disabled when `LINK_SHARED_SECRET` is empty; login falls back to remote `verify-password`) | link_module | views/auth/HandoffView.vue, api/endpoints/link.ts |
 | Movie, TV, actor, search, upcoming | movie_module, tmdb_module | views/movie/, views/tv/, views/actor/, views/SearchResultView.vue |
+| Ratings display (POPCORN primary; TMDB, IMDb, Rotten Tomatoes secondary). Movie/TV lists return `ratings.{popcorn,tmdb}`; detail adds `imdb`, `rotten_tomatoes` from OMDb (`OMDB_API_KEY`, empty = off). `ExternalRating` table caches 7d (1d for not_found), 3s timeout, 900 req/day budget. Library, likes, BMOL and feed items carry `media.ratings` via `shared.AttachRatings` | movie_module (dto/service), external_rating_module, shared/media_ratings.go | components/movie/MediaRating.vue (`card`/`detail`), PopcornScoreBadge.vue, popcornTier.ts (tiers: none, stale <2.5, fresh 2.5-3.9, hot >=4.0), utils/mediaRatings.ts |
 | Reviews, comments, ratings | review_module, like_module, media_stats_module | components/movie/MovieReviews.vue, composables/useReviewForm.ts |
 | Library lists | library_module | views/library/ |
 | Watch logs | watch_log_module | api/endpoints/watchLog.ts, types/watchLog.ts |
@@ -130,6 +131,7 @@ Changing any of these affects stored data, live sessions, or other systems:
 - Legacy fallback only: `LEGACY_LOCALE_STORAGE_KEY` (`removy-locale`) is still read. PLANZI still accepts `removy` as an input alias for `popcorn`.
 
 ## Gotchas
+- `OMDB_API_KEY` (optional): enables IMDb and Rotten Tomatoes ratings on movie/TV detail. Never log it; tests must stub the OMDb HTTP client.
 - Env precedence: real environment > `server/.env` > repo-root `.env` (`config.LoadDotEnv`). `docker compose` needs `--env-file server/.env`.
 - CORS has one source: `CORS_ALLOWED_ORIGIN` (comma-separated exact origins, no wildcard), used by Fiber, Socket.io, and the `/socket.io` handler in `main.go`. Production must set its frontend origin.
 - `node_modules` is platform-specific. After moving between OSes, run `npm ci` in `client/`.

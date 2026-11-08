@@ -41,11 +41,12 @@
           <span class="meta-item year" v-if="currentHero.release_date">
             {{ currentHero.release_date.slice(0, 4) }}
           </span>
-          <span class="meta-dot" v-if="currentHero.release_date && currentHero.vote_average">·</span>
-          <span class="meta-item rating" v-if="currentHero.vote_average">
-            <Star :size="14" class="fill-amber-400 text-amber-400" />
-            {{ currentHero.vote_average.toFixed(1) }}
-          </span>
+          <span class="meta-dot" v-if="currentHero.release_date">·</span>
+          <MediaRating
+            class="meta-item rating"
+            :ratings="currentHero.ratings"
+            :vote-average="currentHero.vote_average"
+          />
         </div>
 
         <p class="hero__overview" v-if="currentHero.overview">
@@ -142,9 +143,8 @@
                 </div>
 
                 <!-- Rating Badge Overlay -->
-                <div class="rating-badge" v-if="movie.vote_average">
-                  <Star :size="11" class="fill-amber-400 text-amber-400" />
-                  <span>{{ movie.vote_average.toFixed(1) }}</span>
+                <div class="rating-badge">
+                  <MediaRating :ratings="movie.ratings" :vote-average="movie.vote_average" />
                 </div>
               </div>
 
@@ -228,9 +228,8 @@
                   <span class="poster-fallback__title">{{ movie.title }}</span>
                 </div>
 
-                <div class="rating-badge" v-if="movie.vote_average">
-                  <Star :size="11" class="fill-amber-400 text-amber-400" />
-                  <span>{{ movie.vote_average.toFixed(1) }}</span>
+                <div class="rating-badge">
+                  <MediaRating :ratings="movie.ratings" :vote-average="movie.vote_average" />
                 </div>
               </div>
 
@@ -312,9 +311,8 @@
                   <span class="poster-fallback__title">{{ movie.title }}</span>
                 </div>
 
-                <div class="rating-badge" v-if="movie.vote_average">
-                  <Star :size="11" class="fill-amber-400 text-amber-400" />
-                  <span>{{ movie.vote_average.toFixed(1) }}</span>
+                <div class="rating-badge">
+                  <MediaRating :ratings="movie.ratings" :vote-average="movie.vote_average" />
                 </div>
               </div>
 
@@ -396,9 +394,8 @@
                   <span class="poster-fallback__title">{{ movie.title }}</span>
                 </div>
 
-                <div class="rating-badge" v-if="movie.vote_average">
-                  <Star :size="11" class="fill-amber-400 text-amber-400" />
-                  <span>{{ movie.vote_average.toFixed(1) }}</span>
+                <div class="rating-badge">
+                  <MediaRating :ratings="movie.ratings" :vote-average="movie.vote_average" />
                 </div>
               </div>
 
@@ -453,6 +450,7 @@
 
 <script setup lang="ts">
 import AppSpinner from "@/components/ui/AppSpinner.vue"
+import MediaRating from "@/components/movie/MediaRating.vue"
 import SkeletonBlock from "@/components/ui/skeleton/SkeletonBlock.vue"
   import { ref, computed, onMounted, onUnmounted } from "vue"
   import { useQuery } from "@tanstack/vue-query"
@@ -462,7 +460,6 @@ import SkeletonBlock from "@/components/ui/skeleton/SkeletonBlock.vue"
     Sparkles,
     Clapperboard,
     ChevronRight,
-    Star,
     Flame,
     TrendingUp,
     Play,

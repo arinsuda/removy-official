@@ -1,3 +1,4 @@
+import type { MediaRatings } from "@/types/movie";
 import type { UserSummary } from "./user";
 import type { MediaSummary } from "./movie";
 import type { MediaType, ListType, Visibility } from "./common";
@@ -55,6 +56,7 @@ export interface LikeItem {
     media_type: "movie" | "tv";
     poster_url: string;
     vote_average: number;
+    ratings?: MediaRatings;
     genres: { id: number; name: string }[];
   };
 }

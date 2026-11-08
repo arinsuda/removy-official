@@ -162,9 +162,8 @@
                 <div v-else class="poster-placeholder">
                   <i class="pi pi-image" />
                 </div>
-                <div v-if="movie.vote_average > 0" class="rating-badge">
-                  <i class="pi pi-star-fill" />
-                  <span>{{ movie.vote_average.toFixed(1) }}</span>
+                <div class="rating-badge">
+                  <MediaRating :ratings="movie.ratings" :vote-average="movie.vote_average" />
                 </div>
               </div>
 
@@ -206,9 +205,8 @@
                 <div v-else class="poster-placeholder">
                   <i class="pi pi-image" />
                 </div>
-                <div v-if="show.vote_average > 0" class="rating-badge">
-                  <i class="pi pi-star-fill" />
-                  <span>{{ show.vote_average.toFixed(1) }}</span>
+                <div class="rating-badge">
+                  <MediaRating :ratings="show.ratings" :vote-average="show.vote_average" />
                 </div>
               </div>
 
@@ -234,6 +232,7 @@ import SkeletonProfile from "@/components/ui/skeleton/SkeletonProfile.vue"
   import { useRoute, useRouter, RouterLink } from "vue-router"
   import { useI18n } from "vue-i18n"
   import { actorApi } from "@/api/api"
+  import MediaRating from "@/components/movie/MediaRating.vue"
   import type {
     PersonDetail,
     ActorMovieCredit,
@@ -750,7 +749,7 @@ import SkeletonProfile from "@/components/ui/skeleton/SkeletonProfile.vue"
     border-radius: 6px;
     font-size: 0.75rem;
     font-weight: 700;
-    color: #ffc107;
+    color: var(--color-text-muted);
     display: flex;
     align-items: center;
     gap: 0.25rem;

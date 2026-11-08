@@ -114,7 +114,7 @@
             >
               {{ item.media.title }}
             </router-link>
-            <span class="bmol-rating">★ {{ item.media.vote_average.toFixed(1) }}</span>
+            <span class="bmol-rating"><MediaRating :ratings="item.media.ratings" :vote-average="item.media.vote_average" /></span>
 
             <!-- Actions (Only for Owner) -->
             <div v-if="isOwner" class="bmol-actions">
@@ -281,7 +281,7 @@
                 >
                   {{ item.media.title }}
                 </router-link>
-                <span class="bmol-rating">★ {{ item.media.vote_average.toFixed(1) }}</span>
+                <span class="bmol-rating"><MediaRating :ratings="item.media.ratings" :vote-average="item.media.vote_average" /></span>
 
                 <!-- Actions (Only for Owner) -->
                 <div v-if="isOwner" class="bmol-actions">
@@ -399,6 +399,7 @@
 </template>
 
 <script setup lang="ts">
+import MediaRating from "@/components/movie/MediaRating.vue"
 import AppSpinner from "@/components/ui/AppSpinner.vue"
 import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue"
 import { Search, Trophy, ChevronLeft, Film, Sparkles, Share2 } from "lucide-vue-next"
@@ -613,7 +614,8 @@ async function submitBmolAdd() {
       id: media.id,
       title: getMediaTitle(media),
       poster_url: media.poster_path || "",
-      vote_average: media.vote_average || 0
+      vote_average: media.vote_average || 0,
+      ratings: media.ratings
     }
   } as BMOLItemResponse
 
@@ -667,7 +669,8 @@ async function saveSpotlightItems(itemsToSave: Array<Movie | TVSeries>) {
       id: media.id,
       title: getMediaTitle(media),
       poster_url: media.poster_path || "",
-      vote_average: media.vote_average || 0
+      vote_average: media.vote_average || 0,
+      ratings: media.ratings
     }
   } as BMOLItemResponse))
 

@@ -1,3 +1,4 @@
+import type { MediaRatings } from "@/types/movie";
 import type { MediaType } from "@/types";
 
 export type ActivityType =
@@ -26,6 +27,7 @@ export interface FeedMediaSummary {
   poster_url?: string | null;
   genres?: string[];
   vote_average?: number;
+  ratings?: MediaRatings;
 }
 
 export interface FeedItemResponse {
