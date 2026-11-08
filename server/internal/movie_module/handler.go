@@ -5,7 +5,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	tmdb "github.com/arinsuda/movie-hub/internal/tmdb_module"
 	"github.com/gofiber/fiber/v3"
@@ -117,41 +116,31 @@ func (h *Handler) GetTopRated(c fiber.Ctx) error {
 	return c.JSON(result)
 }
 
+// GetUpcoming lists Thai releases from today on, soonest first. Date filtering
+// and ordering happen in TMDB discover; results is always an array.
 func (h *Handler) GetUpcoming(c fiber.Ctx) error {
 	page, _ := strconv.Atoi(c.Query("page", "1"))
+	withGenres, ok := genresParam(c)
+	if !ok {
+		return c.Status(400).JSON(fiber.Map{"error": "with_genres ไม่ถูกต้อง"})
+	}
 
-	result, err := h.svc.GetUpcoming(c.Context(), page)
+	options := tmdb.RequestOptions{
+		Language: resolveTMDBLanguage(c.Get("Accept-Language")),
+		Region:   "TH",
+	}
+	result, err := h.svc.GetUpcoming(c.Context(), withGenres, page, options)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "ดึงข้อมูลหนังไม่สำเร็จ"})
 	}
 
-	location, err := time.LoadLocation("Asia/Bangkok")
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "ดึงข้อมูลหนังไม่สำเร็จ"})
+	movies := result.Results
+	if movies == nil {
+		movies = []MovieDTO{}
 	}
-
-	now := time.Now().In(location)
-	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, location)
-
-	var upcomingOnly []MovieDTO
-
-	for _, movie := range result.Results {
-		if len(movie.ReleaseDate) < 10 {
-			continue
-		}
-		releaseDate, err := time.ParseInLocation("2006-01-02", movie.ReleaseDate, location)
-		if err != nil {
-			continue
-		}
-
-		if releaseDate.After(today) || releaseDate.Equal(today) {
-			upcomingOnly = append(upcomingOnly, movie)
-		}
-	}
-
 	return c.JSON(fiber.Map{
 		"page":          result.Page,
-		"results":       upcomingOnly,
+		"results":       movies,
 		"total_pages":   result.TotalPages,
 		"total_results": result.TotalResults,
 	})

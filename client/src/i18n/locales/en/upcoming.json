@@ -1,0 +1,26 @@
+{
+  "title": "Upcoming",
+  "subtitle": "Movies arriving in Thai cinemas, soonest first",
+  "genre": { "label": "Genre", "all": "All genres" },
+  "inTheaters": "In theaters now",
+  "hero": {
+    "label": "Next big release",
+    "eyebrow": "Coming soon",
+    "when": "Out today | Out tomorrow | Out in {n} days",
+    "details": "View details"
+  },
+  "groups": {
+    "out": "Out now",
+    "week": "This week",
+    "next": "Next week"
+  },
+  "grid": {
+    "error": "Could not load upcoming movies",
+    "empty": "Nothing scheduled yet",
+    "emptyDescription": "Try another genre or check back soon",
+    "loadMore": "Load more",
+    "loadingMore": "Loading more movies",
+    "end": "That is everything scheduled so far",
+    "capped": "Showing the first {n} titles. Pick a genre to narrow the list."
+  }
+}

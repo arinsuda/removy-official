@@ -31,7 +31,8 @@
       </div>
       <div class="poster-info">
         <h3 class="poster-title">{{ item.title }}</h3>
-        <span v-if="item.date" class="poster-year">{{ item.date.slice(0, 4) }}</span>
+        <span v-if="caption" class="poster-year">{{ caption }}</span>
+        <span v-else-if="item.date" class="poster-year">{{ item.date.slice(0, 4) }}</span>
       </div>
     </RouterLink>
 
@@ -78,6 +79,8 @@ const props = withDefaults(
     rail: string
     /** img `sizes` hint; grids with other column counts pass their own. */
     sizes?: string
+    /** Replaces the release year under the title (e.g. an upcoming release date). */
+    caption?: string
   }>(),
   { sizes: "(min-width: 1024px) 180px, (min-width: 640px) 28vw, 42vw" },
 )

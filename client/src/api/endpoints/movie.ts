@@ -30,12 +30,9 @@ export const movieApi = {
       params: { page, with_genres },
     }),
 
-  getUpcoming: (page = 1) =>
-    api.get<PaginatedResult<Movie>>("/movies/upcoming", { params: { page } }),
-
-  getDiscoverUpcomingByYear: (year: number, page = 1) =>
-    api.get<PaginatedResult<Movie>>(`/movies/upcoming/${year}`, {
-      params: { page },
+  getUpcoming: (page = 1, with_genres?: string | number) =>
+    api.get<PaginatedResult<Movie>>("/movies/upcoming", {
+      params: { page, with_genres },
     }),
 
   search: (q: string, page = 1) =>

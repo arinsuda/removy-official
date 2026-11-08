@@ -5,11 +5,6 @@
     "line2": "Movie Lovers"
   },
   "sub": "POPCORN is a place to search, review, and track the movies and series you love all in one place.",
-  "stats": {
-    "movies": "Movies",
-    "tv": "Series",
-    "reviews": "Reviews"
-  },
   "mission": {
     "label": "Story",
     "title": "Why we created POPCORN",
@@ -35,41 +30,32 @@
       "community": {
         "title": "Community",
         "desc": "Follow other users and see their reviews on your activity feed. Discover new perspectives."
-      },
-      "metadata": {
-        "title": "Full Information",
-        "desc": "Access details for thousands of titles from TMDB, complete with ratings, cast, and trailers."
-      },
-      "popcornScore": {
-        "title": "POPCORN Score",
-        "desc": "Rating scores aggregated from the POPCORN user community, providing a separate perspective."
       }
-    }
-  },
-  "tech": {
-    "label": "Tech Stack",
-    "title": "Behind the Development",
-    "desc": "POPCORN is developed using Go (Fiber, GORM, PostgreSQL) on the Backend, and Vue 3 (Composition API, TypeScript, Pinia, TanStack Query) on the Frontend.",
-    "roles": {
-      "backendRuntime": "Backend Runtime",
-      "httpFramework": "HTTP Framework",
-      "orm": "ORM",
-      "database": "Database",
-      "frontendFramework": "Frontend Framework",
-      "typeSystem": "Type System",
-      "stateManagement": "State Management",
-      "dataFetching": "Data Fetching"
     }
   },
   "creator": {
     "label": "Developer",
     "role": "Founder & Developer",
     "name": "Arin Sudakijjathorn",
-    "bio": "IT student passionate about building Full-stack products and watching movies"
+    "bio": "IT student passionate about building Full-stack products and watching movies",
+    "avatarAlt": "Photo of Arin Sudakijjathorn",
+    "links": {
+      "github": "GitHub",
+      "linkedin": "LinkedIn",
+      "email": "Email"
+    },
+    "newTab": "opens in a new tab"
   },
   "cta": {
     "title": "Like POPCORN?",
     "desc": "If you would like to support the development of this project, click the button below.",
     "btn": "Support Developer"
-  }
+  },
+  "hero": {
+    "cta": {
+      "home": "Explore movies",
+      "register": "Join POPCORN"
+    }
+  },
+  "builtWith": "Built with Go, Vue 3 and PostgreSQL. Movie data from TMDB."
 }

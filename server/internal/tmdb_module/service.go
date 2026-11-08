@@ -324,13 +324,19 @@ const (
 	TabPopular  = "popular"
 	TabNow      = "now"
 	TabTopRated = "top_rated"
+	TabUpcoming = "upcoming"
 )
+
+// upcomingWindowDays is how far ahead the upcoming discover looks.
+const upcomingWindowDays = 120
 
 // DiscoverParams builds /discover/{movie,tv} params that keep the ordering of the
 // browse tab while filtering by genre (comma list becomes TMDB OR with "|").
 func DiscoverParams(series bool, tab, withGenres string, page int, today time.Time) url.Values {
 	params := pageParams(page)
-	params.Set("with_genres", strings.ReplaceAll(withGenres, ",", "|"))
+	if withGenres != "" {
+		params.Set("with_genres", strings.ReplaceAll(withGenres, ",", "|"))
+	}
 	params.Set("include_adult", "false")
 	day := func(d time.Time) string { return d.Format("2006-01-02") }
 
@@ -353,10 +359,36 @@ func DiscoverParams(series bool, tab, withGenres string, page int, today time.Ti
 			params.Set("release_date.gte", day(today.AddDate(0, 0, -45)))
 			params.Set("release_date.lte", day(today))
 		}
+	case TabUpcoming:
+		params.Set("sort_by", "primary_release_date.asc")
+		params.Set("region", defaultRegion)
+		params.Set("with_release_type", "2|3")
+		params.Set("release_date.gte", day(today))
+		params.Set("release_date.lte", day(today.AddDate(0, 0, upcomingWindowDays)))
 	default:
 		params.Set("sort_by", "popularity.desc")
 	}
 	return params
+}
+
+// bangkokToday returns midnight of the current day in Asia/Bangkok.
+func bangkokToday(now time.Time) time.Time {
+	loc, err := time.LoadLocation("Asia/Bangkok")
+	if err != nil {
+		loc = time.FixedZone("ICT", 7*60*60)
+	}
+	n := now.In(loc)
+	return time.Date(n.Year(), n.Month(), n.Day(), 0, 0, 0, 0, loc)
+}
+
+// DiscoverUpcoming lists Thai releases from today on, soonest first, optionally by genre.
+func DiscoverUpcoming(withGenres string, page int, options RequestOptions) (*PaginatedResult[Movie], error) {
+	params := options.apply(DiscoverParams(false, TabUpcoming, withGenres, page, bangkokToday(time.Now())))
+	var result PaginatedResult[Movie]
+	if err := get("/discover/movie", params, &result); err != nil {
+		return nil, fmt.Errorf("DiscoverUpcoming: %w", err)
+	}
+	return &result, nil
 }
 
 func DiscoverMovies(withGenres, tab string, page int) (*PaginatedResult[Movie], error) {
