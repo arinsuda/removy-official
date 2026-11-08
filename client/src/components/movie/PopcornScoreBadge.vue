@@ -13,7 +13,7 @@
     >
       <svg viewBox="0 0 48 56" class="absolute inset-0 h-full w-full overflow-visible" aria-hidden="true" focusable="false">
         <!-- Kernels -->
-        <g v-if="tier !== 'none'" :class="kernelClass">
+        <g v-if="tier !== 'none'" class="kernels" :class="kernelClass">
           <circle cx="13" cy="19" r="8" />
           <circle cx="24" cy="14" r="9" />
           <circle cx="35" cy="19" r="8" />
@@ -89,3 +89,46 @@ const labelClass = computed(() => {
   return "text-text-muted"
 })
 </script>
+
+<style scoped>
+/* Kernels pop out of the bucket once on mount, staggered. */
+.kernels circle {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: kernel-pop 520ms var(--ease-out-soft, ease-out) both;
+}
+.kernels circle:nth-child(2) {
+  animation-delay: 70ms;
+}
+.kernels circle:nth-child(3) {
+  animation-delay: 140ms;
+}
+.kernels circle:nth-child(4) {
+  animation-delay: 190ms;
+}
+.kernels circle:nth-child(5) {
+  animation-delay: 230ms;
+}
+.kernels circle:nth-child(n + 6) {
+  animation-delay: 280ms;
+}
+@keyframes kernel-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.2);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kernels circle {
+    animation: none;
+  }
+}
+</style>

@@ -111,6 +111,38 @@ const tier = computed(() => {
   background: var(--color-surface-2);
   border: 1px solid var(--color-border);
 }
+/* Heat rim: the poster edge and bottom scrim carry the POPCORN tier. */
+.poster-image::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  transition: box-shadow 0.25s;
+}
+.poster-card[data-tier="hot"] .poster-image {
+  border-color: var(--color-brand);
+}
+.poster-card[data-tier="hot"] .poster-image::after {
+  background: linear-gradient(to top, color-mix(in srgb, var(--color-brand) 45%, transparent) 0%, transparent 38%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 55%, transparent);
+}
+.poster-card[data-tier="hot"]:hover .poster-image,
+.poster-card[data-tier="hot"]:focus-visible .poster-image {
+  box-shadow: 0 0 22px color-mix(in srgb, var(--color-brand) 55%, transparent);
+}
+.poster-card[data-tier="fresh"] .poster-image {
+  border-color: var(--color-border-strong);
+}
+.poster-card[data-tier="stale"] .poster-image img {
+  filter: saturate(0.6);
+}
+.poster-card[data-tier="stale"] .poster-image::after {
+  background: linear-gradient(to top, color-mix(in srgb, var(--color-surface) 70%, transparent) 0%, transparent 38%);
+}
+.poster-card[data-tier="none"] .poster-image {
+  border-style: dashed;
+}
 .poster-image img {
   display: block;
   width: 100%;
