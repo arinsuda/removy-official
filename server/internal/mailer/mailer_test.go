@@ -51,3 +51,41 @@ func TestSendNeverLogsOrReturnsTheRecipient(t *testing.T) {
 		})
 	}
 }
+
+func TestDevLogPrintsAndSkipsHTTP(t *testing.T) {
+	var buf bytes.Buffer
+	m := &Mailer{enabled: true, devLog: true, devOut: &buf, httpClient: &http.Client{Transport: rtFunc(func(*http.Request) (*http.Response, error) {
+		t.Fatal("HTTP call made while dev log active")
+		return nil, nil
+	})}}
+	if !m.IsEnabled() {
+		t.Fatal("IsEnabled must be true when dev log active")
+	}
+	if err := m.SendVerificationEmail(recipient, "P", "http://localhost:3000/auth/verify-email?token=abc"); err != nil {
+		t.Fatal(err)
+	}
+	if err := m.SendLinkCodeEmail(recipient, "P", "123456"); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
+	for _, want := range []string{"[DEV MAIL] to=" + recipient + " kind=verify", "token=abc", "kind=link_code", "123456"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("missing %q in %q", want, out)
+		}
+	}
+}
+
+func TestInactiveSendsNormally(t *testing.T) {
+	var buf bytes.Buffer
+	called := false
+	m := &Mailer{enabled: true, devOut: &buf, httpClient: &http.Client{Transport: rtFunc(func(r *http.Request) (*http.Response, error) {
+		called = true
+		return &http.Response{StatusCode: 201, Body: io.NopCloser(strings.NewReader("{}")), Request: r}, nil
+	})}}
+	if err := m.SendLinkCodeEmail(recipient, "P", "123456"); err != nil {
+		t.Fatal(err)
+	}
+	if !called || buf.Len() != 0 {
+		t.Fatalf("called=%v printed=%q", called, buf.String())
+	}
+}

@@ -90,6 +90,8 @@ type BrevoConfig struct {
 	SenderEmail string
 	SenderName  string
 	Enabled     bool
+	// DevLog prints emails to stdout instead of sending them. Local dev only; see DevMailLogAllowed.
+	DevLog bool
 }
 
 type CookieConfig struct {
@@ -115,6 +117,19 @@ func Load() (*Config, error) {
 	allowedOrigins, err := parseAllowedOrigins(getEnv("CORS_ALLOWED_ORIGIN", defaultAllowedOrigins))
 	if err != nil {
 		return nil, err
+	}
+
+	devMailLog := false
+	if getEnv("DEV_MAIL_LOG", "") == "true" {
+		// Secure cookies mean HTTPS, i.e. a deployed environment: never print mail there.
+		if getEnv("COOKIE_SECURE", "false") == "true" {
+			log.Printf("WARN DEV_MAIL_LOG ignored: COOKIE_SECURE=true")
+		} else if DevMailLogAllowed(allowedOrigins, getEnv("APP_BASE_URL", "http://localhost:3000"), getEnv("FRONTEND_BASE_URL", "http://localhost:3000")) {
+			devMailLog = true
+			log.Printf("DEV_MAIL_LOG active — emails are printed, not sent")
+		} else {
+			log.Printf("WARN DEV_MAIL_LOG ignored: non-local origin")
+		}
 	}
 
 	trustedProxyHops, _ := strconv.Atoi(getEnv("TRUSTED_PROXY_HOPS", "1"))
@@ -154,7 +169,8 @@ func Load() (*Config, error) {
 			APIKey:      brevoAPIKey,
 			SenderEmail: getEnv("BREVO_SENDER_EMAIL", getEnv("ADMIN_EMAIL", "removy.official@gmail.com")),
 			SenderName:  getEnv("BREVO_SENDER_NAME", "POPCORN"),
-			Enabled:     brevoAPIKey != "",
+			Enabled:     brevoAPIKey != "" || devMailLog,
+			DevLog:      devMailLog,
 		},
 		Cookie: CookieConfig{
 			Domain:   getEnv("COOKIE_DOMAIN", ""),
@@ -264,4 +280,26 @@ func splitSecrets(raw string) []string {
 		out = append(out, p)
 	}
 	return out
+}
+
+// DevMailLogAllowed is the safety gate for DEV_MAIL_LOG: true only when there is at least one
+// origin and every CORS origin and every link base URL is a loopback host. Any empty,
+// unparsable or non-local value disables it.
+func DevMailLogAllowed(origins []string, baseURLs ...string) bool {
+	all := append(append([]string{}, origins...), baseURLs...)
+	if len(origins) == 0 || len(baseURLs) == 0 {
+		return false
+	}
+	for _, raw := range all {
+		u, err := url.Parse(strings.TrimSpace(raw))
+		if err != nil || u.Host == "" {
+			return false
+		}
+		switch u.Hostname() {
+		case "localhost", "127.0.0.1", "::1":
+		default:
+			return false
+		}
+	}
+	return true
 }

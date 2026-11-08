@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/arinsuda/movie-hub/config"
@@ -19,7 +20,18 @@ type Mailer struct {
 	senderEmail string
 	senderName  string
 	enabled     bool
+	devLog      bool
+	devOut      io.Writer
 	httpClient  *http.Client
+}
+
+// PrintDev writes a DEV_MAIL_LOG banner. It is the only place codes and links are printed.
+func PrintDev(w io.Writer, to, kind string, lines ...string) {
+	fmt.Fprintf(w, "\n========== [DEV MAIL] ==========\n[DEV MAIL] to=%s kind=%s\n", to, kind)
+	for _, l := range lines {
+		fmt.Fprintf(w, "  %s\n", l)
+	}
+	fmt.Fprint(w, "================================\n\n")
 }
 
 func New(cfg config.BrevoConfig) *Mailer {
@@ -27,7 +39,9 @@ func New(cfg config.BrevoConfig) *Mailer {
 		apiKey:      cfg.APIKey,
 		senderEmail: cfg.SenderEmail,
 		senderName:  cfg.SenderName,
-		enabled:     cfg.Enabled,
+		enabled:     cfg.Enabled || cfg.DevLog,
+		devLog:      cfg.DevLog,
+		devOut:      os.Stdout,
 		httpClient:  &http.Client{Timeout: 10 * time.Second},
 	}
 }
@@ -38,12 +52,20 @@ func (m *Mailer) IsEnabled() bool {
 
 func (m *Mailer) SendVerificationEmail(toEmail, username, verifyURL string) error {
 	subject := "ยืนยันอีเมลของคุณ — POPCORN"
+	if m.devLog {
+		PrintDev(m.devOut, toEmail, "verify", "link: "+verifyURL)
+		return nil
+	}
 	body := buildVerifyEmailBody(username, verifyURL)
 	return m.send(toEmail, username, subject, body)
 }
 
 // SendLinkCodeEmail sends a 6-digit code used to confirm linking a PLANZI account.
 func (m *Mailer) SendLinkCodeEmail(toEmail, username, code string) error {
+	if m.devLog {
+		PrintDev(m.devOut, toEmail, "link_code", "code: "+code)
+		return nil
+	}
 	subject := "รหัสยืนยันการเชื่อมบัญชี — POPCORN"
 	body := fmt.Sprintf(`<!DOCTYPE html><html><body style="margin:0;padding:32px 16px;background:#050505;font-family:'Helvetica Neue',Arial,sans-serif;">
 <div style="max-width:440px;margin:0 auto;background:#0f0f0f;border:1px solid #1c1c1c;border-radius:4px;padding:40px;text-align:center;">

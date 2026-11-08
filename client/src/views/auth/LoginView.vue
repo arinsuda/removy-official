@@ -16,7 +16,8 @@
         autocomplete="current-password"
         :disabled="isLoading"
       />
-      <AuthAlert :message="errorMsg" @dismiss="errorMsg = ''" />
+      <AuthAlert :message="errorMsg" @dismiss="dismissError" />
+      <UnverifiedResend v-if="unverified" :identifier="form.identifier" />
       <div class="auth-forgot form-item">
         <RouterLink to="/forgot-password" class="auth-link">forget password</RouterLink>
       </div>
@@ -40,6 +41,7 @@
   import AuthAlert from "@/components/auth/AuthAlert.vue"
   import AuthField from "@/components/auth/AuthField.vue"
   import AuthShell from "@/components/auth/AuthShell.vue"
+  import UnverifiedResend from "@/components/auth/UnverifiedResend.vue"
   import GoogleSignInButton from "@/components/auth/GoogleSignInButton.vue"
   import AppButton from "@/components/ui/AppButton.vue"
   import { useAuthStore } from "@/stores/auth"
@@ -53,6 +55,12 @@
   const form = ref({ identifier: "", password: "" })
   const isLoading = ref(false)
   const errorMsg = ref("")
+  const unverified = ref(false)
+
+  function dismissError() {
+    errorMsg.value = ""
+    unverified.value = false
+  }
 
   const shellRef = ref<InstanceType<typeof AuthShell> | null>(null)
 
@@ -94,7 +102,7 @@
   }
 
   async function handleLogin() {
-    errorMsg.value = ""
+    dismissError()
     if (!form.value.identifier || !form.value.password) {
       errorMsg.value = "Please fill in all fields"
       shellRef.value?.shake()
@@ -111,6 +119,9 @@
 
       if (isRateLimited(e)) {
         errorMsg.value = t("errors.rateLimited")
+      } else if (status === 403) {
+        errorMsg.value = t("auth.login.unverified")
+        unverified.value = true
       } else if (status === 401) {
         errorMsg.value = "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง"
       } else if (status >= 500) {
