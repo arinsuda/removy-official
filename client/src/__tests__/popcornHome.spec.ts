@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { fromMovie, fromSeries, type HomeMedia } from "@/components/home/homeMedia"
-import { countByTier, dedupeMedia, filterByTier, interleave, mediaTier, pickHeroItems } from "@/components/home/popcornHome"
+import { countByTier, dedupeMedia, filterByTier, interleave, mediaTier, pickHeroItems, tierWithBackfill } from "@/components/home/popcornHome"
 import type { Movie, TVSeries } from "@/types"
 
 const popcorn = (average: number, count: number) => ({
@@ -82,5 +82,29 @@ describe("pickHeroItems", () => {
   it("ignores hot titles that have no backdrop", () => {
     const pool = [movie(1, 4.5, 2, ""), movie(2, 4.5, 2), movie(3, 4.5, 2)]
     expect(pickHeroItems(pool, fallback).source).toBe("popular")
+  })
+})
+
+describe("tierWithBackfill", () => {
+  it("leaves a full tier untouched", () => {
+    const items = Array.from({ length: 6 }, (_, i) => movie(i + 1, 4.5, 3))
+    const r = tierWithBackfill(items, "hot")
+    expect(r.items).toHaveLength(6)
+    expect(r.backfillAt).toBe(-1)
+  })
+
+  it("fills a sparse tier with fresh then other titles after the divider", () => {
+    const items = [movie(1, 4.5, 3), movie(2, 1.5, 4), movie(3, 3, 2), movie(4), movie(5, 3.5, 2), movie(6, 3.2, 2), movie(7), movie(8)]
+    const r = tierWithBackfill(items, "hot")
+    expect(r.items).toHaveLength(6)
+    expect(r.backfillAt).toBe(1)
+    expect(r.items.map((m) => m.key).slice(0, 4)).toEqual(["movie-1", "movie-5", "movie-6", "movie-3"])
+    expect(new Set(r.items.map((m) => m.key)).size).toBe(6)
+  })
+
+  it("does not set a divider when there is nothing to add", () => {
+    const r = tierWithBackfill([movie(1, 4.5, 3)], "hot")
+    expect(r).toMatchObject({ backfillAt: -1 })
+    expect(r.items).toHaveLength(1)
   })
 })

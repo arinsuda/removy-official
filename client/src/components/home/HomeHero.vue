@@ -36,8 +36,22 @@
       </span>
       <h1 class="hero__title">{{ current.title }}</h1>
       <div class="hero__meta">
-        <MediaRating variant="detail" :ratings="current.ratings" :vote-average="current.vote_average" />
-        <span v-if="current.date" class="hero__year">{{ current.date.slice(0, 4) }}</span>
+        <PopcornScoreBadge v-if="rated" size="detail" :average="popcorn.average" :count="popcorn.count" />
+        <AppButton v-else :to="detailRoute(current)" variant="outline" size="sm" class="hero__first">
+          <Popcorn :size="14" aria-hidden="true" />
+          {{ t("home.hero.beFirst") }}
+        </AppButton>
+        <div class="hero__facts">
+          <span v-if="rated" data-test="review-count" class="hero__reviews">
+            {{ t("media.rating.outOfReviews", { count: popcorn.count }, popcorn.count) }}
+          </span>
+          <ul class="hero__chips">
+            <li v-if="current.date">{{ current.date.slice(0, 4) }}</li>
+            <li v-if="tmdb !== null" :aria-label="t('media.rating.tmdbScore', { score: tmdb })">
+              <b aria-hidden="true">TMDB</b> <span aria-hidden="true">{{ tmdb }}/10</span>
+            </li>
+          </ul>
+        </div>
       </div>
       <p v-if="current.overview" class="hero__overview">{{ current.overview }}</p>
       <div class="hero__actions">
@@ -82,9 +96,10 @@
 <script setup lang="ts">
 import { computed, ref } from "vue"
 import { useI18n } from "vue-i18n"
-import { Compass, Flame, Info, Pause, Play, Sparkles } from "lucide-vue-next"
+import { Compass, Flame, Info, Pause, Play, Popcorn, Sparkles } from "lucide-vue-next"
 import AppButton from "@/components/ui/AppButton.vue"
-import MediaRating from "@/components/movie/MediaRating.vue"
+import PopcornScoreBadge from "@/components/movie/PopcornScoreBadge.vue"
+import { popcornTier } from "@/components/movie/popcornTier"
 import { useCarouselAutoplay } from "@/composables/useCarouselAutoplay"
 import { backdropSrc, detailRoute, type HomeMedia } from "./homeMedia"
 
@@ -100,6 +115,13 @@ const failed = ref(new Set<string>())
 const { index, userPaused, hovering, focused, playing } = useCarouselAutoplay(() => props.items.length)
 
 const current = computed(() => props.items[index.value] ?? props.items[0]!)
+const popcorn = computed(() => current.value.ratings?.popcorn ?? { average: 0, count: 0 })
+const rated = computed(() => popcornTier(popcorn.value.average, popcorn.value.count) !== "none")
+const tmdb = computed(() => {
+  const src = current.value.ratings?.tmdb
+  const v = src ? (src.available ? src.average : 0) : current.value.vote_average
+  return v && v > 0 ? v.toFixed(1) : null
+})
 </script>
 
 <style scoped>
@@ -173,9 +195,35 @@ const current = computed(() => props.items[index.value] ?? props.items[0]!)
 }
 .hero__meta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 8px 16px;
   color: var(--color-text-secondary);
+}
+.hero__facts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  font-size: var(--text-caption);
+}
+.hero__reviews {
+  color: var(--color-text-secondary);
+}
+.hero__chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+.hero__chips b {
+  font-weight: 600;
+  letter-spacing: 0.04em;
 }
 .hero__overview {
   display: none;
