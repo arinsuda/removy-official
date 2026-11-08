@@ -59,38 +59,18 @@
         <template v-else>
           <h1 class="auth-title">FORGOT PASSWORD</h1>
           <form @submit.prevent="handleSubmit" class="auth-form" novalidate>
-            <div class="form-group form-item">
-              <label class="form-label">Email address</label>
-              <div
-                class="input-wrapper"
-                :class="{
-                  'input-wrapper--error': touched && error,
-                  'input-wrapper--valid': touched && !error && email,
-                }"
-              >
-                <span class="input-icon"><IconMail :size="16" /></span>
-                <input
-                  v-model="email"
-                  type="email"
-                  class="form-input"
-                  autocomplete="email"
-                  placeholder="your@email.com"
-                  :disabled="isLoading"
-                  @input="validate"
-                  @blur="handleBlur"
-                />
-                <span
-                  v-if="touched && !error && email"
-                  class="input-valid-icon"
-                >
-                  <IconCheck :size="14" />
-                </span>
-              </div>
-              <Transition name="field-error">
-                <p v-if="touched && error" class="field-error-msg">
-                  <IconAlertCircle :size="12" /> {{ error }}
-                </p>
-              </Transition>
+            <div class="form-item">
+              <AppInput
+                v-model="email"
+                type="email"
+                :label="t('auth.forgotPassword.emailLabel')"
+                :placeholder="t('auth.forgotPassword.emailPlaceholder')"
+                autocomplete="email"
+                :error="touched ? error : ''"
+                :disabled="isLoading"
+                @input="validate"
+                @blur="handleBlur"
+              />
             </div>
 
             <Transition name="alert">
@@ -131,14 +111,13 @@
 </template>
 
 <script setup lang="ts">
+import AppInput from "@/components/ui/AppInput.vue"
 import AppSpinner from "@/components/ui/AppSpinner.vue"
   import { ref, onMounted, onUnmounted } from "vue"
   import { gsap } from "gsap"
   import {
-    Mail as IconMail,
     MailCheck as IconMailCheck,
     AlertCircle as IconAlertCircle,
-    Check as IconCheck,
     X as IconX,
   } from "lucide-vue-next"
   import { authApi } from "@/api/api"
@@ -163,11 +142,11 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
   function validate() {
     const v = email.value.trim()
     if (!v) {
-      error.value = "Email is required"
+      error.value = t("validation.email.required")
       return
     }
     if (!EMAIL_RE.test(v)) {
-      error.value = "Enter a valid email address"
+      error.value = t("validation.email.invalid")
       return
     }
     error.value = ""
@@ -436,112 +415,6 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
     flex-direction: column;
     gap: 1rem;
   }
-  .form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-  }
-  .form-label {
-    font-size: 0.82rem;
-    font-weight: 500;
-    color: #d1d1d1;
-  }
-
-  .input-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-  }
-  .input-wrapper--error .form-input {
-    box-shadow: 0 0 0 2px rgba(245, 67, 44, 0.5);
-    background: rgba(245, 67, 44, 0.06);
-  }
-  .input-wrapper--valid .form-input {
-    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.45);
-  }
-  .input-icon {
-    position: absolute;
-    left: 12px;
-    color: #777;
-    display: flex;
-    align-items: center;
-    pointer-events: none;
-    width: 16px;
-    height: 16px;
-    z-index: 1;
-  }
-  .input-valid-icon {
-    position: absolute;
-    right: 12px;
-    color: #22c55e;
-    display: flex;
-    align-items: center;
-    pointer-events: none;
-    width: 16px;
-    height: 16px;
-  }
-  .form-input {
-    width: 100%;
-    padding: 0.65rem 2.8rem;
-    background: rgba(228, 228, 228, 0.92);
-    border: none;
-    border-radius: 9999px;
-    font-size: 0.9rem;
-    color: #111;
-    outline: none;
-    transition:
-      background 0.2s,
-      box-shadow 0.2s;
-  }
-  .form-input:focus {
-    background: #f0f0f0;
-    box-shadow: 0 0 0 2px rgba(245, 67, 44, 0.45);
-  }
-  .form-input:disabled {
-    opacity: 0.6;
-  }
-
-  /* ── per-field error ── */
-  .field-error-msg {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 0.75rem;
-    color: #f87171;
-    padding-left: 4px;
-    margin: 0;
-  }
-  .field-error-enter-active {
-    animation: fieldErrorIn 0.28s cubic-bezier(0.21, 1.02, 0.73, 1) forwards;
-  }
-  .field-error-leave-active {
-    animation: fieldErrorOut 0.18s ease-in forwards;
-  }
-  @keyframes fieldErrorIn {
-    from {
-      opacity: 0;
-      transform: translateY(-4px);
-      max-height: 0;
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-      max-height: 40px;
-    }
-  }
-  @keyframes fieldErrorOut {
-    from {
-      opacity: 1;
-      transform: translateY(0);
-      max-height: 40px;
-    }
-    to {
-      opacity: 0;
-      transform: translateY(-4px);
-      max-height: 0;
-    }
-  }
-
   /* ── server error alert ── */
   .form-alert {
     display: flex;
