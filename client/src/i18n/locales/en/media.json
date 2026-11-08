@@ -64,6 +64,7 @@
     "imdbScore": "IMDb score {score} out of 10",
     "rtScore": "Rotten Tomatoes score {score} percent",
     "reviewCount": "{count} review | {count} reviews",
+    "outOfReviews": "out of 5 · {count} review | out of 5 · {count} reviews",
     "tier": {
       "none": "No ratings yet",
       "stale": "Stale",

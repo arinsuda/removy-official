@@ -6,14 +6,9 @@
   >
     <div class="flex items-center" :class="variant === 'detail' ? 'gap-3' : ''">
       <PopcornScoreBadge :average="popcorn.average" :count="popcorn.count" :size="variant" />
-      <div v-if="variant === 'detail'" class="flex flex-col gap-0.5">
-        <span class="text-small font-semibold text-text-primary">
-          <span data-test="popcorn-value">{{ popcornText }}</span><span class="text-text-muted">/5</span>
-        </span>
-        <span data-test="review-count" class="text-caption text-text-muted">
-          {{ t("media.rating.reviewCount", { count: popcorn.count }, popcorn.count) }}
-        </span>
-      </div>
+      <span v-if="variant === 'detail'" data-test="review-count" class="text-caption text-text-muted">
+        {{ t("media.rating.outOfReviews", { count: popcorn.count }, popcorn.count) }}
+      </span>
     </div>
 
     <ul
@@ -40,7 +35,6 @@ import { computed } from "vue"
 import { useI18n } from "vue-i18n"
 import type { MediaRatings, RatingSource } from "@/types/movie"
 import PopcornScoreBadge from "./PopcornScoreBadge.vue"
-import { roundScore } from "./popcornTier"
 
 const props = withDefaults(
   defineProps<{
@@ -57,7 +51,6 @@ const { t } = useI18n()
 const popcorn = computed<RatingSource>(
   () => props.ratings?.popcorn ?? { average: 0, count: 0, available: false, scale: 5 },
 )
-const popcornText = computed(() => roundScore(popcorn.value.average).toFixed(1))
 
 const tmdbScore = computed(() => {
   const src = props.ratings?.tmdb

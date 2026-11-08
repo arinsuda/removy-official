@@ -1,6 +1,6 @@
 <template>
   <span
-    class="popcorn-score-badge relative inline-flex flex-col items-center"
+    class="popcorn-score-badge relative inline-flex flex-col items-center text-center"
     :class="size === 'detail' ? 'gap-1' : ''"
     :data-tier="tier"
     :data-size="size"
@@ -9,7 +9,7 @@
       role="img"
       :aria-label="tier === 'none' ? t('media.rating.tier.none') : t('media.rating.popcornScore', { score: display })"
       class="relative inline-block shrink-0"
-      :class="size === 'detail' ? 'h-[72px] w-16' : 'h-[34px] w-[30px]'"
+      :class="size === 'detail' ? 'h-[72px] w-16' : 'h-[46px] w-10'"
     >
       <svg viewBox="0 0 48 56" class="absolute inset-0 h-full w-full overflow-visible" aria-hidden="true" focusable="false">
         <!-- Kernels -->
@@ -45,14 +45,14 @@
       <span
         data-test="score"
         class="absolute left-0 right-0 text-center font-bold leading-none tabular-nums text-text-primary"
-        :class="size === 'detail' ? 'top-[71%] -translate-y-1/2 text-[17px]' : 'top-[71%] -translate-y-1/2 text-[10px]'"
+        :class="size === 'detail' ? 'top-[71%] -translate-y-1/2 text-[17px]' : 'top-[71%] -translate-y-1/2 text-[12px]'"
         aria-hidden="true"
       >{{ display }}</span>
     </span>
     <span
       v-if="size === 'detail'"
       data-test="tier-label"
-      class="text-caption font-semibold leading-none"
+      class="whitespace-nowrap text-center text-caption font-semibold leading-none"
       :class="labelClass"
     >{{ t(`media.rating.tier.${tier}`) }}</span>
   </span>

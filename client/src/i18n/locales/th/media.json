@@ -64,6 +64,7 @@
     "imdbScore": "คะแนน IMDb {score} จาก 10",
     "rtScore": "คะแนน Rotten Tomatoes {score} เปอร์เซ็นต์",
     "reviewCount": "{count} รีวิว | {count} รีวิว",
+    "outOfReviews": "จาก 5 · {count} รีวิว | จาก 5 · {count} รีวิว",
     "tier": {
       "none": "ยังไม่มีคะแนน",
       "stale": "ป๊อปเหี่ยว",

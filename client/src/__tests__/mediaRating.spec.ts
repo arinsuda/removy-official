@@ -92,7 +92,7 @@ describe("MediaRating", () => {
 
     const b = mountIt({ variant: "detail", ratings: { popcorn: src(0, 0, 5), tmdb: src(null) } })
     expect(b.get("[data-test=score]").text()).toBe("0.0")
-    expect(b.get("[data-test=review-count]").text()).toBe("0 reviews")
+    expect(b.get("[data-test=review-count]").text()).toBe("out of 5 · 0 reviews")
   })
 
   it("card variant shows POPCORN plus TMDB only", () => {
@@ -103,10 +103,10 @@ describe("MediaRating", () => {
     expect(w.find("[data-test=review-count]").exists()).toBe(false)
   })
 
-  it("detail variant shows count, /5, TMDB, IMDb and RT with scale aria-labels", () => {
+  it("detail variant shows 'out of 5' count, TMDB, IMDb and RT with scale aria-labels", () => {
     const w = mountIt({ variant: "detail", ratings: full })
-    expect(w.get("[data-test=popcorn-value]").text()).toBe("4.3")
-    expect(w.get("[data-test=review-count]").text()).toBe("12 reviews")
+    expect(w.find("[data-test=popcorn-value]").exists()).toBe(false)
+    expect(w.get("[data-test=review-count]").text()).toBe("out of 5 · 12 reviews")
     expect(w.findAll("[data-source]").map((e) => e.attributes("data-source"))).toEqual(["tmdb", "imdb", "rt"])
     expect(w.get("[data-source=tmdb]").attributes("aria-label")).toBe("TMDB score 7.8 out of 10")
     expect(w.get("[data-source=imdb]").attributes("aria-label")).toBe("IMDb score 8.1 out of 10")

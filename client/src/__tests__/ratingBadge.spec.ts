@@ -117,7 +117,8 @@ describe("Phase 1 Frontend Requirements", () => {
       })
 
       expect(wrapper.findComponent(PopcornScoreBadge).attributes("data-tier")).toBe("hot")
-      expect(wrapper.text()).toContain("4.2/5")
+      expect(wrapper.text()).toContain("4.2")
+      expect(wrapper.text()).not.toContain("4.2/5")
     })
 
     it("falls back to TMDB rating if POPCORN is not available", () => {
