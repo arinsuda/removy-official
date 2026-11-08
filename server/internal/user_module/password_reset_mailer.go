@@ -8,9 +8,11 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/arinsuda/movie-hub/config"
+	"github.com/arinsuda/movie-hub/internal/mailer"
 )
 
 type PasswordResetMailer interface {
@@ -22,6 +24,7 @@ type brevoPasswordResetMailer struct {
 	senderEmail string
 	senderName  string
 	enabled     bool
+	devLog      bool
 	httpClient  *http.Client
 }
 
@@ -31,11 +34,16 @@ func NewBrevoPasswordResetMailer(cfg config.BrevoConfig) PasswordResetMailer {
 		senderEmail: cfg.SenderEmail,
 		senderName:  cfg.SenderName,
 		enabled:     cfg.Enabled,
+		devLog:      cfg.DevLog,
 		httpClient:  &http.Client{Timeout: 10 * time.Second},
 	}
 }
 
 func (m *brevoPasswordResetMailer) SendResetLink(toEmail, resetURL string) error {
+	if m.devLog {
+		mailer.PrintDev(os.Stdout, toEmail, "reset", "link: "+resetURL)
+		return nil
+	}
 	if !m.enabled {
 		log.Printf("WARN mailer disabled, skipping password reset email to %s", toEmail)
 		return nil

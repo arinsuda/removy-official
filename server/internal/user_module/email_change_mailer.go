@@ -8,9 +8,11 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/arinsuda/movie-hub/config"
+	"github.com/arinsuda/movie-hub/internal/mailer"
 )
 
 type Mailer interface {
@@ -22,6 +24,7 @@ type brevoMailer struct {
 	senderEmail string
 	senderName  string
 	enabled     bool
+	devLog      bool
 	httpClient  *http.Client
 }
 
@@ -31,11 +34,16 @@ func NewBrevoMailer(cfg config.BrevoConfig) Mailer {
 		senderEmail: cfg.SenderEmail,
 		senderName:  cfg.SenderName,
 		enabled:     cfg.Enabled,
+		devLog:      cfg.DevLog,
 		httpClient:  &http.Client{Timeout: 10 * time.Second},
 	}
 }
 
 func (m *brevoMailer) SendOTP(toEmail, otp string) error {
+	if m.devLog {
+		mailer.PrintDev(os.Stdout, toEmail, "email_change_otp", "code: "+otp)
+		return nil
+	}
 	if !m.enabled {
 		log.Printf("WARN mailer disabled, skipping OTP email to %s", toEmail)
 		return nil

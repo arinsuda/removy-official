@@ -133,6 +133,7 @@ Changing any of these affects stored data, live sessions, or other systems:
 
 ## Gotchas
 - `OMDB_API_KEY` (optional): enables IMDb and Rotten Tomatoes ratings on movie/TV detail. Never log it; tests must stub the OMDb HTTP client.
+- `DEV_MAIL_LOG=true` prints emails (verify link, reset link, link code, email-change OTP) to the server stdout instead of sending. It activates only if every `CORS_ALLOWED_ORIGIN` entry, `APP_BASE_URL` and `FRONTEND_BASE_URL` are loopback; otherwise boot logs a WARN and it stays off. Keep it the only place codes/links are printed.
 - Env precedence: real environment > `server/.env` > repo-root `.env` (`config.LoadDotEnv`). `docker compose` needs `--env-file server/.env`.
 - CORS has one source: `CORS_ALLOWED_ORIGIN` (comma-separated exact origins, no wildcard), used by Fiber, Socket.io, and the `/socket.io` handler in `main.go`. Production must set its frontend origin.
 - `node_modules` is platform-specific. After moving between OSes, run `npm ci` in `client/`.
