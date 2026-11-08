@@ -43,6 +43,8 @@ export const linkApi = {
   sendCode: (pendingId: string) =>
     api.post("/auth/handoff/send-code", { pending_id: pendingId }),
 
+  remote: () => api.get<{ web_url: string }>("/link/remote"),
+
   status: () => api.get<LinkStatusResponse>("/link/status"),
 
   unlink: (platform: LinkPlatform) => api.delete(`/link/${platform}`),
