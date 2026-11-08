@@ -2,6 +2,7 @@ package movie_module
 
 import (
 	"math/rand/v2"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -31,15 +32,29 @@ func resolveTMDBLanguage(acceptLanguage string) string {
 	}
 }
 
+var genreListRe = regexp.MustCompile(`^\d{1,6}(,\d{1,6}){0,19}$`)
+
+// genresParam reads with_genres (or legacy genre); ok is false when it is not a comma list of ids.
+func genresParam(c fiber.Ctx) (string, bool) {
+	g := strings.TrimSpace(c.Query("with_genres"))
+	if g == "" {
+		g = strings.TrimSpace(c.Query("genre"))
+	}
+	if g == "" {
+		return "", true
+	}
+	return g, genreListRe.MatchString(g)
+}
+
 func (h *Handler) GetPopular(c fiber.Ctx) error {
 	page, _ := strconv.Atoi(c.Query("page", "1"))
-	withGenres := c.Query("with_genres")
-	if withGenres == "" {
-		withGenres = c.Query("genre")
+	withGenres, ok := genresParam(c)
+	if !ok {
+		return c.Status(400).JSON(fiber.Map{"error": "with_genres ไม่ถูกต้อง"})
 	}
 
 	if withGenres != "" {
-		result, err := h.svc.DiscoverMovies(c.Context(), withGenres, page)
+		result, err := h.svc.DiscoverMovies(c.Context(), withGenres, tmdb.TabPopular, page)
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": "ดึงข้อมูลหนังไม่สำเร็จ"})
 		}
@@ -55,13 +70,13 @@ func (h *Handler) GetPopular(c fiber.Ctx) error {
 
 func (h *Handler) GetNowPlaying(c fiber.Ctx) error {
 	page, _ := strconv.Atoi(c.Query("page", "1"))
-	withGenres := c.Query("with_genres")
-	if withGenres == "" {
-		withGenres = c.Query("genre")
+	withGenres, ok := genresParam(c)
+	if !ok {
+		return c.Status(400).JSON(fiber.Map{"error": "with_genres ไม่ถูกต้อง"})
 	}
 
 	if withGenres != "" {
-		result, err := h.svc.DiscoverMovies(c.Context(), withGenres, page)
+		result, err := h.svc.DiscoverMovies(c.Context(), withGenres, tmdb.TabNow, page)
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": "ดึงข้อมูลหนังไม่สำเร็จ"})
 		}
@@ -82,13 +97,13 @@ func (h *Handler) GetNowPlaying(c fiber.Ctx) error {
 
 func (h *Handler) GetTopRated(c fiber.Ctx) error {
 	page, _ := strconv.Atoi(c.Query("page", "1"))
-	withGenres := c.Query("with_genres")
-	if withGenres == "" {
-		withGenres = c.Query("genre")
+	withGenres, ok := genresParam(c)
+	if !ok {
+		return c.Status(400).JSON(fiber.Map{"error": "with_genres ไม่ถูกต้อง"})
 	}
 
 	if withGenres != "" {
-		result, err := h.svc.DiscoverMovies(c.Context(), withGenres, page)
+		result, err := h.svc.DiscoverMovies(c.Context(), withGenres, tmdb.TabTopRated, page)
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": "ดึงข้อมูลหนังไม่สำเร็จ"})
 		}
@@ -282,6 +297,18 @@ func (h *Handler) GetSimilar(c fiber.Ctx) error {
 
 func (h *Handler) GetPopularSeries(c fiber.Ctx) error {
 	page, _ := strconv.Atoi(c.Query("page", "1"))
+	withGenres, ok := genresParam(c)
+	if !ok {
+		return c.Status(400).JSON(fiber.Map{"error": "with_genres ไม่ถูกต้อง"})
+	}
+	if withGenres != "" {
+		result, err := h.svc.DiscoverSeries(c.Context(), withGenres, tmdb.TabPopular, page)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "ดึงข้อมูลซีรีส์ไม่สำเร็จ"})
+		}
+		return c.JSON(result)
+	}
+
 	result, err := h.svc.GetPopularSeries(c.Context(), page)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "ดึงข้อมูลซีรีส์ไม่สำเร็จ"})
@@ -291,6 +318,18 @@ func (h *Handler) GetPopularSeries(c fiber.Ctx) error {
 
 func (h *Handler) GetNowAiringSeries(c fiber.Ctx) error {
 	page, _ := strconv.Atoi(c.Query("page", "1"))
+	withGenres, ok := genresParam(c)
+	if !ok {
+		return c.Status(400).JSON(fiber.Map{"error": "with_genres ไม่ถูกต้อง"})
+	}
+	if withGenres != "" {
+		result, err := h.svc.DiscoverSeries(c.Context(), withGenres, tmdb.TabNow, page)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "ดึงข้อมูลซีรีส์ไม่สำเร็จ"})
+		}
+		return c.JSON(result)
+	}
+
 	result, err := h.svc.GetNowAiringSeries(c.Context(), page)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "ดึงข้อมูลซีรีส์ไม่สำเร็จ"})
@@ -300,6 +339,18 @@ func (h *Handler) GetNowAiringSeries(c fiber.Ctx) error {
 
 func (h *Handler) GetTopRatedSeries(c fiber.Ctx) error {
 	page, _ := strconv.Atoi(c.Query("page", "1"))
+	withGenres, ok := genresParam(c)
+	if !ok {
+		return c.Status(400).JSON(fiber.Map{"error": "with_genres ไม่ถูกต้อง"})
+	}
+	if withGenres != "" {
+		result, err := h.svc.DiscoverSeries(c.Context(), withGenres, tmdb.TabTopRated, page)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "ดึงข้อมูลซีรีส์ไม่สำเร็จ"})
+		}
+		return c.JSON(result)
+	}
+
 	result, err := h.svc.GetTopRatedSeries(c.Context(), page)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "ดึงข้อมูลซีรีส์ไม่สำเร็จ"})
@@ -371,7 +422,7 @@ func (h *Handler) GetRecommended(c fiber.Ctx) error {
 	var allResults []tmdb.Movie
 
 	for page := 1; page <= 3; page++ {
-		result, err := tmdb.DiscoverMovies(genreIDs, page)
+		result, err := tmdb.DiscoverMovies(genreIDs, tmdb.TabPopular, page)
 		if err != nil {
 			break
 		}
