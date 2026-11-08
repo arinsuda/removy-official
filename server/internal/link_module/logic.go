@@ -41,12 +41,34 @@ func Decide(alreadyLinked, localExists, localVerified, remoteVerified bool) Deci
 
 // ConfirmMethods lists methods usable to confirm a pending link. Password needs
 // a local password and a verified local email; the email code is always allowed.
-func ConfirmMethods(localHasPassword, localVerified bool) []string {
+func ConfirmMethods(localHasPassword, localVerified bool, localEmail string) []string {
 	var m []string
 	if localHasPassword && localVerified {
 		m = append(m, MethodPasswd)
 	}
-	return append(m, MethodEmail)
+	if emailDeliverable(localEmail) {
+		m = append(m, MethodEmail)
+	}
+	return m
+}
+
+// emailDeliverable is false for addresses that can never receive mail: reserved
+// TLDs (RFC 2606/6761) and dotless domains.
+func emailDeliverable(email string) bool {
+	i := strings.LastIndex(email, "@")
+	if i < 0 {
+		return false
+	}
+	d := strings.TrimSuffix(strings.ToLower(strings.TrimSpace(email[i+1:])), ".")
+	if d == "" || d == "localhost" || !strings.Contains(d, ".") {
+		return false
+	}
+	for _, tld := range []string{".local", ".test", ".invalid", ".example", ".localhost"} {
+		if strings.HasSuffix(d, tld) {
+			return false
+		}
+	}
+	return true
 }
 
 func sanitizeLocalPart(email string) string {

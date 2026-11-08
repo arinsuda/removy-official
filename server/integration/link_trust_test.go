@@ -226,3 +226,22 @@ func TestRedeemClaimMidRedeemDoesNotLoginLinked(t *testing.T) {
 		t.Fatalf("expected no session after a mid-redeem claim, got res=%v err=%v", res, err)
 	}
 }
+
+// An undeliverable local address gets no email-code method, and SendCode refuses it.
+func TestSendCodeRejectedForUndeliverableEmail(t *testing.T) {
+	e := newEnv(t)
+	const addr = "ghost@x.test"
+	e.db.Exec(`UPDATE users SET email = ? WHERE id = ?`, addr, seedUser(t, e.db, "tmp@gmail.com", false, "pw-secret-12"))
+	e.remote.mintToken("tok", link_module.RemoteUser{Platform: "planzi", UserID: "p-ghost", Email: addr, EmailVerified: true})
+	_, err := e.link.Redeem(context.Background(), "tok")
+	var ce *link_module.ConfirmRequiredError
+	if !errors.As(err, &ce) {
+		t.Fatalf("expected confirm required, got %v", err)
+	}
+	if len(ce.Methods) != 0 {
+		t.Fatalf("methods = %v, want none", ce.Methods)
+	}
+	if err := e.link.SendCode(ce.PendingID); !errors.Is(err, link_module.ErrInvalidMethod) {
+		t.Fatalf("SendCode = %v, want ErrInvalidMethod", err)
+	}
+}
