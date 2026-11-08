@@ -1,31 +1,42 @@
 <template>
-  <section v-if="items.length" class="hero" :aria-label="t('home.hero.label')">
-    <div class="hero__slides">
-      <TransitionGroup name="hero-fade">
-        <div v-for="(item, i) in items" v-show="index === i" :key="item.key" class="hero__slide">
+  <section
+    v-if="items.length"
+    class="hero"
+    :aria-label="t('home.hero.label')"
+    aria-roledescription="carousel"
+    @mouseenter="hovering = true"
+    @mouseleave="hovering = false"
+    @focusin="focused = true"
+    @focusout="focused = false"
+  >
+    <div class="hero__slide">
+      <Transition name="hero-fade" mode="out-in">
+        <div :key="current.key" class="hero__media">
           <img
-            v-if="item.backdrop_path && !failed.has(item.key)"
-            :src="backdropSrc(item.backdrop_path)"
+            v-if="current.backdrop_path && !failed.has(current.key)"
+            :src="backdropSrc(current.backdrop_path)"
             alt=""
             class="hero__backdrop"
-            @error="failed.add(item.key)"
+            :fetchpriority="index === 0 ? 'high' : 'auto'"
+            decoding="async"
+            @error="failed.add(current.key)"
           />
           <div v-else class="hero__backdrop hero__backdrop--fallback" />
-          <div class="hero__overlay-bottom" />
-          <div class="hero__overlay-side" />
         </div>
-      </TransitionGroup>
+      </Transition>
+      <div class="hero__overlay" />
     </div>
 
-    <div v-if="current" class="hero__content">
-      <span class="hero__badge">
-        <Sparkles :size="14" aria-hidden="true" />
-        {{ t("home.hero.badge") }}
+    <div class="hero__content" :aria-live="playing ? 'off' : 'polite'">
+      <span class="hero__eyebrow" :data-source="source">
+        <Flame v-if="source === 'hot'" :size="14" aria-hidden="true" />
+        <Sparkles v-else :size="14" aria-hidden="true" />
+        {{ t(`home.hero.eyebrow.${source}`) }}
       </span>
       <h1 class="hero__title">{{ current.title }}</h1>
       <div class="hero__meta">
-        <span v-if="current.date">{{ current.date.slice(0, 4) }}</span>
-        <MediaRating :ratings="current.ratings" :vote-average="current.vote_average" />
+        <MediaRating variant="detail" :ratings="current.ratings" :vote-average="current.vote_average" />
+        <span v-if="current.date" class="hero__year">{{ current.date.slice(0, 4) }}</span>
       </div>
       <p v-if="current.overview" class="hero__overview">{{ current.overview }}</p>
       <div class="hero__actions">
@@ -33,71 +44,124 @@
           <Info :size="16" aria-hidden="true" />
           {{ t("home.hero.details") }}
         </AppButton>
-        <AppButton :to="{ name: 'movies' }" variant="outline">
+        <AppButton :to="{ name: current.type === 'tv' ? 'tv' : 'movies' }" variant="outline">
           <Compass :size="16" aria-hidden="true" />
           {{ t("home.hero.explore") }}
         </AppButton>
       </div>
     </div>
 
-    <div class="hero__dots">
-      <button
-        v-for="(item, i) in items"
-        :key="item.key"
-        type="button"
-        class="hero__dot"
-        :class="{ 'hero__dot--active': index === i }"
-        :aria-label="t('home.hero.slide', { n: i + 1, title: item.title })"
-        :aria-current="index === i"
-        @click="go(i)"
-      />
+    <div v-if="items.length > 1" class="hero__controls">
+      <AppButton
+        variant="ghost"
+        size="sm"
+        icon-only
+        :aria-label="t(userPaused ? 'home.hero.play' : 'home.hero.pause')"
+        @click="userPaused = !userPaused"
+      >
+        <Play v-if="userPaused" :size="14" aria-hidden="true" />
+        <Pause v-else :size="14" aria-hidden="true" />
+      </AppButton>
+      <div class="hero__dots" role="group" :aria-label="t('home.hero.slides')">
+        <button
+          v-for="(item, i) in items"
+          :key="item.key"
+          type="button"
+          class="hero__dot"
+          :class="{ 'hero__dot--active': index === i }"
+          :aria-label="t('home.hero.slide', { n: i + 1, title: item.title })"
+          :aria-current="index === i"
+          @click="index = i"
+        />
+      </div>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from "vue"
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue"
 import { useI18n } from "vue-i18n"
-import { Compass, Info, Sparkles } from "lucide-vue-next"
+import { Compass, Flame, Info, Pause, Play, Sparkles } from "lucide-vue-next"
 import AppButton from "@/components/ui/AppButton.vue"
 import MediaRating from "@/components/movie/MediaRating.vue"
 import { backdropSrc, detailRoute, type HomeMedia } from "./homeMedia"
 
-const props = defineProps<{ items: HomeMedia[] }>()
+const props = defineProps<{
+  items: HomeMedia[]
+  /** "hot" = ป๊อปร้อน titles, "popular" = TMDB fallback. */
+  source: "hot" | "popular"
+}>()
 const { t } = useI18n()
 
-const AUTOPLAY_MS = 5000
+const AUTOPLAY_MS = 6000
 const index = ref(0)
 const failed = ref(new Set<string>())
-const current = computed(() => props.items[index.value] ?? null)
+const hovering = ref(false)
+const focused = ref(false)
+const userPaused = ref(false)
+const tabHidden = ref(false)
+const reduceMotion = ref(false)
+
+const current = computed(() => props.items[index.value] ?? props.items[0]!)
+const playing = computed(
+  () =>
+    props.items.length > 1 &&
+    !reduceMotion.value &&
+    !userPaused.value &&
+    !hovering.value &&
+    !focused.value &&
+    !tabHidden.value,
+)
+
 let timer: ReturnType<typeof setInterval> | null = null
-
-function restart() {
+function stop() {
   if (timer) clearInterval(timer)
-  timer = setInterval(() => {
-    index.value = (index.value + 1) % Math.max(props.items.length, 1)
-  }, AUTOPLAY_MS)
+  timer = null
 }
-
-function go(i: number) {
-  index.value = i
-  restart()
+function schedule() {
+  stop()
+  if (!playing.value) return
+  timer = setInterval(() => (index.value = (index.value + 1) % props.items.length), AUTOPLAY_MS)
 }
+// Restarting on every index change gives a manual pick a full interval.
+watch([playing, index, () => props.items.length], schedule)
+watch(
+  () => props.items,
+  () => (index.value = 0),
+)
 
-onMounted(restart)
-onBeforeUnmount(() => timer && clearInterval(timer))
+let motionQuery: MediaQueryList | null = null
+const syncMotion = () => (reduceMotion.value = motionQuery?.matches ?? false)
+const syncVisibility = () => (tabHidden.value = document.hidden)
+
+onMounted(() => {
+  motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)")
+  syncMotion()
+  syncVisibility()
+  motionQuery.addEventListener("change", syncMotion)
+  document.addEventListener("visibilitychange", syncVisibility)
+  schedule()
+})
+onBeforeUnmount(() => {
+  stop()
+  motionQuery?.removeEventListener("change", syncMotion)
+  document.removeEventListener("visibilitychange", syncVisibility)
+})
 </script>
 
 <style scoped>
 .hero {
   position: relative;
   width: 100%;
-  height: 320px;
+  height: 380px;
   overflow: hidden;
   background: var(--color-surface);
 }
-.hero__slides,
 .hero__slide {
+  position: absolute;
+  inset: 0;
+}
+.hero__media {
   position: absolute;
   inset: 0;
 }
@@ -110,19 +174,16 @@ onBeforeUnmount(() => timer && clearInterval(timer))
 .hero__backdrop--fallback {
   background: var(--color-surface-2);
 }
-.hero__overlay-bottom {
+.hero__overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, var(--color-surface) 0%, color-mix(in srgb, var(--color-surface) 80%, transparent) 25%, transparent 100%);
-}
-.hero__overlay-side {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to right, color-mix(in srgb, var(--color-surface) 95%, transparent) 0%, transparent 80%);
+  background:
+    linear-gradient(to top, var(--color-surface) 0%, color-mix(in srgb, var(--color-surface) 75%, transparent) 35%, transparent 100%),
+    linear-gradient(to right, color-mix(in srgb, var(--color-surface) 90%, transparent) 0%, transparent 75%);
 }
 .hero__content {
   position: absolute;
-  bottom: 36px;
+  bottom: 52px;
   left: 50%;
   z-index: 10;
   display: flex;
@@ -133,7 +194,7 @@ onBeforeUnmount(() => timer && clearInterval(timer))
   padding: 0 1rem;
   transform: translateX(-50%);
 }
-.hero__badge {
+.hero__eyebrow {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -141,9 +202,14 @@ onBeforeUnmount(() => timer && clearInterval(timer))
   padding: 4px 12px;
   border: 1px solid var(--color-border-strong);
   border-radius: 9999px;
-  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-surface) 60%, transparent);
+  color: var(--color-text-primary);
   font-size: var(--text-caption);
   font-weight: 600;
+}
+.hero__eyebrow[data-source="hot"] {
+  border-color: var(--color-brand);
+  color: var(--color-accent);
 }
 .hero__title {
   display: -webkit-box;
@@ -160,7 +226,7 @@ onBeforeUnmount(() => timer && clearInterval(timer))
 .hero__meta {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   font-size: var(--text-small);
   color: var(--color-text-secondary);
 }
@@ -180,14 +246,19 @@ onBeforeUnmount(() => timer && clearInterval(timer))
   gap: 12px;
   margin-top: 0.25rem;
 }
-.hero__dots {
+.hero__controls {
   position: absolute;
-  bottom: 16px;
+  bottom: 12px;
   left: 50%;
   z-index: 10;
   display: flex;
+  align-items: center;
   gap: 8px;
   transform: translateX(-50%);
+}
+.hero__dots {
+  display: flex;
+  gap: 8px;
 }
 .hero__dot {
   width: 24px;
@@ -205,23 +276,24 @@ onBeforeUnmount(() => timer && clearInterval(timer))
 }
 .hero-fade-enter-active,
 .hero-fade-leave-active {
-  transition: opacity 0.7s ease-in-out;
+  transition: opacity 0.5s ease-in-out;
 }
 .hero-fade-enter-from,
 .hero-fade-leave-to {
   opacity: 0;
 }
-@media (min-width: 480px) {
-  .hero {
-    height: 380px;
+@media (prefers-reduced-motion: reduce) {
+  .hero-fade-enter-active,
+  .hero-fade-leave-active {
+    transition: none;
   }
 }
 @media (min-width: 768px) {
   .hero {
-    height: 480px;
+    height: 500px;
   }
   .hero__content {
-    bottom: 50px;
+    bottom: 56px;
     gap: 0.75rem;
     padding: 0 1.5rem;
   }

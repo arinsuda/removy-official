@@ -148,13 +148,14 @@ export function provideHomePopup(): HomePopup {
     syncViewport()
     media.addEventListener("change", syncViewport)
     document.addEventListener("keydown", onKeydown)
-    window.addEventListener("scroll", onScroll, { passive: true })
+    // Capture so scrolling a rail (an element, not the window) closes the popup too.
+    window.addEventListener("scroll", onScroll, { passive: true, capture: true })
   })
 
   onBeforeUnmount(() => {
     media?.removeEventListener("change", syncViewport)
     document.removeEventListener("keydown", onKeydown)
-    window.removeEventListener("scroll", onScroll)
+    window.removeEventListener("scroll", onScroll, { capture: true })
     clearTimers()
     states.forEach((s) => s.unmount())
     states.clear()

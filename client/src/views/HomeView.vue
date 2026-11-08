@@ -1,88 +1,89 @@
 <template>
   <div class="home">
-    <HomeHero :items="heroItems" />
+    <HomeHero :items="data.hero.value.items" :source="data.hero.value.source" />
 
     <div class="home__content">
-      <HomeGenreChips />
+      <HomeTierRail
+        :items="data.pool.value"
+        :loading="data.poolLoading.value"
+        :error="data.poolError.value"
+        @retry="data.refetchPool()"
+      />
+
+      <HomeFriendsStrip
+        :items="data.friendItems.value"
+        :loading="data.friends.isLoading.value"
+        :error="data.friends.isError.value"
+        @retry="data.friends.refetch()"
+        @visible="data.reveal.friends.value = true"
+      />
 
       <HomeRail
-        v-if="hasGenres"
-        rail="recommended"
+        v-if="data.hasGenres.value"
         :title="t('home.recommended.title')"
         :subtitle="t('home.recommended.subtitle')"
-        :loading="recommended.isLoading.value"
-        :error="recommended.isError.value"
-        :empty="!recommendedItems.length"
-        @retry="recommended.refetch()"
+        :loading="data.recommended.isLoading.value || !data.reveal.recommended.value"
+        :error="data.recommended.isError.value"
+        :empty="!data.recommendedItems.value.length"
+        @retry="data.recommended.refetch()"
+        @visible="data.reveal.recommended.value = true"
       >
-        <HomePosterCard v-for="item in recommendedItems" :key="item.key" :item="item" rail="recommended" />
+        <HomePosterCard v-for="item in data.recommendedItems.value" :key="item.key" :item="item" rail="recommended" />
+      </HomeRail>
+      <HomeGenreCta v-else />
+
+      <HomeRail
+        v-if="data.unrated.value.length || data.nowPlaying.isLoading.value"
+        :title="t('home.unrated.title')"
+        :subtitle="t('home.unrated.subtitle')"
+        :loading="data.nowPlaying.isLoading.value"
+        :empty="false"
+      >
+        <HomePosterCard v-for="item in data.unrated.value" :key="item.key" :item="item" rail="unrated" />
       </HomeRail>
 
       <HomeRail
-        v-for="rail in rails"
-        :key="rail.id"
-        :title="t(`home.${rail.id}.title`)"
-        :subtitle="t(`home.${rail.id}.subtitle`)"
+        :title="t('home.nowPlaying.title')"
+        :subtitle="t('home.nowPlaying.subtitle')"
         :see-all-to="{ name: 'movies' }"
-        :loading="rail.query.isLoading.value"
-        :error="rail.query.isError.value"
-        :empty="!rail.items.value.length"
-        @retry="rail.query.refetch()"
+        :loading="data.nowPlaying.isLoading.value"
+        :error="data.nowPlaying.isError.value"
+        :empty="!data.nowPlayingItems.value.length"
+        @retry="data.nowPlaying.refetch()"
       >
-        <HomePosterCard v-for="item in rail.items.value" :key="item.key" :item="item" :rail="rail.id" />
+        <HomePosterCard v-for="item in data.nowPlayingItems.value" :key="item.key" :item="item" rail="nowPlaying" />
+      </HomeRail>
+
+      <HomeRail
+        :title="t('home.topRated.title')"
+        :subtitle="t('home.topRated.subtitle')"
+        :see-all-to="{ name: 'movies' }"
+        :loading="data.topRated.isLoading.value || !data.reveal.topRated.value"
+        :error="data.topRated.isError.value"
+        :empty="!data.topRatedItems.value.length"
+        @retry="data.topRated.refetch()"
+        @visible="data.reveal.topRated.value = true"
+      >
+        <HomePosterCard v-for="item in data.topRatedItems.value" :key="item.key" :item="item" rail="topRated" />
       </HomeRail>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue"
-import { useQuery } from "@tanstack/vue-query"
 import { useI18n } from "vue-i18n"
-import { movieApi } from "@/api/api"
-import HomeGenreChips from "@/components/home/HomeGenreChips.vue"
+import HomeFriendsStrip from "@/components/home/HomeFriendsStrip.vue"
+import HomeGenreCta from "@/components/home/HomeGenreCta.vue"
 import HomeHero from "@/components/home/HomeHero.vue"
 import HomePosterCard from "@/components/home/HomePosterCard.vue"
 import HomeRail from "@/components/home/HomeRail.vue"
-import { fromMovie, type HomeMedia } from "@/components/home/homeMedia"
-import { useFavoriteGenres } from "@/composables/useFavoriteGenres"
+import HomeTierRail from "@/components/home/HomeTierRail.vue"
+import { useHomeData } from "@/composables/useHomeData"
 import { provideHomePopup } from "@/composables/useHomePopup"
-import type { Movie, PaginatedResult } from "@/types"
 
 const { t } = useI18n()
 provideHomePopup()
-
-const RAIL_SIZE = 10
-const { hasGenres, genreQuery } = useFavoriteGenres()
-
-function useMovieRail(id: string, key: string, fetcher: () => Promise<{ data: PaginatedResult<Movie> }>) {
-  const query = useQuery({ queryKey: [key], queryFn: () => fetcher().then((r) => r.data) })
-  const items = computed<HomeMedia[]>(() => (query.data.value?.results ?? []).slice(0, RAIL_SIZE).map(fromMovie))
-  return { id, query, items }
-}
-
-const recommended = useQuery({
-  queryKey: computed(() => ["movies-recommended", genreQuery.value]),
-  queryFn: () => movieApi.getRecommended(genreQuery.value).then((r) => r.data),
-  enabled: hasGenres,
-})
-const recommendedItems = computed<HomeMedia[]>(() =>
-  (recommended.data.value?.results ?? []).slice(0, RAIL_SIZE).map(fromMovie),
-)
-
-const popular = useMovieRail("popular", "movies-popular-home", () => movieApi.getPopular(1))
-const nowPlaying = useMovieRail("nowPlaying", "movies-now-playing-home", () => movieApi.getNowPlaying(1))
-const topRated = useMovieRail("topRated", "movies-top-rated-home", () => movieApi.getTopRated(1))
-const rails = [popular, nowPlaying, topRated]
-
-const heroItems = computed(() => {
-  const source = recommendedItems.value.length
-    ? recommendedItems.value
-    : popular.items.value.length
-      ? popular.items.value
-      : nowPlaying.items.value
-  return source.slice(0, 5)
-})
+const data = useHomeData()
 </script>
 
 <style scoped>
