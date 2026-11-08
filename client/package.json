@@ -17,7 +17,6 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@primevue/themes": "^4.5.4",
     "@tanstack/vue-query": "^5.100.10",
     "@vuepic/vue-datepicker": "^14.0.0",
     "@vueuse/core": "^14.3.0",
@@ -30,7 +29,6 @@
     "lucide-vue-next": "^1.0.0",
     "pinia": "^3.0.4",
     "primeicons": "^7.0.0",
-    "primevue": "^4.5.5",
     "radix-vue": "^1.9.17",
     "socket.io-client": "^4.8.3",
     "tailwind-merge": "^3.6.0",

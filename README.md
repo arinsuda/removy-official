@@ -66,7 +66,7 @@
 | Framework | **Vue 3** (Composition API, `<script setup>`) |
 | Language | **TypeScript** (Strict mode) |
 | Build Tool | **Vite 8** |
-| Styling | **Tailwind CSS 4** + **PrimeVue 4** (Aura Theme) |
+| Styling | **Tailwind CSS 4** + primeicons (icon font) |
 | State Management | **Pinia 3** |
 | Routing | **Vue Router 5** |
 | Data Fetching | **TanStack Vue Query 5** + **Axios** |

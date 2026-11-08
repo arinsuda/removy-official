@@ -19,10 +19,10 @@
           <div class="avatar-shell">
             <div class="avatar-ring">
               <div class="avatar-inner">
-                <Avatar
+                <img
                   v-if="user?.avatar_url"
-                  :image="user.avatar_url"
-                  shape="circle"
+                  :src="user.avatar_url"
+                  alt=""
                   class="avatar-img"
                 />
                 <div v-else class="avatar-fallback">
@@ -186,7 +186,6 @@ import SkeletonProfile from "@/components/ui/skeleton/SkeletonProfile.vue"
   import { computed, ref, watch, onBeforeUnmount } from "vue"
   import { useRoute } from "vue-router"
 
-  import Avatar from "primevue/avatar"
 
   import {
     Star,
@@ -550,10 +549,6 @@ import SkeletonProfile from "@/components/ui/skeleton/SkeletonProfile.vue"
   }
 
   .avatar-img {
-    width: 100% !important;
-    height: 100% !important;
-  }
-  .avatar-img :deep(img) {
     width: 100%;
     height: 100%;
     object-fit: cover;

@@ -1,7 +1,7 @@
 @AGENTS.md
 
 # Tech Stack
-Go 1.26 + Fiber v3 + GORM (server) · Vue 3 + TypeScript + Vite + Tailwind + Pinia + PrimeVue + TanStack Query (client) · PostgreSQL 16 · MinIO · Brevo · TMDB · Socket.io.
+Go 1.26 + Fiber v3 + GORM (server) · Vue 3 + TypeScript + Vite + Tailwind + Pinia + TanStack Query (client) · PostgreSQL 16 · MinIO · Brevo · TMDB · Socket.io.
 Layout, commands, and invariants are in AGENTS.md. Don't duplicate them here.
 
 # Coding Rules
