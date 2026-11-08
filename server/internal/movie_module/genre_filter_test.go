@@ -26,3 +26,13 @@ func TestGenreParamValidation(t *testing.T) {
 		}
 	}
 }
+
+func TestUpcomingRejectsBadGenres(t *testing.T) {
+	app := fiber.New()
+	app.Get("/movies/upcoming", NewHandler(NewMovieService(nil)).GetUpcoming)
+	for _, bad := range []string{"abc", "28,", "28|35", "1,2,x", ",28"} {
+		resp, err := app.Test(httptest.NewRequest("GET", "/movies/upcoming?with_genres="+bad, nil))
+		assert.NoError(t, err)
+		assert.Equal(t, 400, resp.StatusCode, bad)
+	}
+}

@@ -45,8 +45,8 @@ func (s *MovieService) GetTopRated(ctx context.Context, page int) (*tmdb.Paginat
 	return s.enrichMovies(ctx, res)
 }
 
-func (s *MovieService) GetUpcoming(ctx context.Context, page int) (*tmdb.PaginatedResult[MovieDTO], error) {
-	res, err := tmdb.GetUpcoming(page)
+func (s *MovieService) GetUpcoming(ctx context.Context, withGenres string, page int, options tmdb.RequestOptions) (*tmdb.PaginatedResult[MovieDTO], error) {
+	res, err := tmdb.DiscoverUpcoming(withGenres, page, options)
 	if err != nil {
 		return nil, err
 	}
