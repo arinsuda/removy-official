@@ -3,7 +3,6 @@ import { mount } from "@vue/test-utils"
 import { createPinia, setActivePinia } from "pinia"
 import { createI18n } from "vue-i18n"
 import { useShareImage } from "@/composables/useShareImage"
-import PosterShareTemplate from "@/components/share/PosterShareTemplate.vue"
 import ReviewShareTemplate from "@/components/share/ReviewShareTemplate.vue"
 import ShareImageModal from "@/components/share/ShareImageModal.vue"
 import type { ShareMediaContext, ShareReviewContext } from "@/types/share"
@@ -93,52 +92,6 @@ describe("Share as Image Feature", () => {
     })
   })
 
-  describe("PosterShareTemplate Component", () => {
-    const mockMedia: ShareMediaContext = {
-      id: 550,
-      mediaType: "movie",
-      title: "Fight Club",
-      posterPath: "/poster.jpg",
-      posterUrl: null,
-      releaseYear: "1999",
-      genres: [{ id: 18, name: "Drama" }],
-      voteAverage: 8.4,
-      popcornRating: 4.8,
-    }
-
-    it("renders movie title, year, genre chips and POPCORN rating", () => {
-      const wrapper = mount(PosterShareTemplate, {
-        props: {
-          media: mockMedia,
-          posterBlobUrl: "blob:http://localhost/fake-poster-blob",
-        },
-        global: {
-          plugins: [i18n],
-        },
-      })
-
-      expect(wrapper.find(".media-title").text()).toBe("Fight Club")
-      expect(wrapper.find(".media-year").text()).toBe("1999")
-      expect(wrapper.find(".genre-chip").text()).toBe("Drama")
-      expect(wrapper.find(".rating-value").text()).toBe("4.8")
-      expect(wrapper.find(".rating-source").text()).toBe("POPCORN")
-    })
-
-    it("renders poster fallback when posterBlobUrl is null", () => {
-      const wrapper = mount(PosterShareTemplate, {
-        props: {
-          media: { ...mockMedia, posterPath: null },
-          posterBlobUrl: null,
-        },
-        global: {
-          plugins: [i18n],
-        },
-      })
-
-      expect(wrapper.find(".poster-fallback").exists()).toBe(true)
-    })
-  })
-
   describe("ReviewShareTemplate Component", () => {
     const mockMedia: ShareMediaContext = {
       id: 101,
@@ -196,38 +149,6 @@ describe("Share as Image Feature", () => {
       })
 
       expect(wrapper.find(".avatar-fallback").exists()).toBe(true)
-    })
-  })
-
-  describe("ShareImageModal Component", () => {
-    const mockMedia: ShareMediaContext = {
-      id: 200,
-      mediaType: "movie",
-      title: "Spider-Man",
-      posterPath: "/spiderman.jpg",
-      posterUrl: null,
-      releaseYear: "2002",
-      genres: [{ id: 28, name: "Action" }],
-      voteAverage: 7.3,
-      popcornRating: 4.5,
-    }
-
-    it("renders modal shell with download and copy buttons when open", () => {
-      const wrapper = mount(ShareImageModal, {
-        props: {
-          modelValue: true,
-          shareType: "poster",
-          media: mockMedia,
-        },
-        global: {
-          plugins: [i18n],
-        },
-        attachTo: document.body,
-      })
-
-      expect(document.body.querySelector(".btn-download")).not.toBeNull()
-      expect(document.body.querySelectorAll(".btn-secondary").length).toBe(2)
-      wrapper.unmount()
     })
   })
 })

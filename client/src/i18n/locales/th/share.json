@@ -29,5 +29,35 @@
   "showUsername": "แสดงชื่อผู้ใช้",
   "rankLabel": "อันดับที่ {rank}",
   "imageLoadFailed": "โหลดโปสเตอร์ไม่สำเร็จ ตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง",
-  "retry": "ลองอีกครั้ง"
+  "retry": "ลองอีกครั้ง",
+  "templatesLabel": "สไตล์การ์ด",
+  "previewLabel": "ตัวอย่างการ์ดแชร์",
+  "shareTo": "แชร์ไปยัง…",
+  "downloadPng": "ดาวน์โหลด PNG",
+  "copyImage": "คัดลอกรูปภาพ",
+  "imageCopied": "คัดลอกรูปภาพแล้ว!",
+  "copyImageUnsupported": "เบราว์เซอร์นี้คัดลอกรูปภาพไม่ได้ ลองดาวน์โหลดแทน",
+  "nativeShareFailed": "เปิดหน้าต่างแชร์ไม่สำเร็จ",
+  "myTake": "ความเห็นของฉัน",
+  "myRating": "คะแนนของฉัน",
+  "watched": "ดูแล้ว",
+  "lastWatched": "ดูล่าสุด",
+  "templates": {
+    "poster": "โปสเตอร์",
+    "take": "ความเห็นของฉัน",
+    "sticker": "สติกเกอร์",
+    "square": "จัตุรัส",
+    "review": "รีวิว"
+  },
+  "tier": {
+    "hot": "ร้อนแรง",
+    "fresh": "สดใหม่",
+    "stale": "ซบเซา"
+  },
+  "theme": {
+    "label": "สีการ์ด",
+    "dark": "มืด",
+    "light": "สว่าง",
+    "brand": "แดง POPCORN"
+  }
 }

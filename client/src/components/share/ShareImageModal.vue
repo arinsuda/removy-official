@@ -1,431 +1,268 @@
 <template>
-  <Teleport to="body">
-    <Transition name="modal-fade">
-      <div
-        v-if="modelValue"
-        class="share-modal-overlay"
-        role="dialog"
-        aria-modal="true"
-        :aria-label="$t('share.shareAsImage')"
-        @click.self="close"
-        @keydown.esc="close"
-        tabindex="-1"
-        ref="overlayRef"
-      >
-        <div class="share-modal">
-          <!-- Header -->
-          <div class="modal-header">
-            <h2 class="modal-title">
-              <i class="pi pi-share-alt" />
-              {{ shareType === 'poster' ? $t('share.posterShare') : $t('share.reviewShare') }}
-            </h2>
-            <button class="btn-close" @click="close" :aria-label="$t('common.close') || 'Close'">
-              <i class="pi pi-times" />
-            </button>
-          </div>
+  <AppModal
+    v-model="open"
+    size="md"
+    class="share-sheet"
+    :title="t('share.shareAsImage')"
+    initial-focus=".share-sheet__tabs [role='tab'][aria-selected='true']"
+  >
+    <div class="share-sheet__tabs">
+      <AppTabs v-model="active" :tabs="tabs" :controls="false" :label="t('share.templatesLabel')" />
+    </div>
 
-          <!-- Preview area -->
-          <div class="preview-container">
-            <div class="preview-scaler" :style="scalerStyle">
-              <div v-if="imageStatus === 'ready'" ref="exportNodeRef">
-                <PosterShareTemplate
-                  v-if="shareType === 'poster'"
-                  :media="media"
-                  :poster-blob-url="posterBlobUrl"
-                />
-                <ReviewShareTemplate
-                  v-if="shareType === 'review' && review"
-                  :media="media"
-                  :review="review"
-                  :poster-blob-url="posterBlobUrl"
-                  :avatar-blob-url="avatarBlobUrl"
-                />
-              </div>
-            </div>
+    <div class="share-sheet__stage" :style="{ minHeight: `${stageMinHeight}px` }" :aria-busy="status === 'loading'">
+      <ShareTemplateCarousel
+        v-if="status === 'ready'"
+        ref="carousel"
+        v-model="active"
+        :templates="templates"
+        :media="media"
+        :poster-url="posterUrl"
+        :avatar-url="avatarUrl"
+        :theme="theme"
+        :short-url="shortUrl"
+        :stats="ownStats"
+        :review="shareableReview"
+        :max-height="previewMaxHeight"
+      />
+      <SkeletonBlock v-else-if="status === 'loading'" class="share-sheet__skeleton" height="100%" radius="12px" />
+      <div v-else class="share-sheet__error" role="alert">
+        <p>{{ t("share.imageLoadFailed") }}</p>
+        <AppButton variant="outline" size="sm" @click="loadImages">{{ t("share.retry") }}</AppButton>
+      </div>
 
-            <!-- Images loading (skeleton) / failed (retry) -->
-            <div v-if="imageStatus !== 'ready'" class="image-state" :aria-busy="imageStatus === 'loading'">
-              <SkeletonBlock v-if="imageStatus === 'loading'" class="image-state__skeleton" height="100%" radius="0" />
-              <div v-else class="image-state__error" role="alert">
-                <p>{{ $t('share.imageLoadFailed') }}</p>
-                <button class="btn-action btn-secondary" @click="loadImages">
-                  <i class="pi pi-refresh" />
-                  {{ $t('share.retry') }}
-                </button>
-              </div>
-            </div>
+      <div v-if="isExporting" class="share-sheet__busy">
+        <AppSpinner :size="32" />
+        <span>{{ t("share.generating") }}</span>
+      </div>
+    </div>
 
-            <!-- Loading overlay -->
-            <div v-if="isExporting" class="export-overlay">
-              <AppSpinner :size="36" class="export-overlay__spinner" />
-              <span>{{ $t('share.generating') }}</span>
-            </div>
-          </div>
+    <div class="share-sheet__meta">
+      <ShareThemePicker v-if="activeDef.key !== 'review'" v-model="theme" />
+      <span class="share-sheet__ratio">{{ activeDef.width }} × {{ activeDef.height }} · {{ activeDef.ratio }}</span>
+    </div>
 
-          <!-- Actions -->
-          <div class="modal-actions">
-            <button
-              class="btn-action btn-download"
-              :disabled="isExporting || imageStatus !== 'ready'"
-              @click="handleDownload"
-            >
-              <i class="pi pi-download" />
-              {{ $t('share.downloadImage') }}
-            </button>
-            <button
-              class="btn-action btn-secondary"
-              @click="handleCopyCaption"
-            >
-              <i class="pi pi-copy" />
-              {{ $t('share.copyCaption') }}
-            </button>
-            <button
-              class="btn-action btn-secondary"
-              @click="handleCopyLink"
-            >
-              <i class="pi pi-link" />
-              {{ $t('share.copyLink') }}
-            </button>
-          </div>
-
-          <!-- Format label -->
-          <div class="format-label">
-            <i class="pi pi-mobile" />
-            {{ $t('share.storyFormat') }} · 9:16
-          </div>
+    <template #footer>
+      <div class="share-sheet__actions">
+        <AppButton v-if="canNativeShare" variant="primary" block :disabled="!ready || isExporting" @click="handleShare">
+          <Share2 :size="16" aria-hidden="true" /> {{ t("share.shareTo") }}
+        </AppButton>
+        <AppButton :variant="canNativeShare ? 'outline' : 'primary'" block :disabled="!ready || isExporting" @click="handleDownload">
+          <Download :size="16" aria-hidden="true" /> {{ t("share.downloadPng") }}
+        </AppButton>
+        <div class="share-sheet__secondary">
+          <AppButton v-if="canCopyImg" variant="ghost" size="sm" :disabled="!ready || isExporting" @click="handleCopyImage">
+            <Copy :size="15" aria-hidden="true" /> {{ t("share.copyImage") }}
+          </AppButton>
+          <AppButton variant="ghost" size="sm" @click="handleCopyLink">
+            <Link2 :size="15" aria-hidden="true" /> {{ t("share.copyLink") }}
+          </AppButton>
+          <AppButton variant="ghost" size="sm" @click="handleCopyCaption">
+            <MessageSquareText :size="15" aria-hidden="true" /> {{ t("share.copyCaption") }}
+          </AppButton>
         </div>
       </div>
-    </Transition>
-  </Teleport>
+    </template>
+  </AppModal>
 </template>
 
 <script setup lang="ts">
+import { computed, onBeforeUnmount, ref, useTemplateRef, watch } from "vue"
+import { useI18n } from "vue-i18n"
+import { Copy, Download, Link2, MessageSquareText, Share2 } from "lucide-vue-next"
+import AppButton from "@/components/ui/AppButton.vue"
+import AppModal from "@/components/ui/AppModal.vue"
 import AppSpinner from "@/components/ui/AppSpinner.vue"
-  import SkeletonBlock from "@/components/ui/skeleton/SkeletonBlock.vue"
-  import { ref, watch, computed, onUnmounted, nextTick } from "vue"
-  import type { ShareMediaContext, ShareReviewContext } from "@/types/share"
-  import { useShareImage } from "@/composables/useShareImage"
-  import { getTmdbImageUrl } from "@/utils/image"
-  import PosterShareTemplate from "./PosterShareTemplate.vue"
-  import ReviewShareTemplate from "./ReviewShareTemplate.vue"
+import AppTabs from "@/components/ui/AppTabs.vue"
+import SkeletonBlock from "@/components/ui/skeleton/SkeletonBlock.vue"
+import { useShareImage } from "@/composables/useShareImage"
+import { getTmdbImageUrl } from "@/utils/image"
+import type { ShareMediaContext, ShareReviewContext, ShareStatsContext, ShareTemplateKey, ShareTheme } from "@/types/share"
+import ShareTemplateCarousel from "./ShareTemplateCarousel.vue"
+import ShareThemePicker from "./ShareThemePicker.vue"
+import { availableTemplates, hasOwnStats, publicExcerpt, shortShareUrl, templateDef } from "./shareCards"
 
-  function getApiBaseUrl(): string {
-    const envUrl = import.meta.env.VITE_API_BASE_URL
-    if (!envUrl) return "/api"
-    const cleanUrl = (envUrl as string).replace(/\/+$/, "")
-    return cleanUrl.endsWith("/api") ? cleanUrl : `${cleanUrl}/api`
-  }
+const props = defineProps<{
+  modelValue: boolean
+  shareType: "poster" | "review"
+  media: ShareMediaContext
+  review?: ShareReviewContext
+  /** The signed-in user's own stats. Ignored when sharing a review. */
+  stats?: ShareStatsContext | null
+}>()
+const emit = defineEmits<{ "update:modelValue": [value: boolean] }>()
 
-  const props = defineProps<{
-    modelValue: boolean
-    shareType: "poster" | "review"
-    media: ShareMediaContext
-    review?: ShareReviewContext
-  }>()
+const { t } = useI18n()
+const share = useShareImage()
+const isExporting = share.isExporting
 
-  const emit = defineEmits<{
-    "update:modelValue": [value: boolean]
-  }>()
+const open = computed({ get: () => props.modelValue, set: (v) => emit("update:modelValue", v) })
+const carousel = useTemplateRef<InstanceType<typeof ShareTemplateCarousel>>("carousel")
 
-  const share = useShareImage()
-
-  const overlayRef = ref<HTMLElement | null>(null)
-  const exportNodeRef = ref<HTMLElement | null>(null)
-
-  const posterBlobUrl = ref<string | null>(null)
-  const avatarBlobUrl = ref<string | null>(null)
-  const isExporting = share.isExporting
-  const imageStatus = ref<"loading" | "ready" | "error">("loading")
-
-  // Scale the 1080px-wide export node to fit the modal preview (~360px)
-  const PREVIEW_WIDTH = 360
-  const scalerStyle = computed(() => ({
-    transform: `scale(${PREVIEW_WIDTH / 1080})`,
-    transformOrigin: "top left",
-    width: "1080px",
-    height: "1920px",
-  }))
-
-  function close() {
-    emit("update:modelValue", false)
-  }
-
-  /** Load images as data URLs (TMDB through the API proxy) before any card renders. */
-  async function loadImages() {
-    imageStatus.value = "loading"
-    const posterUrl = props.media.posterUrl || getTmdbImageUrl(props.media.posterPath, "w500")
-
-    let avatarUrl = props.shareType === "review" ? props.review?.authorAvatarUrl?.trim() || "" : ""
-    if (avatarUrl && !/^(https?:|data:)/.test(avatarUrl)) {
-      const apiBase = getApiBaseUrl()
-      const origin = apiBase.startsWith("http") ? new URL(apiBase).origin : window.location.origin
-      avatarUrl = `${origin}${avatarUrl.startsWith("/") ? "" : "/"}${avatarUrl}`
-    }
-
-    const [poster, avatar] = await Promise.all([
-      posterUrl ? share.fetchImageAsBlob(posterUrl) : Promise.resolve(null),
-      avatarUrl ? share.fetchImageAsBlob(avatarUrl) : Promise.resolve(null),
-    ])
-    if (!props.modelValue) return
-    posterBlobUrl.value = poster
-    avatarBlobUrl.value = avatar
-    // A missing poster is only an error when one exists but could not be loaded.
-    imageStatus.value = posterUrl && !poster ? "error" : "ready"
-  }
-
-  async function handleDownload() {
-    if (!exportNodeRef.value) return
-    const blob = await share.generatePng(exportNodeRef.value)
-    if (blob) {
-      const filename = share.sanitizeFilename(
-        props.media.title,
-        props.shareType === "poster" ? "POPCORN_poster" : "POPCORN_review",
-      )
-      share.downloadBlob(blob, filename)
-    }
-  }
-
-  function handleCopyCaption() {
-    const caption =
-      props.shareType === "poster"
-        ? share.buildPosterCaption(
-            props.media.title,
-            props.media.releaseYear,
-            props.media.mediaType,
-          )
-        : share.buildReviewCaption(
-            props.media.title,
-            props.review?.authorDisplayName || props.review?.authorUsername || "",
-            props.review?.rating || 0,
-          )
-    share.copyText(caption, "share.captionCopied")
-  }
-
-  function handleCopyLink() {
-    const link = share.buildShareLink(props.media.mediaType, props.media.id)
-    share.copyText(link, "share.linkCopied")
-  }
-
-  // Body scroll lock & image loading
-  watch(
-    () => props.modelValue,
-    async (visible) => {
-      if (visible) {
-        document.body.style.overflow = "hidden"
-        await nextTick()
-        loadImages()
-        overlayRef.value?.focus()
-      } else {
-        document.body.style.overflow = ""
-        posterBlobUrl.value = null
-        avatarBlobUrl.value = null
-        imageStatus.value = "loading"
-        share.cleanup()
-      }
-    },
-    { immediate: true },
-  )
-
-  onUnmounted(() => {
-    document.body.style.overflow = ""
-    share.cleanup()
-  })
-</script>
-
-<style scoped>
-  .share-modal-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 9999;
-    background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(12px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-  }
-
-  .share-modal {
-    background: #1a1a1a;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
-    max-width: 440px;
-    width: 100%;
-    max-height: 90vh;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
-  }
-
-  /* ── Header ── */
-  .modal-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 20px 24px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  }
-
-  .modal-title {
-    color: #ffffff;
-    font-size: 1rem;
-    font-weight: 700;
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .modal-title i {
-    color: #f5432c;
-  }
-
-  .btn-close {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    color: #ffffff;
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: background 0.15s;
-  }
-
-  .btn-close:hover {
-    background: rgba(255, 255, 255, 0.12);
-  }
-
-  /* ── Preview ── */
-  .preview-container {
-    position: relative;
-    margin: 20px 24px;
-    border-radius: 12px;
-    overflow: hidden;
-    background: #0a0a0a;
-    /* Preview dimensions set by scaler */
-    width: 360px;
-    height: 640px;
-    align-self: center;
-  }
-
-  .preview-scaler {
-    pointer-events: none;
-  }
-
-  .image-state {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .image-state__skeleton {
-    width: 100%;
-    height: 100%;
-    border-radius: 0;
-  }
-
-  .image-state__error {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    padding: 24px;
-    text-align: center;
-    color: var(--color-text-secondary);
-    font-size: 0.875rem;
-  }
-
-  .export-overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.7);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    color: #ffffff;
-    font-size: 0.875rem;
-    z-index: 2;
-  }
-
-  .export-overlay__spinner {
-  color: var(--color-brand);
+function getApiBaseUrl(): string {
+  const envUrl = import.meta.env.VITE_API_BASE_URL
+  if (!envUrl) return "/api"
+  const cleanUrl = (envUrl as string).replace(/\/+$/, "")
+  return cleanUrl.endsWith("/api") ? cleanUrl : `${cleanUrl}/api`
 }
 
-  /* ── Actions ── */
-  .modal-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 0 24px 16px;
+// Privacy: another user's stats never appear, and review text needs a public review.
+const ownStats = computed(() => (props.shareType === "poster" && hasOwnStats(props.stats) ? props.stats : null))
+const shareableReview = computed(() =>
+  props.shareType === "review" && props.review && publicExcerpt(props.review.visibility, props.review.body) ? props.review : null,
+)
+
+const templates = computed(() => availableTemplates(props.shareType, ownStats.value, shareableReview.value))
+const tabs = computed(() => templates.value.map((d) => ({ key: d.key, label: t(d.labelKey) })))
+const active = ref<ShareTemplateKey>("poster")
+const activeDef = computed(() => templates.value.find((d) => d.key === active.value) ?? templateDef("poster"))
+const theme = ref<ShareTheme>("dark")
+
+const shortUrl = computed(() => shortShareUrl(props.media))
+const canNativeShare = ref(false)
+const canCopyImg = ref(false)
+
+// Preview height follows the viewport so the sheet fits on small phones.
+const viewportH = ref(typeof window === "undefined" ? 800 : window.innerHeight)
+const previewMaxHeight = computed(() => Math.max(260, Math.min(560, viewportH.value - 400)))
+const stageMinHeight = computed(() => previewMaxHeight.value)
+function onResize() {
+  viewportH.value = window.innerHeight
+}
+
+// Images: TMDB goes through the API proxy as data URLs before any card renders.
+const status = ref<"loading" | "ready" | "error">("loading")
+const posterUrl = ref<string | null>(null)
+const avatarUrl = ref<string | null>(null)
+const ready = computed(() => status.value === "ready")
+let loadSeq = 0
+
+async function loadImages() {
+  const seq = ++loadSeq
+  status.value = "loading"
+  const source = props.media.posterUrl || getTmdbImageUrl(props.media.posterPath, "w780")
+
+  let avatar = props.shareType === "review" ? props.review?.authorAvatarUrl?.trim() || "" : ""
+  if (avatar && !/^(https?:|data:)/.test(avatar)) {
+    const apiBase = getApiBaseUrl()
+    const origin = apiBase.startsWith("http") ? new URL(apiBase).origin : window.location.origin
+    avatar = `${origin}${avatar.startsWith("/") ? "" : "/"}${avatar}`
   }
 
-  .btn-action {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 12px 16px;
-    border-radius: 10px;
-    font-size: 0.875rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.15s;
-    border: none;
-  }
+  const [poster, avatarData] = await Promise.all([
+    source ? share.fetchImageAsBlob(source) : Promise.resolve(null),
+    avatar ? share.fetchImageAsBlob(avatar) : Promise.resolve(null),
+  ])
+  if (seq !== loadSeq || !props.modelValue) return
+  posterUrl.value = poster
+  avatarUrl.value = avatarData
+  // A title with no poster at all renders the fallback; a poster that failed to load is an error.
+  status.value = source && !poster ? "error" : "ready"
+}
 
-  .btn-download {
-    background: #f5432c;
-    color: #ffffff;
-  }
+watch(
+  () => props.modelValue,
+  (visible) => {
+    if (visible) {
+      active.value = templates.value[0]!.key
+      canNativeShare.value = share.canShareFiles()
+      canCopyImg.value = share.canCopyImage()
+      onResize()
+      window.addEventListener("resize", onResize)
+      loadImages()
+    } else {
+      loadSeq++
+      window.removeEventListener("resize", onResize)
+      posterUrl.value = null
+      avatarUrl.value = null
+      status.value = "loading"
+      share.cleanup()
+    }
+  },
+  { immediate: true },
+)
 
-  .btn-download:hover:not(:disabled) {
-    background: #ff5a42;
-  }
+// Keep the selection valid if the offered templates change while open.
+watch(templates, (list) => {
+  if (!list.some((d) => d.key === active.value)) active.value = list[0]!.key
+})
 
-  .btn-download:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
+onBeforeUnmount(() => {
+  loadSeq++
+  window.removeEventListener("resize", onResize)
+  share.cleanup()
+})
 
-  .btn-secondary {
-    background: rgba(255, 255, 255, 0.05);
-    color: #ffffff;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-  }
+async function exportActive(): Promise<{ blob: Blob; filename: string } | null> {
+  const def = activeDef.value
+  const node = carousel.value?.getNode(def.key)
+  if (!node) return null
+  const blob = await share.renderPng(node, { width: def.width, height: def.height })
+  if (!blob) return null
+  return { blob, filename: share.sanitizeFilename(props.media.title, `POPCORN_${def.key}`) }
+}
 
-  .btn-secondary:hover {
-    background: rgba(255, 255, 255, 0.1);
+function caption(): string {
+  const r = shareableReview.value
+  if (active.value === "review" && r) {
+    return share.buildReviewCaption(props.media.title, r.authorDisplayName || r.authorUsername, r.rating)
   }
+  return share.buildPosterCaption(props.media.title, props.media.releaseYear, props.media.mediaType)
+}
 
-  /* ── Format label ── */
-  .format-label {
-    text-align: center;
-    padding: 12px 24px 20px;
-    color: rgba(255, 255, 255, 0.4);
-    font-size: 0.75rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-  }
+async function handleShare() {
+  const out = await exportActive()
+  if (!out) return
+  const link = share.buildShareLink(props.media.mediaType, props.media.id)
+  await share.shareImageFile(out.blob, out.filename, `${caption()}\n${link}`)
+}
 
-  /* ── Transition ── */
-  .modal-fade-enter-active,
-  .modal-fade-leave-active {
-    transition: opacity 0.2s ease;
-  }
+async function handleDownload() {
+  const out = await exportActive()
+  if (out) share.saveBlob(out.blob, out.filename)
+}
 
-  .modal-fade-enter-from,
-  .modal-fade-leave-to {
-    opacity: 0;
+async function handleCopyImage() {
+  const out = await exportActive()
+  if (out) await share.copyImage(out.blob)
+}
+
+function handleCopyCaption() {
+  share.copyText(caption(), "share.captionCopied")
+}
+
+function handleCopyLink() {
+  share.copyText(share.buildShareLink(props.media.mediaType, props.media.id), "share.linkCopied")
+}
+</script>
+
+<style>
+.share-sheet__tabs { margin-bottom: 12px; overflow-x: auto; }
+.share-sheet__stage { position: relative; display: flex; align-items: stretch; justify-content: center; }
+.share-sheet__stage > * { flex: 1; min-width: 0; }
+.share-sheet__skeleton { flex: 1; }
+.share-sheet__error {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px;
+  border-radius: 12px; background: var(--color-surface); color: var(--color-text-secondary); font-size: 14px; text-align: center;
+}
+.share-sheet__busy {
+  position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  border-radius: 12px; background: color-mix(in srgb, black 70%, transparent); color: var(--color-text-primary); font-size: 14px;
+}
+.share-sheet__meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; }
+.share-sheet__ratio { margin-left: auto; color: var(--color-text-muted); font-size: 12px; }
+.share-sheet__actions { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.share-sheet__secondary { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
+
+/* Bottom sheet below 768px. */
+@media (max-width: 767px) {
+  .app-modal:has(> .share-sheet) { align-items: flex-end; padding: 0; }
+  .share-sheet {
+    max-width: none;
+    max-height: 94dvh;
+    border-bottom: 0;
+    border-radius: 20px 20px 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
   }
+}
 </style>

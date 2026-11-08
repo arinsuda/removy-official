@@ -95,7 +95,7 @@
       <Teleport to="body">
         <PopupTrailer v-if="trailerOpen" :trailer-url="trailerOpen" @close="trailerOpen = null" />
       </Teleport>
-      <ShareImageModal v-if="shareContext" v-model="showShare" share-type="poster" :media="shareContext" />
+      <ShareImageModal v-if="shareContext" v-model="showShare" share-type="poster" :media="shareContext" :stats="shareStats" />
     </template>
   </div>
 </template>
@@ -120,7 +120,7 @@ import { useMediaActivity } from "@/composables/useMediaActivity"
 import { useMediaDetail } from "@/composables/useMediaDetail"
 import { useAuthStore } from "@/stores/auth"
 import type { ReviewResponse } from "@/types/review"
-import type { ShareMediaContext } from "@/types/share"
+import type { ShareMediaContext, ShareStatsContext } from "@/types/share"
 import DetailActionBar from "./DetailActionBar.vue"
 import DetailCastRail from "./DetailCastRail.vue"
 import DetailFacts from "./DetailFacts.vue"
@@ -198,7 +198,22 @@ const shareContext = computed<ShareMediaContext | null>(() => {
     genres: d.genres,
     voteAverage: d.voteAverage,
     popcornRating: s?.has_rating ? s.average_rating : null,
+    popcornCount: s?.has_rating ? s.review_count : null,
   }
+})
+// The signed-in user's own activity only; guests and other people's data never reach the card.
+const shareStats = computed<ShareStatsContext | null>(() => {
+  if (!auth.isLoggedIn) return null
+  const mine = myReview.value
+  const watch = activity.watchSummary.value
+  const stats: ShareStatsContext = {
+    rating: mine?.rating ?? null,
+    watchCount: watch?.watch_count ?? 0,
+    lastWatchedOn: watch?.last_watched_on ?? null,
+    reviewBody: mine?.body ?? null,
+    reviewVisibility: mine?.visibility ?? null,
+  }
+  return stats.rating || stats.watchCount > 0 ? stats : null
 })
 
 // Similar titles

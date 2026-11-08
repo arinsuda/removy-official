@@ -11,6 +11,8 @@ export interface ShareMediaContext {
   genres: Genre[]
   voteAverage: number
   popcornRating: number | null
+  /** Review count behind popcornRating; used for the tier. Optional for older callers. */
+  popcornCount?: number | null
 }
 
 export interface ShareReviewContext {
@@ -23,3 +25,15 @@ export interface ShareReviewContext {
   visibility: Visibility
   createdAt: string
 }
+
+/** The signed-in user's own activity on the title. Build it only for the owner. */
+export interface ShareStatsContext {
+  rating: number | null
+  watchCount: number
+  lastWatchedOn: string | null
+  reviewBody: string | null
+  reviewVisibility: Visibility | null
+}
+
+export type ShareTemplateKey = "poster" | "take" | "sticker" | "square" | "review"
+export type ShareTheme = "dark" | "light" | "brand"
