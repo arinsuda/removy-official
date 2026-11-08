@@ -40,70 +40,7 @@
       </nav>
 
       <div class="nav-right">
-        <div class="search-box" :class="{ 'search-box--open': searchOpen }">
-          <button class="search-icon-btn" @click="toggleSearch">
-            <Search :size="18" />
-          </button>
-          <input
-            v-if="searchOpen"
-            ref="searchInput"
-            v-model="searchQuery"
-            class="search-input"
-            :placeholder="$t('navigation.searchPlaceholder')"
-            @keydown.enter="doSearch"
-            @keydown.escape="closeSearch"
-          />
-
-          <button
-            v-if="searchOpen"
-            class="search-close-btn"
-            @click="closeSearch"
-            aria-label="Close search"
-          >
-            <X :size="16" />
-          </button>
-
-          <div
-            v-if="searchOpen && (suggestions.length > 0 || searchLoading)"
-            class="search-suggestions"
-          >
-            <div v-if="searchLoading" class="search-suggestion-loading">
-              {{ $t("navigation.searching") }}
-            </div>
-
-            <button
-              v-for="item in suggestions"
-              :key="`${item.type}-${item.id}`"
-              class="search-suggestion-item"
-              @click="goToItem(item)"
-            >
-              <img
-                v-if="item.poster_path"
-                :src="item.poster_path"
-                class="suggestion-poster"
-              />
-              <div class="suggestion-info">
-                <span class="suggestion-title">{{ item.title }}</span>
-                <div class="suggestion-meta">
-                  <span class="suggestion-type">{{
-                    item.type === "movie" ? $t("navigation.movie") : $t("navigation.series")
-                  }}</span>
-                  <span class="suggestion-rating">
-                    <MediaRating :ratings="item.ratings" :vote-average="item.rating" />
-                  </span>
-                </div>
-              </div>
-            </button>
-
-            <button
-              v-if="!searchLoading && suggestions.length > 0"
-              class="search-suggestion-viewall"
-              @click="doSearch"
-            >
-              {{ $t("navigation.viewAllResults", { query: searchQuery }) }}
-            </button>
-          </div>
-        </div>
+        <HeaderSearch />
 
         <!-- Language Switcher -->
         <button
@@ -340,22 +277,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick, watch } from "vue";
+import { ref, onMounted, onUnmounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
-import MediaRating from "@/components/movie/MediaRating.vue";
-import type { MediaRatings } from "@/types/movie";
 import { useAdminStore } from "@/stores/admin";
 import { useNotificationStore } from "@/stores/notification";
 import { useLocale, i18n } from "@/i18n";
 import NotificationPanel from "@/components/common/NotificationPanel.vue";
-import { movieApi } from "@/api/endpoints/movie";
+import HeaderSearch from "@/components/search/HeaderSearch.vue";
 import { linkApi } from "@/api/endpoints/link";
 import { playPlatformExit } from "@/utils/platformTransition";
-import { getTmdbImageUrl } from "@/utils/image";
-import type { Movie, TVSeries } from "@/types";
 import {
-  Search,
   Bell,
   User as UserIcon,
   ChevronDown,
@@ -363,18 +295,8 @@ import {
   Trophy,
   Rss,
   LogOut,
-  X,
   Shield,
   } from "lucide-vue-next";
-
-interface SearchSuggestion {
-  id: number;
-  type: "movie" | "tv";
-  title: string;
-  poster_path: string | null;
-  rating: number | null;
-  ratings?: MediaRatings;
-}
 
 const router = useRouter();
 const route = useRoute();
@@ -384,38 +306,10 @@ const notificationStore = useNotificationStore();
 const localeStore = useLocale();
 
 const scrolled = ref(false);
-const searchOpen = ref(false);
-const searchQuery = ref("");
-const searchInput = ref<HTMLInputElement | null>(null);
 const userMenuOpen = ref(false);
 const userMenuRef = ref<HTMLElement | null>(null);
 const mobileMenuOpen = ref(false);
 
-const suggestions = ref<SearchSuggestion[]>([]);
-const searchLoading = ref(false);
-let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-
-function mapMovie(m: Movie): SearchSuggestion {
-  return {
-    id: m.id,
-    type: "movie",
-    title: m.title,
-    poster_path: m.poster_path ? getTmdbImageUrl(m.poster_path) : null,
-    rating: m.vote_average,
-    ratings: m.ratings,
-  };
-}
-
-function mapSeries(s: TVSeries): SearchSuggestion {
-  return {
-    id: s.id,
-    type: "tv",
-    title: s.name,
-    poster_path: s.poster_path ? getTmdbImageUrl(s.poster_path) : null,
-    rating: s.vote_average,
-    ratings: s.ratings,
-  };
-}
 
 async function handleSwitchToPlanzi() {
   userMenuOpen.value = false;
@@ -435,72 +329,8 @@ function toggleNotificationPanel() {
   notificationStore.togglePanel();
 }
 
-async function fetchSuggestions(query: string) {
-  if (!query.trim()) {
-    suggestions.value = [];
-    return;
-  }
-  searchLoading.value = true;
-  try {
-    const [movieRes, seriesRes] = await Promise.all([
-      movieApi.search(query, 1),
-      movieApi.searchSeries(query, 1),
-    ]);
-    const movies = movieRes.data.results.map(mapMovie);
-    const series = seriesRes.data.results.map(mapSeries);
-
-    const merged: SearchSuggestion[] = [];
-    const maxLen = Math.max(movies.length, series.length);
-    for (let i = 0; i < maxLen; i++) {
-      const movie = movies[i];
-      const show = series[i];
-      if (movie) merged.push(movie);
-      if (show) merged.push(show);
-    }
-
-    suggestions.value = merged.slice(0, 4);
-  } catch (err) {
-    console.error("โหลดรายการแนะนำล้มเหลว:", err);
-    suggestions.value = [];
-  } finally {
-    searchLoading.value = false;
-  }
-}
-
-watch(searchQuery, (val) => {
-  if (debounceTimer) clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(() => fetchSuggestions(val), 300);
-});
-
-function goToItem(item: SearchSuggestion) {
-  router.push(item.type === "movie" ? `/movies/${item.id}` : `/tv/${item.id}`);
-  closeSearch();
-}
-
 function onScroll() {
   scrolled.value = window.scrollY > 20;
-}
-
-function toggleSearch() {
-  searchOpen.value = !searchOpen.value;
-  if (searchOpen.value) {
-    nextTick(() => searchInput.value?.focus());
-  }
-}
-
-function closeSearch() {
-  searchOpen.value = false;
-  searchQuery.value = "";
-  suggestions.value = [];
-}
-
-function doSearch() {
-  if (!searchQuery.value.trim()) return;
-  router.push({
-    name: "search-results",
-    query: { q: searchQuery.value.trim() },
-  });
-  closeSearch();
 }
 
 function closeMobileMenu() {
@@ -680,157 +510,6 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-}
-
-/* Search */
-.search-box {
-  position: relative;
-  display: flex;
-  align-items: center;
-  background: transparent;
-  border-radius: 9999px;
-  overflow: visible;
-  transition: background 0.2s;
-}
-.search-box--open {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 9999px;
-}
-.search-icon-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #a3a3a3;
-  display: flex;
-  padding: 0.5rem 0.6rem;
-  transition: color 0.2s;
-  flex-shrink: 0;
-}
-.search-icon-btn:hover {
-  color: #fff;
-}
-.search-input {
-  background: none;
-  border: none;
-  outline: none;
-  color: #fff;
-  font-size: 0.875rem;
-  width: 260px;
-  padding: 0.5rem 0.75rem 0.5rem 0;
-  min-width: 0;
-}
-.search-input::placeholder {
-  color: #666;
-}
-
-/* ปุ่มปิด search เฉพาะจอเล็ก (ซ่อนบนเดสก์ท็อปโดย default) */
-.search-close-btn {
-  display: none;
-  background: none;
-  border: none;
-  color: #a3a3a3;
-  cursor: pointer;
-  padding: 0.4rem;
-  flex-shrink: 0;
-}
-
-/* Search suggestions dropdown */
-.search-suggestions {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  right: 0;
-  min-width: 360px;
-  max-height: 480px;
-  overflow-y: auto;
-  background: #1f1f1f;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
-  z-index: 200;
-  -webkit-overflow-scrolling: touch;
-}
-
-.search-suggestion-loading {
-  padding: 0.75rem;
-  color: #888;
-  font-size: 0.8rem;
-  text-align: center;
-}
-.search-suggestion-item {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-  width: 100%;
-  padding: 0.75rem 1rem;
-  background: none;
-  border: none;
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.15s;
-}
-.search-suggestion-item:hover {
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.suggestion-poster {
-  width: 44px;
-  height: 64px;
-  object-fit: cover;
-  border-radius: 5px;
-  flex-shrink: 0;
-  background: #2a2a2a;
-}
-
-.suggestion-info {
-  min-width: 0;
-  flex: 1;
-}
-
-.suggestion-title {
-  color: #fff;
-  font-size: 0.95rem;
-  display: block;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.suggestion-type {
-  color: #888;
-  font-size: 0.78rem;
-}
-
-.suggestion-meta {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.suggestion-rating {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  font-size: 0.78rem;
-  color: var(--color-text-muted);
-  font-weight: 600;
-}
-.search-suggestion-viewall {
-  width: 100%;
-  padding: 0.6rem 0.75rem;
-  background: rgba(255, 255, 255, 0.03);
-  border: none;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  color: var(--color-brand);
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  text-align: center;
-  transition: background 0.15s;
-}
-.search-suggestion-viewall:hover {
-  background: rgba(245, 67, 44, 0.1);
 }
 
 /* Notification Wrapper & Badge */
@@ -1136,9 +815,6 @@ onUnmounted(() => {
     font-size: 0.85rem;
     padding: 0.45rem 0.9rem;
   }
-  .search-input {
-    width: 300px;
-  }
 }
 
 @media (max-width: 1439px) {
@@ -1160,9 +836,6 @@ onUnmounted(() => {
     font-size: 0.78rem;
     padding: 0.4rem 0.55rem;
   }
-  .search-input {
-    width: 200px;
-  }
   .user-name {
     max-width: 90px;
     overflow: hidden;
@@ -1179,9 +852,6 @@ onUnmounted(() => {
   }
   .navbar {
     gap: 0.75rem;
-  }
-  .search-input {
-    width: 180px;
   }
   .user-name {
     display: none;
@@ -1216,9 +886,6 @@ onUnmounted(() => {
   .nav-logo {
     font-size: 1.35rem;
   }
-  .search-input {
-    width: 150px;
-  }
 }
 
 @media (max-width: 768px) {
@@ -1228,27 +895,6 @@ onUnmounted(() => {
   }
   .nav-right {
     gap: 0.25rem;
-  }
-  .search-box--open {
-    position: absolute;
-    left: 0.75rem;
-    right: 0.75rem;
-    top: 50%;
-    transform: translateY(-50%);
-    background: #1f1f1f;
-    border-radius: 10px;
-    z-index: 150;
-  }
-  .search-input {
-    width: 100%;
-  }
-  .search-close-btn {
-    display: flex;
-  }
-  .search-suggestions {
-    left: 0;
-    right: 0;
-    min-width: 0;
   }
   .icon-btn {
     width: 32px;
@@ -1273,17 +919,6 @@ onUnmounted(() => {
   }
   .nav-logo {
     font-size: 1.2rem;
-  }
-  .search-box--open {
-    left: 0.5rem;
-    right: 0.5rem;
-  }
-  .suggestion-poster {
-    width: 38px;
-    height: 56px;
-  }
-  .suggestion-title {
-    font-size: 0.85rem;
   }
   .notification-wrapper {
     display: flex;
@@ -1314,16 +949,6 @@ onUnmounted(() => {
   .user-avatar {
     width: 26px;
     height: 26px;
-  }
-  .search-close-btn {
-    padding: 0.3rem;
-  }
-  .search-suggestions {
-    max-height: 60vh;
-  }
-  .suggestion-poster {
-    width: 34px;
-    height: 50px;
   }
   .mobile-nav-link {
     font-size: 0.85rem;
