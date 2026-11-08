@@ -185,9 +185,12 @@ func GetSimilar(tmdbID, page int) (*PaginatedResult[Movie], error) {
 	return &result, nil
 }
 
-func SearchMovies(query string, page int) (*PaginatedResult[Movie], error) {
+func SearchMovies(query string, page int, language string) (*PaginatedResult[Movie], error) {
 	params := pageParams(page)
 	params.Set("query", query)
+	if language != "" {
+		params.Set("language", language)
+	}
 
 	var result PaginatedResult[Movie]
 	if err := get("/search/movie", params, &result); err != nil {
@@ -298,9 +301,12 @@ func GetTopRatedSeries(page int) (*PaginatedResult[TVSeries], error) {
 	return &result, nil
 }
 
-func SearchSeries(query string, page int) (*PaginatedResult[TVSeries], error) {
+func SearchSeries(query string, page int, language string) (*PaginatedResult[TVSeries], error) {
 	params := pageParams(page)
 	params.Set("query", query)
+	if language != "" {
+		params.Set("language", language)
+	}
 
 	var result PaginatedResult[TVSeries]
 	if err := get("/search/tv", params, &result); err != nil {

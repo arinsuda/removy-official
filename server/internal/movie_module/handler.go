@@ -233,7 +233,7 @@ func (h *Handler) Search(c fiber.Ctx) error {
 
 	page, _ := strconv.Atoi(c.Query("page", "1"))
 
-	result, err := h.svc.SearchMovies(c.Context(), query, page)
+	result, err := h.svc.SearchMovies(c.Context(), query, page, resolveTMDBLanguage(c.Get("Accept-Language")))
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "ค้นหาไม่สำเร็จ"})
 	}
@@ -353,7 +353,7 @@ func (h *Handler) SearchSeries(c fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "กรุณาระบุคำค้นหา"})
 	}
 	page, _ := strconv.Atoi(c.Query("page", "1"))
-	result, err := h.svc.SearchSeries(c.Context(), query, page)
+	result, err := h.svc.SearchSeries(c.Context(), query, page, resolveTMDBLanguage(c.Get("Accept-Language")))
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "ค้นหาไม่สำเร็จ"})
 	}
