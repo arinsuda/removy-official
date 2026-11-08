@@ -11,6 +11,8 @@
   --motion-wave-text: 400ms;
   --ease-water: cubic-bezier(0.37, 0, 0.63, 1);
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Overshoot-and-settle, for pops and fills. */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --focus-ring-color: var(--color-focus);
   --focus-input-shadow: 0 0 0 2px var(--color-brand),
     0 0 0 6px color-mix(in srgb, var(--color-brand) 20%, transparent),

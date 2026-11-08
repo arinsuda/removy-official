@@ -6,6 +6,8 @@ import { updateDocumentTitle } from "@/i18n"
 function hasGenres(genres: string | null | undefined): boolean {
   if (!genres) return false
   if (genres === "null") return false
+  // Set locally by the onboarding "skip" action; without it the guard bounces the user back.
+  if (genres === "skip") return true
   try {
     const parsed = JSON.parse(genres)
     return Array.isArray(parsed) && parsed.length > 0
