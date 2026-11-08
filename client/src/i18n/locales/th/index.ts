@@ -20,6 +20,7 @@ import actor from "./actor.json";
 import share from "./share.json";
 import watchLog from "./watchLog.json";
 import visibility from "./visibility.json";
+import browse from "./browse.json";
 
 export default {
   common,
@@ -44,4 +45,5 @@ export default {
   share,
   watchLog,
   visibility,
+  browse,
 };

@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const defaultRegion = "TH"
@@ -318,15 +319,58 @@ func GetSeriesGenres() ([]Genre, error) {
 	return result.Genres, nil
 }
 
-func DiscoverMovies(withGenres string, page int) (*PaginatedResult[Movie], error) {
-	params := pageParams(page)
-	orGenres := strings.ReplaceAll(withGenres, ",", "|")
-	params.Set("with_genres", orGenres)
-	params.Set("sort_by", "popularity.desc")
+// Browse tabs shared by the movie and TV discover helpers.
+const (
+	TabPopular  = "popular"
+	TabNow      = "now"
+	TabTopRated = "top_rated"
+)
 
+// DiscoverParams builds /discover/{movie,tv} params that keep the ordering of the
+// browse tab while filtering by genre (comma list becomes TMDB OR with "|").
+func DiscoverParams(series bool, tab, withGenres string, page int, today time.Time) url.Values {
+	params := pageParams(page)
+	params.Set("with_genres", strings.ReplaceAll(withGenres, ",", "|"))
+	params.Set("include_adult", "false")
+	day := func(d time.Time) string { return d.Format("2006-01-02") }
+
+	switch tab {
+	case TabTopRated:
+		params.Set("sort_by", "vote_average.desc")
+		if series {
+			params.Set("vote_count.gte", "200")
+		} else {
+			params.Set("vote_count.gte", "300")
+		}
+	case TabNow:
+		params.Set("sort_by", "popularity.desc")
+		if series {
+			params.Set("air_date.gte", day(today))
+			params.Set("air_date.lte", day(today.AddDate(0, 0, 7)))
+		} else {
+			params.Set("region", defaultRegion)
+			params.Set("with_release_type", "2|3")
+			params.Set("release_date.gte", day(today.AddDate(0, 0, -45)))
+			params.Set("release_date.lte", day(today))
+		}
+	default:
+		params.Set("sort_by", "popularity.desc")
+	}
+	return params
+}
+
+func DiscoverMovies(withGenres, tab string, page int) (*PaginatedResult[Movie], error) {
 	var result PaginatedResult[Movie]
-	if err := get("/discover/movie", params, &result); err != nil {
+	if err := get("/discover/movie", DiscoverParams(false, tab, withGenres, page, time.Now()), &result); err != nil {
 		return nil, fmt.Errorf("DiscoverMovies: %w", err)
+	}
+	return &result, nil
+}
+
+func DiscoverSeries(withGenres, tab string, page int) (*PaginatedResult[TVSeries], error) {
+	var result PaginatedResult[TVSeries]
+	if err := get("/discover/tv", DiscoverParams(true, tab, withGenres, page, time.Now()), &result); err != nil {
+		return nil, fmt.Errorf("DiscoverSeries: %w", err)
 	}
 	return &result, nil
 }

@@ -1,0 +1,45 @@
+{
+  "title": { "movie": "Movies", "tv": "Series" },
+  "type": { "label": "Content type", "movie": "Movies", "tv": "Series" },
+  "search": {
+    "label": "Search titles",
+    "placeholder": { "movie": "Search movies...", "tv": "Search series..." },
+    "clear": "Clear search",
+    "hint": "Type at least {n} characters"
+  },
+  "tabs": {
+    "label": "List",
+    "popular": "Popular",
+    "now": { "movie": "Now Playing", "tv": "Now Airing" },
+    "top": "Top Rated"
+  },
+  "genre": { "label": "Genre", "all": "All genres" },
+  "sort": {
+    "label": "Sort by",
+    "default": "List order",
+    "popcorn": "POPCORN score",
+    "tmdb": "TMDB score",
+    "date": "Newest"
+  },
+  "tier": {
+    "label": "POPCORN score tier",
+    "all": "All",
+    "hot": "Hot",
+    "fresh": "Fresh",
+    "stale": "Stale",
+    "none": "Not reviewed",
+    "caption": "From {n} loaded titles",
+    "loading": "Looking for more matches..."
+  },
+  "grid": {
+    "count": "{n} titles",
+    "error": "Could not load titles",
+    "empty": "No titles found",
+    "emptyDescription": "Try a different filter or search",
+    "reset": "Clear filters",
+    "loadMore": "Load more",
+    "loadingMore": "Loading more titles",
+    "end": "You have reached the end",
+    "capped": "Showing the first {n} titles. Narrow the filters to see more."
+  }
+}

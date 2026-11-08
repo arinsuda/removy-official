@@ -13,7 +13,7 @@
           v-if="item.poster_path && !failed"
           :src="posterSrc(item.poster_path)"
           :srcset="posterSrcset(item.poster_path)"
-          sizes="(min-width: 1024px) 180px, (min-width: 640px) 28vw, 42vw"
+          :sizes="sizes"
           :alt="item.title"
           loading="lazy"
           decoding="async"
@@ -71,11 +71,16 @@ import { popcornTier } from "@/components/movie/popcornTier"
 import { useHomePopup } from "@/composables/useHomePopup"
 import { detailRoute, posterSrc, posterSrcset, type HomeMedia } from "./homeMedia"
 
-const props = defineProps<{
-  item: HomeMedia
-  /** Rail id, keeps popup keys unique when a title appears in two rails. */
-  rail: string
-}>()
+const props = withDefaults(
+  defineProps<{
+    item: HomeMedia
+    /** Rail id, keeps popup keys unique when a title appears in two rails. */
+    rail: string
+    /** img `sizes` hint; grids with other column counts pass their own. */
+    sizes?: string
+  }>(),
+  { sizes: "(min-width: 1024px) 180px, (min-width: 640px) 28vw, 42vw" },
+)
 
 const { t } = useI18n()
 const popup = useHomePopup()

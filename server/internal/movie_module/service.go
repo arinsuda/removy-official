@@ -183,6 +183,14 @@ func (s *MovieService) GetTopRatedSeries(ctx context.Context, page int) (*tmdb.P
 	return s.enrichSeries(ctx, res)
 }
 
+func (s *MovieService) DiscoverSeries(ctx context.Context, genres, tab string, page int) (*tmdb.PaginatedResult[TVSeriesDTO], error) {
+	res, err := tmdb.DiscoverSeries(genres, tab, page)
+	if err != nil {
+		return nil, err
+	}
+	return s.enrichSeries(ctx, res)
+}
+
 func (s *MovieService) SearchSeries(ctx context.Context, query string, page int) (*tmdb.PaginatedResult[TVSeriesDTO], error) {
 	res, err := tmdb.SearchSeries(query, page)
 	if err != nil {
@@ -207,8 +215,8 @@ func (s *MovieService) GetSimilar(ctx context.Context, id, page int) (*tmdb.Pagi
 	return s.enrichMovies(ctx, res)
 }
 
-func (s *MovieService) DiscoverMovies(ctx context.Context, genres string, page int) (*tmdb.PaginatedResult[MovieDTO], error) {
-	res, err := tmdb.DiscoverMovies(genres, page)
+func (s *MovieService) DiscoverMovies(ctx context.Context, genres, tab string, page int) (*tmdb.PaginatedResult[MovieDTO], error) {
+	res, err := tmdb.DiscoverMovies(genres, tab, page)
 	if err != nil {
 		return nil, err
 	}

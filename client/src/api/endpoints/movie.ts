@@ -69,14 +69,20 @@ export const movieApi = {
     }),
 
   // TV Series
-  getPopularSeries: (page = 1) =>
-    api.get<PaginatedResult<TVSeries>>("/tv/popular", { params: { page } }),
+  getPopularSeries: (page = 1, with_genres?: string | number) =>
+    api.get<PaginatedResult<TVSeries>>("/tv/popular", {
+      params: { page, with_genres },
+    }),
 
-  getNowAiringSeries: (page = 1) =>
-    api.get<PaginatedResult<TVSeries>>("/tv/now-airing", { params: { page } }),
+  getNowAiringSeries: (page = 1, with_genres?: string | number) =>
+    api.get<PaginatedResult<TVSeries>>("/tv/now-airing", {
+      params: { page, with_genres },
+    }),
 
-  getTopRatedSeries: (page = 1) =>
-    api.get<PaginatedResult<TVSeries>>("/tv/top-rated", { params: { page } }),
+  getTopRatedSeries: (page = 1, with_genres?: string | number) =>
+    api.get<PaginatedResult<TVSeries>>("/tv/top-rated", {
+      params: { page, with_genres },
+    }),
 
   searchSeries: (q: string, page = 1) =>
     api.get<PaginatedResult<TVSeries>>("/tv/search", { params: { q, page } }),
