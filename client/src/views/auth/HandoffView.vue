@@ -21,7 +21,7 @@
         </p>
 
         <form
-          v-if="pending?.methods.includes('local_password')"
+          v-if="(pending?.methods ?? []).includes('local_password')"
           class="block"
           @submit.prevent="submitPassword"
         >
@@ -37,7 +37,7 @@
           </AppButton>
         </form>
 
-        <div v-if="pending?.methods.includes('email_code')" class="block">
+        <div v-if="(pending?.methods ?? []).includes('email_code')" class="block">
           <AppButton variant="outline" block :disabled="busy" @click="sendCode">
             {{ t("navigation.link.handoff.sendCode") }}
           </AppButton>
@@ -59,6 +59,10 @@
           </template>
         </div>
 
+        <p v-if="pending && !(pending.methods ?? []).length" class="text text--error">
+          {{ t("navigation.link.handoff.noMethods") }}
+        </p>
+
         <p v-if="errorMsg" class="text text--error">{{ errorMsg }}</p>
       </template>
     </div>
@@ -73,6 +77,7 @@ import AppButton from "@/components/ui/AppButton.vue"
 import { linkApi } from "@/api/endpoints/link"
 import type { LinkConfirmRequired, LinkSessionResponse } from "@/api/endpoints/link"
 import { useAuthStore } from "@/stores/auth"
+import { handoffErrorKey } from "@/utils/handoffError"
 import { playPlatformEnter } from "@/utils/platformTransition"
 
 const { t } = useI18n()
@@ -99,10 +104,7 @@ function readToken(): string {
 }
 
 function errorFor(err: unknown): string {
-  const status = (err as { response?: { status?: number } })?.response?.status
-  return status === 429
-    ? t("navigation.link.handoff.tooMany")
-    : t("navigation.link.handoff.wrong")
+  return t(handoffErrorKey(err))
 }
 
 onMounted(async () => {

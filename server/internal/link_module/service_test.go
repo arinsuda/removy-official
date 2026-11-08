@@ -1,6 +1,7 @@
 package link_module
 
 import (
+	"encoding/json"
 	"strconv"
 	"strings"
 	"testing"
@@ -57,14 +58,43 @@ func TestDecide(t *testing.T) {
 }
 
 func TestConfirmMethods(t *testing.T) {
-	if m := ConfirmMethods(true, true); len(m) != 2 || m[0] != MethodPasswd {
+	const ok = "me@gmail.com"
+	if m := ConfirmMethods(true, true, ok); len(m) != 2 || m[0] != MethodPasswd {
 		t.Errorf("unexpected %v", m)
 	}
-	if m := ConfirmMethods(true, false); len(m) != 1 || m[0] != MethodEmail {
+	if m := ConfirmMethods(true, false, ok); len(m) != 1 || m[0] != MethodEmail {
 		t.Errorf("unverified local must only allow email code: %v", m)
 	}
-	if m := ConfirmMethods(false, true); len(m) != 1 || m[0] != MethodEmail {
+	if m := ConfirmMethods(false, true, ok); len(m) != 1 || m[0] != MethodEmail {
 		t.Errorf("no password must only allow email code: %v", m)
+	}
+	if m := ConfirmMethods(true, true, "me@x.test"); len(m) != 1 || m[0] != MethodPasswd {
+		t.Errorf("undeliverable email must drop email code: %v", m)
+	}
+	if m := ConfirmMethods(false, false, "me@x.test"); len(m) != 0 {
+		t.Errorf("expected no methods: %v", m)
+	}
+}
+
+func TestEmailDeliverable(t *testing.T) {
+	for email, want := range map[string]bool{
+		"a@gmail.com":     true,
+		"a@example.com":   true,
+		"a@mail.co.th":    true,
+		"a@x.local":       false,
+		"a@x.test":        false,
+		"a@x.invalid":     false,
+		"a@x.example":     false,
+		"a@foo.localhost": false,
+		"a@localhost":     false,
+		"a@intranet":      false,
+		"a@X.TEST":        false,
+		"a@":              false,
+		"nodomain":        false,
+	} {
+		if got := emailDeliverable(email); got != want {
+			t.Errorf("%q: got %v want %v", email, got, want)
+		}
 	}
 }
 
@@ -91,5 +121,15 @@ func TestGenerateUsername(t *testing.T) {
 	always := func(s string) bool { return s != "" && len(s) < 20 }
 	if got := GenerateUsername("john@x.com", always); len(got) > 50 {
 		t.Errorf("fallback too long %q", got)
+	}
+}
+
+func TestConfirmMethodsEncodesEmptyAsArray(t *testing.T) {
+	b, err := json.Marshal(map[string]any{"methods": ConfirmMethods(false, false, "admin@planzi.local")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(b) != `{"methods":[]}` {
+		t.Fatalf("got %s, want {\"methods\":[]}", b)
 	}
 }

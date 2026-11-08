@@ -57,7 +57,11 @@
       "confirmCode": "Confirm with code",
       "wrong": "Incorrect credentials or too many attempts.",
       "tooMany": "Too many requests. Please wait and try again.",
-      "remoteUnverified": "Your PLANZI email is not verified yet. Verify it on PLANZI first, then try switching again."
+      "remoteUnverified": "Your PLANZI email is not verified yet. Verify it on PLANZI first, then try switching again.",
+      "emailFailed": "We couldn't send the email. Please try again.",
+      "disabled": "Account linking is turned off right now.",
+      "network": "Network error. Check your connection and try again.",
+      "noMethods": "We can't verify this account automatically because its email address can't receive mail. Please contact support."
     }
   }
 }

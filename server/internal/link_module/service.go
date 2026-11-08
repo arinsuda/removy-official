@@ -330,7 +330,7 @@ func (s *Service) resolveRemoteUser(ru *RemoteUser) (*Result, error) {
 		return nil, &ConfirmRequiredError{
 			PendingID: p.ID,
 			Email:     ru.Email,
-			Methods:   ConfirmMethods(local.Password != nil && *local.Password != "", localVerified),
+			Methods:   ConfirmMethods(local.Password != nil && *local.Password != "", localVerified, local.Email),
 		}
 	}
 }
@@ -572,6 +572,9 @@ func (s *Service) SendCode(pendingID string) error {
 	u, err := s.loadUser(p.LocalUserID)
 	if err != nil || !u.IsActive {
 		return ErrPendingInvalid
+	}
+	if !emailDeliverable(u.Email) {
+		return ErrInvalidMethod
 	}
 	n := randInt(1000000)
 	code := fmt.Sprintf("%06d", n)
