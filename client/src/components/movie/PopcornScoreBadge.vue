@@ -7,7 +7,7 @@
   >
     <span
       role="img"
-      :aria-label="t('media.rating.popcornScore', { score: display })"
+      :aria-label="tier === 'none' ? t('media.rating.tier.none') : t('media.rating.popcornScore', { score: display })"
       class="relative inline-block shrink-0"
       :class="size === 'detail' ? 'h-[72px] w-16' : 'h-[34px] w-[30px]'"
     >
@@ -45,7 +45,7 @@
       <span
         data-test="score"
         class="absolute left-0 right-0 text-center font-bold leading-none tabular-nums text-text-primary"
-        :class="size === 'detail' ? 'top-[63%] -translate-y-1/2 text-[17px]' : 'top-[64%] -translate-y-1/2 text-[10px]'"
+        :class="size === 'detail' ? 'top-[71%] -translate-y-1/2 text-[17px]' : 'top-[71%] -translate-y-1/2 text-[10px]'"
         aria-hidden="true"
       >{{ display }}</span>
     </span>

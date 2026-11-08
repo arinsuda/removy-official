@@ -3,6 +3,7 @@ import { mount } from "@vue/test-utils"
 import { i18n } from "../i18n"
 import MediaRating from "../components/movie/MediaRating.vue"
 import PopcornScoreBadge from "../components/movie/PopcornScoreBadge.vue"
+import { withLiveStats } from "../utils/mediaRatings"
 import { popcornTier } from "../components/movie/popcornTier"
 import type { MediaRatings } from "../types/movie"
 
@@ -64,6 +65,11 @@ describe("PopcornScoreBadge", () => {
     expect(w.get("[data-test=tier-label]").text()).toBe(label)
   })
 
+  it("uses the no-ratings text as aria-label when the tier is none", () => {
+    const w = mount(PopcornScoreBadge, { props: { average: 0, count: 0 }, global: { plugins: [i18n] } })
+    expect(w.get("[role=img]").attributes("aria-label")).toBe("No ratings yet")
+  })
+
   it("hides the tier label on the card size and localizes it in Thai", () => {
     const card = mount(PopcornScoreBadge, { props: { average: 4.5, count: 1 }, global: { plugins: [i18n] } })
     expect(card.find("[data-test=tier-label]").exists()).toBe(false)
@@ -123,5 +129,18 @@ describe("MediaRating", () => {
     const w = mountIt({ variant: "card", voteAverage: 6.66 })
     expect(w.get("[data-source=tmdb]").text()).toContain("6.7")
     expect(w.get("[data-test=score]").text()).toBe("0.0")
+  })
+})
+
+describe("withLiveStats", () => {
+  it("resets popcorn to 0.0 when live stats say there is no rating", () => {
+    const out = withLiveStats(full, { average_rating: 0, review_count: 0, has_rating: false })
+    expect(out?.popcorn).toEqual({ average: 0, count: 0, available: false, scale: 5 })
+    expect(out?.tmdb).toEqual(full.tmdb)
+  })
+
+  it("uses live numbers when a rating exists and passes null through", () => {
+    expect(withLiveStats(full, { average_rating: 3, review_count: 2, has_rating: true })?.popcorn.average).toBe(3)
+    expect(withLiveStats(null, { average_rating: 3, review_count: 2, has_rating: true })).toBeNull()
   })
 })
