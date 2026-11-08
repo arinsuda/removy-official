@@ -74,6 +74,10 @@
   import AppButton from "@/components/ui/AppButton.vue"
   import { useAuthStore } from "@/stores/auth"
   import { authApi } from "@/api/api"
+  import { useI18n } from "vue-i18n"
+  import { isRateLimited } from "@/utils/rateLimit"
+
+  const { t } = useI18n()
 
   const router = useRouter()
   const authStore = useAuthStore()
@@ -224,7 +228,9 @@
       router.push({ name: "check-email" })
     } catch (e: any) {
       const status = e?.response?.status
-      if (status === 409) {
+      if (isRateLimited(e)) {
+        serverError.value = t("errors.rateLimited")
+      } else if (status === 409) {
         serverError.value =
           e?.response?.data?.error ?? "Email or username already in use"
       } else if (status >= 500) {

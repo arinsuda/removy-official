@@ -85,7 +85,10 @@
               <IconAlertCircle :size="48" />
             </div>
             <h2 class="status-subtitle">ลิงก์ไม่ถูกต้องหรือหมดอายุ</h2>
-            <p v-if="attemptsExceeded" class="status-text">
+            <p v-if="rateLimited" class="status-text status-text--error" role="alert">
+              {{ t("errors.rateLimited") }}
+            </p>
+            <p v-else-if="attemptsExceeded" class="status-text">
               {{ t("auth.verifyEmail.attemptsExceeded") }}
             </p>
             <p v-else class="status-text">
@@ -122,6 +125,7 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
   import { ref, onMounted } from "vue"
   import { useRoute, RouterLink } from "vue-router"
   import { useI18n } from "vue-i18n"
+  import { isRateLimited } from "@/utils/rateLimit"
   import { authApi } from "@/api/api"
   import { gsap } from "gsap"
   import {
@@ -143,6 +147,7 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
   const wrongPassword = ref(false)
   const confirmingSkip = ref(false)
   const attemptsExceeded = ref(false)
+  const rateLimited = ref(false)
   const resendStatus = ref<ResendStatus>("idle")
   const email = ref("")
 
@@ -194,6 +199,7 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
         return
       }
       attemptsExceeded.value = code === "VERIFY_ATTEMPTS_EXCEEDED"
+      rateLimited.value = isRateLimited(err)
       status.value = "error"
     }
   }
@@ -205,11 +211,13 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
       email.value = input
     }
 
+    rateLimited.value = false
     resendStatus.value = "sending"
     try {
       await authApi.resendVerification(email.value)
       resendStatus.value = "sent"
-    } catch {
+    } catch (e) {
+      rateLimited.value = isRateLimited(e)
       resendStatus.value = "failed"
     }
   }

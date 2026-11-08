@@ -35,6 +35,7 @@
   import { ref, onMounted } from "vue"
   import { useRouter, useRoute } from "vue-router"
   import { useI18n } from "vue-i18n"
+  import { isRateLimited } from "@/utils/rateLimit"
   import { User as IconUser, Lock as IconLock } from "lucide-vue-next"
   import AuthAlert from "@/components/auth/AuthAlert.vue"
   import AuthField from "@/components/auth/AuthField.vue"
@@ -108,10 +109,10 @@
     } catch (e: any) {
       const status = e?.response?.status
 
-      if (status === 401) {
+      if (isRateLimited(e)) {
+        errorMsg.value = t("errors.rateLimited")
+      } else if (status === 401) {
         errorMsg.value = "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง"
-      } else if (status === 429) {
-        errorMsg.value = "พยายามเข้าสู่ระบบบ่อยเกินไป กรุณารอสักครู่"
       } else if (status >= 500) {
         errorMsg.value = "เกิดข้อผิดพลาดจากเซิร์ฟเวอร์ กรุณาลองใหม่ภายหลัง"
       } else {

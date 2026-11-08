@@ -69,6 +69,7 @@ func main() {
 			notifHub.Handler().ServeHTTP(w, r)
 			return
 		}
+		mergeForwardedFor(r.Header)
 		fiberHandler.ServeHTTP(w, r)
 	})
 
@@ -97,6 +98,15 @@ func main() {
 	}
 
 	log.Println("👋 Server exited cleanly")
+}
+
+// mergeForwardedFor joins repeated X-Forwarded-For lines into one comma-joined
+// value. The adaptor keeps only the last line, which would hide the entries
+// ClientIP counts from the right.
+func mergeForwardedFor(h http.Header) {
+	if v := h.Values("X-Forwarded-For"); len(v) > 1 {
+		h.Set("X-Forwarded-For", strings.Join(v, ", "))
+	}
 }
 
 func customErrorHandler(c fiber.Ctx, err error) error {

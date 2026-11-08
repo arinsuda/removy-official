@@ -23,6 +23,9 @@ type Config struct {
 	MinIO      MinIOConfig
 	Google     GoogleConfig
 	Link       LinkConfig
+
+	// TrustedProxyHops is how many proxies append to X-Forwarded-For (Render = 1).
+	TrustedProxyHops int
 }
 
 // LinkConfig configures PLANZI <-> POPCORN account linking. Empty Secrets disables the feature.
@@ -108,9 +111,15 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
+	trustedProxyHops, _ := strconv.Atoi(getEnv("TRUSTED_PROXY_HOPS", "1"))
+	if trustedProxyHops < 1 {
+		trustedProxyHops = 1
+	}
+
 	cfg := &Config{
-		Port:       getEnv("PORT", "8080"),
-		AppBaseURL: getEnv("APP_BASE_URL", "http://localhost:3000"),
+		TrustedProxyHops: trustedProxyHops,
+		Port:             getEnv("PORT", "8080"),
+		AppBaseURL:       getEnv("APP_BASE_URL", "http://localhost:3000"),
 		CORS: CORSConfig{
 			AllowedOrigins: allowedOrigins,
 		},
