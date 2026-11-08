@@ -26,7 +26,7 @@ vi.mock("@/composables/useMediaActivity", () => ({
 }))
 
 const stub = (name: string) => defineComponent({ name, render: () => h("div", { "data-stub": name }) })
-const stubs = { MovieReviews: stub("MovieReviews"), HomeRail: stub("HomeRail"), HomePosterCard: true, PopupTrailer: true, ShareImageModal: true, WatchLogModal: true }
+const stubs = { MovieReviews: stub("MovieReviews"), HomeRail: stub("HomeRail"), HomePosterCard: true, PopupTrailer: true, ShareImageModal: true, WatchLogModal: true, DetailWatchProviders: true }
 
 const data = (id: number, title: string): DetailData => ({
   id, type: "movie", title, englishTitle: null, tagline: "", overview: "Plot", year: "2010", runtimeMin: 100,

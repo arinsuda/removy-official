@@ -11,6 +11,7 @@ import type {
   PersonDetail,
   PersonMovieCredits,
   PersonTVCredits,
+  WatchProviders,
 } from "@/types"
 
 export const movieApi = {
@@ -53,6 +54,11 @@ export const movieApi = {
         videos: Video[]
       }>(`/movies/${id}`)
       .then(res => ({ data: { results: res.data.videos } })),
+
+  getWatchProviders: (type: "movie" | "tv", id: number, region: string) =>
+    api.get<{ providers: WatchProviders }>(`/${type === "tv" ? "tv" : "movies"}/${id}/watch-providers`, {
+      params: { region },
+    }),
 
   getSimilar: (id: number, page = 1) =>
     api.get<PaginatedResult<Movie>>(`/movies/${id}/similar`, {

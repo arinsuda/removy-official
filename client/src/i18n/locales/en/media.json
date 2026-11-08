@@ -75,6 +75,18 @@
     "showLess": "Show less",
     "reviews": "POPCORN reviews",
     "similar": "More like this",
+    "providers": {
+      "title": "Where to watch",
+      "region": "Region",
+      "stream": "Stream",
+      "free": "Free / with ads",
+      "rent": "Rent",
+      "buy": "Buy",
+      "empty": "Not available to stream in {region}",
+      "error": "Could not load where to watch.",
+      "open": "See all options on TMDB",
+      "attribution": "Data from JustWatch"
+    },
     "status": {
       "Released": "Released",
       "PostProduction": "Post production",
