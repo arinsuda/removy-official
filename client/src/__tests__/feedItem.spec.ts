@@ -23,16 +23,15 @@ const mountItem = (item: FeedItemResponse) =>
   })
 
 describe("FeedItem avatars", () => {
-  it("renders a fallback icon instead of a broken image when avatar is missing", () => {
+  it("renders a initials instead of a broken image when avatar is missing", () => {
     const wrapper = mountItem(build(null, null))
-    expect(wrapper.find('[data-testid="actor-avatar-fallback"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="target-avatar-fallback"]').exists()).toBe(true)
+    expect(wrapper.findAll("[data-avatar-fallback]")).toHaveLength(2)
     expect(wrapper.findAll("img")).toHaveLength(0)
   })
 
   it("renders the image when avatar exists", () => {
     const wrapper = mountItem(build("https://x/a.png", "https://x/b.png"))
     expect(wrapper.findAll("img")).toHaveLength(2)
-    expect(wrapper.find('[data-testid="actor-avatar-fallback"]').exists()).toBe(false)
+    expect(wrapper.findAll("[data-avatar-fallback]")).toHaveLength(0)
   })
 })
