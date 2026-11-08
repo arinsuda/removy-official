@@ -7,7 +7,7 @@
     :close-on-escape="!menuOpen"
     @update:model-value="onOpenChange"
   >
-    <div class="field">
+    <div class="field" @keydown.esc.capture="onPickerEscape">
       <label class="field-label">{{ t('watchLog.watchedDate') }}</label>
       <VueDatePicker
         v-model="watchedOn"
@@ -66,6 +66,14 @@ const menuOpen = ref(false)
 const saving = ref(false)
 const watchedOn = ref<Date>(new Date())
 const visibility = ref<Visibility>('public')
+
+// The picker input calls preventDefault on every Escape, even with its menu closed,
+// so AppModal's document listener never sees the second press. Close here instead.
+function onPickerEscape() {
+  if (menuOpen.value || saving.value) return
+  open.value = false
+  emit('close')
+}
 
 function onOpenChange(value: boolean) {
   if (!value) emit('close')

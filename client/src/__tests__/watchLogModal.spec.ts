@@ -25,6 +25,8 @@ vi.mock("@vuepic/vue-datepicker", async () => {
         h("div", [
           h("button", { id: "dp-open", onClick: () => emit("open") }),
           h("button", { id: "dp-close", onClick: () => emit("closed") }),
+          // The real input swallows every Escape, even with its menu closed.
+          h("input", { id: "dp-input", onKeydown: (e: KeyboardEvent) => e.key === "Escape" && e.preventDefault() }),
         ])
     },
   })
@@ -112,6 +114,21 @@ describe("WatchLogModal", () => {
     expect(wrapper.emitted("close")).toBeUndefined()
     document.getElementById("dp-close")!.click()
     await nextTick()
+    pressEscape()
+    await nextTick()
+    expect(wrapper.emitted("close")).toHaveLength(1)
+  })
+
+  it("closes on the second Escape pressed inside the picker input", async () => {
+    await mountModal()
+    const input = document.getElementById("dp-input")!
+    input.focus()
+    document.getElementById("dp-open")!.click()
+    await nextTick()
+    pressEscape()
+    document.getElementById("dp-close")!.click()
+    await nextTick()
+    expect(wrapper.emitted("close")).toBeUndefined()
     pressEscape()
     await nextTick()
     expect(wrapper.emitted("close")).toHaveLength(1)
