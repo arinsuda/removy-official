@@ -39,7 +39,7 @@ client/src/
   api/endpoints/<domain>.ts  API calls (api/index.ts = axios instance)
   types/<domain>.ts          TS mirrors of DTOs
   views/  route pages        components/<area>/        layouts/ MainLayout, AdminLayout
-  components/ui/  AppButton, AppSpinner, LoadingBar, skeleton/ (use these for every loading state: skeleton for known layouts, spinner for actions)    assets/styles/motion.css  motion + focus tokens
+  components/ui/  UI primitives, see "UI primitives" below    assets/styles/motion.css  motion + focus tokens
   stores/ auth, ui, feed, notification, achievement, admin
   composables/ useAuth, useSocket, useFollow, useReviewForm, useShareImage, ...
   i18n/locales/{en,th}/*.json  UI text, one file per area
@@ -69,6 +69,20 @@ client/src/
 | Share images | `shareImageProxyHandler` in router.go | components/share/, composables/useShareImage.ts |
 | Admin | admin_module | views/admin/, layouts/AdminLayout.vue, stores/admin.ts |
 | Onboarding, donate, about | — | views/onboarding/, views/aboutus/ |
+
+## UI primitives (client/src/components/ui)
+Use these instead of hand-rolled modals, tabs, inputs, and loading/empty/error states.
+- `AppButton`: variants `primary | outline | ghost | danger`, sizes `sm | md | lg`; props `to`/`href`, `loading`, `block`, `iconOnly` (needs aria-label).
+- `AppModal`: dialog with focus trap, scroll lock, and a shared modal stack (Escape closes only the top one). `profile/components/ConfirmModal` and `AdminConfirmModal` are built on it.
+- `AppInput`: labeled text input with error/hint wiring (used by auth forms such as ForgotPassword).
+- `AppAvatar`: image with initials fallback (`sm | md | lg | xl`).
+- `AppTabs`: tablist with roving tabindex; Arrow, Home, End keys.
+- `AppCard`, `AppEmptyState`, `AppErrorState`: surfaces and the standard empty/error blocks.
+- `AppSpinner`, `LoadingBar`, `skeleton/`: loading states.
+- `components/movie/Starratinginput.vue`: rating slider (0.5 steps, Arrow/Home/End) and read-only half-star display (`readonly`).
+- Toasts: one global `ToastContainer` is mounted in `App.vue`; push toasts through the ui store, don't mount another.
+- z-index scale (`main.css`): header 100 < legacy modals 9999-99999 < AppModal (`--z-modal-base` 100000, +10 per open modal) < popovers/datepicker menus (`--z-popover`) < toasts (`--z-toast`). Don't add new hard-coded z-index values above 1000.
+- Icons: `primeicons` font (`pi pi-*`) is still loaded for legacy views; PrimeVue itself is removed. Prefer `lucide-vue-next` for new code.
 
 ## Design system (client)
 Tokens live in `client/src/assets/styles/main.css` (`@theme static`); use them as Tailwind utilities (`bg-surface`, `text-text-muted`, `border-border`).
