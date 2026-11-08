@@ -45,7 +45,7 @@
       <HomeRail
         :title="t('home.nowPlaying.title')"
         :subtitle="t('home.nowPlaying.subtitle')"
-        :see-all-to="{ name: 'movies' }"
+        :see-all-to="{ name: 'movies', query: { tab: 'now' } }"
         :loading="data.nowPlaying.isLoading.value"
         :error="data.nowPlaying.isError.value"
         :empty="!data.nowPlayingItems.value.length"
@@ -57,7 +57,7 @@
       <HomeRail
         :title="t('home.topRated.title')"
         :subtitle="t('home.topRated.subtitle')"
-        :see-all-to="{ name: 'movies' }"
+        :see-all-to="{ name: 'movies', query: { tab: 'top' } }"
         :loading="data.topRated.isLoading.value || !data.reveal.topRated.value"
         :error="data.topRated.isError.value"
         :empty="!data.topRatedItems.value.length"
