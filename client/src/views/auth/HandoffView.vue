@@ -21,7 +21,7 @@
         </p>
 
         <form
-          v-if="pending?.methods.includes('local_password')"
+          v-if="(pending?.methods ?? []).includes('local_password')"
           class="block"
           @submit.prevent="submitPassword"
         >
@@ -37,7 +37,7 @@
           </AppButton>
         </form>
 
-        <div v-if="pending?.methods.includes('email_code')" class="block">
+        <div v-if="(pending?.methods ?? []).includes('email_code')" class="block">
           <AppButton variant="outline" block :disabled="busy" @click="sendCode">
             {{ t("navigation.link.handoff.sendCode") }}
           </AppButton>
@@ -59,7 +59,7 @@
           </template>
         </div>
 
-        <p v-if="pending && !pending.methods.length" class="text text--error">
+        <p v-if="pending && !(pending.methods ?? []).length" class="text text--error">
           {{ t("navigation.link.handoff.noMethods") }}
         </p>
 

@@ -40,9 +40,10 @@ func Decide(alreadyLinked, localExists, localVerified, remoteVerified bool) Deci
 }
 
 // ConfirmMethods lists methods usable to confirm a pending link. Password needs
-// a local password and a verified local email; the email code is always allowed.
+// a local password and a verified local email; the email code needs a deliverable local email.
+// The result is never nil, so it encodes as [] rather than null.
 func ConfirmMethods(localHasPassword, localVerified bool, localEmail string) []string {
-	var m []string
+	m := []string{}
 	if localHasPassword && localVerified {
 		m = append(m, MethodPasswd)
 	}

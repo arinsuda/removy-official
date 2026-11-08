@@ -1,6 +1,7 @@
 package link_module
 
 import (
+	"encoding/json"
 	"strconv"
 	"strings"
 	"testing"
@@ -120,5 +121,15 @@ func TestGenerateUsername(t *testing.T) {
 	always := func(s string) bool { return s != "" && len(s) < 20 }
 	if got := GenerateUsername("john@x.com", always); len(got) > 50 {
 		t.Errorf("fallback too long %q", got)
+	}
+}
+
+func TestConfirmMethodsEncodesEmptyAsArray(t *testing.T) {
+	b, err := json.Marshal(map[string]any{"methods": ConfirmMethods(false, false, "admin@planzi.local")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(b) != `{"methods":[]}` {
+		t.Fatalf("got %s, want {\"methods\":[]}", b)
 	}
 }
