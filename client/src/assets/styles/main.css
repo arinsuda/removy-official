@@ -114,13 +114,20 @@ body .dp--menu-wrapper {
   z-index: var(--z-popover);
 }
 
-.dp__theme_dark {
+/* vue-datepicker v14 names its dark theme class dp--theme-dark. `body` outranks the
+   library's own single-class rule regardless of stylesheet order. */
+body .dp--theme-dark {
   --dp-background-color: var(--color-surface-2);
   --dp-text-color: var(--color-text-primary);
   --dp-hover-color: var(--color-border-strong);
   --dp-hover-text-color: var(--color-text-primary);
   --dp-primary-color: var(--color-brand);
-  --dp-primary-disabled-color: #7f2c20;
+  --dp-primary-disabled-color: color-mix(in srgb, var(--color-brand) 50%, var(--color-surface-2));
+  --dp-hover-icon-color: var(--color-text-primary);
+  --dp-scroll-bar-background: var(--color-surface-2);
+  --dp-scroll-bar-color: var(--color-surface-3);
+  --dp-tooltip-color: var(--color-surface-3);
+  --dp-success-color: var(--color-success);
   --dp-primary-text-color: var(--color-on-brand);
   --dp-secondary-color: var(--color-text-secondary);
   --dp-border-color: var(--color-border-strong);
