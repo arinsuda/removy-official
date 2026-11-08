@@ -59,6 +59,7 @@
       class="popup__rating"
       variant="detail"
       :ratings="ratings ?? movie.ratings"
+      :external-loading="ratingsLoading"
       :vote-average="movie.vote_average"
     />
 
@@ -162,6 +163,8 @@ const props = defineProps<{
   movie: Movie | TVSeries;
   /** Fuller ratings (with IMDb / RT) fetched from the detail endpoint; overrides `movie.ratings`. */
   ratings?: MediaRatings;
+  /** Detail ratings are still being fetched; IMDb / RT show a skeleton instead of an em dash. */
+  ratingsLoading?: boolean;
   // ── Trailer/player state: มาจาก useTrailerPreview instance ของการ์ดนี้ ──
   currentTrailer: ResolvedTrailer | null;
   trailerUnavailable: boolean;

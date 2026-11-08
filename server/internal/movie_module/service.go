@@ -29,6 +29,7 @@ func (s *MovieService) GetPopular(ctx context.Context, page int) (*tmdb.Paginate
 	if err != nil {
 		return nil, err
 	}
+	s.prewarmMovies(res.Results)
 	return s.enrichMovies(ctx, res)
 }
 
@@ -37,6 +38,7 @@ func (s *MovieService) GetNowPlaying(ctx context.Context, page int, options tmdb
 	if err != nil {
 		return nil, err
 	}
+	s.prewarmMovies(res.Results)
 	return s.enrichMovies(ctx, res)
 }
 
@@ -45,6 +47,7 @@ func (s *MovieService) GetTopRated(ctx context.Context, page int) (*tmdb.Paginat
 	if err != nil {
 		return nil, err
 	}
+	s.prewarmMovies(res.Results)
 	return s.enrichMovies(ctx, res)
 }
 
@@ -167,6 +170,7 @@ func (s *MovieService) GetPopularSeries(ctx context.Context, page int) (*tmdb.Pa
 	if err != nil {
 		return nil, err
 	}
+	s.prewarmSeries(res.Results)
 	return s.enrichSeries(ctx, res)
 }
 
@@ -175,6 +179,7 @@ func (s *MovieService) GetNowAiringSeries(ctx context.Context, page int) (*tmdb.
 	if err != nil {
 		return nil, err
 	}
+	s.prewarmSeries(res.Results)
 	return s.enrichSeries(ctx, res)
 }
 
@@ -183,6 +188,7 @@ func (s *MovieService) GetTopRatedSeries(ctx context.Context, page int) (*tmdb.P
 	if err != nil {
 		return nil, err
 	}
+	s.prewarmSeries(res.Results)
 	return s.enrichSeries(ctx, res)
 }
 
@@ -191,6 +197,7 @@ func (s *MovieService) DiscoverSeries(ctx context.Context, genres, tab string, p
 	if err != nil {
 		return nil, err
 	}
+	s.prewarmSeries(res.Results)
 	return s.enrichSeries(ctx, res)
 }
 
@@ -223,6 +230,7 @@ func (s *MovieService) DiscoverMovies(ctx context.Context, genres, tab string, p
 	if err != nil {
 		return nil, err
 	}
+	s.prewarmMovies(res.Results)
 	return s.enrichMovies(ctx, res)
 }
 
@@ -243,12 +251,16 @@ func (s *MovieService) GetSeriesByID(ctx context.Context, id int) (*TVSeriesDeta
 	return &TVSeriesDetailDTO{TVSeriesDetail: *detail, Ratings: ratings}, nil
 }
 
-// SeriesIMDbResolver looks up a TV show's IMDb id through TMDB external_ids.
+// SeriesIMDbResolver looks up a title's IMDb id through TMDB external_ids
+// (TV on detail pages, movies and TV when prewarming list results).
 func SeriesIMDbResolver(_ context.Context, mediaType string, tmdbID int) (string, error) {
-	if mediaType != string(shared.MediaTypeTV) {
-		return "", fmt.Errorf("no resolver for media type %q", mediaType)
+	switch mediaType {
+	case string(shared.MediaTypeTV):
+		return tmdb.GetSeriesIMDbID(tmdbID)
+	case string(shared.MediaTypeMovie):
+		return tmdb.GetMovieIMDbID(tmdbID)
 	}
-	return tmdb.GetSeriesIMDbID(tmdbID)
+	return "", fmt.Errorf("no resolver for media type %q", mediaType)
 }
 
 func (s *MovieService) GetPersonMovieCredits(ctx context.Context, personID int) (*PersonMovieCreditsDTO, error) {
@@ -306,4 +318,22 @@ func (s *MovieService) GetPersonTVCredits(ctx context.Context, personID int) (*P
 // EnrichMovies attaches ratings.popcorn/tmdb to a raw TMDB movie page.
 func (s *MovieService) EnrichMovies(ctx context.Context, res *tmdb.PaginatedResult[tmdb.Movie]) (*tmdb.PaginatedResult[MovieDTO], error) {
 	return s.enrichMovies(ctx, res)
+}
+
+// prewarmMovies and prewarmSeries warm the external-ratings cache for a list
+// page so the first hover popup already has IMDb / Rotten Tomatoes. Non-blocking.
+func (s *MovieService) prewarmMovies(items []tmdb.Movie) {
+	ids := make([]int, len(items))
+	for i, m := range items {
+		ids[i] = m.ID
+	}
+	s.external.Prewarm(string(shared.MediaTypeMovie), ids)
+}
+
+func (s *MovieService) prewarmSeries(items []tmdb.TVSeries) {
+	ids := make([]int, len(items))
+	for i, t := range items {
+		ids[i] = t.ID
+	}
+	s.external.Prewarm(string(shared.MediaTypeTV), ids)
 }
