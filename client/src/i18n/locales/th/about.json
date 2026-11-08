@@ -5,11 +5,6 @@
     "line2": "คนรักหนัง"
   },
   "sub": "POPCORN คือพื้นที่สำหรับค้นหา รีวิว และติดตามภาพยนตร์ และซีรีส์ที่คุณรักในที่เดียว",
-  "stats": {
-    "movies": "ภาพยนตร์",
-    "tv": "ซีรีส์",
-    "reviews": "รีวิว"
-  },
   "mission": {
     "label": "เรื่องราว",
     "title": "ทำไมถึงสร้าง POPCORN",
@@ -35,41 +30,32 @@
       "community": {
         "title": "Community",
         "desc": "ติดตามผู้ใช้คนอื่นและดูรีวิวจากฟีดของคุณ ค้นพบมุมมองใหม่ ๆ"
-      },
-      "metadata": {
-        "title": "ข้อมูลครบถ้วน",
-        "desc": "เข้าถึงข้อมูลจาก TMDB กว่าหมื่นเรื่อง พร้อมเรตติ้ง นักแสดง และตัวอย่าง"
-      },
-      "popcornScore": {
-        "title": "POPCORN Score",
-        "desc": "คะแนนเรตติ้งจากชุมชนผู้ใช้ POPCORN ที่แยกจาก TMDB ให้มุมมองที่แตกต่าง"
       }
-    }
-  },
-  "tech": {
-    "label": "เทคโนโลยี",
-    "title": "เบื้องหลังการพัฒนา",
-    "desc": "POPCORN พัฒนาโดยใช้ Go (Fiber, GORM, PostgreSQL) ฝั่ง Backend และ Vue 3 (Composition API, TypeScript, Pinia, TanStack Query) ฝั่ง Frontend",
-    "roles": {
-      "backendRuntime": "Backend Runtime",
-      "httpFramework": "HTTP Framework",
-      "orm": "ORM",
-      "database": "Database",
-      "frontendFramework": "Frontend Framework",
-      "typeSystem": "Type System",
-      "stateManagement": "State Management",
-      "dataFetching": "Data Fetching"
     }
   },
   "creator": {
     "label": "ผู้พัฒนา",
     "role": "Founder & Developer",
     "name": "อรินทร์ สุดากิจจาทร",
-    "bio": "นักศึกษาด้าน IT ที่หลงรักการสร้างโปรดักต์ Full-stack และภาพยนตร์"
+    "bio": "นักศึกษาด้าน IT ที่หลงรักการสร้างโปรดักต์ Full-stack และภาพยนตร์",
+    "avatarAlt": "รูปของ Arin Sudakijjathorn",
+    "links": {
+      "github": "GitHub",
+      "linkedin": "LinkedIn",
+      "email": "อีเมล"
+    },
+    "newTab": "เปิดในแท็บใหม่"
   },
   "cta": {
     "title": "ชอบ POPCORN ไหม?",
     "desc": "ถ้าอยากสนับสนุนให้โปรเจกต์นี้พัฒนาต่อไป กดปุ่มด้านล่างได้เลย",
     "btn": "สนับสนุนผู้พัฒนา"
-  }
+  },
+  "hero": {
+    "cta": {
+      "home": "สำรวจภาพยนตร์",
+      "register": "เข้าร่วม POPCORN"
+    }
+  },
+  "builtWith": "สร้างด้วย Go, Vue 3 และ PostgreSQL ข้อมูลภาพยนตร์จาก TMDB"
 }

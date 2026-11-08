@@ -21,6 +21,7 @@ import share from "./share.json";
 import watchLog from "./watchLog.json";
 import visibility from "./visibility.json";
 import browse from "./browse.json";
+import upcoming from "./upcoming.json";
 
 export default {
   common,
@@ -46,4 +47,5 @@ export default {
   watchLog,
   visibility,
   browse,
+  upcoming,
 };
