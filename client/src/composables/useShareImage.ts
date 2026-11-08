@@ -12,6 +12,14 @@ function getApiBaseUrl(): string {
   return cleanUrl.endsWith("/api") ? cleanUrl : `${cleanUrl}/api`
 }
 
+export function isTmdbImageUrl(url: string): boolean {
+  try {
+    return new URL(url).hostname === "image.tmdb.org"
+  } catch {
+    return false
+  }
+}
+
 export function useShareImage() {
   let t: (key: string) => string
   try {
@@ -27,35 +35,27 @@ export function useShareImage() {
   const blobUrlsToRevoke: string[] = []
   let hasFallback = false
 
-  /** Fetch a remote image as a Data URI to bypass CORS canvas taint and avoid console errors */
+  /**
+   * Fetch an image as a data URL so the export canvas is never tainted.
+   * TMDB images always go through the API proxy (never a direct CORS request to
+   * image.tmdb.org); same-origin and API-hosted images are fetched directly.
+   * Returns null on any failure.
+   */
   async function fetchImageAsBlob(url: string): Promise<string | null> {
     try {
       if (!url) return null
+      if (url.startsWith("blob:") || url.startsWith("data:")) return url
 
-      // If it's already a blob URL or data URI, return as-is
-      if (url.startsWith("blob:") || url.startsWith("data:")) {
-        return url
-      }
-
-      // 1. Try direct CORS fetch first (TMDB image.tmdb.org supports CORS out-of-the-box!)
-      let response = await fetch(url, { mode: "cors" }).catch(() => null)
-
-      // 2. If direct CORS fetch failed and it's an external HTTP/HTTPS image, fall back to backend proxy
-      if ((!response || !response.ok) && (url.startsWith("http://") || url.startsWith("https://"))) {
-        const currentOrigin = window.location.origin
-        if (!url.startsWith(currentOrigin)) {
-          const apiBase = getApiBaseUrl()
-          const proxyUrl = `${apiBase}/share/proxy-image?url=${encodeURIComponent(url)}`
-          response = await fetch(proxyUrl).catch(() => null)
-        }
-      }
-
+      const fetchUrl = isTmdbImageUrl(url)
+        ? `${getApiBaseUrl()}/share/proxy-image?url=${encodeURIComponent(url)}`
+        : url
+      const response = await fetch(fetchUrl).catch(() => null)
       if (!response || !response.ok) return null
 
       const blob = await response.blob()
-      return new Promise<string | null>((resolve) => {
+      return await new Promise<string | null>((resolve) => {
         const reader = new FileReader()
-        reader.onloadend = () => resolve(reader.result as string)
+        reader.onloadend = () => resolve(typeof reader.result === "string" ? reader.result : null)
         reader.onerror = () => resolve(null)
         reader.readAsDataURL(blob)
       })

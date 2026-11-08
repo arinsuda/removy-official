@@ -27,5 +27,7 @@
   "styleColor": "Dominant Color",
   "styleBars": "Bookshelf",
   "showUsername": "Show Username",
-  "rankLabel": "Rank #{rank}"
+  "rankLabel": "Rank #{rank}",
+  "imageLoadFailed": "Couldn't load the poster. Check your connection and try again.",
+  "retry": "Try again"
 }

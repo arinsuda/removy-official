@@ -27,7 +27,7 @@
           <!-- Preview area -->
           <div class="preview-container">
             <div class="preview-scaler" :style="scalerStyle">
-              <div ref="exportNodeRef">
+              <div v-if="imageStatus === 'ready'" ref="exportNodeRef">
                 <PosterShareTemplate
                   v-if="shareType === 'poster'"
                   :media="media"
@@ -43,6 +43,18 @@
               </div>
             </div>
 
+            <!-- Images loading (skeleton) / failed (retry) -->
+            <div v-if="imageStatus !== 'ready'" class="image-state" :aria-busy="imageStatus === 'loading'">
+              <SkeletonBlock v-if="imageStatus === 'loading'" class="image-state__skeleton" height="100%" radius="0" />
+              <div v-else class="image-state__error" role="alert">
+                <p>{{ $t('share.imageLoadFailed') }}</p>
+                <button class="btn-action btn-secondary" @click="loadImages">
+                  <i class="pi pi-refresh" />
+                  {{ $t('share.retry') }}
+                </button>
+              </div>
+            </div>
+
             <!-- Loading overlay -->
             <div v-if="isExporting" class="export-overlay">
               <AppSpinner :size="36" class="export-overlay__spinner" />
@@ -54,7 +66,7 @@
           <div class="modal-actions">
             <button
               class="btn-action btn-download"
-              :disabled="isExporting"
+              :disabled="isExporting || imageStatus !== 'ready'"
               @click="handleDownload"
             >
               <i class="pi pi-download" />
@@ -89,6 +101,7 @@
 
 <script setup lang="ts">
 import AppSpinner from "@/components/ui/AppSpinner.vue"
+  import SkeletonBlock from "@/components/ui/skeleton/SkeletonBlock.vue"
   import { ref, watch, computed, onUnmounted, nextTick } from "vue"
   import type { ShareMediaContext, ShareReviewContext } from "@/types/share"
   import { useShareImage } from "@/composables/useShareImage"
@@ -122,6 +135,7 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
   const posterBlobUrl = ref<string | null>(null)
   const avatarBlobUrl = ref<string | null>(null)
   const isExporting = share.isExporting
+  const imageStatus = ref<"loading" | "ready" | "error">("loading")
 
   // Scale the 1080px-wide export node to fit the modal preview (~360px)
   const PREVIEW_WIDTH = 360
@@ -136,57 +150,27 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
     emit("update:modelValue", false)
   }
 
-  /** Load images as blob URLs when modal opens */
+  /** Load images as data URLs (TMDB through the API proxy) before any card renders. */
   async function loadImages() {
-    share.resetFallbackTracking()
+    imageStatus.value = "loading"
+    const posterUrl = props.media.posterUrl || getTmdbImageUrl(props.media.posterPath, "w500")
 
-    // Load poster
-    const posterUrl =
-      props.media.posterUrl ||
-      getTmdbImageUrl(props.media.posterPath, "w500")
-
-    if (posterUrl) {
-      const blob = await share.fetchImageAsBlob(posterUrl)
-      if (blob) {
-        posterBlobUrl.value = blob
-      } else {
-        posterBlobUrl.value = null
-        share.markFallbackUsed()
-      }
-    } else {
-      posterBlobUrl.value = null
+    let avatarUrl = props.shareType === "review" ? props.review?.authorAvatarUrl?.trim() || "" : ""
+    if (avatarUrl && !/^(https?:|data:)/.test(avatarUrl)) {
+      const apiBase = getApiBaseUrl()
+      const origin = apiBase.startsWith("http") ? new URL(apiBase).origin : window.location.origin
+      avatarUrl = `${origin}${avatarUrl.startsWith("/") ? "" : "/"}${avatarUrl}`
     }
 
-    // Load avatar for review shares
-    if (props.shareType === "review" && props.review?.authorAvatarUrl) {
-      let avatarUrl = props.review.authorAvatarUrl.trim()
-      if (
-        avatarUrl &&
-        !avatarUrl.startsWith("http://") &&
-        !avatarUrl.startsWith("https://") &&
-        !avatarUrl.startsWith("data:")
-      ) {
-        const apiBase = getApiBaseUrl()
-        if (apiBase.startsWith("http")) {
-          const origin = new URL(apiBase).origin
-          avatarUrl = `${origin}${avatarUrl.startsWith("/") ? "" : "/"}${avatarUrl}`
-        } else {
-          avatarUrl = `${window.location.origin}${avatarUrl.startsWith("/") ? "" : "/"}${avatarUrl}`
-        }
-      }
-
-      if (avatarUrl) {
-        const blob = await share.fetchImageAsBlob(avatarUrl)
-        if (blob) {
-          avatarBlobUrl.value = blob
-        } else {
-          avatarBlobUrl.value = null
-          share.markFallbackUsed()
-        }
-      }
-    }
-
-    share.showFallbackWarningIfNeeded()
+    const [poster, avatar] = await Promise.all([
+      posterUrl ? share.fetchImageAsBlob(posterUrl) : Promise.resolve(null),
+      avatarUrl ? share.fetchImageAsBlob(avatarUrl) : Promise.resolve(null),
+    ])
+    if (!props.modelValue) return
+    posterBlobUrl.value = poster
+    avatarBlobUrl.value = avatar
+    // A missing poster is only an error when one exists but could not be loaded.
+    imageStatus.value = posterUrl && !poster ? "error" : "ready"
   }
 
   async function handleDownload() {
@@ -235,6 +219,7 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
         document.body.style.overflow = ""
         posterBlobUrl.value = null
         avatarBlobUrl.value = null
+        imageStatus.value = "loading"
         share.cleanup()
       }
     },
@@ -329,6 +314,32 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
 
   .preview-scaler {
     pointer-events: none;
+  }
+
+  .image-state {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .image-state__skeleton {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+  }
+
+  .image-state__error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 24px;
+    text-align: center;
+    color: var(--color-text-secondary);
+    font-size: 0.875rem;
   }
 
   .export-overlay {

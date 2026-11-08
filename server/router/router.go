@@ -1,13 +1,7 @@
 package router
 
 import (
-	"io"
 	"log"
-	"net"
-	"net/http"
-	"net/url"
-	"strings"
-	"time"
 
 	"github.com/arinsuda/movie-hub/config"
 	achievementsmodule "github.com/arinsuda/movie-hub/internal/achievements_module"
@@ -71,7 +65,7 @@ func Register(app *fiber.App, db *gorm.DB, cfg *config.Config, m *mailer.Mailer)
 	app.Get("/health", healthHandler)
 
 	api := app.Group("/api")
-	api.Get("/share/proxy-image", shareImageProxyHandler(cfg))
+	api.Get("/share/proxy-image", shareImageProxyHandler())
 
 	authSvc := auth_module.RegisterRoutes(api, db, cfg, m, mc, notifSvc)
 
@@ -116,70 +110,3 @@ func healthHandler(c fiber.Ctx) error {
 	return c.JSON(fiber.Map{"status": "ok"})
 }
 
-func isPrivateHost(host string) bool {
-	hostOnly := strings.ToLower(host)
-	if h, _, err := net.SplitHostPort(hostOnly); err == nil {
-		hostOnly = h
-	}
-
-	if hostOnly == "localhost" || hostOnly == "0.0.0.0" || strings.HasSuffix(hostOnly, ".local") || strings.HasSuffix(hostOnly, ".internal") {
-		return true
-	}
-
-	ip := net.ParseIP(hostOnly)
-	if ip == nil {
-		return false
-	}
-
-	if ip.IsLoopback() || ip.IsPrivate() || ip.IsUnspecified() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
-		return true
-	}
-
-	return false
-}
-
-func shareImageProxyHandler(cfg *config.Config) fiber.Handler {
-	return func(c fiber.Ctx) error {
-		rawURL := c.Query("url")
-		if rawURL == "" {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "url parameter is required"})
-		}
-
-		parsed, err := url.Parse(rawURL)
-		if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid url"})
-		}
-
-		// Security check: restrict internal/loopback/private IP addresses to prevent SSRF
-		if isPrivateHost(parsed.Host) {
-			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "restricted host"})
-		}
-
-		// Fetch image from target
-		client := &http.Client{Timeout: 10 * time.Second}
-		resp, err := client.Get(rawURL)
-		if err != nil || resp.StatusCode != http.StatusOK {
-			if resp != nil {
-				resp.Body.Close()
-			}
-			return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": "failed to fetch remote image"})
-		}
-		defer resp.Body.Close()
-
-		contentType := resp.Header.Get("Content-Type")
-		if contentType == "" {
-			contentType = "image/jpeg"
-		}
-
-		c.Set("Content-Type", contentType)
-		c.Set("Access-Control-Allow-Origin", "*")
-		c.Set("Cache-Control", "public, max-age=86400")
-
-		bodyBytes, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to read image stream"})
-		}
-
-		return c.Status(fiber.StatusOK).Send(bodyBytes)
-	}
-}

@@ -7,7 +7,6 @@
         :src="displayPosterUrl"
         :alt="media.title"
         class="bg-poster"
-        crossorigin="anonymous"
       />
       <div class="bg-gradient" />
     </div>
@@ -21,7 +20,6 @@
           :src="displayPosterUrl"
           :alt="media.title"
           class="poster-img"
-          crossorigin="anonymous"
         />
         <div v-else class="poster-fallback">
           <i class="pi pi-image" />
@@ -81,7 +79,6 @@
 <script setup lang="ts">
   import { computed } from "vue"
   import type { ShareMediaContext } from "@/types/share"
-  import { getTmdbImageUrl } from "@/utils/image"
 
   const props = defineProps<{
     media: ShareMediaContext
@@ -90,8 +87,6 @@
 
   const displayPosterUrl = computed(() => {
     if (props.posterBlobUrl) return props.posterBlobUrl
-    if (props.media.posterUrl) return props.media.posterUrl
-    if (props.media.posterPath) return getTmdbImageUrl(props.media.posterPath, "w500")
     return null
   })
 

@@ -7,7 +7,6 @@
         :src="displayPosterUrl"
         :alt="media.title"
         class="bg-poster"
-        crossorigin="anonymous"
       />
       <div class="bg-gradient" />
     </div>
@@ -22,7 +21,6 @@
             :src="displayPosterUrl"
             :alt="media.title"
             class="poster-img"
-            crossorigin="anonymous"
           />
           <div v-else class="poster-fallback">
             <i class="pi pi-image" />
@@ -57,7 +55,6 @@
               :src="displayAvatarUrl"
               :alt="review.authorDisplayName"
               class="avatar-img"
-              crossorigin="anonymous"
             />
             <div v-else class="avatar-fallback">
               <i class="pi pi-user" />
@@ -110,7 +107,6 @@
   import { computed } from "vue"
   import type { ShareMediaContext, ShareReviewContext } from "@/types/share"
   import { useShareImage } from "@/composables/useShareImage"
-  import { getTmdbImageUrl } from "@/utils/image"
 
   const props = defineProps<{
     media: ShareMediaContext
@@ -125,14 +121,11 @@
 
   const displayPosterUrl = computed(() => {
     if (props.posterBlobUrl) return props.posterBlobUrl
-    if (props.media.posterUrl) return props.media.posterUrl
-    if (props.media.posterPath) return getTmdbImageUrl(props.media.posterPath, "w500")
     return null
   })
 
   const displayAvatarUrl = computed(() => {
     if (props.avatarBlobUrl) return props.avatarBlobUrl
-    if (props.review?.authorAvatarUrl) return props.review.authorAvatarUrl
     return null
   })
 </script>
