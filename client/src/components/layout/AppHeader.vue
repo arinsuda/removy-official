@@ -1,7 +1,7 @@
 <template>
   <header class="hdr" :class="{ 'hdr--scrolled': scrolled }">
     <RouterLink to="/" class="hdr-logo" @click="mobileMenuOpen = false">
-      <img src="/popcorn-icon-192.png" alt="" class="hdr-logo-icon" /><span>POP</span><span class="hdr-logo-brand">CORN</span>
+      <img src="/popcorn-icon-192.png" alt="" class="hdr-logo-icon" /><span>POP</span><span class="hdr-logo-brand">CORN</span> <!-- hardcode-ok: brand name -->
     </RouterLink>
 
     <HeaderNav class="hdr-nav" />
@@ -171,7 +171,7 @@ onUnmounted(() => {
   top: 0;
   left: 0;
   right: 0;
-  z-index: 100;
+  z-index: var(--z-header);
   display: flex;
   align-items: center;
   gap: 2rem;

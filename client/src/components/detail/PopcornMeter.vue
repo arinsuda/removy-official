@@ -2,7 +2,7 @@
   <section class="meter" :data-tier="tier" :aria-labelledby="titleId">
     <div class="meter__head">
       <div>
-        <h2 :id="titleId" class="meter__eyebrow">POPCORN</h2>
+        <h2 :id="titleId" class="meter__eyebrow">POPCORN</h2> <!-- hardcode-ok: brand name -->
         <p class="meter__score">
           <span class="meter__num" data-test="meter-score">{{ tier === "none" ? "—" : score.toFixed(1) }}</span>
           <span class="meter__max" aria-hidden="true">/ 5</span>

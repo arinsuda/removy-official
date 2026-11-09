@@ -262,7 +262,7 @@ onBeforeUnmount(() => {
   border: 1px solid var(--color-border-strong);
   border-radius: 1rem;
   background: var(--color-surface-2);
-  box-shadow: 0 20px 56px rgb(0 0 0 / 0.55);
+  box-shadow: var(--shadow-popover);
   transform-origin: top right;
 }
 .am-card {

@@ -136,7 +136,7 @@ function onSort(e: Event) {
   .filter-bar {
     position: sticky;
     top: 0;
-    z-index: 50;
+    z-index: var(--z-sticky);
     margin-inline: -1rem;
     padding: 0.5rem 1rem;
     background: color-mix(in srgb, var(--color-surface) 92%, transparent);

@@ -48,7 +48,7 @@
           <ul class="hero__chips">
             <li v-if="current.date">{{ current.date.slice(0, 4) }}</li>
             <li v-if="tmdb !== null" :aria-label="t('media.rating.tmdbScore', { score: tmdb })">
-              <b aria-hidden="true">TMDB</b> <span aria-hidden="true">{{ tmdb }}/10</span>
+              <b aria-hidden="true">TMDB</b> <span aria-hidden="true">{{ tmdb }}/10</span> <!-- hardcode-ok: brand name -->
             </li>
           </ul>
         </div>

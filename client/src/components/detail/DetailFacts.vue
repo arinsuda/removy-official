@@ -19,7 +19,7 @@
 <script setup lang="ts">
 import { computed, useId } from "vue"
 import { useI18n } from "vue-i18n"
-import { statusKey, type DetailFact } from "./detailConfig"
+import { MONEY_CURRENCY, statusKey, type DetailFact } from "./detailConfig"
 
 const props = defineProps<{ facts: DetailFact[]; homepage?: string }>()
 const { t, te, locale } = useI18n()
@@ -42,6 +42,9 @@ function display(f: DetailFact): string {
   if (f.kind === "date") {
     const d = new Date(`${f.value.slice(0, 10)}T00:00:00`)
     return Number.isNaN(d.getTime()) ? f.value : new Intl.DateTimeFormat(locale.value, { dateStyle: "long" }).format(d)
+  }
+  if (f.kind === "money") {
+    return new Intl.NumberFormat(locale.value, { style: "currency", currency: MONEY_CURRENCY, maximumFractionDigits: 0 }).format(Number(f.value))
   }
   return f.value
 }

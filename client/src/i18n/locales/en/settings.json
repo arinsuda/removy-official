@@ -73,6 +73,7 @@
     "sendCode": "Send codes",
     "confirm": "Confirm",
     "done": "Verified!",
+    "placeholder": "name@example.com",
     "inputHint": "Enter your new email. We will send a 6-digit code to your current email ({current}) and another to the new address, and you need both.",
     "currentCodeHint": "Code sent to your current email {email}",
     "newCodeHint": "Code sent to your new email {email}",

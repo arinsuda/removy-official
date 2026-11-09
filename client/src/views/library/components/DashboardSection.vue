@@ -1,451 +1,168 @@
 <template>
-  <section class="dashboard-section fade-in-up">
-    <!-- Highlight stats grid -->
-    <div class="stats-grid">
-      <!-- Total Watched -->
-      <div class="stat-card">
-        <div class="stat-icon-box watched-theme">
-          <Eye :size="22" />
-        </div>
-        <div class="stat-data">
-          <h3>{{ $t("library.dashboard.totalWatched") }}</h3>
-          <p class="stat-value">{{ watchedItems.length }}</p>
-        </div>
+  <div class="ds">
+    <section v-if="isEmpty" class="ds__onboarding">
+      <Clapperboard :size="36" class="ds__onboarding-icon" aria-hidden="true" />
+      <h3 class="ds__onboarding-title">{{ t("library.dashboard.onboarding.title") }}</h3>
+      <p class="ds__onboarding-body">{{ t("library.dashboard.onboarding.body") }}</p>
+      <AppButton v-if="isOwner" :to="{ name: 'movies' }">{{ t("library.dashboard.onboarding.cta") }}</AppButton>
+    </section>
+
+    <template v-else>
+      <ul class="ds__stats" :aria-label="t('library.dashboard.stats.watched')">
+        <li v-for="s in stats" :key="s.key" class="ds__stat">
+          <component :is="s.to ? RouterLink : 'div'" v-bind="s.to ? { to: s.to } : {}" class="ds__stat-body">
+            <span class="ds__stat-icon"><component :is="s.icon" :size="18" aria-hidden="true" /></span>
+            <span class="ds__stat-label">{{ t(`library.dashboard.stats.${s.key}`) }}</span>
+            <span class="ds__stat-value">{{ s.value }}</span>
+            <span v-if="s.note" class="ds__stat-note">{{ s.note }}</span>
+          </component>
+        </li>
+      </ul>
+
+      <div v-if="isOwner" class="ds__actions" role="group" :aria-label="t('library.dashboard.actions.title')">
+        <AppButton variant="outline" size="sm" :to="{ name: 'movies' }"><Film :size="14" aria-hidden="true" />{{ t("library.dashboard.actions.browseMovies") }}</AppButton>
+        <AppButton variant="outline" size="sm" :to="{ name: 'tv' }"><Tv :size="14" aria-hidden="true" />{{ t("library.dashboard.actions.browseSeries") }}</AppButton>
+        <AppButton variant="outline" size="sm" data-action="quick-add" @click="emit('add')"><Plus :size="14" aria-hidden="true" />{{ t("library.dashboard.actions.add") }}</AppButton>
+        <AppButton variant="outline" size="sm" :to="tabTo('bmol')"><Trophy :size="14" aria-hidden="true" />{{ t("library.dashboard.actions.bmol") }}</AppButton>
       </div>
 
-      <!-- Total Reviews & Trend -->
-      <div class="stat-card">
-        <div class="stat-icon-box review-theme">
-          <Star :size="22" />
-        </div>
-        <div class="stat-data">
-          <h3>{{ $t("library.dashboard.totalReviews") }}</h3>
-          <p class="stat-value">{{ userReviews.length }}</p>
-          <div v-if="userReviews.length > 0" class="trend-badge" :class="trendClass">
-            <component :is="trendIcon" :size="12" />
-            <span class="trend-text">
-              {{
-                reviewsStats.diff > 0
-                  ? $t("library.dashboard.moreThanLastMonth", { count: reviewsStats.diff })
-                  : reviewsStats.diff < 0
-                  ? $t("library.dashboard.lessThanLastMonth", { count: Math.abs(reviewsStats.diff) })
-                  : $t("library.dashboard.equalLastMonth")
-              }}
-            </span>
-          </div>
-        </div>
-      </div>
+      <LibraryRail
+        rail="library-up-next"
+        :title="t('library.dashboard.upNext.title')"
+        :see-all-label="t('library.dashboard.upNext.seeAll')"
+        :empty-label="t('library.dashboard.upNext.empty')"
+        :see-all-to="listTo('watchlist')"
+        :items="upNext"
+      />
+      <LibraryRail
+        rail="library-recent"
+        :title="t('library.dashboard.recent.title')"
+        :see-all-label="t('library.dashboard.recent.seeAll')"
+        :empty-label="t('library.dashboard.recent.empty')"
+        :see-all-to="listTo('watched')"
+        :items="recent"
+      />
 
-      <!-- Average Rating -->
-      <div class="stat-card">
-        <div class="stat-icon-box rating-theme">
-          <Star :size="22" />
-        </div>
-        <div class="stat-data">
-          <h3>{{ $t("library.dashboard.averageRating") }}</h3>
-          <div class="rating-display">
-            <span class="stat-value">{{ averageRating > 0 ? averageRating : "—" }}</span>
-            <span class="max-val">/ 5.0</span>
-          </div>
-          <div class="stars-row">
-            <span
-              v-for="s in 5"
-              :key="s"
-              class="star-dot"
-              :class="{ 'star-dot--active': s <= Math.round(averageRating) }"
-            >★</span>
-          </div>
-        </div>
-      </div>
+      <div class="ds__charts">
+        <section class="ds__card" aria-labelledby="ds-genres">
+          <h3 id="ds-genres" class="ds__card-title">{{ t("library.dashboard.genres.title") }}</h3>
+          <p v-if="!genres.length" class="ds__muted">{{ t("library.dashboard.genres.empty") }}</p>
+          <ol v-else class="ds__genres">
+            <li v-for="(g, i) in genres" :key="g.name" class="ds__genre">
+              <span class="ds__rank">{{ fmt(i + 1) }}</span>
+              <span class="ds__genre-name">{{ g.name }}</span>
+              <span class="ds__genre-count">{{ t("library.dashboard.genres.count", { n: fmt(g.count) }) }}</span>
+            </li>
+          </ol>
+        </section>
 
-      <!-- Dynamic Top Genre -->
-      <div class="stat-card">
-        <div class="stat-icon-box genre-theme">
-          <Trophy :size="22" />
-        </div>
-        <div class="stat-data">
-          <h3>{{ $t("library.dashboard.topGenre") }}</h3>
-          <p class="stat-value genre-text">{{ topGenre || $t("library.dashboard.noWatchedData") }}</p>
-        </div>
+        <section class="ds__card" aria-labelledby="ds-ratings">
+          <h3 id="ds-ratings" class="ds__card-title">{{ t("library.dashboard.ratings.title") }}</h3>
+          <p v-if="!reviews.length" class="ds__muted">{{ t("library.dashboard.ratings.empty") }}</p>
+          <ul v-else class="ds__bars">
+            <li v-for="b in buckets" :key="b.rating" class="ds__bar" :aria-label="t('library.dashboard.ratings.bar', { rating: fmt(b.rating), count: fmt(b.count) })">
+              <span class="ds__bar-label" aria-hidden="true">{{ fmt(b.rating) }}</span>
+              <span class="ds__bar-track" aria-hidden="true"><span class="ds__bar-fill" :style="{ width: `${b.percent}%` }" /></span>
+              <span class="ds__bar-count" aria-hidden="true">{{ fmt(b.count) }}</span>
+            </li>
+          </ul>
+        </section>
       </div>
-    </div>
-
-    <!-- Charts Section (Rating Distribution + Genres Breakdown) -->
-    <div class="charts-row">
-      <!-- Rating Distribution CSS Bar Chart -->
-      <div class="chart-card">
-        <h4 class="chart-title">{{ $t("library.dashboard.averageRating") }}</h4>
-        <div class="distribution-list">
-          <div
-            v-for="dist in ratingDistribution"
-            :key="dist.rating"
-            class="dist-row"
-          >
-            <span class="dist-label">{{ dist.rating.toFixed(1) }} ★</span>
-            <div class="dist-bar-wrapper">
-              <div
-                class="dist-bar-fill"
-                :style="{ width: `${dist.percentage}%` }"
-                aria-hidden="true"
-              />
-            </div>
-            <span class="dist-count">{{ dist.count }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Top Genres Frequency List -->
-      <div class="chart-card">
-        <h4 class="chart-title">{{ $t("library.dashboard.topGenre") }}</h4>
-        <div class="genres-ranking">
-          <div
-            v-for="(genre, index) in topGenresList"
-            :key="genre.name"
-            class="genre-rank-row"
-          >
-            <div class="rank-badge" :class="`rank-${index + 1}`">{{ index + 1 }}</div>
-            <span class="genre-rank-name">{{ genre.name }}</span>
-            <span class="genre-rank-count">{{ genre.count }} {{ $t("library.tabs.watched") }}</span>
-          </div>
-          <div v-if="topGenresList.length === 0" class="genres-empty">
-            {{ $t("library.dashboard.noWatchedData") }}
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+    </template>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from "vue"
-import { Eye, Star, Trophy, TrendingUp, TrendingDown, Minus } from "lucide-vue-next"
-import type { LibraryItemResponse, ReviewResponse } from "@/types"
+import { useI18n } from "vue-i18n"
+import { RouterLink, type RouteLocationRaw } from "vue-router"
+import { Bookmark, Clapperboard, Eye, Film, Heart, Plus, Star, Trophy, Tv, Award } from "lucide-vue-next"
+import AppButton from "@/components/ui/AppButton.vue"
+import type { LibraryListKey, LibraryTab, ReviewResponse } from "@/types"
+import { RAIL_SIZE, RATING_MAX, TOP_GENRES } from "../config"
+import { averageRating, newestFirst, ratingBuckets, reviewMonthDiff, topGenres, type LibraryEntry } from "../libraryStats"
+import LibraryRail from "./LibraryRail.vue"
 
 const props = defineProps<{
-  watchedItems: LibraryItemResponse[]
-  userReviews: ReviewResponse[]
-  likedItems: LibraryItemResponse[]
+  isOwner: boolean
+  watchlist: LibraryEntry[]
+  watched: LibraryEntry[]
+  likes: LibraryEntry[]
+  reviews: ReviewResponse[]
+  listTo: (key: LibraryListKey) => RouteLocationRaw
+  tabTo: (tab: LibraryTab) => RouteLocationRaw
 }>()
+const emit = defineEmits<{ add: [] }>()
 
-// Dashboard Computations
-const averageRating = computed(() => {
-  if (props.userReviews.length === 0) return 0
-  const sum = props.userReviews.reduce((acc, r) => acc + r.rating, 0)
-  return Number((sum / props.userReviews.length).toFixed(1))
+const { t, n } = useI18n()
+const fmt = (value: number) => n(value, { maximumFractionDigits: 1 })
+
+const isEmpty = computed(() => !props.watchlist.length && !props.watched.length && !props.likes.length && !props.reviews.length)
+
+const upNext = computed(() => newestFirst(props.watchlist).slice(0, RAIL_SIZE).map((e) => e.media))
+const recent = computed(() => newestFirst(props.watched).slice(0, RAIL_SIZE).map((e) => e.media))
+const genres = computed(() => topGenres(props.watched, TOP_GENRES))
+const buckets = computed(() => ratingBuckets(props.reviews))
+
+const trend = computed(() => {
+  const diff = reviewMonthDiff(props.reviews)
+  if (!props.reviews.length) return undefined
+  if (diff > 0) return t("library.dashboard.trend.more", { count: fmt(diff) })
+  if (diff < 0) return t("library.dashboard.trend.less", { count: fmt(Math.abs(diff)) })
+  return t("library.dashboard.trend.same")
 })
 
-const topGenresList = computed(() => {
-  const counts: Record<string, number> = {}
-  const allMediaItems = [...props.watchedItems, ...props.likedItems]
-
-  allMediaItems.forEach(item => {
-    if (item.media && item.media.genres) {
-      item.media.genres.forEach(g => {
-        counts[g.name] = (counts[g.name] || 0) + 1
-      })
-    }
-  })
-
-  return Object.entries(counts)
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5)
-})
-
-const topGenre = computed(() => {
-  return topGenresList.value[0]?.name || null
-})
-
-const reviewsStats = computed(() => {
-  const now = new Date()
-  const currentYear = now.getFullYear()
-  const currentMonth = now.getMonth()
-
-  let thisMonthCount = 0
-  let lastMonthCount = 0
-
-  props.userReviews.forEach(r => {
-    const rDate = new Date(r.created_at)
-    const rYear = rDate.getFullYear()
-    const rMonth = rDate.getMonth()
-
-    if (rYear === currentYear && rMonth === currentMonth) {
-      thisMonthCount++
-    } else if (
-      (currentMonth === 0 && rYear === currentYear - 1 && rMonth === 11) ||
-      (currentMonth > 0 && rYear === currentYear && rMonth === currentMonth - 1)
-    ) {
-      lastMonthCount++
-    }
-  })
-
-  const diff = thisMonthCount - lastMonthCount
-  return { thisMonth: thisMonthCount, lastMonth: lastMonthCount, diff }
-})
-
-const trendIcon = computed(() => {
-  if (reviewsStats.value.diff > 0) return TrendingUp
-  if (reviewsStats.value.diff < 0) return TrendingDown
-  return Minus
-})
-
-const trendClass = computed(() => {
-  if (reviewsStats.value.diff > 0) return "trend-green"
-  if (reviewsStats.value.diff < 0) return "trend-red"
-  return "trend-neutral"
-})
-
-const ratingDistribution = computed(() => {
-  const distribution = Array(10).fill(0) // 0.5 to 5.0 in steps of 0.5
-  props.userReviews.forEach(r => {
-    const index = Math.round(r.rating * 2) - 1
-    if (index >= 0 && index < 10) {
-      distribution[index]++
-    }
-  })
-  const maxCount = Math.max(...distribution, 1)
-  return distribution
-    .map((count, i) => ({
-      rating: (i + 1) / 2,
-      count,
-      percentage: (count / maxCount) * 100
-    }))
-    .reverse()
+const stats = computed(() => {
+  const avg = averageRating(props.reviews)
+  return [
+    { key: "watched", icon: Eye, value: fmt(props.watched.length), to: props.listTo("watched") },
+    { key: "watchlist", icon: Bookmark, value: fmt(props.watchlist.length), to: props.listTo("watchlist") },
+    { key: "likes", icon: Heart, value: fmt(props.likes.length), to: props.listTo("likes") },
+    { key: "reviews", icon: Star, value: fmt(props.reviews.length), note: trend.value, to: props.listTo("reviews") },
+    { key: "average", icon: Award, value: avg ? t("library.dashboard.averageOf", { value: fmt(avg), max: fmt(RATING_MAX) }) : t("library.dashboard.noData") },
+    { key: "topGenre", icon: Trophy, value: genres.value[0]?.name ?? t("library.dashboard.noData") },
+  ] as { key: string; icon: typeof Eye; value: string; note?: string; to?: RouteLocationRaw }[]
 })
 </script>
 
 <style scoped>
-.dashboard-section {
-  display: flex;
-  flex-direction: column;
-  gap: 2.5rem;
+.ds { display: flex; flex-direction: column; gap: 2rem; }
+.ds__stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; margin: 0; padding: 0; list-style: none; }
+.ds__stat-body { display: flex; flex-direction: column; gap: 0.25rem; height: 100%; padding: 1rem; color: inherit; text-decoration: none; background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--radius-card); transition: border-color var(--motion-fast) var(--ease-water); }
+.ds__stat-icon { display: grid; place-items: center; width: 2rem; height: 2rem; margin-bottom: 0.25rem; color: var(--color-text-secondary); background: var(--color-surface-3); border-radius: var(--radius-btn); }
+.ds__stat-label { font-size: var(--text-caption); color: var(--color-text-muted); }
+.ds__stat-value { overflow: hidden; font-size: var(--text-heading); font-weight: 700; line-height: 1.2; color: var(--color-text-primary); text-overflow: ellipsis; }
+.ds__stat-note { font-size: var(--text-caption); color: var(--color-text-secondary); }
+.ds__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.ds__charts { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+.ds__card { padding: 1.25rem; background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--radius-card); }
+.ds__card-title { margin: 0 0 1rem; font-size: var(--text-body); font-weight: 700; color: var(--color-text-primary); }
+.ds__muted { margin: 0; font-size: var(--text-small); color: var(--color-text-muted); }
+.ds__genres, .ds__bars { display: flex; flex-direction: column; gap: 0.625rem; margin: 0; padding: 0; list-style: none; }
+.ds__genre { display: flex; align-items: center; gap: 0.75rem; font-size: var(--text-small); }
+.ds__rank { display: grid; flex: none; place-items: center; width: 1.5rem; height: 1.5rem; font-size: var(--text-caption); font-weight: 700; color: var(--color-text-secondary); background: var(--color-surface-3); border-radius: var(--radius-btn); }
+.ds__genre-name { flex: 1; min-width: 0; overflow: hidden; color: var(--color-text-primary); text-overflow: ellipsis; white-space: nowrap; }
+.ds__genre-count { flex: none; font-size: var(--text-caption); color: var(--color-text-muted); }
+.ds__bar { display: flex; align-items: center; gap: 0.75rem; font-size: var(--text-caption); color: var(--color-text-secondary); }
+.ds__bar-label { flex: none; width: 2rem; text-align: end; }
+.ds__bar-track { flex: 1; height: 0.5rem; overflow: hidden; background: var(--color-surface-3); border-radius: var(--radius-btn); }
+.ds__bar-fill { display: block; height: 100%; background: var(--color-rating); border-radius: var(--radius-btn); transition: width var(--motion-base) var(--ease-out-soft); }
+.ds__bar-count { flex: none; width: 2rem; color: var(--color-text-muted); }
+.ds__onboarding { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; padding: 3rem 1.5rem; text-align: center; background: var(--color-surface-2); border: 1px dashed var(--color-border-strong); border-radius: var(--radius-card); }
+.ds__onboarding-icon { color: var(--color-text-muted); }
+.ds__onboarding-title { margin: 0; font-size: var(--text-title); font-weight: 700; color: var(--color-text-primary); }
+.ds__onboarding-body { max-width: 28rem; margin: 0; font-size: var(--text-small); color: var(--color-text-secondary); }
+@media (hover: hover) {
+  a.ds__stat-body:hover { border-color: var(--color-border-strong); }
 }
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1.5rem;
-}
-
 @media (min-width: 640px) {
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+  .ds__stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
-
 @media (min-width: 1024px) {
-  .stats-grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
+  .ds__stats { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .ds__charts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-
-.stat-card {
-  background: rgba(20, 20, 22, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  border-radius: 16px;
-  padding: 1.5rem;
-  display: flex;
-  align-items: center;
-  gap: 1.25rem;
-  backdrop-filter: blur(8px);
-}
-
-.stat-icon-box {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.watched-theme { color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
-.review-theme { color: #e1251b; background: rgba(225, 37, 27, 0.1); }
-.rating-theme { color: #ffb800; background: rgba(255, 184, 0, 0.1); }
-.genre-theme { color: #a855f7; background: rgba(168, 85, 247, 0.1); }
-
-.stat-data h3 {
-  font-size: 0.8125rem;
-  color: #9ca3af;
-  margin: 0 0 0.25rem 0;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-}
-
-.stat-value {
-  font-size: 1.75rem;
-  font-weight: 800;
-  color: #ffffff;
-  margin: 0;
-}
-
-.genre-text {
-  font-size: 1.125rem;
-  font-weight: 700;
-}
-
-.trend-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 2px 6px;
-  border-radius: 6px;
-  margin-top: 0.375rem;
-  font-size: 0.725rem;
-  font-weight: 600;
-}
-
-.trend-green { background: rgba(16, 185, 129, 0.1); color: #10b981; }
-.trend-red { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
-.trend-neutral { background: rgba(255, 255, 255, 0.05); color: #9ca3af; }
-
-.rating-display {
-  display: flex;
-  align-items: baseline;
-  gap: 0.125rem;
-}
-
-.max-val {
-  font-size: 0.8125rem;
-  color: #9ca3af;
-}
-
-.stars-row {
-  display: flex;
-  gap: 0.125rem;
-  margin-top: 0.25rem;
-}
-
-.star-dot {
-  font-size: 0.875rem;
-  color: #3f3f46;
-}
-
-.star-dot--active {
-  color: #ffb800;
-}
-
-/* Charts Section */
-.charts-row {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 2rem;
-}
-
-@media (min-width: 1024px) {
-  .charts-row {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-.chart-card {
-  background: rgba(20, 20, 22, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  border-radius: 20px;
-  padding: 2rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.chart-title {
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: #ffffff;
-  margin: 0;
-  border-left: 3px solid #e1251b;
-  padding-left: 0.75rem;
-}
-
-/* Rating Distribution CSS Chart */
-.distribution-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.dist-row {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.dist-label {
-  font-size: 0.8125rem;
-  color: #9ca3af;
-  width: 36px;
-  text-align: right;
-  font-weight: 600;
-}
-
-.dist-bar-wrapper {
-  flex: 1;
-  height: 8px;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.dist-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #8a1612, #e1251b);
-  border-radius: 4px;
-}
-
-.dist-count {
-  font-size: 0.8125rem;
-  color: #ffffff;
-  width: 24px;
-  font-weight: 700;
-}
-
-/* Top Genres List ranking */
-.genres-ranking {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.genre-rank-row {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.rank-badge {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 0.8125rem;
-  background: rgba(255, 255, 255, 0.05);
-  color: #9ca3af;
-}
-
-.rank-1 { background: rgba(255, 184, 0, 0.15); color: #ffb800; }
-.rank-2 { background: rgba(156, 163, 175, 0.15); color: #d1d5db; }
-.rank-3 { background: rgba(180, 83, 9, 0.15); color: #b45309; }
-
-.genre-rank-name {
-  flex: 1;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #f3f4f6;
-}
-
-.genre-rank-count {
-  font-size: 0.8125rem;
-  color: #9ca3af;
-}
-
-.genres-empty {
-  text-align: center;
-  color: #52525b;
-  font-size: 0.875rem;
-  padding: 2rem 0;
+@media (prefers-reduced-motion: reduce) {
+  .ds__stat-body, .ds__bar-fill { transition: none; }
 }
 </style>

@@ -71,7 +71,7 @@ function onLog() {
 .bar {
   position: fixed;
   inset: auto 0 0;
-  z-index: 90;
+  z-index: var(--z-below-header);
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.25rem;

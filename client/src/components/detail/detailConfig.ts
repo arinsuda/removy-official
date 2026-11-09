@@ -19,7 +19,7 @@ export type DetailType = "movie" | "tv"
 export interface DetailFact {
   key: "originalTitle" | "status" | "releaseDate" | "firstAirDate" | "lastAirDate" | "budget" | "revenue" | "networks" | "seasons" | "episodes"
   value: string
-  kind: "text" | "status" | "date"
+  kind: "text" | "status" | "date" | "money"
 }
 
 export interface CrewHighlight {
@@ -77,8 +77,12 @@ function yearOf(date: string | null | undefined): string | null {
   return y && /^\d{4}$/.test(y) ? y : null
 }
 
+/** TMDB reports budget and revenue in US dollars. */
+export const MONEY_CURRENCY = "USD"
+
+/** The raw amount; the renderer formats it for the active locale. */
 function money(amount: number | undefined): string | null {
-  return amount ? `$${amount.toLocaleString("en-US")}` : null
+  return amount ? String(amount) : null
 }
 
 function pushFact(facts: DetailFact[], key: DetailFact["key"], kind: DetailFact["kind"], value: string | null | undefined) {
@@ -112,8 +116,8 @@ export function adaptMovieDetail({ movie, credits, videos }: MovieDetailResponse
   }
   pushFact(facts, "status", "status", movie.status)
   pushFact(facts, "releaseDate", "date", movie.release_date)
-  pushFact(facts, "budget", "text", money(movie.budget))
-  pushFact(facts, "revenue", "text", money(movie.revenue))
+  pushFact(facts, "budget", "money", money(movie.budget))
+  pushFact(facts, "revenue", "money", money(movie.revenue))
 
   return {
     id: movie.id,

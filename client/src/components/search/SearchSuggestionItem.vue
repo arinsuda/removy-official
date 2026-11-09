@@ -23,7 +23,7 @@
         <span class="ssi-chip" :data-type="item.type">{{ t(item.type === "movie" ? "navigation.movie" : "navigation.series") }}</span>
         <span v-if="item.year" class="ssi-year">{{ item.year }}</span>
         <span v-if="tmdb" class="ssi-tmdb" :aria-label="t('media.rating.tmdbScore', { score: tmdb })">
-          <span aria-hidden="true">TMDB {{ tmdb }}</span>
+          <span aria-hidden="true">TMDB {{ tmdb }}</span> <!-- hardcode-ok: brand name -->
         </span>
         <span
           class="ssi-popcorn"

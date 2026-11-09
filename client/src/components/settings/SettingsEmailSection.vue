@@ -9,7 +9,7 @@
         :disabled="step !== 'input'"
         :error="step === 'input' ? error : ''"
         :hint="step === 'input' ? t('settings.email.inputHint', { current: user.email }) : ''"
-        placeholder="your@email.com"
+        :placeholder="t('settings.email.placeholder')"
       />
       </div>
       <div class="row__actions">

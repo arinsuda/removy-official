@@ -13,7 +13,7 @@
         >
           <div class="mns-top">
             <RouterLink to="/" class="mns-logo" @click="close">
-              <img src="/popcorn-icon-192.png" alt="" width="28" height="28" /><span>POP</span><span class="mns-logo-brand">CORN</span>
+              <img src="/popcorn-icon-192.png" alt="" width="28" height="28" /><span>POP</span><span class="mns-logo-brand">CORN</span> <!-- hardcode-ok: brand name -->
             </RouterLink>
             <button type="button" class="mns-close" :aria-label="t('navigation.header.closeMenu')" @click="close">
               <X :size="20" aria-hidden="true" />
@@ -161,7 +161,7 @@ onBeforeUnmount(() => {
   z-index: var(--z-modal-base);
   display: flex;
   justify-content: flex-end;
-  background: rgb(0 0 0 / 0.6);
+  background: var(--color-scrim);
   backdrop-filter: blur(2px);
 }
 .mns-panel {
@@ -171,7 +171,7 @@ onBeforeUnmount(() => {
   height: 100%;
   background: var(--color-surface-2);
   border-left: 1px solid var(--color-border-strong);
-  box-shadow: -16px 0 48px rgb(0 0 0 / 0.5);
+  box-shadow: var(--shadow-sheet);
   outline: none;
 }
 .mns-top {
