@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { defineComponent, h } from "vue"
 import { flushPromises, mount, type VueWrapper } from "@vue/test-utils"
 import { createPinia, setActivePinia } from "pinia"
+import { QueryClient, VueQueryPlugin } from "@tanstack/vue-query"
 import { createMemoryHistory, createRouter, RouterView } from "vue-router"
 import { useAuthStore } from "@/stores/auth"
 import LibraryView from "@/views/library/LibraryView.vue"
@@ -25,6 +26,10 @@ vi.mock("@/api/api", () => ({
   libraryApi: { getVisibleUserLibrary: m.library, removeItem: m.removeItem, addItem: m.addItem },
   reviewApi: { getUserReviews: m.reviews },
   movieApi: { search: m.search, searchSeries: m.searchSeries },
+}))
+vi.mock("@/api/endpoints/social", async (orig) => ({
+  ...(await orig<typeof import("@/api/endpoints/social")>()),
+  followApi: { getFollowStatus: vi.fn().mockResolvedValue({ data: {} }), follow: vi.fn(), unfollow: vi.fn() },
 }))
 vi.mock("@/api/endpoints/media", () => ({ mediaApi: { getLikeByUserId: m.likes, unlikeMedia: vi.fn() } }))
 vi.mock("@/api/endpoints/watchLog", () => ({ watchLogApi: { getMyWatchLogs: vi.fn().mockResolvedValue({ data: {} }) } }))
@@ -57,7 +62,7 @@ async function mountAt(url: string, viewerId: number) {
   setActivePinia(pinia)
   useAuthStore().user = { id: viewerId } as never
   await router.push(url)
-  const wrapper = mount(defineComponent({ render: () => h(RouterView) }), { global: { plugins: [i18n, pinia, router] }, attachTo: document.body })
+  const wrapper = mount(defineComponent({ render: () => h(RouterView) }), { global: { plugins: [i18n, pinia, router, [VueQueryPlugin, { queryClient: new QueryClient({ defaultOptions: { queries: { retry: false } } }) }]] }, attachTo: document.body })
   wrappers.push(wrapper)
   await flushPromises()
   return wrapper
@@ -142,6 +147,14 @@ describe("dashboard", () => {
     await w.find(".app-state button").trigger("click")
     await flushPromises()
     expect(w.find("h1").exists()).toBe(true)
+  })
+
+  it("shows the locked state instead of an error when a list answers 403", async () => {
+    m.library.mockRejectedValue(Object.assign(new Error("forbidden"), { isAxiosError: true, response: { status: 403 } }))
+    const w = await mountAt("/users/1/library", 2)
+    expect(w.text()).toContain("This account is private")
+    expect(w.text()).not.toContain("Could not load this library")
+    expect(w.find(".lib__layout").exists()).toBe(false)
   })
 
   it("warns but still renders when one list fails", async () => {

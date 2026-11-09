@@ -124,6 +124,5 @@ var (
 	ErrUsernameTaken    = errors.New("username already in use")
 	ErrWrongPassword    = errors.New("incorrect password")
 	ErrEmailUnverified  = errors.New("email not verified")
-	ErrAlreadyVerified  = errors.New("email already verified")
 	ErrPasswordMismatch = errors.New("passwords do not match")
 )

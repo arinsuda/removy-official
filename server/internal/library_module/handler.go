@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/arinsuda/movie-hub/internal/movie_module"
+	"github.com/arinsuda/movie-hub/internal/privacy_policy"
 	mw "github.com/arinsuda/movie-hub/middleware"
 	"github.com/gofiber/fiber/v3"
 )
@@ -162,8 +163,10 @@ func handleError(c fiber.Ctx, err error) error {
 	switch {
 	case errors.Is(err, ErrItemNotFound):
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "item not found"})
-	case errors.Is(err, ErrForbidden):
+	case errors.Is(err, ErrForbidden), errors.Is(err, privacy_policy.ErrForbidden):
 		return forbidden(c)
+	case errors.Is(err, privacy_policy.ErrNotFound):
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "user not found"})
 	case errors.Is(err, ErrDuplicate):
 		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "item already in list"})
 	case errors.Is(err, ErrInvalidWatchedAt):

@@ -19,8 +19,11 @@ import (
 	"time"
 
 	"github.com/arinsuda/movie-hub/config"
+	achievementsmodule "github.com/arinsuda/movie-hub/internal/achievements_module"
+	"github.com/arinsuda/movie-hub/internal/admin_module"
 	"github.com/arinsuda/movie-hub/internal/auth_module"
 	"github.com/arinsuda/movie-hub/internal/bmol_module"
+	"github.com/arinsuda/movie-hub/internal/library_module"
 	"github.com/arinsuda/movie-hub/internal/link_module"
 	"github.com/arinsuda/movie-hub/internal/mailer"
 	"github.com/arinsuda/movie-hub/internal/privacy_policy"
@@ -258,6 +261,10 @@ func newEnv(t *testing.T) *env {
 	e.users.SetSessionReissuer(e.auth)
 	bmol_module.RegisterRoutes(protected, db, privacy_policy.NewUserAccessPolicy(db))
 	user_stats_module.RegisterRoutes(protected, db, privacy_policy.NewUserAccessPolicy(db))
+	achieve := achievementsmodule.New(db, privacy_policy.NewUserAccessPolicy(db))
+	achieve.RegisterRoutes(api, mw.RequireAuth)
+	library_module.RegisterRoutes(protected, db, nil, achieve.Service, nil, nil, privacy_policy.NewUserAccessPolicy(db))
+	admin_module.RegisterRoutes(protected, db, nil, nil, mw.RequireCurrentAdmin(db))
 	return e
 }
 

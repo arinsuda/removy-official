@@ -12,6 +12,10 @@ import { useRealI18n } from "./helpers/realI18n"
 
 const m = vi.hoisted(() => ({ list: vi.fn(), profile: vi.fn() }))
 vi.mock("@/api/api", () => ({ userApi: { getProfile: m.profile } }))
+vi.mock("@/api/endpoints/social", async (orig) => ({
+  ...(await orig<typeof import("@/api/endpoints/social")>()),
+  followApi: { getFollowStatus: vi.fn().mockResolvedValue({ data: {} }), follow: vi.fn(), unfollow: vi.fn() },
+}))
 vi.mock("@/api/endpoints/achievement", () => ({ achievementApi: { listByUser: m.list } }))
 
 let nextId = 1
@@ -194,6 +198,14 @@ describe("AchievementsView", () => {
     await w.findAll(".tb__chip")[1]!.trigger("click")
     expect(w.text()).toContain("2 of 6 achievements")
     expect(w.findAll(".af__step.is-dim")).toHaveLength(2)
+  })
+
+  it("shows the locked state instead of an error when the list answers 403", async () => {
+    m.list.mockRejectedValue(Object.assign(new Error("forbidden"), { isAxiosError: true, response: { status: 403 } }))
+    const w = mountView(2)
+    await flushPromises()
+    expect(w.text()).toContain("This account is private")
+    expect(w.text()).not.toContain("Could not load achievements")
   })
 
   it("shows the empty, error and not found states", async () => {

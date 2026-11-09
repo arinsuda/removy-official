@@ -147,11 +147,17 @@ func (s *Service) UpdateProfile(
 	return s.GetProfile(targetUserID, requesterID)
 }
 
-func (s *Service) DeleteUser(targetUserID, requesterID uint, requesterRole string) error {
-	if targetUserID != requesterID && requesterRole != "admin" {
+// DeleteUser deactivates the caller's own account and ends all of its sessions.
+// Admins remove other users through the admin module, never through this path.
+func (s *Service) DeleteUser(targetUserID, requesterID uint, sessionVersion int) error {
+	if targetUserID != requesterID {
 		return ErrForbidden
 	}
-	return s.repo.DeleteUser(targetUserID)
+	if err := s.repo.DeleteUser(targetUserID, sessionVersion); err != nil {
+		return err
+	}
+	identity_policy.Outcome{SessionsRevoked: true}.Publish(targetUserID)
+	return nil
 }
 
 func (s *Service) UpdateFavoriteGenres(targetUserID, requesterID uint, genres []int) (*UserProfileResponse, error) {

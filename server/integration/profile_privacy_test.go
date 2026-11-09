@@ -92,6 +92,46 @@ func TestBMOLGatedByPrivacy(t *testing.T) {
 	}
 }
 
+// Private profile sections answer 403 to strangers and pending followers, 200 to accepted
+// followers and the owner, and 404 once the owner is deactivated.
+func TestAchievementsAndLibraryGatedByPrivacy(t *testing.T) {
+	e := newEnv(t)
+	owner := seedUser(t, e.db, "owner@x.test", true, "password-one1")
+	seedUser(t, e.db, "stranger@x.test", true, "password-two2")
+	follower := seedUser(t, e.db, "follower@x.test", true, "password-thr3")
+	if err := e.db.Exec(`UPDATE users SET is_private = true WHERE id = ?`, owner).Error; err != nil {
+		t.Fatal(err)
+	}
+	e.db.Exec(`INSERT INTO user_follows (follower_id, followee_id, status, created_at, updated_at) VALUES (?, ?, 'pending', now(), now())`, follower, owner)
+
+	str := e.loginPair("stranger@x.test", "password-two2")
+	fol := e.loginPair("follower@x.test", "password-thr3")
+	paths := []string{
+		fmt.Sprintf("/api/users/%d/achievements", owner),
+		fmt.Sprintf("/api/library/user/%d", owner),
+	}
+	for _, path := range paths {
+		if code, body := e.do("GET", path, nil, str.AccessToken); code != 403 || body["error"] != "forbidden" {
+			t.Fatalf("%s stranger: %d %v", path, code, body)
+		}
+		if code, _ := e.do("GET", path, nil, fol.AccessToken); code != 403 {
+			t.Fatalf("%s pending follower: want 403, got %d", path, code)
+		}
+	}
+	e.db.Exec(`UPDATE user_follows SET status = 'accepted' WHERE follower_id = ?`, follower)
+	for _, path := range paths {
+		if code, body := e.do("GET", path, nil, fol.AccessToken); code != 200 {
+			t.Fatalf("%s accepted follower: %d %v", path, code, body)
+		}
+	}
+	e.db.Exec(`UPDATE users SET is_active = false WHERE id = ?`, owner)
+	for _, path := range paths {
+		if code, _ := e.do("GET", path, nil, fol.AccessToken); code != 404 {
+			t.Fatalf("%s deactivated owner: want 404, got %d", path, code)
+		}
+	}
+}
+
 // S3: empty keys clear fields; over-long or out-of-range values are rejected.
 func TestUpdateProfileClearsAndValidates(t *testing.T) {
 	e := newEnv(t)

@@ -2,6 +2,8 @@
   <div class="lib">
     <SkeletonProfile v-if="data.loading.value" />
 
+    <PrivateSectionLock v-else-if="data.locked.value" :user-id="userId" @reload="data.load()" />
+
     <AppErrorState
       v-else-if="data.profileFailed.value && !data.profile.value"
       :title="t('library.states.errorTitle')"
@@ -61,6 +63,7 @@ import { useI18n } from "vue-i18n"
 import { useRoute } from "vue-router"
 import AppButton from "@/components/ui/AppButton.vue"
 import AppErrorState from "@/components/ui/AppErrorState.vue"
+import PrivateSectionLock from "@/components/profile/PrivateSectionLock.vue"
 import AppTabs from "@/components/ui/AppTabs.vue"
 import SkeletonProfile from "@/components/ui/skeleton/SkeletonProfile.vue"
 import { useAuthStore } from "@/stores/auth"

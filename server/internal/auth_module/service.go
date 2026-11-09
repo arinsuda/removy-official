@@ -882,15 +882,19 @@ func (s *Service) VerifyEmail(token string, password *string, skipPassword bool)
 	if (password == nil || *password == "") && !skipPassword {
 		return VerifyResult{}, ErrPasswordChoiceRequired
 	}
+	h := HashToken(token) // tokens are stored hashed; the raw value only lives in the mailed link
+	// Look up by hash only: accepting the submitted value as-is would let anyone who can read
+	// stored hashes verify an account without the mailed link.
+	candidates := []string{h}
 	// Reserve an attempt in its own committed statement: the proof below rolls back on a
 	// wrong password, and the count must survive that. Parallel guesses cannot share a slot.
-	reserve := s.db.Exec(`UPDATE email_verifications SET attempts = attempts + 1 WHERE token = ? AND attempts < ?`, token, MaxVerifyAttempts)
+	reserve := s.db.Exec(`UPDATE email_verifications SET attempts = attempts + 1 WHERE token IN ? AND attempts < ?`, candidates, MaxVerifyAttempts)
 	if reserve.Error != nil {
 		return VerifyResult{}, reserve.Error
 	}
 	if reserve.RowsAffected == 0 {
 		// Either no such token, or it is spent: reject it for good so the owner must resend.
-		del := s.db.Exec(`DELETE FROM email_verifications WHERE token = ? AND attempts >= ?`, token, MaxVerifyAttempts)
+		del := s.db.Exec(`DELETE FROM email_verifications WHERE token IN ? AND attempts >= ?`, candidates, MaxVerifyAttempts)
 		if del.Error == nil && del.RowsAffected > 0 {
 			return VerifyResult{}, ErrVerifyAttemptsExceeded
 		}
@@ -900,7 +904,7 @@ func (s *Service) VerifyEmail(token string, password *string, skipPassword bool)
 	var userID uint
 	err := s.db.Transaction(func(tx *gorm.DB) error {
 		var record user_module.EmailVerification
-		if err := tx.Where("token = ?", token).First(&record).Error; err != nil {
+		if err := tx.Where("token IN ?", candidates).First(&record).Error; err != nil {
 			return ErrInvalidToken
 		}
 		// Consume first: concurrent clicks race on this row, only one deletes it.
@@ -940,8 +944,10 @@ func (s *Service) ResendVerification(email string) error {
 		return nil
 	}
 
+	// A verified account gets no mail and no distinct answer, so the endpoint
+	// cannot be used to probe which addresses are registered or verified.
 	if user.VerifiedEmailAt != nil {
-		return ErrAlreadyVerified
+		return nil
 	}
 
 	return s.sendVerificationEmail(user)
@@ -974,7 +980,7 @@ func (s *Service) sendVerificationEmail(u *user_module.User) error {
 
 	ev := &user_module.EmailVerification{
 		UserID:    u.ID,
-		Token:     rawToken,
+		Token:     HashToken(rawToken), // only the hash is stored; the mailed link carries the raw token
 		ExpiresAt: time.Now().Add(24 * time.Hour),
 		Email:     &u.Email, // bound: the token only proves this address, not whatever the email becomes
 	}
