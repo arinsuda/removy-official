@@ -1,256 +1,135 @@
 <template>
-  <div class="ach-root">
-    <div class="section-head">
-      <span class="eyebrow">Achievements</span>
-      <span class="count-chip">{{ store.pagination.total }} unlocked</span>
-      <div class="rule" />
-      <RouterLink
-        :to="{ name: 'user-achievements', params: { userId } }"
-        class="view-all"
-      >
-        ดูทั้งหมด
-      </RouterLink>
-    </div>
+  <div class="ua">
+    <SkeletonGrid v-if="loading" :count="8" min-width="140px" aspect="1 / 1" />
 
-    <SkeletonList v-if="store.loading" avatar :count="5" />
+    <AppErrorState v-else-if="loadError" :title="t('profile.states.sectionError')" @retry="load" />
 
-    <div v-else-if="store.error" class="state-empty">{{ store.error }}</div>
+    <AppEmptyState v-else-if="all.length === 0" :icon="Trophy" :title="t('profile.tabContent.achievements.emptyTitle')" :description="t('profile.tabContent.achievements.emptyBody')" />
 
-    <div v-else-if="store.userAchievements.length === 0" class="state-empty">
-      ยังไม่มี Achievement ที่ปลดล็อก
-    </div>
-
-    <div v-else class="ach-list">
-      <div
-        v-for="(ua, i) in store.userAchievements"
-        :key="ua.achievement_id"
-        class="ach-card"
-        :style="{ '--i': i }"
-      >
-        <div class="ach-icon-box lit">
-          <component
-            :is="getAchievementIcon(ua.achievement.action_type)"
-            :size="15"
-            :stroke-width="1.8"
-          />
+    <template v-else>
+      <header class="ua__head">
+        <div class="ua__counter">
+          <p class="ua__count" role="status">{{ t("profile.tabContent.achievements.counter", { unlocked, total: all.length }) }}</p>
+          <span class="ua__bar" aria-hidden="true"><span class="ua__fill" :style="{ width: `${(unlocked / all.length) * 100}%` }" /></span>
         </div>
+        <RouterLink :to="{ name: 'user-achievements', params: { userId } }" class="ua__all">{{ t("profile.tabContent.achievements.viewAll") }}</RouterLink>
+      </header>
 
-        <div class="ach-info">
-          <p class="ach-name">{{ ua.achievement.name }}</p>
-          <p class="ach-desc">{{ ua.achievement.description }}</p>
-          <p v-if="ua.unlocked_at" class="ach-unlocked-at">
-            <CheckCircle :size="9" /> {{ formatDate(ua.unlocked_at) }}
-          </p>
-        </div>
-
-        <div class="ach-badge">
-          <span class="badge badge--done">
-            <CheckCircle :size="9" /> Unlocked
-          </span>
-        </div>
+      <div class="ua__chips" role="group" :aria-label="t('profile.tabContent.common.filter')">
+        <button v-for="f in FILTERS" :key="f" type="button" class="ua__chip" :class="{ 'is-active': filter === f }" :aria-pressed="filter === f" @click="filter = f">
+          {{ t(`profile.tabContent.achievements.filters.${f}`) }}
+        </button>
       </div>
-    </div>
+
+      <ul class="ua__grid" :aria-label="t('profile.tabs.achievements')">
+        <li v-for="(a, i) in shown" :key="a.achievement_id" :style="{ '--i': Math.min(i, 12) }">
+          <AchievementBadge :achievement="a" @open="selected = $event" />
+        </li>
+      </ul>
+    </template>
+
+    <AppModal :model-value="!!selected" size="sm" :title="selected?.achievement.name" @close="selected = null">
+      <div v-if="selected" class="ua__detail">
+        <span class="ua__detail-icon" :class="{ 'is-on': selected.is_unlocked }">
+          <component :is="getAchievementIcon(selected.achievement.action_type)" :size="34" :stroke-width="1.6" aria-hidden="true" />
+        </span>
+        <p class="ua__detail-desc">{{ selected.achievement.description }}</p>
+        <p v-if="selected.is_unlocked && selected.unlocked_at" class="ua__detail-state">{{ t("profile.tabContent.achievements.unlockedOn", { date: formatDate(selected.unlocked_at) }) }}</p>
+        <template v-else-if="!selected.is_unlocked">
+          <span class="ua__detail-bar" role="progressbar" :aria-valuenow="progressOf(selected)" aria-valuemin="0" aria-valuemax="100" :aria-label="t('profile.tabContent.achievements.progressLabel')">
+            <span :style="{ width: `${progressOf(selected)}%` }" />
+          </span>
+          <p class="ua__detail-state">{{ t("profile.tabContent.achievements.progress", { current: Math.min(selected.current_count, selected.achievement.target_count), target: selected.achievement.target_count }) }}</p>
+          <p class="ua__detail-hint">{{ t("profile.tabContent.achievements.lockedHint") }}</p>
+        </template>
+        <p v-if="selected.achievement.exp_reward" class="ua__detail-xp">{{ t("profile.tabContent.achievements.xp", { n: selected.achievement.exp_reward }) }}</p>
+      </div>
+      <template #footer>
+        <AppButton variant="outline" @click="selected = null">{{ t("profile.tabContent.achievements.close") }}</AppButton>
+      </template>
+    </AppModal>
   </div>
 </template>
 
 <script setup lang="ts">
-import SkeletonList from "@/components/ui/skeleton/SkeletonList.vue"
-  import { onMounted } from "vue"
-  import { CheckCircle } from "lucide-vue-next"
-  import { useAchievementStore } from "@/stores/achievement"
-  import { getAchievementIcon } from "@/utils/achievementIcons"
+import { computed, onMounted, ref } from "vue"
+import { useI18n } from "vue-i18n"
+import { RouterLink } from "vue-router"
+import { Trophy } from "lucide-vue-next"
+import { achievementApi } from "@/api/endpoints/achievement"
+import AppButton from "@/components/ui/AppButton.vue"
+import AppEmptyState from "@/components/ui/AppEmptyState.vue"
+import AppErrorState from "@/components/ui/AppErrorState.vue"
+import AppModal from "@/components/ui/AppModal.vue"
+import SkeletonGrid from "@/components/ui/skeleton/SkeletonGrid.vue"
+import type { UserAchievement } from "@/types/achievement"
+import { getAchievementIcon } from "@/utils/achievementIcons"
+import AchievementBadge from "./tabs/AchievementBadge.vue"
+import { countUnlocked, filterAchievements, progressOf, sortAchievements, type AchievementFilter } from "./tabs/achievements"
 
-  const props = defineProps<{ userId: number }>()
-  const store = useAchievementStore()
+const props = defineProps<{ userId: number }>()
 
-  function formatDate(iso: string) {
-    return new Date(iso).toLocaleDateString("th-TH", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    })
+const { t, locale } = useI18n()
+const FILTERS: AchievementFilter[] = ["all", "unlocked", "locked"]
+const PAGE_LIMIT = 100 // server maximum
+const MAX_PAGES = 5
+
+const all = ref<UserAchievement[]>([])
+const loading = ref(false)
+const loadError = ref(false)
+const filter = ref<AchievementFilter>("all")
+const selected = ref<UserAchievement | null>(null)
+
+const unlocked = computed(() => countUnlocked(all.value))
+const shown = computed(() => filterAchievements(all.value, filter.value))
+const formatDate = (iso: string) => new Intl.DateTimeFormat(locale.value, { dateStyle: "long" }).format(new Date(iso))
+
+async function load() {
+  try {
+    loading.value = true
+    loadError.value = false
+    const out: UserAchievement[] = []
+    for (let page = 1; page <= MAX_PAGES; page++) {
+      const res = await achievementApi.listByUser(props.userId, { page, limit: PAGE_LIMIT })
+      out.push(...res.data)
+      if (page >= (res.pagination?.total_pages ?? 1)) break
+    }
+    all.value = sortAchievements(out)
+  } catch (err) {
+    console.error("Fetch achievements failed:", err)
+    loadError.value = true
+  } finally {
+    loading.value = false
   }
+}
 
-  onMounted(() => {
-    store.fetchUnlockedOnly(props.userId)
-  })
+onMounted(load)
 </script>
 
 <style scoped>
-  .ach-root {
-    --c-card: var(--color-surface-2);
-    --c-border: var(--color-border);
-    --c-border-h: var(--color-border-strong);
-    --c-red: var(--color-brand);
-    --c-text: var(--color-text-primary);
-    --c-sub: var(--color-text-secondary);
-    --c-muted: var(--color-text-muted);
-    --font: var(--font-sans);
-    --ease: cubic-bezier(0.16, 1, 0.3, 1);
-    font-family: var(--font-sans);
-    color: var(--c-text);
-  }
-
-  .section-head {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 20px;
-  }
-  .eyebrow {
-    font-size: 0.6rem;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--c-muted);
-    white-space: nowrap;
-  }
-  .count-chip {
-    font-size: 0.65rem;
-    font-weight: 700;
-    background: var(--c-red);
-    color: #fff;
-    padding: 2px 7px;
-    border-radius: 4px;
-  }
-  .rule {
-    flex: 1;
-    height: 1px;
-    background: var(--c-border);
-  }
-  .view-all {
-    font-size: 0.68rem;
-    font-weight: 600;
-    color: var(--c-sub);
-    text-decoration: none;
-    white-space: nowrap;
-    transition: color 0.15s;
-  }
-  .view-all:hover {
-    color: #fff;
-  }
-
-  .state-empty {
-    padding: 32px 0;
-    text-align: center;
-    color: var(--c-sub);
-    font-size: 0.78rem;
-  }
-
-  .ach-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .ach-card {
-    display: grid;
-    grid-template-columns: 40px 1fr auto;
-    align-items: center;
-    gap: 14px;
-    padding: 14px 16px;
-    background: #101010;
-    border: 1px solid var(--c-border);
-    border-radius: 10px;
-    position: relative;
-    overflow: hidden;
-    transition: all 0.22s var(--ease);
-    animation: cardIn 0.4s var(--ease) calc(var(--i) * 50ms) both;
-  }
-  @keyframes cardIn {
-    from {
-      opacity: 0;
-      transform: translateY(8px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  .ach-card:hover {
-    background: var(--c-card);
-    border-color: var(--c-border-h);
-  }
-  .ach-card::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 20%;
-    bottom: 20%;
-    width: 2px;
-    background: #fff;
-    border-radius: 0 2px 2px 0;
-  }
-
-  .ach-icon-box {
-    width: 40px;
-    height: 40px;
-    background: var(--c-card);
-    border: 1px solid var(--c-border);
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--c-sub);
-    transition: all 0.2s;
-  }
-  .ach-icon-box.lit {
-    color: #fff;
-    background: rgba(255, 255, 255, 0.04);
-  }
-
-  .ach-info {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
-  }
-  .ach-name {
-    font-size: 0.84rem;
-    font-weight: 500;
-    color: #fff;
-    margin: 0;
-  }
-  .ach-desc {
-    font-size: 0.73rem;
-    color: var(--c-sub);
-    line-height: 1.45;
-    margin: 0;
-  }
-  .ach-unlocked-at {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 0.65rem;
-    color: var(--c-sub);
-    margin: 3px 0 0;
-    opacity: 0.75;
-  }
-
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 0.62rem;
-    font-weight: 600;
-    padding: 4px 9px;
-    border-radius: 5px;
-    white-space: nowrap;
-  }
-  .badge--done {
-    background: rgba(255, 255, 255, 0.05);
-    color: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  @media (max-width: 480px) {
-    .ach-card {
-      grid-template-columns: 40px 1fr;
-      row-gap: 8px;
-    }
-    .ach-badge {
-      grid-column: 2;
-      justify-self: start;
-    }
-  }
+.ua__head { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.ua__counter { display: flex; flex: 1; flex-direction: column; gap: 0.5rem; max-width: 24rem; }
+.ua__count { margin: 0; font-size: var(--text-small); font-weight: 700; color: var(--color-text-primary); }
+.ua__bar { display: block; height: 0.375rem; overflow: hidden; background: var(--color-surface-3); border-radius: 9999px; }
+.ua__fill { display: block; height: 100%; background: var(--color-brand); border-radius: inherit; transition: width var(--motion-base) var(--ease-out-soft); }
+.ua__all { flex: none; font-size: var(--text-caption); font-weight: 600; color: var(--color-text-secondary); text-decoration: underline; text-underline-offset: 3px; }
+.ua__chips { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; overflow-x: auto; scrollbar-width: none; }
+.ua__chip { flex: none; min-height: 2rem; padding: 0 0.875rem; font: inherit; font-size: var(--text-caption); color: var(--color-text-secondary); white-space: nowrap; background: none; border: 1px solid var(--color-border-strong); border-radius: 9999px; cursor: pointer; }
+.ua__chip.is-active { color: var(--color-on-brand); background: var(--color-brand); border-color: var(--color-brand); }
+.ua__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; margin: 0; padding: 0; list-style: none; }
+.ua__grid > li { display: flex; flex-direction: column; animation: ua-in var(--motion-base) var(--ease-out-soft) calc(var(--i) * 30ms) both; }
+.ua__grid > li > * { flex: 1; }
+@keyframes ua-in { from { opacity: 0; transform: translateY(8px); } }
+.ua__detail { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; text-align: center; }
+.ua__detail-icon { display: grid; place-items: center; width: 5rem; height: 5rem; color: var(--color-text-muted); background: var(--color-surface-3); border-radius: 50%; filter: grayscale(1); }
+.ua__detail-icon.is-on { color: var(--color-accent); background: var(--color-brand); filter: none; box-shadow: 0 0 28px color-mix(in srgb, var(--color-brand) 50%, transparent); }
+.ua__detail-desc { margin: 0; font-size: var(--text-small); line-height: 1.6; color: var(--color-text-secondary); }
+.ua__detail-state { margin: 0; font-size: var(--text-small); font-weight: 600; color: var(--color-text-primary); }
+.ua__detail-hint { margin: 0; font-size: var(--text-caption); color: var(--color-text-muted); }
+.ua__detail-xp { margin: 0; padding: 0.125rem 0.75rem; font-size: var(--text-caption); font-weight: 700; color: var(--color-accent); border: 1px solid var(--color-border-strong); border-radius: 9999px; }
+.ua__detail-bar { display: block; width: 100%; height: 0.4rem; overflow: hidden; background: var(--color-surface-3); border-radius: 9999px; }
+.ua__detail-bar > span { display: block; height: 100%; background: var(--color-text-secondary); border-radius: inherit; }
+@media (min-width: 480px) { .ua__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 768px) { .ua__grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (prefers-reduced-motion: reduce) { .ua__grid > li { animation: none; } .ua__fill { transition: none; } }
 </style>
