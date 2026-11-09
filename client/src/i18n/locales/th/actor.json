@@ -1,27 +1,88 @@
 {
   "title": "ข้อมูลนักแสดง",
-  "knownFor": "สาขาความถนัด",
-  "born": "เกิดเมื่อ",
-  "died": "เสียชีวิตเมื่อ",
-  "age": "ปี",
-  "agedAtDeath": "เสียชีวิตขณะอายุ",
-  "birthplace": "สถานที่เกิด",
-  "biography": "ประวัติส่วนตัว",
-  "noBiography": "ไม่มีข้อมูลประวัติภาษาไทยสำหรับนักแสดงท่านนี้",
-  "showMore": "อ่านเพิ่มเติม",
-  "showLess": "ย่อประวัติ",
-  "workography": "ผลงานการแสดง",
-  "moviesTab": "ภาพยนตร์",
-  "tvTab": "ซีรีส์",
-  "asCharacter": "รับบทเป็น {character}",
-  "unknownCharacter": "ไม่ระบุบทบาท",
-  "noMovieCredits": "ยังไม่มีประวัติผลงานภาพยนตร์",
-  "noTVCredits": "ยังไม่มีประวัติผลงานซีรีส์",
-  "notFoundTitle": "ไม่พบข้อมูลนักแสดง",
-  "notFoundDetail": "ไม่พบข้อมูลนักแสดงที่คุณต้องการค้นหา หรือ ID อาจไม่ถูกต้อง",
-  "errorTitle": "เกิดข้อผิดพลาดในการโหลดข้อมูล",
-  "errorDetail": "ไม่สามารถเชื่อมต่อระบบเพื่อดึงข้อมูลนักแสดงได้",
-  "retry": "ลองใหม่อีกครั้ง",
+  "back": "ย้อนกลับ",
   "backToHome": "กลับสู่หน้าหลัก",
-  "back": "ย้อนกลับ"
+  "retry": "ลองใหม่อีกครั้ง",
+  "notFoundTitle": "ไม่พบข้อมูลนักแสดง",
+  "notFoundDetail": "ไม่พบข้อมูลบุคคลนี้ หรือลิงก์ไม่ถูกต้อง",
+  "errorTitle": "โหลดข้อมูลนักแสดงไม่สำเร็จ",
+  "errorDetail": "ตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง",
+  "photo": "รูปของ {name}",
+  "knownFor": "ผลงานที่รู้จักกันดี",
+  "knownForSubtitle": "เรื่องที่ได้รับความนิยมสูงสุด",
+  "biography": "ประวัติ",
+  "noBiography": "ยังไม่มีข้อมูลประวัติของบุคคลนี้",
+  "showMore": "อ่านเพิ่มเติม",
+  "showLess": "ย่อ",
+  "bornOn": "เกิด {date}",
+  "diedOn": "เสียชีวิต {date}",
+  "age": "อายุ {n} ปี",
+  "agedAtDeath": "อายุ {n} ปี",
+  "birthplace": "สถานที่เกิด",
+  "imdb": "โปรไฟล์ IMDb",
+  "departments": {
+    "Acting": "การแสดง",
+    "Directing": "การกำกับ",
+    "Writing": "การเขียนบท",
+    "Production": "การผลิต",
+    "Sound": "เสียง",
+    "Camera": "กล้อง",
+    "Editing": "ตัดต่อ",
+    "Art": "ศิลปกรรม",
+    "Crew": "ทีมงาน",
+    "Costume & Make-Up": "เครื่องแต่งกายและแต่งหน้า",
+    "Visual Effects": "วิชวลเอฟเฟกต์",
+    "Lighting": "แสง",
+    "Creator": "ผู้สร้าง"
+  },
+  "stats": {
+    "label": "ภาพรวมผลงาน",
+    "credits": "จำนวนผลงาน",
+    "movies": "ภาพยนตร์",
+    "tv": "ซีรีส์",
+    "yearsActive": "ช่วงปีที่ทำงาน",
+    "range": "{from} – {to}",
+    "single": "{year}",
+    "none": "–"
+  },
+  "filmography": {
+    "title": "ผลงาน",
+    "roleLabel": "ประเภทผลงาน",
+    "roles": {
+      "acting": "การแสดง",
+      "crew": "ทีมงาน"
+    },
+    "sortLabel": "เรียงผลงาน",
+    "sort": {
+      "popular": "ยอดนิยม",
+      "newest": "ใหม่สุด",
+      "oldest": "เก่าสุด"
+    },
+    "filterLabel": "กรองตามประเภท",
+    "filter": {
+      "all": "ทั้งหมด",
+      "movie": "ภาพยนตร์",
+      "tv": "ซีรีส์"
+    },
+    "viewLabel": "รูปแบบการแสดงผล",
+    "view": {
+      "grid": "โปสเตอร์",
+      "timeline": "ไทม์ไลน์"
+    },
+    "count": "{n} เรื่อง",
+    "showMore": "แสดงเพิ่มเติม",
+    "unknownYear": "ไม่ทราบปี",
+    "empty": {
+      "acting": "ยังไม่มีผลงานการแสดง",
+      "crew": "ยังไม่มีผลงานเบื้องหลัง",
+      "filtered": "ไม่มีผลงานที่ตรงกับตัวกรองนี้"
+    }
+  },
+  "credit": {
+    "asCharacter": "รับบทเป็น {character}",
+    "uncredited": "ไม่ระบุบทบาท",
+    "caption": "{year} · {character}",
+    "movie": "ภาพยนตร์",
+    "tv": "ซีรีส์"
+  }
 }

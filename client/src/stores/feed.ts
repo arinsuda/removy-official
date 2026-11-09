@@ -2,12 +2,15 @@ import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { feedApi } from "@/api/endpoints/feed";
 import { useSocket } from "@/composables/useSocket";
+import { logApiError } from "@/utils/logApiError";
 import type {
   FeedItemResponse,
   FeedPaginationMeta,
   ActivitySettingsResponse,
   UpdateActivitySettingsRequest,
 } from "@/types/feed";
+
+type SocketHandler = (...args: unknown[]) => void;
 
 const DEFAULT_PAGINATION: FeedPaginationMeta = {
   page: 1,
@@ -49,14 +52,14 @@ export const useFeedStore = defineStore("feed", () => {
       const res = await feedApi.getNewCount(topId, selectedCategory.value || undefined);
       newItemsCount.value = res.data.count;
     } catch (err) {
-      console.error("checkNewItems failed:", err);
+      logApiError("checkNewItems failed:", err);
     }
   }
 
   function handleActivityUpdated(payload: { id: number; visibility: string }) {
     const item = items.value.find((i) => i.id === payload.id);
     if (item) {
-      item.visibility = payload.visibility as any;
+      item.visibility = payload.visibility as FeedItemResponse["visibility"];
     }
   }
 
@@ -86,9 +89,9 @@ export const useFeedStore = defineStore("feed", () => {
   function unbindSocket() {
     if (!socketBound) return;
     const { off } = useSocket();
-    off("feed:refresh_required", checkNewItems as any);
-    off("feed:activity_updated", handleActivityUpdated as any);
-    off("feed:activity_removed", handleActivityRemoved as any);
+    off("feed:refresh_required", checkNewItems as SocketHandler);
+    off("feed:activity_updated", handleActivityUpdated as SocketHandler);
+    off("feed:activity_removed", handleActivityRemoved as SocketHandler);
     socketBound = false;
   }
 
@@ -123,8 +126,8 @@ export const useFeedStore = defineStore("feed", () => {
         ...res.data.pagination,
       };
     } catch (err) {
-      console.error("fetchFeed failed:", err);
-      error.value = "โหลดฟีดไม่สำเร็จ";
+      logApiError("fetchFeed failed:", err);
+      error.value = "load_failed";
     } finally {
       loading.value = false;
       loadingMore.value = false;
@@ -161,7 +164,7 @@ export const useFeedStore = defineStore("feed", () => {
       await feedApi.updateVisibility(id, visibility);
     } catch (err) {
       item.visibility = prevVisibility;
-      console.error("updateVisibility failed:", err);
+      logApiError("updateVisibility failed:", err);
       throw err;
     }
   }
@@ -179,7 +182,7 @@ export const useFeedStore = defineStore("feed", () => {
     } catch (err) {
       items.value.splice(idx, 0, removed);
       pagination.value.total++;
-      console.error("deleteActivity failed:", err);
+      logApiError("deleteActivity failed:", err);
       throw err;
     }
   }
@@ -192,7 +195,7 @@ export const useFeedStore = defineStore("feed", () => {
       const res = await feedApi.getSettings();
       settings.value = res.data;
     } catch (err) {
-      console.error("fetchSettings failed:", err);
+      logApiError("fetchSettings failed:", err);
       settingsError.value = "load_failed";
     } finally {
       settingsLoading.value = false;
@@ -214,7 +217,7 @@ export const useFeedStore = defineStore("feed", () => {
       return true;
     } catch (err) {
       settings.value = prev;
-      console.error("updateSettings failed:", err);
+      logApiError("updateSettings failed:", err);
       return false;
     }
   }

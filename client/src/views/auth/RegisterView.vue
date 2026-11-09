@@ -1,9 +1,9 @@
 <template>
-  <AuthShell ref="shellRef" title="REGISTER">
+  <AuthShell ref="shellRef" :title="t('auth.register.title')" :subtitle="t('auth.register.subtitle')">
     <form class="auth-form" novalidate @submit.prevent="handleRegister">
       <AuthField
         v-model="form.username"
-        label="Username"
+        :label="t('auth.register.usernameLabel')"
         :icon="IconUser"
         autocomplete="username"
         :disabled="isLoading"
@@ -14,7 +14,7 @@
       />
       <AuthField
         v-model="form.email"
-        label="Email address"
+        :label="t('auth.register.emailLabel')"
         type="email"
         :icon="IconMail"
         autocomplete="email"
@@ -26,7 +26,8 @@
       />
       <AuthField
         v-model="form.password"
-        label="Password"
+        :label="t('auth.register.passwordLabel')"
+        :hint="t('auth.register.passwordHint')"
         type="password"
         :icon="IconLock"
         autocomplete="new-password"
@@ -40,7 +41,7 @@
       </AuthField>
       <AuthField
         v-model="form.confirm_password"
-        label="Confirm password"
+        :label="t('auth.register.confirmPasswordLabel')"
         type="password"
         :icon="IconLock"
         autocomplete="new-password"
@@ -52,11 +53,12 @@
       />
       <AuthAlert :message="serverError" @dismiss="serverError = ''" />
       <AppButton type="submit" size="lg" block class="form-item" :loading="isLoading">
-        REGISTER
+        {{ t("auth.register.submit") }}
       </AppButton>
       <GoogleSignInButton :disabled="isLoading" @click="handleGoogleLogin" />
       <p class="auth-footer form-item">
-        <RouterLink to="/login" class="auth-link">I already have an account.</RouterLink>
+        <span class="auth-footer__text">{{ t("auth.register.hasAccount") }}</span>
+        <RouterLink to="/login" class="auth-link auth-link--strong">{{ t("auth.register.login") }}</RouterLink>
       </p>
     </form>
   </AuthShell>
@@ -86,7 +88,7 @@
     try {
       const { data } = await authApi.getGoogleConfig()
       if (!data.enabled) {
-        serverError.value = "ระบบยังไม่ได้เปิดใช้งาน Google OAuth ในไฟล์ .env ของเซิร์ฟเวอร์ (GOOGLE_OAUTH_ENABLED=true)"
+        serverError.value = t("auth.login.errors.googleDisabled")
         return
       }
       window.location.assign(authApi.getGoogleLoginUrl("/"))
@@ -128,13 +130,13 @@
       case "username": {
         const v = form.value.username.trim()
         if (!v) {
-          errors.value.username = "Username is required"
+          errors.value.username = t("auth.register.errors.usernameRequired")
         } else if (v.length < 3) {
-          errors.value.username = "At least 3 characters"
+          errors.value.username = t("auth.register.errors.usernameMin")
         } else if (v.length > 20) {
-          errors.value.username = "Maximum 20 characters"
+          errors.value.username = t("auth.register.errors.usernameMax")
         } else if (!USERNAME_RE.test(v)) {
-          errors.value.username = "Letters, numbers, _ and - only"
+          errors.value.username = t("auth.register.errors.usernameChars")
         } else {
           errors.value.username = ""
         }
@@ -143,9 +145,9 @@
       case "email": {
         const v = form.value.email.trim()
         if (!v) {
-          errors.value.email = "Email is required"
+          errors.value.email = t("auth.register.errors.emailRequired")
         } else if (!EMAIL_RE.test(v)) {
-          errors.value.email = "Enter a valid email address"
+          errors.value.email = t("auth.register.errors.emailInvalid")
         } else {
           errors.value.email = ""
         }
@@ -154,13 +156,13 @@
       case "password": {
         const v = form.value.password
         if (!v) {
-          errors.value.password = "Password is required"
+          errors.value.password = t("auth.register.errors.passwordRequired")
         } else if (v.length < 8) {
-          errors.value.password = "At least 8 characters"
+          errors.value.password = t("auth.register.errors.passwordMin")
         } else if (!/[A-Z]/.test(v)) {
-          errors.value.password = "Include at least one uppercase letter"
+          errors.value.password = t("auth.register.errors.passwordUpper")
         } else if (!/[0-9]/.test(v)) {
-          errors.value.password = "Include at least one number"
+          errors.value.password = t("auth.register.errors.passwordNumber")
         } else {
           errors.value.password = ""
         }
@@ -171,9 +173,9 @@
       case "confirm_password": {
         const v = form.value.confirm_password
         if (!v) {
-          errors.value.confirm_password = "Please confirm your password"
+          errors.value.confirm_password = t("auth.register.errors.confirmRequired")
         } else if (v !== form.value.password) {
-          errors.value.confirm_password = "Passwords do not match"
+          errors.value.confirm_password = t("auth.register.errors.confirmMismatch")
         } else {
           errors.value.confirm_password = ""
         }
@@ -232,12 +234,12 @@
         serverError.value = t("errors.rateLimited")
       } else if (status === 409) {
         serverError.value =
-          e?.response?.data?.error ?? "Email or username already in use"
+          e?.response?.data?.error ?? t("auth.register.errors.conflict")
       } else if (status >= 500) {
-        serverError.value = "Server error. Please try again later."
+        serverError.value = t("auth.register.errors.server")
       } else {
         serverError.value =
-          e?.response?.data?.error ?? "Registration failed. Please try again."
+          e?.response?.data?.error ?? t("auth.register.errors.failed")
       }
       shellRef.value?.shake()
     } finally {
@@ -253,11 +255,16 @@
     gap: 1rem;
   }
   .auth-footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.375rem;
     margin: 0;
-    text-align: center;
+    font-size: var(--text-small);
+    color: var(--color-text-muted);
   }
   .auth-link {
-    font-size: 0.8125rem;
+    font-size: var(--text-small);
     color: var(--color-text-secondary);
     text-decoration: underline;
     text-decoration-color: transparent;
@@ -266,10 +273,20 @@
       color var(--motion-fast) var(--ease-out-soft),
       text-decoration-color var(--motion-fast) var(--ease-out-soft);
   }
+  .auth-link--strong {
+    font-weight: 600;
+    color: var(--color-text-primary);
+    text-decoration-color: currentcolor;
+  }
   @media (hover: hover) {
     .auth-link:hover {
-      color: #fff;
+      color: var(--color-text-primary);
       text-decoration-color: currentcolor;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .auth-link {
+      transition: none;
     }
   }
 </style>

@@ -1,8 +1,72 @@
 {
   "title": "การแจ้งเตือน",
+  "subtitle": "การติดตาม รีวิว หนังเข้าฉาย และความสำเร็จ รวมไว้ที่เดียว",
   "panelTitle": "การแจ้งเตือนทั้งหมด",
+  "latest": "การแจ้งเตือนล่าสุด",
   "markAllAsRead": "อ่านทั้งหมดแล้ว",
+  "viewAll": "ดูการแจ้งเตือนทั้งหมด",
   "empty": "ยังไม่มีการแจ้งเตือนในขณะนี้",
+  "toast": "{title}: {message}",
+  "unread": "ยังไม่ได้อ่าน",
+  "new": "ใหม่",
+  "remove": "ลบการแจ้งเตือนนี้",
+  "error": "โหลดการแจ้งเตือนไม่สำเร็จ",
+  "loadMore": "โหลดเพิ่มเติม",
+  "loadingMore": "กำลังโหลดเพิ่มเติม...",
+  "filters": {
+    "label": "กรองการแจ้งเตือน",
+    "unreadOnly": "เฉพาะที่ยังไม่อ่าน"
+  },
+  "categories": {
+    "all": "ทั้งหมด",
+    "social": "ผู้ติดตามและโซเชียล",
+    "media": "หนังและซีรีส์",
+    "achievement": "ความสำเร็จ",
+    "system": "ระบบ"
+  },
+  "groups": {
+    "today": "วันนี้",
+    "yesterday": "เมื่อวาน",
+    "earlier": "ก่อนหน้านี้"
+  },
+  "emptyStates": {
+    "all": "ไม่มีอะไรค้างอยู่เลย",
+    "unread": "ไม่มีการแจ้งเตือนที่ยังไม่อ่าน",
+    "category": "ยังไม่มีการแจ้งเตือนในหมวดนี้",
+    "description": "การติดตาม ถูกใจ และหนังเข้าฉายใหม่ ๆ จะแสดงที่นี่"
+  },
+  "messages": {
+    "followed_you": "{name} เริ่มติดตามคุณ",
+    "follow_requested": "{name} ขอติดตามคุณ",
+    "follow_accepted": "{name} ยอมรับคำขอติดตามของคุณ"
+  },
+  "actions": {
+    "accept": "ยอมรับ",
+    "decline": "ปฏิเสธ",
+    "accepted": "ยอมรับคำขอแล้ว",
+    "declined": "ปฏิเสธคำขอแล้ว",
+    "failed": "อัปเดตคำขอไม่สำเร็จ อาจมีการจัดการไปแล้ว"
+  },
+  "titles": {
+    "followed_you": "ผู้ติดตามใหม่",
+    "following_reviewed": "กิจกรรมจากคนที่คุณติดตาม",
+    "following_liked_review": "กิจกรรมจากคนที่คุณติดตาม",
+    "following_added_watchlist": "กิจกรรมจากคนที่คุณติดตาม",
+    "following_added_watched": "กิจกรรมจากคนที่คุณติดตาม",
+    "following_marked_helpful": "กิจกรรมจากคนที่คุณติดตาม",
+    "following_commented": "กิจกรรมจากคนที่คุณติดตาม",
+    "following_liked_media": "กิจกรรมจากคนที่คุณติดตาม",
+    "review_liked": "มีคนถูกใจรีวิวของคุณ",
+    "review_commented": "มีคอมเมนต์ใหม่ในรีวิวของคุณ",
+    "review_marked_helpful": "รีวิวของคุณถูกโหวตว่ามีประโยชน์",
+    "achievement_unlocked": "ปลดล็อกความสำเร็จ",
+    "movie_now_playing": "หนังในวอทช์ลิสต์เข้าฉายแล้ว",
+    "email_verified": "ยืนยันอีเมลสำเร็จ",
+    "password_changed": "เปลี่ยนรหัสผ่านสำเร็จ",
+    "welcome": "ยินดีต้อนรับ",
+    "follow_requested": "คำขอติดตามใหม่",
+    "follow_accepted": "ยอมรับคำขอติดตามแล้ว"
+  },
   "types": {
     "like": "{username} ถูกใจรีวิวของคุณในเรื่อง {mediaTitle}",
     "comment": "{username} แสดงความคิดเห็นในรีวิวของคุณในเรื่อง {mediaTitle}",

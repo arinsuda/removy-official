@@ -62,7 +62,8 @@
       "emailFailed": "We couldn't send the email. Please try again.",
       "disabled": "Account linking is turned off right now.",
       "network": "Network error. Check your connection and try again.",
-      "noMethods": "We can't verify this account automatically because its email address can't receive mail. Please contact support."
+      "noMethods": "We can't verify this account automatically because its email address can't receive mail. Please contact support.",
+      "failedTitle": "Link problem"
     }
   },
   "logIn": "Log In",

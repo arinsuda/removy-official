@@ -1,20 +1,94 @@
 {
-  "title": "ฟีดกิจกรรมคนรักหนัง",
-  "subtitle": "ดูรีวิวและการเคลื่อนไหวล่าสุดจากเพื่อนและคนในชุมชน",
+  "title": "ฟีดกิจกรรม",
+  "subtitle": "ความเคลื่อนไหวล่าสุดจากคนที่คุณติดตาม",
+  "refresh": "รีเฟรชฟีด",
   "settings": {
-    "title": "ตั้งค่าหน้าฟีด",
-    "allActivity": "แสดงกิจกรรมทั้งหมดในระบบ",
-    "followingOnly": "แสดงเฉพาะคนที่คุณกำลังติดตาม",
-    "save": "บันทึกการตั้งค่า",
-    "success": "บันทึกการตั้งค่าหน้าฟีดแล้ว"
+    "open": "ตั้งค่าฟีด",
+    "manage": "ไปที่ตั้งค่ากิจกรรม"
   },
-  "empty": "ยังไม่มีกิจกรรมในฟีดตอนนี้ ลองติดตามเพื่อนๆ หรือผู้ใช้คนอื่นเพื่ออัปเดตฟีดของคุณ!",
-  "activity": {
-    "review": "เขียนรีวิวเรื่อง {title}",
-    "like": "ถูกใจเรื่อง {title}",
-    "watchlist": "เพิ่มเรื่อง {title} ลงใน Watchlist",
-    "watched": "บันทึกเรื่อง {title} เป็นเรื่องที่ดูแล้ว",
-    "watchLogCreated": "บันทึกการรับชมเรื่อง {title}",
-    "rewatched": "รับชมเรื่อง {title} อีกครั้ง"
+  "filters": {
+    "label": "กรองฟีด",
+    "all": "ทั้งหมด",
+    "reviews": "รีวิว",
+    "lists": "ลิสต์",
+    "social": "สังคม"
+  },
+  "newItems": "มี {n} กิจกรรมใหม่",
+  "error": "โหลดฟีดไม่สำเร็จ",
+  "loadingMore": "กำลังโหลดเพิ่มเติม...",
+  "end": "ดูครบทุกกิจกรรมแล้ว",
+  "empty": {
+    "title": "ฟีดของคุณยังเงียบอยู่",
+    "description": "ติดตามเพื่อนและคนรักหนังเพื่อดูว่าพวกเขาดู ให้คะแนน และรีวิวอะไรบ้าง",
+    "findPeople": "ค้นหาคนที่น่าติดตาม",
+    "browse": "สำรวจภาพยนตร์",
+    "filtered": "ยังไม่มีกิจกรรมในหมวดนี้"
+  },
+  "untitled": "ไม่มีชื่อ",
+  "mediaType": {
+    "movie": "ภาพยนตร์",
+    "tv": "ซีรีส์"
+  },
+  "readMore": "อ่านต่อ",
+  "readLess": "ย่อ",
+  "like": "ถูกใจรีวิวนี้",
+  "unlike": "เลิกถูกใจ",
+  "likeFailed": "อัปเดตการถูกใจไม่สำเร็จ",
+  "manage": {
+    "open": "จัดการกิจกรรมนี้",
+    "visibility": "ใครเห็นกิจกรรมนี้ได้",
+    "default": "ค่าเริ่มต้น (ตามประเภทบัญชี)",
+    "current": "ความเป็นส่วนตัว: {value}",
+    "delete": "ลบออกจากฟีด",
+    "visibilityFailed": "เปลี่ยนความเป็นส่วนตัวไม่สำเร็จ",
+    "deleteFailed": "ลบกิจกรรมไม่สำเร็จ",
+    "deleteTitle": "ลบกิจกรรมนี้?",
+    "deleteDescription": "กิจกรรมนี้จะถูกลบออกจากฟีดอย่างถาวร"
+  },
+  "types": {
+    "review_created": {
+      "label": "รีวิว",
+      "sentence": "{actor} รีวิว {title}"
+    },
+    "review_commented": {
+      "label": "ความคิดเห็น",
+      "sentence": "{actor} แสดงความคิดเห็นในรีวิวของ {title}"
+    },
+    "review_liked": {
+      "label": "ถูกใจรีวิว",
+      "sentence": "{actor} ถูกใจรีวิวของ {title}"
+    },
+    "media_liked": {
+      "label": "ถูกใจ",
+      "sentence": "{actor} ถูกใจ {title}"
+    },
+    "watchlist_added": {
+      "label": "วอทช์ลิสต์",
+      "sentence": "{actor} เพิ่ม {title} ลงวอทช์ลิสต์"
+    },
+    "watched_added": {
+      "label": "ดูแล้ว",
+      "sentence": "{actor} ดู {title} แล้ว"
+    },
+    "achievement_unlocked": {
+      "label": "ความสำเร็จ",
+      "sentence": "{actor} ปลดล็อกความสำเร็จ {achievement}"
+    },
+    "user_followed": {
+      "label": "ติดตาม",
+      "sentence": "{actor} เริ่มติดตาม {target}"
+    },
+    "watch_log_created": {
+      "label": "บันทึกการดู",
+      "sentence": "{actor} บันทึกการดู {title}"
+    },
+    "rewatched": {
+      "label": "ดูซ้ำ",
+      "sentence": "{actor} ดู {title} ซ้ำ"
+    },
+    "unknown": {
+      "label": "กิจกรรม",
+      "sentence": "{actor} มีกิจกรรมใหม่"
+    }
   }
 }

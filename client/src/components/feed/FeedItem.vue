@@ -1,328 +1,379 @@
 <template>
-  <article
-    class="relative flex gap-4 rounded-2xl border border-white/5 bg-neutral-900/30 p-5 mb-5 transition-all duration-300 hover:border-white/10 hover:bg-neutral-900/50 shadow-md group"
-  >
-    <!-- Actor Avatar -->
-    <RouterLink :to="actorLink" class="shrink-0">
-      <AppAvatar
-        :src="item.actor.avatar_url"
-        :name="item.actor.display_name || item.actor.username"
-        decorative
-        class="transition-all duration-300 group-hover:ring-white/20"
-      />
+  <article class="feed-item" :data-type="item.type">
+    <RouterLink :to="actorTo" class="feed-item__avatar" tabindex="-1" aria-hidden="true">
+      <AppAvatar :src="item.actor.avatar_url" :name="actorName" decorative />
     </RouterLink>
 
-    <div class="min-w-0 flex-1">
-      <div class="flex items-start justify-between gap-2">
-        <div>
-          <!-- Actor Names & Date -->
-          <div class="flex items-center flex-wrap gap-x-2 gap-y-1">
-            <RouterLink
-              :to="actorLink"
-              class="font-semibold text-white hover:text-red-400 transition-colors"
-            >
-              {{ item.actor.display_name || item.actor.username }}
-            </RouterLink>
-            <span class="text-xs text-white/40">@{{ item.actor.username }}</span>
-          </div>
-
-          <!-- Activity Badge & Time -->
-          <div class="mt-1 flex items-center gap-2">
-            <span
-              class="inline-flex items-center justify-center text-[10px] font-semibold border px-2.5 py-0.5 rounded-full"
-              :class="badgeClasses"
-            >
-              <component :is="activityMeta.icon" class="mr-1 h-3 w-3 shrink-0" />
-              {{ activityMeta.label }}
+    <div class="feed-item__main">
+      <header class="feed-item__head">
+        <div class="feed-item__headline">
+          <i18n-t :keypath="`feed.types.${knownType}.sentence`" tag="p" class="feed-item__sentence">
+            <template #actor>
+              <RouterLink :to="actorTo" class="feed-item__link feed-item__link--actor">{{ actorName }}</RouterLink>
+            </template>
+            <template #title>
+              <RouterLink v-if="item.media" :to="mediaTo" class="feed-item__link">{{ mediaTitle }}</RouterLink>
+              <span v-else>{{ mediaTitle }}</span>
+            </template>
+            <template #target>
+              <RouterLink v-if="item.target_user" :to="targetTo" class="feed-item__link">{{ targetName }}</RouterLink>
+            </template>
+            <template #achievement>
+              <strong>{{ item.message }}</strong>
+            </template>
+          </i18n-t>
+          <p class="feed-item__meta">
+            <span class="feed-item__badge" :class="`feed-item__badge--${meta.tone}`">
+              <component :is="meta.icon" :size="12" aria-hidden="true" />
+              {{ t(meta.labelKey) }}
             </span>
-            <span class="text-xs text-white/30" aria-hidden="true">·</span>
-            <time :datetime="item.created_at" class="text-xs text-white/40">{{ relativeTime }}</time>
-          </div>
+            <time :datetime="item.created_at" :title="absoluteTime">{{ relativeTime }}</time>
+          </p>
         </div>
 
-        <!-- Privacy & Delete Management Dropdown -->
-        <div v-if="canManage" class="relative" ref="menuRef">
-          <button
-            type="button"
-            class="flex h-7 w-7 items-center justify-center rounded-lg text-white/30 hover:bg-white/10 hover:text-white/70 transition-all cursor-pointer"
-            :title="`ความเป็นส่วนตัว: ${visibilityLabel}`"
-            @click="isMenuOpen = !isMenuOpen"
-          >
-            <component :is="activeVisibilityIcon" class="h-4 w-4" />
-          </button>
+        <FeedItemMenu
+          v-if="canManage"
+          :visibility="item.visibility"
+          @update-visibility="(v) => emit('update-visibility', item.id, v)"
+          @delete-activity="emit('delete-activity', item.id)"
+        />
+      </header>
 
-          <!-- Dropdown Menu -->
-          <Transition name="slide-up">
-            <div
-              v-if="isMenuOpen"
-              class="absolute right-0 top-full z-30 mt-1.5 w-52 rounded-xl border border-white/10 bg-neutral-950 p-1.5 shadow-2xl backdrop-blur-xl"
-            >
-              <div
-                class="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white/40"
-              >
-                ตั้งค่าความส่วนตัว
-              </div>
-              <button
-                v-for="opt in visibilityOptions"
-                :key="opt.value"
-                type="button"
-                class="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs transition-colors hover:bg-white/5 cursor-pointer"
-                :class="
-                  item.visibility === opt.value
-                    ? 'text-emerald-400 font-semibold bg-emerald-500/5'
-                    : 'text-white/70'
-                "
-                @click="changeVisibility(opt.value)"
-              >
-                <component :is="opt.icon" class="h-3.5 w-3.5 shrink-0" />
-                <span>{{ opt.label }}</span>
-              </button>
-
-              <div class="border-t border-white/5 my-1.5" />
-
-              <button
-                type="button"
-                class="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs text-rose-400 transition-colors hover:bg-rose-500/10 cursor-pointer"
-                @click="confirmDelete"
-              >
-                <Trash2 class="h-3.5 w-3.5 shrink-0" />
-                <span>ลบกิจกรรมนี้</span>
-              </button>
-            </div>
-          </Transition>
-        </div>
-      </div>
-
-      <!-- Action status text (For feed clarity) -->
-      <p class="mt-2.5 text-sm text-white/80 leading-relaxed">
-        {{ actionDescription }}
-      </p>
-
-      <!-- Review content blockquote -->
-      <div v-if="item.type === 'review_created' && item.message" class="mt-3 relative">
-        <div
-          class="border-l-2 border-emerald-500/40 bg-emerald-500/[0.02] px-4 py-3 rounded-r-xl text-sm leading-relaxed text-white/90 italic"
-          :class="{ 'line-clamp-3 overflow-hidden': isTruncated && !isExpanded }"
-        >
-          "{{ item.message }}"
-        </div>
-        <button
-          v-if="isTruncated"
-          type="button"
-          class="mt-2 text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer"
-          @click="isExpanded = !isExpanded"
-        >
-          {{ isExpanded ? "แสดงน้อยลง" : "อ่านรีวิวเพิ่มเติม..." }}
+      <div v-if="item.type === 'review_created' && item.message" class="feed-item__review">
+        <p ref="excerpt" class="feed-item__excerpt" :class="{ 'is-clamped': !expanded }">{{ item.message }}</p>
+        <button v-if="overflowing || expanded" type="button" class="feed-item__toggle" :aria-expanded="expanded" @click="expanded = !expanded">
+          {{ expanded ? t("feed.readLess") : t("feed.readMore") }}
         </button>
       </div>
 
-      <!-- Media Reference Card -->
-      <RouterLink
-        v-if="item.media"
-        :to="mediaLink"
-        class="mt-4 flex items-center gap-4 rounded-xl border border-white/5 bg-white/[0.01] p-3 transition-all duration-300 hover:border-red-500/20 hover:bg-white/[0.03] group/media shadow-sm"
-      >
+      <RouterLink v-if="item.media" :to="mediaTo" class="feed-item__media">
         <img
-          v-if="item.media.poster_url"
+          v-if="item.media.poster_url && !posterFailed"
           :src="item.media.poster_url"
-          :alt="item.media.title"
-          class="h-20 w-14 shrink-0 rounded-lg object-cover shadow-md transition-transform duration-300 group-hover/media:scale-105"
+          alt=""
+          class="feed-item__poster"
+          loading="lazy"
+          decoding="async"
+          @error="posterFailed = true"
         />
-        <div class="min-w-0 flex-1">
-          <span class="text-[10px] uppercase tracking-wider text-red-500 font-semibold mb-1 block">
-            {{ item.media.media_type === 'movie' ? 'ภาพยนตร์' : 'ซีรีส์' }}
-          </span>
-          <p class="truncate text-base font-semibold text-white group-hover/media:text-red-500 transition-colors duration-200">
-            {{ item.media.title }}
-          </p>
-          <div class="mt-1">
-            <MediaRating :ratings="item.media.ratings" :vote-average="item.media.vote_average" />
-          </div>
-        </div>
+        <span v-else class="feed-item__poster feed-item__poster--empty" aria-hidden="true"><Film :size="18" /></span>
+        <span class="feed-item__media-text">
+          <span class="feed-item__media-type">{{ t(`feed.mediaType.${item.media.media_type === "tv" ? "tv" : "movie"}`) }}</span>
+          <span class="feed-item__media-title">{{ mediaTitle }}</span>
+          <MediaRating :ratings="item.media.ratings" :vote-average="item.media.vote_average" />
+        </span>
       </RouterLink>
 
-      <!-- Target User Reference Card (For follow activities) -->
-      <RouterLink
-        v-if="item.type === 'user_followed' && item.target_user"
-        :to="`/users/${item.target_user.id}`"
-        class="mt-4 flex items-center gap-4 rounded-xl border border-white/5 bg-white/[0.01] p-3 transition-all duration-300 hover:border-white/10 hover:bg-white/[0.03] shadow-sm group/target"
-      >
-        <AppAvatar
-          :src="item.target_user.avatar_url"
-          :name="item.target_user.display_name || item.target_user.username"
-          decorative
-          class="transition-transform duration-300 group-hover/target:scale-105"
-        />
-        <div class="min-w-0 flex-1">
-          <p class="truncate text-sm font-semibold text-white group-hover/target:text-red-400 transition-colors">
-            {{ item.target_user.display_name || item.target_user.username }}
-          </p>
-          <p class="text-xs text-white/40">
-            @{{ item.target_user.username }}
-          </p>
-        </div>
+      <RouterLink v-if="item.type === 'user_followed' && item.target_user" :to="targetTo" class="feed-item__media">
+        <AppAvatar :src="item.target_user.avatar_url" :name="targetName" decorative />
+        <span class="feed-item__media-text">
+          <span class="feed-item__media-title">{{ targetName }}</span>
+          <span class="feed-item__handle">@{{ item.target_user.username }}</span>
+        </span>
       </RouterLink>
+
+      <footer v-if="likeable" class="feed-item__footer">
+        <button
+          type="button"
+          class="feed-item__like"
+          :class="{ 'is-liked': liked }"
+          :aria-pressed="liked"
+          :aria-label="liked ? t('feed.unlike') : t('feed.like')"
+          :disabled="liking"
+          @click="toggleLike"
+        >
+          <Heart :size="16" :fill="liked ? 'currentColor' : 'none'" aria-hidden="true" />
+        </button>
+      </footer>
     </div>
   </article>
 </template>
 
 <script setup lang="ts">
+import { computed, nextTick, onMounted, ref, useTemplateRef, watch } from "vue"
+import { useI18n } from "vue-i18n"
+import { Film, Heart } from "lucide-vue-next"
+import { reviewApi } from "@/api/api"
 import MediaRating from "@/components/movie/MediaRating.vue"
-import { computed, ref } from "vue";
-import type { FeedItemResponse } from "@/types/feed";
-import { getActivityMeta, mediaRoutePrefix } from "@/utils/feedActivity";
-import { formatRelativeTime } from "@/utils/relativeTime";
-import { useClickOutside } from "@/composables/useClickOutside";
-import AppAvatar from "@/components/ui/AppAvatar.vue";
-import { Globe, Users, Lock, Compass, Trash2 } from "lucide-vue-next";
+import AppAvatar from "@/components/ui/AppAvatar.vue"
+import { detailRoute } from "@/components/home/homeMedia"
+import { useUIStore } from "@/stores/ui"
+import type { FeedItemResponse } from "@/types/feed"
+import { getActivityMeta } from "@/utils/feedActivity"
+import { logApiError } from "@/utils/logApiError"
+import { formatRelativeTime } from "@/utils/relativeTime"
+import FeedItemMenu from "./FeedItemMenu.vue"
+import { LIKEABLE_TYPES, type Visibility } from "./feedConfig"
 
 const props = defineProps<{
-  item: FeedItemResponse;
-  canManage?: boolean;
-}>();
+  item: FeedItemResponse
+  canManage?: boolean
+}>()
 
 const emit = defineEmits<{
-  "update-visibility": [
-    id: number,
-    visibility: "default" | "public" | "followers" | "private",
-  ];
-  "delete-activity": [id: number];
-}>();
+  "update-visibility": [id: number, visibility: Visibility]
+  "delete-activity": [id: number]
+}>()
 
-const isMenuOpen = ref(false);
-const menuRef = ref<HTMLElement | null>(null);
-const isExpanded = ref(false);
+const { t, te, locale } = useI18n()
+const ui = useUIStore()
 
-useClickOutside(menuRef, () => (isMenuOpen.value = false));
+const meta = computed(() => getActivityMeta(props.item.type))
+const knownType = computed(() => (te(`feed.types.${props.item.type}.sentence`) ? props.item.type : "unknown"))
+const actorName = computed(() => props.item.actor.display_name || props.item.actor.username)
+const targetName = computed(() => props.item.target_user?.display_name || props.item.target_user?.username || "")
+const mediaTitle = computed(() => props.item.media?.title || t("feed.untitled"))
+const actorTo = computed(() => ({ name: "user-profile", params: { userId: props.item.actor.id } }))
+const targetTo = computed(() => ({ name: "user-profile", params: { userId: props.item.target_user?.id ?? 0 } }))
+const mediaTo = computed(() =>
+  detailRoute({ id: props.item.media?.id ?? 0, type: props.item.media?.media_type === "tv" ? "tv" : "movie" }),
+)
 
-const activityMeta = computed(() => getActivityMeta(props.item.type));
-const relativeTime = computed(() => formatRelativeTime(props.item.created_at));
-const actorLink = computed(() => `/users/${props.item.actor.id}`);
+const relativeTime = computed(() => formatRelativeTime(props.item.created_at, locale.value))
+const absoluteTime = computed(() =>
+  new Intl.DateTimeFormat(locale.value, { dateStyle: "medium", timeStyle: "short" }).format(new Date(props.item.created_at)),
+)
 
-const mediaLink = computed(() => {
-  if (!props.item.media) return "/";
-  return `/${mediaRoutePrefix(props.item.media.media_type)}/${props.item.media.id}`;
-});
+const posterFailed = ref(false)
 
-const isTruncated = computed(() => {
-  return props.item.message && props.item.message.length > 200;
-});
-
-const actionDescription = computed(() => {
-  const mediaTitle = props.item.media?.title ? `"${props.item.media.title}"` : "";
-  const targetName = props.item.target_user
-    ? `${props.item.target_user.display_name || props.item.target_user.username}`
-    : "";
-
-  switch (props.item.type) {
-    case "review_created":
-      return `ได้เขียนบทวิจารณ์ให้กับภาพยนตร์ ${mediaTitle}`;
-    case "review_commented":
-      return `ได้แสดงความคิดเห็นในบทวิจารณ์ของภาพยนตร์ ${mediaTitle}`;
-    case "review_liked":
-      return `ได้ถูกใจบทวิจารณ์ของภาพยนตร์ ${mediaTitle}`;
-    case "media_liked":
-      return `ได้ถูกใจภาพยนตร์ ${mediaTitle}`;
-    case "watchlist_added":
-      return `ได้เพิ่มภาพยนตร์ ${mediaTitle} ลงในรายการภาพยนตร์ที่อยากดู (Watchlist)`;
-    case "watched_added":
-      return `ได้รับชมภาพยนตร์ ${mediaTitle} แล้ว`;
-    case "achievement_unlocked":
-      return `ได้รับความสำเร็จระดับใหม่: "${props.item.message}"`;
-    case "user_followed":
-      return `ได้เริ่มติดตามผู้ใช้ ${targetName}`;
-    case "watch_log_created":
-      return `ได้บันทึกการดูภาพยนตร์ ${mediaTitle}`;
-    case "rewatched":
-      return `ได้ดูภาพยนตร์ ${mediaTitle} ซ้ำ`;
-    default:
-      return props.item.message;
-  }
-});
-
-const badgeClasses = computed(() => {
-  switch (props.item.type) {
-    case "review_created":
-    case "review_commented":
-      return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
-    case "review_liked":
-    case "media_liked":
-      return "bg-rose-500/10 text-rose-400 border-rose-500/20";
-    case "watchlist_added":
-      return "bg-blue-500/10 text-blue-400 border-blue-500/20";
-    case "watched_added":
-    case "watch_log_created":
-    case "rewatched":
-      return "bg-indigo-500/10 text-indigo-400 border-indigo-500/20";
-    case "achievement_unlocked":
-      return "bg-amber-500/10 text-amber-400 border-amber-500/20";
-    case "user_followed":
-      return "bg-purple-500/10 text-purple-400 border-purple-500/20";
-    default:
-      return "bg-white/5 text-white/50 border-white/10";
-  }
-});
-
-const visibilityLabel = computed(() => {
-  switch (props.item.visibility) {
-    case "public":
-      return "สาธารณะ";
-    case "followers":
-      return "ผู้ติดตามเท่านั้น";
-    case "private":
-      return "เฉพาะฉัน";
-    case "default":
-    default:
-      return "ค่าเริ่มต้น";
-  }
-});
-
-const activeVisibilityIcon = computed(() => {
-  switch (props.item.visibility) {
-    case "public":
-      return Globe;
-    case "followers":
-      return Users;
-    case "private":
-      return Lock;
-    case "default":
-    default:
-      return Compass;
-  }
-});
-
-const visibilityOptions = [
-  { value: "default" as const, label: "ค่าเริ่มต้น (ตามประเภทบัญชี)", icon: Compass },
-  { value: "public" as const, label: "สาธารณะ", icon: Globe },
-  { value: "followers" as const, label: "ผู้ติดตามเท่านั้น", icon: Users },
-  { value: "private" as const, label: "เฉพาะฉัน", icon: Lock },
-];
-
-function changeVisibility(
-  visibility: "default" | "public" | "followers" | "private"
-) {
-  emit("update-visibility", props.item.id, visibility);
-  isMenuOpen.value = false;
+// Review excerpt: clamp to three lines; the toggle shows only when text really overflows.
+const expanded = ref(false)
+const overflowing = ref(false)
+const excerpt = useTemplateRef<HTMLElement>("excerpt")
+async function measure() {
+  await nextTick()
+  const el = excerpt.value
+  overflowing.value = !!el && !expanded.value && el.scrollHeight > el.clientHeight + 1
 }
+onMounted(measure)
+watch(() => props.item.message, measure)
 
-function confirmDelete() {
-  if (confirm("คุณแน่ใจหรือไม่ที่จะลบกิจกรรมนี้ออกจากฟีดอย่างถาวร?")) {
-    emit("delete-activity", props.item.id);
+// The feed API does not report whether the viewer already liked a review, so state starts unliked.
+const likeable = computed(() => LIKEABLE_TYPES.includes(props.item.type) && !!props.item.review_id && !props.canManage)
+const liked = ref(false)
+const liking = ref(false)
+async function toggleLike() {
+  const reviewId = props.item.review_id
+  if (!reviewId || liking.value) return
+  const next = !liked.value
+  liked.value = next
+  liking.value = true
+  try {
+    await (next ? reviewApi.likeReview(reviewId) : reviewApi.unlikeReview(reviewId))
+  } catch (err) {
+    liked.value = !next
+    logApiError("feed like failed:", err)
+    ui.addToast(t("feed.likeFailed"), "error")
+  } finally {
+    liking.value = false
   }
-  isMenuOpen.value = false;
 }
 </script>
 
 <style scoped>
-.slide-up-enter-active,
-.slide-up-leave-active {
-  transition:
-    transform 0.15s ease,
-    opacity 0.15s ease;
+.feed-item {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-2);
+  transition: border-color var(--motion-fast) ease;
 }
-.slide-up-enter-from,
-.slide-up-leave-to {
-  transform: translateY(4px);
-  opacity: 0;
+.feed-item:hover {
+  border-color: var(--color-border-strong);
+}
+.feed-item__avatar {
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+.feed-item__main {
+  min-width: 0;
+  flex: 1;
+}
+.feed-item__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.feed-item__headline {
+  min-width: 0;
+}
+.feed-item__sentence {
+  margin: 0;
+  font-size: var(--text-small);
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+.feed-item__link {
+  font-weight: 600;
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+.feed-item__link:hover {
+  color: var(--color-brand);
+}
+.feed-item__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.25rem 0 0;
+  font-size: var(--text-caption);
+  color: var(--color-text-muted);
+}
+.feed-item__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius-btn);
+  font-weight: 600;
+  background: color-mix(in srgb, var(--badge-tone) 14%, transparent);
+  color: var(--badge-tone);
+  --badge-tone: var(--color-text-secondary);
+}
+.feed-item__badge--success { --badge-tone: var(--color-success); }
+.feed-item__badge--danger { --badge-tone: var(--color-danger); }
+.feed-item__badge--info { --badge-tone: var(--color-info); }
+.feed-item__badge--brand { --badge-tone: var(--color-brand); }
+.feed-item__badge--warning { --badge-tone: var(--color-warning); }
+
+.feed-item__review {
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-left: 2px solid var(--color-border-strong);
+}
+.feed-item__excerpt {
+  margin: 0;
+  font-size: var(--text-small);
+  line-height: 1.6;
+  color: var(--color-text-primary);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.feed-item__excerpt.is-clamped {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.feed-item__toggle {
+  margin-top: 0.25rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: var(--text-caption);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.feed-item__toggle:hover {
+  color: var(--color-text-primary);
+}
+
+.feed-item__media {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  padding: 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color var(--motion-fast) ease;
+}
+.feed-item__media:hover {
+  border-color: var(--color-border-strong);
+}
+.feed-item__poster {
+  flex-shrink: 0;
+  width: 3rem;
+  aspect-ratio: 2 / 3;
+  border-radius: 0.375rem;
+  object-fit: cover;
+  background: var(--color-surface-3);
+}
+.feed-item__poster--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+}
+.feed-item__media-text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+.feed-item__media-type {
+  font-size: var(--text-caption);
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+.feed-item__media-title {
+  overflow: hidden;
+  font-size: var(--text-small);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.feed-item__handle {
+  font-size: var(--text-caption);
+  color: var(--color-text-muted);
+}
+
+.feed-item__footer {
+  display: flex;
+  margin-top: 0.5rem;
+}
+.feed-item__like {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 0;
+  border-radius: var(--radius-btn);
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition:
+    color var(--motion-fast) ease,
+    background-color var(--motion-fast) ease;
+}
+.feed-item__like:hover:not(:disabled) {
+  background: var(--color-surface-3);
+  color: var(--color-text-primary);
+}
+.feed-item__like.is-liked {
+  color: var(--color-danger);
+}
+.feed-item__like.is-liked svg {
+  animation: feed-like-pop var(--motion-base) var(--ease-spring);
+}
+@keyframes feed-like-pop {
+  from {
+    transform: scale(0.6);
+  }
+}
+
+@media (min-width: 640px) {
+  .feed-item {
+    gap: 1rem;
+    padding: 1.25rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feed-item__like.is-liked svg {
+    animation: none;
+  }
 }
 </style>

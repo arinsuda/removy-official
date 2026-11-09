@@ -1,16 +1,16 @@
 <template>
-  <AuthShell ref="shellRef" title="LOGIN">
+  <AuthShell ref="shellRef" :title="t('auth.login.title')" :subtitle="t('auth.login.subtitle')">
     <form class="auth-form" novalidate @submit.prevent="handleLogin">
       <AuthField
         v-model="form.identifier"
-        label="Username or email"
+        :label="t('auth.login.identifierLabel')"
         :icon="IconUser"
         autocomplete="username"
         :disabled="isLoading"
       />
       <AuthField
         v-model="form.password"
-        label="Password"
+        :label="t('auth.login.passwordLabel')"
         type="password"
         :icon="IconLock"
         autocomplete="current-password"
@@ -19,14 +19,15 @@
       <AuthAlert :message="errorMsg" @dismiss="dismissError" />
       <UnverifiedResend v-if="unverified" :identifier="form.identifier" />
       <div class="auth-forgot form-item">
-        <RouterLink to="/forgot-password" class="auth-link">forget password</RouterLink>
+        <RouterLink to="/forgot-password" class="auth-link">{{ t("auth.login.forgotPassword") }}</RouterLink>
       </div>
       <AppButton type="submit" size="lg" block class="form-item" :loading="isLoading">
-        LOGIN
+        {{ t("auth.login.submit") }}
       </AppButton>
       <GoogleSignInButton :disabled="isLoading" @click="handleGoogleLogin" />
       <p class="auth-footer form-item">
-        <RouterLink to="/register" class="auth-link">I don't have an account.</RouterLink>
+        <span class="auth-footer__text">{{ t("auth.login.noAccount") }}</span>
+        <RouterLink to="/register" class="auth-link auth-link--strong">{{ t("auth.login.register") }}</RouterLink>
       </p>
     </form>
   </AuthShell>
@@ -68,19 +69,19 @@
     const errParam = route.query.error as string | undefined
     if (errParam) {
       if (errParam === "user_cancelled") {
-        errorMsg.value = "คุณได้ยกเลิกการเข้าสู่ระบบด้วย Google"
+        errorMsg.value = t("auth.login.errors.cancelled")
       } else if (errParam === "google_account_link_required") {
-        errorMsg.value = "พบบัญชีอีเมลนี้ในระบบ กรุณาเข้าสู่ระบบด้วยรหัสผ่านแล้วเชื่อมต่อ Google ในการตั้งค่า"
+        errorMsg.value = t("auth.login.errors.linkRequired")
       } else if (errParam === "google_identity_already_connected") {
-        errorMsg.value = "บัญชี Google นี้ถูกเชื่อมต่อกับผู้ใช้อื่นในระบบแล้ว"
+        errorMsg.value = t("auth.login.errors.identityConnected")
       } else if (errParam === "account_disabled") {
-        errorMsg.value = "บัญชีผู้ใช้นี้ถูกระงับการใช้งาน"
+        errorMsg.value = t("auth.login.errors.disabled")
       } else if (errParam === "google_email_verification_required") {
         errorMsg.value = t("auth.login.googleVerificationRequired")
       } else if (errParam === "session_expired") {
         errorMsg.value = t("auth.login.sessionExpired")
       } else {
-        errorMsg.value = "เกิดข้อผิดพลาดในการเข้าสู่ระบบด้วย Google กรุณาลองใหม่อีกครั้ง"
+        errorMsg.value = t("auth.login.errors.google")
       }
       router.replace({ query: {} })
     }
@@ -90,7 +91,7 @@
     try {
       const { data } = await authApi.getGoogleConfig()
       if (!data.enabled) {
-        errorMsg.value = "ระบบยังไม่ได้เปิดใช้งาน Google OAuth ในไฟล์ .env ของเซิร์ฟเวอร์ (GOOGLE_OAUTH_ENABLED=true)"
+        errorMsg.value = t("auth.login.errors.googleDisabled")
         return
       }
       const redirect = (route.query.redirect as string) || "/"
@@ -104,7 +105,7 @@
   async function handleLogin() {
     dismissError()
     if (!form.value.identifier || !form.value.password) {
-      errorMsg.value = "Please fill in all fields"
+      errorMsg.value = t("auth.login.errors.fill")
       shellRef.value?.shake()
       return
     }
@@ -123,11 +124,11 @@
         errorMsg.value = t("auth.login.unverified")
         unverified.value = true
       } else if (status === 401) {
-        errorMsg.value = "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง"
+        errorMsg.value = t("auth.login.errors.invalid")
       } else if (status >= 500) {
-        errorMsg.value = "เกิดข้อผิดพลาดจากเซิร์ฟเวอร์ กรุณาลองใหม่ภายหลัง"
+        errorMsg.value = t("auth.login.errors.server")
       } else {
-        errorMsg.value = "เกิดข้อผิดพลาด กรุณาลองใหม่"
+        errorMsg.value = t("auth.login.errors.generic")
       }
 
       shellRef.value?.shake()
@@ -148,11 +149,16 @@
     text-align: right;
   }
   .auth-footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.375rem;
     margin: 0;
-    text-align: center;
+    font-size: var(--text-small);
+    color: var(--color-text-muted);
   }
   .auth-link {
-    font-size: 0.8125rem;
+    font-size: var(--text-small);
     color: var(--color-text-secondary);
     text-decoration: underline;
     text-decoration-color: transparent;
@@ -161,10 +167,20 @@
       color var(--motion-fast) var(--ease-out-soft),
       text-decoration-color var(--motion-fast) var(--ease-out-soft);
   }
+  .auth-link--strong {
+    font-weight: 600;
+    color: var(--color-text-primary);
+    text-decoration-color: currentcolor;
+  }
   @media (hover: hover) {
     .auth-link:hover {
-      color: #fff;
+      color: var(--color-text-primary);
       text-decoration-color: currentcolor;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .auth-link {
+      transition: none;
     }
   }
 </style>

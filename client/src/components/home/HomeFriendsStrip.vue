@@ -31,7 +31,7 @@
       </RouterLink>
       <p class="friend-card__action">
         <component :is="meta(item).icon" :size="13" aria-hidden="true" />
-        {{ meta(item).label }}
+        {{ t(meta(item).labelKey) }}
       </p>
       <RouterLink v-if="item.media" :to="mediaTo(item.media)" class="friend-card__media">
         <img
@@ -43,7 +43,7 @@
         />
         <span class="friend-card__title">{{ item.media.title }}</span>
       </RouterLink>
-      <time :datetime="item.created_at" class="friend-card__time">{{ formatRelativeTime(item.created_at) }}</time>
+      <time :datetime="item.created_at" class="friend-card__time">{{ formatRelativeTime(item.created_at, locale) }}</time>
     </article>
   </HomeRail>
 </template>
@@ -61,7 +61,7 @@ import HomeRail from "./HomeRail.vue"
 
 defineProps<{ items: FeedItemResponse[]; loading?: boolean; error?: boolean }>()
 const emit = defineEmits<{ retry: []; visible: [] }>()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const meta = (item: FeedItemResponse) => getActivityMeta(item.type)
 const mediaTo = (m: FeedMediaSummary) => detailRoute({ id: m.id, type: m.media_type === "tv" ? "tv" : "movie" })

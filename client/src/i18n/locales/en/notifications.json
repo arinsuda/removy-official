@@ -1,8 +1,72 @@
 {
   "title": "Notifications",
+  "subtitle": "Follows, reviews, releases and achievements in one place",
   "panelTitle": "All Notifications",
-  "markAllAsRead": "Mark All as Read",
+  "latest": "Latest notifications",
+  "markAllAsRead": "Mark all as read",
+  "viewAll": "View all notifications",
   "empty": "No notifications at this time",
+  "toast": "{title}: {message}",
+  "unread": "Unread",
+  "new": "New",
+  "remove": "Delete this notification",
+  "error": "Could not load notifications",
+  "loadMore": "Load more",
+  "loadingMore": "Loading more...",
+  "filters": {
+    "label": "Filter notifications",
+    "unreadOnly": "Unread only"
+  },
+  "categories": {
+    "all": "All",
+    "social": "Social",
+    "media": "Movies and TV",
+    "achievement": "Achievements",
+    "system": "System"
+  },
+  "groups": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "earlier": "Earlier"
+  },
+  "emptyStates": {
+    "all": "You are all caught up",
+    "unread": "No unread notifications",
+    "category": "No notifications in this category",
+    "description": "New follows, likes and releases will show up here."
+  },
+  "messages": {
+    "followed_you": "{name} started following you",
+    "follow_requested": "{name} requested to follow you",
+    "follow_accepted": "{name} accepted your follow request"
+  },
+  "actions": {
+    "accept": "Accept",
+    "decline": "Decline",
+    "accepted": "Request accepted",
+    "declined": "Request declined",
+    "failed": "Could not update this request. It may already be handled."
+  },
+  "titles": {
+    "followed_you": "New follower",
+    "following_reviewed": "Activity from people you follow",
+    "following_liked_review": "Activity from people you follow",
+    "following_added_watchlist": "Activity from people you follow",
+    "following_added_watched": "Activity from people you follow",
+    "following_marked_helpful": "Activity from people you follow",
+    "following_commented": "Activity from people you follow",
+    "following_liked_media": "Activity from people you follow",
+    "review_liked": "Someone liked your review",
+    "review_commented": "New comment on your review",
+    "review_marked_helpful": "Your review was marked helpful",
+    "achievement_unlocked": "Achievement unlocked",
+    "movie_now_playing": "A watchlist movie is now playing",
+    "email_verified": "Email verified",
+    "password_changed": "Password changed",
+    "welcome": "Welcome",
+    "follow_requested": "New follow request",
+    "follow_accepted": "Follow request accepted"
+  },
   "types": {
     "like": "{username} liked your review for {mediaTitle}",
     "comment": "{username} commented on your review for {mediaTitle}",

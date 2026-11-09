@@ -6,7 +6,8 @@
     "title": "Scan QR Code",
     "name": "PromptPay",
     "hint": "Scan with your bank app to transfer via PromptPay",
-    "fallback": "Could not load QR Code"
+    "fallback": "Could not load QR Code",
+    "alt": "QR code for PromptPay"
   },
   "bank": {
     "title": "Bank Transfer",
@@ -14,7 +15,8 @@
     "accountName": "Mr. Arin Sudakijjathorn",
     "copy": "Copy",
     "copied": "Copied",
-    "fallback": "Could not load bank logo"
+    "fallback": "Could not load bank logo",
+    "tab": "Bank transfer"
   },
   "impact": {
     "title": "How does your support help?",
@@ -34,5 +36,50 @@
   "thanks": {
     "title": "Thank you for your support",
     "subtitle": "We promise to develop POPCORN into the best platform for everyone."
+  },
+  "cta": "Support now",
+  "tiers": {
+    "title": "Pick a way to say thanks",
+    "hint": "Suggested amounts only. Any amount helps and you can send what feels right.",
+    "amount": "฿{amount}",
+    "coffee": {
+      "name": "A coffee",
+      "desc": "Keeps the late-night bug fixes going"
+    },
+    "popcorn": {
+      "name": "A bucket of popcorn",
+      "desc": "Covers a few days of server costs"
+    },
+    "movie": {
+      "name": "A movie night",
+      "desc": "Helps us ship a new feature sooner"
+    }
+  },
+  "pay": {
+    "title": "How to donate",
+    "suggested": "Suggested amount: ฿{amount}. Enter it in your bank app after scanning or transferring."
+  },
+  "faq": {
+    "title": "Questions",
+    "required": {
+      "q": "Do I have to donate to use POPCORN?",
+      "a": "No. POPCORN is free and every feature stays free. Donations are optional and simply help us keep it running."
+    },
+    "safe": {
+      "q": "Is it safe?",
+      "a": "Transfers go straight to the developer's bank account through your own banking app. We never ask for card details on this site."
+    },
+    "amount": {
+      "q": "How much should I give?",
+      "a": "Whatever you like. The amounts above are only ideas; any amount is appreciated."
+    },
+    "use": {
+      "q": "Where does the money go?",
+      "a": "Server and storage costs first, then new features, maintenance and security fixes."
+    }
+  },
+  "share": {
+    "button": "Share this page",
+    "copied": "Link copied"
   }
 }

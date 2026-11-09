@@ -1,70 +1,87 @@
 <template>
-  <div class="admin-shell">
-    <!-- Topbar -->
+  <div class="admin-shell" :class="{ 'is-collapsed': collapsed }">
     <header class="admin-topbar">
-      <div class="admin-brand">
-        <RouterLink to="/" class="nav-logo">
-          <span class="logo-movie">POP</span><span class="logo-hub">CORN</span>
+      <div class="admin-topbar__brand">
+        <AppButton
+          class="admin-topbar__menu"
+          variant="ghost"
+          size="sm"
+          icon-only
+          :aria-label="t('admin.nav.openMenu')"
+          :aria-expanded="drawerOpen"
+          aria-controls="admin-sidebar"
+          @click="openDrawer"
+        >
+          <Menu :size="20" aria-hidden="true" />
+        </AppButton>
+        <RouterLink to="/" class="admin-logo" :aria-label="t('admin.nav.backToApp')">
+          <img src="/popcorn-icon-192.png" alt="" class="admin-logo__icon" />
+          <!-- hardcode-ok: brand name -->
+          <span class="admin-logo__name">POP<span>CORN</span></span>
         </RouterLink>
-        <span class="admin-badge">
-          <Shield :size="14" /> {{ $t("admin.nav.adminMode") }}
-        </span>
+        <AdminBadge tone="brand"><Shield :size="12" aria-hidden="true" />{{ t("admin.nav.adminMode") }}</AdminBadge>
       </div>
 
-      <div class="admin-topbar-right">
-        <button class="exit-admin-btn" @click="handleExitAdmin">
-          <LogOut :size="15" />
-          <span>{{ $t("admin.nav.exitAdmin") }}</span>
-        </button>
-      </div>
+      <AppButton variant="outline" size="sm" @click="handleExitAdmin">
+        <LogOut :size="16" aria-hidden="true" />
+        <span class="admin-topbar__exit">{{ t("admin.nav.exitAdmin") }}</span>
+      </AppButton>
     </header>
 
-    <!-- Main Workspace Container -->
+    <div v-if="drawerOpen" class="admin-scrim" @click="closeDrawer" />
+
     <div class="admin-body">
-      <!-- Sidebar Navigation -->
-      <aside class="admin-sidebar">
+      <aside
+        id="admin-sidebar"
+        ref="sidebarRef"
+        class="admin-sidebar"
+        :class="{ 'is-open': drawerOpen }"
+        :aria-label="t('admin.nav.primary')"
+        @keydown.esc="closeDrawer"
+      >
+        <div class="admin-sidebar__head">
+          <span class="admin-sidebar__title">{{ t("admin.nav.adminMode") }}</span>
+          <AppButton
+            class="admin-sidebar__close"
+            variant="ghost"
+            size="sm"
+            icon-only
+            :aria-label="t('admin.nav.closeMenu')"
+            @click="closeDrawer"
+          >
+            <X :size="18" aria-hidden="true" />
+          </AppButton>
+        </div>
+
         <nav class="admin-nav">
           <RouterLink
-            to="/admin"
-            exact
-            class="admin-nav-item"
-            :class="{ active: route.name === 'admin-dashboard' }"
+            v-for="item in NAV"
+            :key="item.name"
+            :to="item.to"
+            class="admin-nav__item"
+            :class="{ 'is-active': route.name === item.name }"
+            :aria-current="route.name === item.name ? 'page' : undefined"
+            :title="collapsed ? t(item.label) : undefined"
           >
-            <LayoutDashboard :size="18" />
-            <span>{{ $t("admin.nav.dashboard") }}</span>
-          </RouterLink>
-
-          <RouterLink
-            to="/admin/users"
-            class="admin-nav-item"
-            :class="{ active: route.name === 'admin-users' }"
-          >
-            <Users :size="18" />
-            <span>{{ $t("admin.nav.users") }}</span>
-          </RouterLink>
-
-          <RouterLink
-            to="/admin/reviews"
-            class="admin-nav-item"
-            :class="{ active: route.name === 'admin-reviews' }"
-          >
-            <MessageSquare :size="18" />
-            <span>{{ $t("admin.nav.reviews") }}</span>
-          </RouterLink>
-
-          <RouterLink
-            to="/admin/audit-logs"
-            class="admin-nav-item"
-            :class="{ active: route.name === 'admin-audit-logs' }"
-          >
-            <FileText :size="18" />
-            <span>{{ $t("admin.nav.auditLogs") }}</span>
+            <component :is="item.icon" :size="18" aria-hidden="true" />
+            <span class="admin-nav__label">{{ t(item.label) }}</span>
           </RouterLink>
         </nav>
+
+        <button
+          type="button"
+          class="admin-sidebar__toggle"
+          :aria-label="collapsed ? t('admin.nav.expand') : t('admin.nav.collapse')"
+          :aria-pressed="collapsed"
+          @click="toggleCollapsed"
+        >
+          <PanelLeftOpen v-if="collapsed" :size="18" aria-hidden="true" />
+          <PanelLeftClose v-else :size="18" aria-hidden="true" />
+          <span class="admin-nav__label">{{ collapsed ? t("admin.nav.expand") : t("admin.nav.collapse") }}</span>
+        </button>
       </aside>
 
-      <!-- Content Area -->
-      <main class="admin-content">
+      <main class="admin-content" :inert="drawerOpen || undefined">
         <RouterView />
       </main>
     </div>
@@ -72,20 +89,75 @@
 </template>
 
 <script setup lang="ts">
+import { nextTick, onBeforeUnmount, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
-import { useAdminStore } from "@/stores/admin"
+import { useI18n } from "vue-i18n"
 import {
-  Shield,
-  LayoutDashboard,
-  Users,
-  MessageSquare,
   FileText,
+  LayoutDashboard,
   LogOut,
+  Menu,
+  MessageSquare,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Shield,
+  Users,
+  X,
 } from "lucide-vue-next"
+import AdminBadge from "@/components/admin/AdminBadge.vue"
+import AppButton from "@/components/ui/AppButton.vue"
+import { lockScroll, unlockScroll } from "@/composables/scrollLock"
+import { useAdminStore } from "@/stores/admin"
 
+const NAV = [
+  { name: "admin-dashboard", to: "/admin", label: "admin.nav.dashboard", icon: LayoutDashboard },
+  { name: "admin-users", to: "/admin/users", label: "admin.nav.users", icon: Users },
+  { name: "admin-reviews", to: "/admin/reviews", label: "admin.nav.reviews", icon: MessageSquare },
+  { name: "admin-audit-logs", to: "/admin/audit-logs", label: "admin.nav.auditLogs", icon: FileText },
+]
+const COLLAPSE_KEY = "admin_sidebar_collapsed"
+
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const adminStore = useAdminStore()
+
+const collapsed = ref(localStorage.getItem(COLLAPSE_KEY) === "true")
+const drawerOpen = ref(false)
+const sidebarRef = ref<HTMLElement | null>(null)
+
+function toggleCollapsed() {
+  collapsed.value = !collapsed.value
+  localStorage.setItem(COLLAPSE_KEY, String(collapsed.value))
+}
+
+async function openDrawer() {
+  drawerOpen.value = true
+  lockScroll()
+  await nextTick()
+  sidebarRef.value?.querySelector<HTMLElement>("a, button")?.focus()
+}
+
+function closeDrawer() {
+  if (!drawerOpen.value) return
+  drawerOpen.value = false
+  unlockScroll()
+  document.querySelector<HTMLElement>(".admin-topbar__menu")?.focus()
+}
+
+// Following a link closes the drawer without stealing focus back to the menu button.
+watch(
+  () => route.fullPath,
+  () => {
+    if (!drawerOpen.value) return
+    drawerOpen.value = false
+    unlockScroll()
+  },
+)
+
+onBeforeUnmount(() => {
+  if (drawerOpen.value) unlockScroll()
+})
 
 function handleExitAdmin() {
   adminStore.exitAdminMode()
@@ -95,149 +167,237 @@ function handleExitAdmin() {
 
 <style scoped>
 .admin-shell {
-  min-height: 100vh;
-  background-color: var(--color-surface);
-  color: var(--color-text-primary);
+  --sidebar-width: 15rem;
   display: flex;
   flex-direction: column;
+  min-height: 100dvh;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
 }
 
-/* ── Topbar ─────────────────────────────────────────── */
+.admin-shell.is-collapsed {
+  --sidebar-width: 4.25rem;
+}
+
 .admin-topbar {
-  height: 64px;
-  background-color: var(--color-surface-2);
-  border-bottom: 1px solid var(--color-border);
+  position: sticky;
+  top: 0;
+  z-index: var(--z-header);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 1.5rem;
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  gap: 0.75rem;
+  height: 3.5rem;
+  padding: 0 1rem;
+  background: var(--color-surface-2);
+  border-bottom: 1px solid var(--color-border);
 }
 
-.admin-brand {
+.admin-topbar__brand {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.5rem;
+  min-width: 0;
 }
 
-.nav-logo {
-  font-family: var(--font-sans);
-  font-size: 1.4rem;
-  font-weight: 900;
-  text-decoration: none;
-  letter-spacing: -0.5px;
+.admin-topbar__exit {
+  display: none;
 }
-.logo-movie { color: var(--color-text-primary); }
-.logo-hub { color: var(--color-brand); }
 
-.admin-badge {
+.admin-logo {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  background: rgba(245, 67, 44, 0.15);
-  border: 1px solid rgba(245, 67, 44, 0.4);
-  color: var(--color-brand);
-  font-size: 0.75rem;
-  font-weight: 700;
-  padding: 0.25rem 0.6rem;
-  border-radius: var(--radius-btn);
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-}
-
-.exit-admin-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  background: var(--color-surface-3);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-secondary);
-  font-size: 0.825rem;
-  font-weight: 600;
-  padding: 0.45rem 0.9rem;
-  border-radius: var(--radius-btn);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.exit-admin-btn:hover {
+  gap: 0.5rem;
   color: var(--color-text-primary);
-  border-color: var(--color-brand);
-  background: rgba(245, 67, 44, 0.1);
+  text-decoration: none;
 }
 
-/* ── Body Layout ────────────────────────────────────── */
+.admin-logo__icon {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.admin-logo__name {
+  font-size: 1.125rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.admin-logo__name span {
+  color: var(--color-brand);
+}
+
+.admin-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-above-header);
+  background: color-mix(in srgb, var(--color-surface) 70%, transparent);
+}
+
 .admin-body {
   display: flex;
   flex: 1;
+  min-width: 0;
 }
 
+/* Phones: the sidebar is an off-canvas drawer. */
 .admin-sidebar {
-  width: 240px;
-  background-color: var(--color-surface-2);
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: calc(var(--z-above-header) + 1);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: min(18rem, 85vw);
+  padding: 0.75rem;
+  background: var(--color-surface-2);
   border-right: 1px solid var(--color-border);
-  padding: 1.5rem 0.75rem;
-  flex-shrink: 0;
+  box-shadow: var(--shadow-sheet);
+  transform: translateX(-100%);
+  visibility: hidden;
+  transition:
+    transform var(--motion-base) var(--ease-out-soft),
+    visibility 0s linear var(--motion-base);
+}
+
+.admin-sidebar.is-open {
+  transform: none;
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+.admin-sidebar__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.25rem 0.5rem;
+}
+
+.admin-sidebar__title {
+  font-size: var(--text-caption);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
 }
 
 .admin-nav {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.25rem;
 }
 
-.admin-nav-item {
+.admin-nav__item,
+.admin-sidebar__toggle {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  color: var(--color-text-secondary);
-  font-size: 0.875rem;
+  min-height: 2.75rem;
+  padding: 0 0.875rem;
+  background: none;
+  border: 0;
+  border-radius: 0.625rem;
+  font: inherit;
+  font-size: var(--text-small);
   font-weight: 600;
   text-decoration: none;
-  border-radius: 0.5rem;
-  transition: all 0.2s;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition:
+    background var(--motion-fast) var(--ease-out-soft),
+    color var(--motion-fast) var(--ease-out-soft);
 }
-.admin-nav-item:hover {
+
+.admin-nav__item.is-active {
+  background: color-mix(in srgb, var(--color-brand) 16%, transparent);
   color: var(--color-text-primary);
-  background-color: var(--color-surface-3);
+  box-shadow: inset 3px 0 0 var(--color-brand);
 }
-.admin-nav-item.active {
-  color: var(--color-text-primary);
-  background-color: var(--color-brand);
+
+.admin-sidebar__toggle {
+  display: none;
+  margin-top: auto;
+}
+
+@media (hover: hover) {
+  .admin-nav__item:hover,
+  .admin-sidebar__toggle:hover {
+    background: var(--color-surface-3);
+    color: var(--color-text-primary);
+  }
 }
 
 .admin-content {
   flex: 1;
-  padding: 2rem;
-  max-width: 1400px;
-  width: 100%;
+  min-width: 0;
+  padding: 1rem;
   box-sizing: border-box;
 }
 
-@media (max-width: 768px) {
-  .admin-body {
-    flex-direction: column;
+@media (min-width: 640px) {
+  .admin-topbar {
+    padding: 0 1.5rem;
   }
+
+  .admin-topbar__exit {
+    display: inline;
+  }
+}
+
+@media (min-width: 768px) {
+  .admin-topbar__menu,
+  .admin-sidebar__close,
+  .admin-scrim {
+    display: none;
+  }
+
   .admin-sidebar {
-    width: 100%;
-    border-right: none;
-    border-bottom: 1px solid var(--color-border);
-    padding: 0.5rem;
+    position: sticky;
+    top: 3.5rem;
+    z-index: auto;
+    align-self: flex-start;
+    flex: 0 0 var(--sidebar-width);
+    width: var(--sidebar-width);
+    height: calc(100dvh - 3.5rem);
+    box-shadow: none;
+    transform: none;
+    visibility: visible;
+    transition: width var(--motion-base) var(--ease-out-soft);
   }
-  .admin-nav {
-    flex-direction: row;
-    justify-content: space-around;
+
+  .admin-sidebar__head {
+    display: none;
   }
-  .admin-nav-item {
-    font-size: 0.75rem;
-    padding: 0.5rem;
-    flex-direction: column;
-    gap: 0.2rem;
+
+  .admin-sidebar__toggle {
+    display: flex;
   }
+
+  .is-collapsed .admin-nav__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .is-collapsed .admin-nav__item,
+  .is-collapsed .admin-sidebar__toggle {
+    justify-content: center;
+    padding: 0;
+  }
+
   .admin-content {
-    padding: 1rem;
+    padding: 1.5rem 2rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-sidebar {
+    transition: none;
   }
 }
 </style>

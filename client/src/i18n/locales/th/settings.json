@@ -75,7 +75,7 @@
     "sendCode": "ส่งรหัส",
     "confirm": "ยืนยัน",
     "done": "ยืนยันแล้ว!",
-    "placeholder": "name@example.com",
+    "placeholder": "name{'@'}example.com",
     "inputHint": "กรอกอีเมลใหม่ เราจะส่งรหัส 6 หลักไปที่อีเมลปัจจุบัน ({current}) และอีกรหัสไปที่อีเมลใหม่ ต้องใช้ทั้งสองรหัส",
     "currentCodeHint": "ส่งรหัสไปที่อีเมลปัจจุบัน {email}",
     "newCodeHint": "ส่งรหัสไปที่อีเมลใหม่ {email}",

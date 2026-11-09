@@ -2,8 +2,11 @@ import { defineStore } from "pinia"
 import { ref, computed } from "vue"
 import { notiApi } from "@/api/endpoints/notification"
 import { useSocket } from "@/composables/useSocket"
+import { i18n } from "@/i18n"
+import { useUIStore } from "@/stores/ui"
+import { logApiError } from "@/utils/logApiError"
 import {
-  getNotificationTitle,
+  notificationTitleKey,
   type AppNotification,
   type NotificationPaginationMeta,
   type SocketNotificationDeletedPayload,
@@ -62,8 +65,8 @@ export const useNotificationStore = defineStore("notification", () => {
         limit,
       }
     } catch (err) {
-      console.error("fetchNotifications failed:", err)
-      error.value = "โหลดการแจ้งเตือนไม่สำเร็จ"
+      logApiError("fetchNotifications failed:", err)
+      error.value = "load_failed"
     } finally {
       loading.value = false
       loadingMore.value = false
@@ -80,7 +83,7 @@ export const useNotificationStore = defineStore("notification", () => {
       const res = await notiApi.getUnreadCount()
       unreadCount.value = res.data.unread_count
     } catch (err) {
-      console.error("fetchUnreadCount failed:", err)
+      logApiError("fetchUnreadCount failed:", err)
     }
   }
 
@@ -100,7 +103,7 @@ export const useNotificationStore = defineStore("notification", () => {
     } catch (err) {
       target.is_read = false
       unreadCount.value++
-      console.error("markAsRead failed:", err)
+      logApiError("markAsRead failed:", err)
     }
   }
 
@@ -123,7 +126,7 @@ export const useNotificationStore = defineStore("notification", () => {
     } catch (err) {
       if (target && wasUnreadInPanel) target.is_read = false
       unreadCount.value++
-      console.error("markAsReadRemote failed:", err)
+      logApiError("markAsReadRemote failed:", err)
       return false
     }
   }
@@ -141,7 +144,7 @@ export const useNotificationStore = defineStore("notification", () => {
     } catch (err) {
       notifications.value.forEach((n, i) => (n.is_read = prevState[i] ?? false))
       unreadCount.value = prevCount
-      console.error("markAllAsRead failed:", err)
+      logApiError("markAllAsRead failed:", err)
     }
   }
 
@@ -163,7 +166,7 @@ export const useNotificationStore = defineStore("notification", () => {
       notifications.value.splice(idx, 0, removed)
       if (!removed.is_read) unreadCount.value++
       pagination.value.total++
-      console.error("removeNotification failed:", err)
+      logApiError("removeNotification failed:", err)
     }
   }
 
@@ -178,7 +181,7 @@ export const useNotificationStore = defineStore("notification", () => {
     } catch (err) {
       notifications.value = prev
       unreadCount.value = prevUnread
-      console.error("clearAll failed:", err)
+      logApiError("clearAll failed:", err)
     }
   }
 
@@ -234,9 +237,14 @@ export const useNotificationStore = defineStore("notification", () => {
 
     on<SocketNotificationNewPayload>("notification:new", payload => {
       prependNotification(payload)
-      ;(window as any).$toast?.info?.(
-        payload.message,
-        getNotificationTitle(payload),
+      useUIStore().addToast(
+        i18n.global.t("notifications.toast", {
+          title: i18n.global.te(notificationTitleKey(payload.type))
+            ? i18n.global.t(notificationTitleKey(payload.type))
+            : i18n.global.t("notifications.title"),
+          message: payload.message,
+        }),
+        "info",
       )
     })
 
@@ -309,6 +317,7 @@ export const useNotificationStore = defineStore("notification", () => {
     markAllAsRead,
     removeNotification,
     clearAll,
+    prependNotification,
 
     bindSocket,
     unbindSocket,

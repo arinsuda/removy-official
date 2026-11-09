@@ -1,81 +1,84 @@
 <template>
-  <div class="handoff-page">
-    <div class="handoff-card">
-      <div class="brand"><img src="/popcorn-full-512.png" alt="POPCORN" class="brand-logo" /></div>
+  <AuthShell :title="title">
+    <AuthStatus v-if="state === 'working'">
+      <AppSpinner :size="32" class="handoff-spinner" />
+      <p role="status">{{ t("navigation.link.handoff.working") }}</p>
+    </AuthStatus>
 
-      <template v-if="state === 'working'">
-        <p class="text">{{ t("navigation.link.handoff.working") }}</p>
-      </template>
-
-      <template v-else-if="state === 'failed'">
-        <p class="text text--error">{{ failedMessage }}</p>
+    <AuthStatus v-else-if="state === 'failed'" :icon="IconAlert" tone="danger">
+      <p role="alert">{{ failedMessage }}</p>
+      <div class="auth-status__actions">
         <AppButton to="/login" block>
           {{ t("navigation.link.handoff.backToLogin") }}
         </AppButton>
         <HandoffBackLink :url="planziUrl" />
-      </template>
+      </div>
+    </AuthStatus>
 
-      <template v-else>
-        <h1 class="title">{{ t("navigation.link.handoff.confirmTitle") }}</h1>
-        <p class="text">
-          {{ t("navigation.link.handoff.confirmDesc", { email: pending?.email }) }}
-        </p>
+    <div v-else class="auth-form">
+      <p class="handoff-text form-item">
+        {{ t("navigation.link.handoff.confirmDesc", { email: pending?.email }) }}
+      </p>
 
-        <form
-          v-if="(pending?.methods ?? []).includes('local_password')"
-          class="block"
-          @submit.prevent="submitPassword"
-        >
-          <input
-            v-model="password"
-            type="password"
-            class="input"
-            autocomplete="current-password"
-            :placeholder="t('navigation.link.handoff.password')"
-          />
-          <AppButton type="submit" block :disabled="busy || !password">
-            {{ t("navigation.link.handoff.confirmPassword") }}
-          </AppButton>
-        </form>
+      <form
+        v-if="(pending?.methods ?? []).includes('local_password')"
+        class="auth-form"
+        @submit.prevent="submitPassword"
+      >
+        <AuthField
+          v-model="password"
+          type="password"
+          :label="t('navigation.link.handoff.password')"
+          :icon="IconLock"
+          autocomplete="current-password"
+        />
+        <AppButton type="submit" block :loading="busy" :disabled="busy || !password">
+          {{ t("navigation.link.handoff.confirmPassword") }}
+        </AppButton>
+      </form>
 
-        <div v-if="(pending?.methods ?? []).includes('email_code')" class="block">
-          <AppButton variant="outline" block :disabled="busy" @click="sendCode">
-            {{ t("navigation.link.handoff.sendCode") }}
-          </AppButton>
-          <template v-if="codeSent">
-            <p class="text text--ok">{{ t("navigation.link.handoff.codeSent") }}</p>
-            <form class="block" @submit.prevent="submitCode">
-              <input
-                v-model="code"
-                inputmode="numeric"
-                maxlength="6"
-                class="input"
-                autocomplete="one-time-code"
-                :placeholder="t('navigation.link.handoff.code')"
-              />
-              <AppButton type="submit" block :disabled="busy || code.length !== 6">
-                {{ t("navigation.link.handoff.confirmCode") }}
-              </AppButton>
-            </form>
-          </template>
-        </div>
+      <div v-if="(pending?.methods ?? []).includes('email_code')" class="auth-form">
+        <AppButton variant="outline" block :disabled="busy" @click="sendCode">
+          {{ t("navigation.link.handoff.sendCode") }}
+        </AppButton>
+        <template v-if="codeSent">
+          <p class="handoff-text handoff-text--ok" role="status">{{ t("navigation.link.handoff.codeSent") }}</p>
+          <form class="auth-form" @submit.prevent="submitCode">
+            <AuthField
+              v-model="code"
+              :label="t('navigation.link.handoff.code')"
+              :icon="IconKey"
+              inputmode="numeric"
+              maxlength="6"
+              autocomplete="one-time-code"
+            />
+            <AppButton type="submit" block :loading="busy" :disabled="busy || code.length !== 6">
+              {{ t("navigation.link.handoff.confirmCode") }}
+            </AppButton>
+          </form>
+        </template>
+      </div>
 
-        <p v-if="pending && !(pending.methods ?? []).length" class="text text--error">
-          {{ t("navigation.link.handoff.noMethods") }}
-        </p>
-
-        <p v-if="errorMsg" class="text text--error">{{ errorMsg }}</p>
-        <HandoffBackLink :url="planziUrl" />
-      </template>
+      <p v-if="pending && !(pending.methods ?? []).length" class="handoff-text handoff-text--error" role="alert">
+        {{ t("navigation.link.handoff.noMethods") }}
+      </p>
+      <AuthAlert :message="errorMsg" @dismiss="errorMsg = ''" />
+      <HandoffBackLink :url="planziUrl" />
     </div>
-  </div>
+  </AuthShell>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue"
+import { computed, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
+import { AlertCircle as IconAlert, KeyRound as IconKey, Lock as IconLock } from "lucide-vue-next"
+import AuthAlert from "@/components/auth/AuthAlert.vue"
+import AuthField from "@/components/auth/AuthField.vue"
+import AuthShell from "@/components/auth/AuthShell.vue"
+import AuthStatus from "@/components/auth/AuthStatus.vue"
 import AppButton from "@/components/ui/AppButton.vue"
+import AppSpinner from "@/components/ui/AppSpinner.vue"
 import HandoffBackLink from "@/components/auth/HandoffBackLink.vue"
 import { linkApi } from "@/api/endpoints/link"
 import type { LinkConfirmRequired, LinkSessionResponse } from "@/api/endpoints/link"
@@ -97,6 +100,14 @@ const codeSent = ref(false)
 const busy = ref(false)
 const errorMsg = ref("")
 const planziUrl = ref("")
+
+const title = computed(() =>
+  state.value === "confirm"
+    ? t("navigation.link.handoff.confirmTitle")
+    : state.value === "failed"
+      ? t("navigation.link.handoff.failedTitle")
+      : t("navigation.link.handoff.title"),
+)
 
 async function loadPlanziUrl() {
   try {
@@ -207,69 +218,22 @@ async function submitCode() {
 </script>
 
 <style scoped>
-.handoff-page {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px 16px;
-  background: #050505;
-}
-.handoff-card {
-  width: 100%;
-  max-width: 420px;
-  background: #0f0f0f;
-  border: 1px solid #1c1c1c;
-  border-radius: 6px;
-  padding: 36px 28px;
-  text-align: center;
-  color: #fff;
-}
-.brand {
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: 4px;
-  margin-bottom: 24px;
-}
-.brand-logo {
-  display: block;
-  width: 140px;
-  margin: 0 auto;
-}
-.brand-re {
-  color: var(--color-brand);
-}
-.title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0 0 12px;
-}
-.text {
-  color: #8f8f8f;
-  font-size: 14px;
+.handoff-text {
+  margin: 0;
+  font-size: var(--text-small);
   line-height: 1.7;
-  margin: 0 0 16px;
+  color: var(--color-text-secondary);
 }
-.text--error {
-  color: #ff6b6b;
+
+.handoff-text--error {
+  color: var(--color-danger);
 }
-.text--ok {
-  color: #4cd98a;
+
+.handoff-text--ok {
+  color: var(--color-success);
 }
-.block {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-.input {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 12px 14px;
-  background: #151515;
-  border: 1px solid #2a2a2a;
-  border-radius: 6px;
-  color: #fff;
-  font-size: 14px;
+
+.handoff-spinner {
+  color: var(--color-brand);
 }
 </style>

@@ -1,20 +1,94 @@
 {
-  "title": "Movie Lovers Activity Feed",
-  "subtitle": "See recent reviews and activities from friends and the community",
+  "title": "Activity feed",
+  "subtitle": "The latest from people you follow",
+  "refresh": "Refresh feed",
   "settings": {
-    "title": "Feed Settings",
-    "allActivity": "Show all system-wide activities",
-    "followingOnly": "Show only activities from users you follow",
-    "save": "Save Settings",
-    "success": "Feed settings saved successfully"
+    "open": "Feed settings",
+    "manage": "Open activity settings"
   },
-  "empty": "No activity on your feed yet. Try following other users to update your feed!",
-  "activity": {
-    "review": "reviewed {title}",
-    "like": "liked {title}",
-    "watchlist": "added {title} to watchlist",
-    "watched": "marked {title} as watched",
-    "watchLogCreated": "Watch recorded for {title}",
-    "rewatched": "Rewatched {title}"
+  "filters": {
+    "label": "Filter feed",
+    "all": "All",
+    "reviews": "Reviews",
+    "lists": "Lists",
+    "social": "Social"
+  },
+  "newItems": "{n} new activity | {n} new activities",
+  "error": "Could not load the feed",
+  "loadingMore": "Loading more...",
+  "end": "You are all caught up",
+  "empty": {
+    "title": "Your feed is quiet",
+    "description": "Follow friends and other movie lovers to see what they watch, rate and review here.",
+    "findPeople": "Find people to follow",
+    "browse": "Browse movies",
+    "filtered": "No activity in this category yet"
+  },
+  "untitled": "Untitled",
+  "mediaType": {
+    "movie": "Movie",
+    "tv": "TV series"
+  },
+  "readMore": "Read more",
+  "readLess": "Show less",
+  "like": "Like this review",
+  "unlike": "Remove like",
+  "likeFailed": "Could not update your like",
+  "manage": {
+    "open": "Manage this activity",
+    "visibility": "Who can see this",
+    "default": "Default (follows account type)",
+    "current": "Visibility: {value}",
+    "delete": "Delete from feed",
+    "visibilityFailed": "Could not change visibility",
+    "deleteFailed": "Could not delete this activity",
+    "deleteTitle": "Delete this activity?",
+    "deleteDescription": "It will be removed from the feed permanently."
+  },
+  "types": {
+    "review_created": {
+      "label": "Review",
+      "sentence": "{actor} reviewed {title}"
+    },
+    "review_commented": {
+      "label": "Comment",
+      "sentence": "{actor} commented on a review of {title}"
+    },
+    "review_liked": {
+      "label": "Liked review",
+      "sentence": "{actor} liked a review of {title}"
+    },
+    "media_liked": {
+      "label": "Liked",
+      "sentence": "{actor} liked {title}"
+    },
+    "watchlist_added": {
+      "label": "Watchlist",
+      "sentence": "{actor} added {title} to their watchlist"
+    },
+    "watched_added": {
+      "label": "Watched",
+      "sentence": "{actor} watched {title}"
+    },
+    "achievement_unlocked": {
+      "label": "Achievement",
+      "sentence": "{actor} unlocked the achievement {achievement}"
+    },
+    "user_followed": {
+      "label": "Follow",
+      "sentence": "{actor} started following {target}"
+    },
+    "watch_log_created": {
+      "label": "Watch log",
+      "sentence": "{actor} logged a viewing of {title}"
+    },
+    "rewatched": {
+      "label": "Rewatch",
+      "sentence": "{actor} rewatched {title}"
+    },
+    "unknown": {
+      "label": "Activity",
+      "sentence": "{actor} did something new"
+    }
   }
 }

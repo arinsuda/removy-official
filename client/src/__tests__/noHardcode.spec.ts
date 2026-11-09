@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 import { scanDir, scanSource } from "./helpers/hardcodeScan"
 
@@ -23,6 +25,35 @@ export const ZERO_DIRS = [
   "components/onboarding",
   "components/home",
   "components/lists",
+  "components/feed",
+  "components/notifications",
+  "components/actor",
+  "views/actor",
+  "components/auth",
+  "components/donate",
+  "components/admin",
+  "views/admin",
+  "views/auth",
+]
+
+/** Single files (not whole directories) that must stay at zero as well. */
+export const ZERO_FILES = [
+  "views/FeedView.vue",
+  "views/NotificationsView.vue",
+  "stores/feed.ts",
+  "stores/notification.ts",
+  "types/notification.ts",
+  "utils/feedActivity.ts",
+  "utils/relativeTime.ts",
+  "composables/useNotificationList.ts",
+  "composables/useSearchResults.ts",
+  "views/SearchResultView.vue",
+  "views/auth/LoginView.vue",
+  "views/auth/RegisterView.vue",
+  "views/aboutus/DonateView.vue",
+  "layouts/AdminLayout.vue",
+  "stores/admin.ts",
+  "utils/adminError.ts",
 ]
 
 describe("scanner", () => {
@@ -45,5 +76,12 @@ describe("scanner", () => {
 describe.each(ZERO_DIRS)("no hardcode in %s", (dir) => {
   it("has no violations", () => {
     expect(scanDir(dir)).toEqual([])
+  })
+})
+
+describe.each(ZERO_FILES)("no hardcode in %s", (file) => {
+  it("has no violations", () => {
+    const source = readFileSync(join(import.meta.dirname, "..", file), "utf8")
+    expect(scanSource(source, file.endsWith(".vue"))).toEqual([])
   })
 })

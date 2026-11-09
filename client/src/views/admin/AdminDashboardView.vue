@@ -1,325 +1,242 @@
 <template>
   <div class="admin-dashboard">
-    <h1 class="page-title">{{ $t("admin.dashboard.title") }}</h1>
+    <AdminPageHeader :title="t('admin.dashboard.title')" :subtitle="t('admin.dashboard.subtitle')" />
 
-    <SkeletonGrid
-      v-if="adminStore.isLoadingOverview"
-      :count="4"
-      min-width="220px"
-      aspect="2 / 1"
-      :caption="false"
+    <AppErrorState
+      v-if="loadError && !overview"
+      :title="t('admin.dashboard.errorTitle')"
+      :description="t('admin.table.errorDesc')"
+      @retry="load"
     />
 
+    <SkeletonGrid v-else-if="adminStore.isLoadingOverview && !overview" :count="4" min-width="220px" aspect="2 / 1" :caption="false" />
+
     <template v-else-if="overview">
-      <!-- Top Overview Metrics Grid -->
-      <div class="metrics-grid">
-        <!-- Card 1: Registered Users -->
-        <div class="stat-card">
-          <div class="stat-header">
-            <span class="stat-label">{{ $t("admin.dashboard.totalRegisteredUsers") }}</span>
-            <div class="stat-icon-badge brand"><Users :size="20" /></div>
-          </div>
-          <div class="stat-value">{{ overview.total_registered_users.toLocaleString() }}</div>
-          <div class="stat-sub text-muted">
-            {{ $t("admin.dashboard.activeUsers") }}: {{ overview.active_users_count }} |
-            {{ $t("admin.dashboard.inactiveUsers") }}: {{ overview.inactive_users_count }}
-          </div>
-        </div>
+      <section class="kpi-grid" :aria-label="t('admin.dashboard.title')">
+        <AdminKpiCard :label="t('admin.dashboard.totalRegisteredUsers')" :icon="Users">
+          <template #value>{{ overview.total_registered_users.toLocaleString() }}</template>
+          <template #sub>
+            {{ t("admin.dashboard.activeUsers") }} {{ overview.active_users_count.toLocaleString() }} ·
+            {{ t("admin.dashboard.inactiveUsers") }} {{ overview.inactive_users_count.toLocaleString() }}
+          </template>
+        </AdminKpiCard>
 
-        <!-- Card 2: Growth Rate -->
-        <div class="stat-card">
-          <div class="stat-header">
-            <span class="stat-label">{{ $t("admin.dashboard.growth") }}</span>
-            <div class="stat-icon-badge success"><TrendingUp :size="20" /></div>
-          </div>
-          <div class="stat-value">
-            <span v-if="overview.growth_percentage !== null">
-              {{ overview.growth_percentage > 0 ? '+' : '' }}{{ overview.growth_percentage.toFixed(1) }}%
+        <AdminKpiCard :label="t('admin.dashboard.growth')" :icon="TrendingUp" tone="success">
+          <template #value>
+            <template v-if="overview.growth_percentage !== null">
+              {{ overview.growth_percentage > 0 ? "+" : "" }}{{ overview.growth_percentage.toFixed(1) }}%
+            </template>
+            <span v-else class="kpi-note">{{ t("admin.dashboard.noPreviousBaseline") }}</span>
+          </template>
+          <template #sub>
+            <span :class="overview.absolute_growth >= 0 ? 'is-up' : 'is-down'">
+              {{ overview.absolute_growth >= 0 ? "+" : "" }}{{ overview.absolute_growth }}
             </span>
-            <span v-else class="text-secondary text-base">
-              {{ $t("admin.dashboard.noPreviousBaseline") }}
-            </span>
-          </div>
-          <div class="stat-sub">
-            <span :class="overview.absolute_growth >= 0 ? 'text-success' : 'text-danger'">
-              {{ overview.absolute_growth >= 0 ? '+' : '' }}{{ overview.absolute_growth }}
-            </span>
-            vs last month ({{ overview.previous_month_registrations }} → {{ overview.current_month_registrations }})
-          </div>
-        </div>
+            {{
+              t("admin.dashboard.vsLastMonth", {
+                previous: overview.previous_month_registrations,
+                current: overview.current_month_registrations,
+              })
+            }}
+          </template>
+        </AdminKpiCard>
 
-        <!-- Card 3: Realtime Connected Users -->
-        <div class="stat-card">
-          <div class="stat-header">
-            <span class="stat-label">{{ $t("admin.dashboard.realtimeConnectedUsers") }}</span>
-            <div class="stat-icon-badge info pulse"><Wifi :size="20" /></div>
-          </div>
-          <div class="stat-value flex-align">
-            <span>{{ overview.unique_online_users }}</span>
-            <span class="online-indicator" />
-          </div>
-          <div class="stat-sub text-muted">Sockets connected now</div>
-        </div>
+        <AdminKpiCard :label="t('admin.dashboard.realtimeConnectedUsers')" :icon="Wifi" tone="info">
+          <template #value>
+            {{ overview.unique_online_users.toLocaleString() }}
+            <span class="live-dot" aria-hidden="true" />
+          </template>
+          <template #sub>{{ t("admin.dashboard.socketsNow") }}</template>
+        </AdminKpiCard>
 
-        <!-- Card 4: DAU / WAU / MAU -->
-        <div class="stat-card">
-          <div class="stat-header">
-            <span class="stat-label">Active Actors (DAU / WAU / MAU)</span>
-            <div class="stat-icon-badge warning"><Activity :size="20" /></div>
-          </div>
-          <div class="stat-value text-xl">
-            DAU: {{ overview.dau_today }}
-          </div>
-          <div class="stat-sub text-muted">
-            7d (WAU): {{ overview.wau_7d }} | 30d (MAU): {{ overview.mau_30d }}
-          </div>
+        <AdminKpiCard :label="t('admin.dashboard.activeActors')" :icon="Activity" tone="warning">
+          <template #value>{{ overview.dau_today.toLocaleString() }}</template>
+          <template #sub>{{ t("admin.dashboard.dauToday") }}</template>
+        </AdminKpiCard>
+      </section>
+
+      <div class="chart-row">
+        <section class="panel panel--wide">
+          <AdminBarChart
+            v-if="growthPoints.length"
+            :points="growthPoints"
+            :caption="t('admin.dashboard.growthChartTitle')"
+            :summary="chartSummary"
+            :label-header="t('admin.dashboard.chartMonth')"
+            :value-header="t('admin.dashboard.chartCount')"
+          />
+          <template v-else>
+            <h2 class="panel__title">{{ t("admin.dashboard.growthChartTitle") }}</h2>
+            <AppEmptyState :title="t('admin.dashboard.noGrowthData')" :icon="BarChart3" />
+          </template>
+        </section>
+
+        <div class="side-stack">
+          <section class="panel">
+            <AdminStackBar :caption="t('admin.dashboard.accountStatus')" :summary="statusSummary" :segments="statusSegments" />
+          </section>
+          <section class="panel">
+            <AdminMeterList :caption="t('admin.dashboard.activityTitle')" :items="activityItems" />
+          </section>
         </div>
       </div>
 
-      <!-- Secondary Activity Metrics -->
-      <div class="metrics-grid secondary">
-        <div class="stat-card compact">
-          <div class="stat-label">{{ $t("admin.dashboard.totalActivities") }}</div>
-          <div class="stat-value-sm">{{ overview.total_activity_events.toLocaleString() }}</div>
-          <div class="stat-sub text-muted">{{ overview.activity_events_today }} today</div>
-        </div>
-        <div class="stat-card compact">
-          <div class="stat-label">{{ $t("admin.dashboard.totalReviews") }}</div>
-          <div class="stat-value-sm">{{ overview.total_reviews.toLocaleString() }}</div>
-        </div>
-        <div class="stat-card compact">
-          <div class="stat-label">{{ $t("admin.dashboard.totalMediaLikes") }}</div>
-          <div class="stat-value-sm">{{ overview.total_media_likes.toLocaleString() }}</div>
-        </div>
-      </div>
-
-      <!-- Growth Line Chart -->
-      <div class="chart-card">
-        <h2 class="chart-title">{{ $t("admin.dashboard.growthChartTitle") }}</h2>
-        <div class="chart-container">
-          <Line v-if="chartData.labels.length > 0" :data="chartData" :options="chartOptions" />
-        </div>
-      </div>
+      <section class="kpi-grid kpi-grid--compact">
+        <AdminKpiCard :label="t('admin.dashboard.totalActivities')" :icon="Zap" tone="warning">
+          <template #value>{{ overview.total_activity_events.toLocaleString() }}</template>
+          <template #sub>{{ t("admin.dashboard.todayCount", { count: overview.activity_events_today.toLocaleString() }) }}</template>
+        </AdminKpiCard>
+        <AdminKpiCard :label="t('admin.dashboard.totalReviews')" :icon="MessageSquare">
+          <template #value>{{ overview.total_reviews.toLocaleString() }}</template>
+        </AdminKpiCard>
+        <AdminKpiCard :label="t('admin.dashboard.totalMediaLikes')" :icon="Heart" tone="success">
+          <template #value>{{ overview.total_media_likes.toLocaleString() }}</template>
+        </AdminKpiCard>
+      </section>
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed, onMounted, ref } from "vue"
+import { useI18n } from "vue-i18n"
+import { Activity, BarChart3, Heart, MessageSquare, TrendingUp, Users, Wifi, Zap } from "lucide-vue-next"
+import AdminBarChart from "@/components/admin/AdminBarChart.vue"
+import AdminKpiCard from "@/components/admin/AdminKpiCard.vue"
+import AdminMeterList from "@/components/admin/AdminMeterList.vue"
+import AdminPageHeader from "@/components/admin/AdminPageHeader.vue"
+import AdminStackBar from "@/components/admin/AdminStackBar.vue"
+import AppEmptyState from "@/components/ui/AppEmptyState.vue"
+import AppErrorState from "@/components/ui/AppErrorState.vue"
 import SkeletonGrid from "@/components/ui/skeleton/SkeletonGrid.vue"
-import { computed, onMounted } from "vue"
 import { useAdminStore } from "@/stores/admin"
-import { Users, TrendingUp, Wifi, Activity } from "lucide-vue-next"
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-} from "chart.js"
-import { Line } from "vue-chartjs"
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-)
-
+const { t, locale } = useI18n()
 const adminStore = useAdminStore()
 const overview = computed(() => adminStore.overview)
+const loadError = ref(false)
 
-const chartData = computed(() => {
-  const points = adminStore.growth || []
-  return {
-    labels: points.map((p) => p.month),
-    datasets: [
-      {
-        label: "New Registrations",
-        data: points.map((p) => p.user_count),
-        borderColor: "#f5432c",
-        backgroundColor: "rgba(245, 67, 44, 0.15)",
-        fill: true,
-        tension: 0.35,
-        pointBackgroundColor: "#f5432c",
-        pointBorderColor: "#ffffff",
-        pointRadius: 4,
-      },
-    ],
-  }
-})
-
-const chartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: { display: false },
-    tooltip: {
-      backgroundColor: "#1f1f1f",
-      titleColor: "#ffffff",
-      bodyColor: "#f5432c",
-      borderColor: "#2a2a2a",
-      borderWidth: 1,
-    },
-  },
-  scales: {
-    x: {
-      grid: { color: "rgba(255, 255, 255, 0.05)" },
-      ticks: { color: "#a3a3a3" },
-    },
-    y: {
-      beginAtZero: true,
-      grid: { color: "rgba(255, 255, 255, 0.05)" },
-      ticks: { color: "#a3a3a3", stepSize: 1 },
-    },
-  },
+// The API sends months as "YYYY-MM"; show them in the active locale.
+const monthFormat = computed(() => new Intl.DateTimeFormat(locale.value, { month: "short", year: "2-digit", timeZone: "UTC" }))
+function monthLabel(month: string) {
+  const d = new Date(`${month}-01T00:00:00Z`)
+  return Number.isNaN(d.getTime()) ? month : monthFormat.value.format(d)
 }
 
-onMounted(() => {
-  adminStore.fetchOverview()
-  adminStore.fetchGrowth()
+const growthPoints = computed(() => (adminStore.growth || []).map((p) => ({ label: monthLabel(p.month), value: p.user_count })))
+const chartSummary = computed(() => {
+  const pts = growthPoints.value
+  const peak = pts.reduce((best, p) => (p.value > best.value ? p : best), pts[0] ?? { label: "", value: 0 })
+  return t("admin.dashboard.chartSummary", { count: pts.length, peak: peak.value, month: peak.label })
 })
+
+const statusSegments = computed(() => [
+  { label: t("admin.dashboard.activeUsers"), value: overview.value?.active_users_count ?? 0, tone: "success" as const },
+  { label: t("admin.dashboard.inactiveUsers"), value: overview.value?.inactive_users_count ?? 0, tone: "danger" as const },
+])
+const statusSummary = computed(() => statusSegments.value.map((s) => `${s.label}: ${s.value}`).join(", "))
+
+const activityItems = computed(() => [
+  { label: t("admin.dashboard.windowDay"), value: overview.value?.dau_today ?? 0 },
+  { label: t("admin.dashboard.windowWeek"), value: overview.value?.wau_7d ?? 0 },
+  { label: t("admin.dashboard.windowMonth"), value: overview.value?.mau_30d ?? 0 },
+])
+
+async function load() {
+  loadError.value = false
+  const results = await Promise.allSettled([adminStore.fetchOverview(), adminStore.fetchGrowth()])
+  loadError.value = results[0].status === "rejected"
+}
+
+onMounted(load)
 </script>
 
 <style scoped>
 .admin-dashboard {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-}
-
-.page-title {
-  font-size: 1.6rem;
-  font-weight: 800;
-  margin: 0;
-  color: var(--color-text-primary);
-}
-
-.metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 1.25rem;
 }
 
-.metrics-grid.secondary {
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
 }
 
-.stat-card {
-  background: var(--color-surface-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-card);
-  padding: 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+.kpi-grid--compact {
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
 }
 
-.stat-card.compact {
-  padding: 1rem;
-}
-
-.stat-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.stat-label {
-  font-size: 0.825rem;
+.kpi-note {
+  font-size: var(--text-small);
   font-weight: 600;
   color: var(--color-text-secondary);
 }
 
-.stat-icon-badge {
-  width: 36px;
-  height: 36px;
-  border-radius: 0.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.stat-icon-badge.brand { background: rgba(245, 67, 44, 0.15); color: var(--color-brand); }
-.stat-icon-badge.success { background: rgba(16, 185, 129, 0.15); color: #10b981; }
-.stat-icon-badge.info { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
-.stat-icon-badge.warning { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
-
-.stat-value {
-  font-size: 1.8rem;
-  font-weight: 800;
-  color: var(--color-text-primary);
-  line-height: 1.2;
+.is-up {
+  color: var(--color-success);
 }
 
-.stat-value.text-xl {
-  font-size: 1.3rem;
+.is-down {
+  color: var(--color-danger);
 }
 
-.stat-value-sm {
-  font-size: 1.4rem;
-  font-weight: 800;
-  color: var(--color-text-primary);
-}
-
-.flex-align {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.online-indicator {
-  width: 10px;
-  height: 10px;
-  background-color: #10b981;
+.live-dot {
+  width: 0.625rem;
+  height: 0.625rem;
   border-radius: 50%;
-  box-shadow: 0 0 8px #10b981;
-  animation: pulse-online 2s infinite;
+  background: var(--color-success);
+  animation: live-pulse 2s infinite;
 }
 
-@keyframes pulse-online {
-  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-  70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+@keyframes live-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-success) 60%, transparent);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 0.5rem transparent;
+  }
 }
 
-.stat-sub {
-  font-size: 0.775rem;
-}
-
-.text-muted { color: var(--color-text-muted); }
-.text-secondary { color: var(--color-text-secondary); }
-.text-success { color: #10b981; }
-.text-danger { color: #ef4444; }
-.text-base { font-size: 0.9rem; font-weight: 600; }
-
-.chart-card {
-  background: var(--color-surface-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-card);
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
+.chart-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
 }
 
-.chart-title {
-  font-size: 1.1rem;
+.panel {
+  min-width: 0;
+  padding: 1.25rem;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+}
+
+.panel__title {
+  margin: 0 0 0.75rem;
+  font-size: var(--text-small);
   font-weight: 700;
   color: var(--color-text-primary);
-  margin: 0;
 }
 
-.chart-container {
-  height: 320px;
-  position: relative;
+.side-stack {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+  align-content: start;
 }
 
+@media (min-width: 1024px) {
+  .chart-row {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-dot {
+    animation: none;
+  }
+}
 </style>

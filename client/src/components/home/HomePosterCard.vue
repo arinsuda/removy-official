@@ -30,7 +30,15 @@
         </span>
       </div>
       <div class="poster-info">
-        <h3 class="poster-title">{{ item.title }}</h3>
+        <h3 class="poster-title">
+          <template v-if="highlight">
+            <template v-for="(part, i) in titleParts" :key="i">
+              <mark v-if="part.match" class="poster-mark">{{ part.text }}</mark>
+              <template v-else>{{ part.text }}</template>
+            </template>
+          </template>
+          <template v-else>{{ item.title }}</template>
+        </h3>
         <span v-if="caption" class="poster-year">{{ caption }}</span>
         <span v-else-if="item.date" class="poster-year">{{ item.date.slice(0, 4) }}</span>
       </div>
@@ -70,6 +78,7 @@ import { useI18n } from "vue-i18n"
 import PopcornScoreBadge from "@/components/movie/PopcornScoreBadge.vue"
 import PopupCard from "@/components/movie/PopupCard.vue"
 import { popcornTier } from "@/components/movie/popcornTier"
+import { highlightParts } from "@/components/search/highlight"
 import { useHomePopup } from "@/composables/useHomePopup"
 import { detailRoute, posterSrc, posterSrcset, type HomeMedia } from "./homeMedia"
 
@@ -82,8 +91,10 @@ const props = withDefaults(
     sizes?: string
     /** Replaces the release year under the title (e.g. an upcoming release date). */
     caption?: string
+    /** Search words to mark inside the title. */
+    highlight?: string
   }>(),
-  { sizes: "(min-width: 1024px) 180px, (min-width: 640px) 28vw, 42vw" },
+  { sizes: "(min-width: 1024px) 180px, (min-width: 640px) 28vw, 42vw", caption: undefined, highlight: "" },
 )
 
 const { t } = useI18n()
@@ -91,6 +102,7 @@ const popup = useHomePopup()
 const wrap = useTemplateRef<HTMLElement>("wrap")
 const failed = ref(false)
 
+const titleParts = computed(() => highlightParts(props.item.title, props.highlight))
 const popupKey = computed(() => `${props.rail}:${props.item.key}`)
 const state = computed(() => popup.getState(props.item))
 const popcorn = computed(() => props.item.ratings?.popcorn ?? { average: 0, count: 0 })
@@ -209,6 +221,11 @@ const tier = computed(() => {
   gap: 2px;
   min-height: 40px;
   padding: 0 2px;
+}
+.poster-mark {
+  background: color-mix(in srgb, var(--color-brand) 28%, transparent);
+  border-radius: 2px;
+  color: inherit;
 }
 .poster-title {
   margin: 0;

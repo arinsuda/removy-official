@@ -28,7 +28,7 @@
           </button>
 
           <Transition name="dropdown">
-            <NotificationPanel v-if="notificationStore.isPanelOpen" @close="notificationStore.closePanel()" />
+            <NotificationDropdown v-if="notificationStore.isPanelOpen" @close="notificationStore.closePanel()" />
           </Transition>
         </div>
 
@@ -81,7 +81,7 @@ import { useAdminStore } from "@/stores/admin"
 import { useNotificationStore } from "@/stores/notification"
 import { useSessionReset } from "@/composables/useSessionReset"
 import { i18n } from "@/i18n"
-import NotificationPanel from "@/components/common/NotificationPanel.vue"
+import NotificationDropdown from "@/components/notifications/NotificationDropdown.vue"
 import HeaderSearch from "@/components/search/HeaderSearch.vue"
 import AppButton from "@/components/ui/AppButton.vue"
 import { linkApi } from "@/api/endpoints/link"

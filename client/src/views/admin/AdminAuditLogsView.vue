@@ -1,259 +1,297 @@
 <template>
-  <div class="admin-audit-logs-view">
-    <div class="view-header">
-      <h1 class="page-title">{{ $t("admin.auditLogs.title") }}</h1>
+  <AdminPage>
+    <AdminPageHeader :title="t('admin.auditLogs.title')" :subtitle="t('admin.auditLogs.subtitle')" />
+
+    <AdminFilters>
+      <AdminSelect v-model="actionFilter" :label="t('admin.auditLogs.colAction')" :options="actionOptions" />
+      <AdminSelect v-model="targetTypeFilter" :label="t('admin.auditLogs.colTarget')" :options="targetOptions" />
+    </AdminFilters>
+
+    <SkeletonList v-if="adminStore.isLoadingAuditLogs" :count="6" />
+    <AppErrorState
+      v-else-if="loadError"
+      :title="t('admin.table.errorTitle')"
+      :description="t('admin.table.errorDesc')"
+      @retry="fetchData(adminStore.auditLogsPage)"
+    />
+    <AppEmptyState
+      v-else-if="auditLogs.length === 0"
+      :icon="isFiltered ? SearchX : ScrollText"
+      :title="isFiltered ? t('admin.table.noResultsTitle') : t('admin.auditLogs.emptyTitle')"
+      :description="isFiltered ? t('admin.table.noResultsDesc') : t('admin.auditLogs.emptyDesc')"
+    >
+      <template v-if="isFiltered" #action>
+        <AppButton variant="outline" size="sm" @click="clearFilters">{{ t("admin.table.clearFilters") }}</AppButton>
+      </template>
+    </AppEmptyState>
+
+    <div v-else class="timeline">
+      <section v-for="group in groups" :key="group.day" class="timeline__day">
+        <h2 class="timeline__heading">{{ group.label }}</h2>
+        <ol class="timeline__list">
+          <li v-for="log in group.items" :key="log.id" class="entry" :class="`entry--${tone(log.action)}`">
+            <span class="entry__dot" aria-hidden="true"><component :is="icon(log.action)" :size="14" /></span>
+            <div class="entry__body">
+              <div class="entry__head">
+                <strong class="entry__action">{{ actionLabel(log.action) }}</strong>
+                <AdminBadge>{{ t("admin.auditLogs.target", { type: targetLabel(log.target_type), id: log.target_id }) }}</AdminBadge>
+                <time class="entry__time" :datetime="log.created_at">{{ formatTime(log.created_at) }}</time>
+              </div>
+              <p class="entry__by">{{ t("admin.auditLogs.byAdmin", { admin: log.admin_username }) }}</p>
+              <p class="entry__reason" :class="{ 'is-empty': !log.reason }">{{ log.reason || t("admin.auditLogs.noReason") }}</p>
+              <details v-if="hasMeta(log)" class="entry__meta">
+                <summary>{{ t("admin.auditLogs.details") }}</summary>
+                <dl>
+                  <template v-for="(value, key) in log.meta_data" :key="key">
+                    <dt>{{ key }}</dt>
+                    <dd>{{ formatMeta(value) }}</dd>
+                  </template>
+                </dl>
+              </details>
+            </div>
+          </li>
+        </ol>
+      </section>
     </div>
 
-    <!-- Filter Bar -->
-    <div class="filter-bar">
-      <div class="filter-controls">
-        <select v-model="actionFilter" class="filter-select" @change="fetchData(1)">
-          <option value="all">{{ $t("admin.auditLogs.actionAll") }}</option>
-          <option value="USER_DEACTIVATED">USER_DEACTIVATED</option>
-          <option value="USER_REACTIVATED">USER_REACTIVATED</option>
-          <option value="USER_ROLE_CHANGED">USER_ROLE_CHANGED</option>
-          <option value="REVIEW_DELETED">REVIEW_DELETED</option>
-        </select>
-
-        <select v-model="targetTypeFilter" class="filter-select" @change="fetchData(1)">
-          <option value="all">{{ $t("admin.auditLogs.targetAll") }}</option>
-          <option value="user">User</option>
-          <option value="review">Review</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- Table -->
-    <div class="table-container">
-      <table class="admin-table">
-        <thead>
-          <tr>
-            <th>{{ $t("admin.auditLogs.colId") }}</th>
-            <th>{{ $t("admin.auditLogs.colAdmin") }}</th>
-            <th>{{ $t("admin.auditLogs.colAction") }}</th>
-            <th>{{ $t("admin.auditLogs.colTarget") }}</th>
-            <th>{{ $t("admin.auditLogs.colReason") }}</th>
-            <th>{{ $t("admin.auditLogs.colMetadata") }}</th>
-            <th>{{ $t("admin.auditLogs.colTimestamp") }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <SkeletonTableRows v-if="adminStore.isLoadingAuditLogs" :columns="7" />
-          <tr v-else-if="auditLogs.length === 0">
-            <td colspan="7" class="text-center py-8 text-muted">
-              No audit logs recorded yet.
-            </td>
-          </tr>
-          <tr v-for="log in auditLogs" :key="log.id">
-            <td>#{{ log.id }}</td>
-            <td class="font-semibold">@{{ log.admin_username }}</td>
-            <td>
-              <span class="action-badge" :class="log.action">
-                {{ log.action }}
-              </span>
-            </td>
-            <td>
-              <span class="target-tag">
-                {{ log.target_type }} #{{ log.target_id }}
-              </span>
-            </td>
-            <td class="text-secondary">{{ log.reason || '-' }}</td>
-            <td>
-              <code class="meta-code" v-if="log.meta_data">
-                {{ JSON.stringify(log.meta_data) }}
-              </code>
-              <span v-else class="text-muted">-</span>
-            </td>
-            <td class="text-secondary">{{ formatDate(log.created_at) }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Pagination Bar -->
-    <div v-if="adminStore.auditLogsTotalPages > 1" class="pagination-bar">
-      <span class="pagination-info">
-        {{ $t("admin.pagination.showing", {
-          from: (adminStore.auditLogsPage - 1) * adminStore.auditLogsLimit + 1,
-          to: Math.min(adminStore.auditLogsPage * adminStore.auditLogsLimit, adminStore.auditLogsTotal),
-          total: adminStore.auditLogsTotal
-        }) }}
-      </span>
-
-      <div class="pagination-buttons">
-        <button
-          class="page-btn"
-          :disabled="adminStore.auditLogsPage <= 1"
-          @click="fetchData(adminStore.auditLogsPage - 1)"
-        >
-          {{ $t("admin.pagination.previous") }}
-        </button>
-        <span class="page-num">{{ adminStore.auditLogsPage }} / {{ adminStore.auditLogsTotalPages }}</span>
-        <button
-          class="page-btn"
-          :disabled="adminStore.auditLogsPage >= adminStore.auditLogsTotalPages"
-          @click="fetchData(adminStore.auditLogsPage + 1)"
-        >
-          {{ $t("admin.pagination.next") }}
-        </button>
-      </div>
-    </div>
-  </div>
+    <AdminPagination
+      :page="adminStore.auditLogsPage"
+      :total-pages="adminStore.auditLogsTotalPages"
+      :total="adminStore.auditLogsTotal"
+      :limit="adminStore.auditLogsLimit"
+      @change="fetchData"
+    />
+  </AdminPage>
 </template>
 
 <script setup lang="ts">
-import SkeletonTableRows from "@/components/ui/skeleton/SkeletonTableRows.vue"
-import { ref, computed, onMounted } from "vue"
+import { computed, onMounted, ref, watch, type Component } from "vue"
+import { useI18n } from "vue-i18n"
+import { MessageSquareOff, ScrollText, SearchX, Shield, Trash2, UserCheck, UserX } from "lucide-vue-next"
+import AdminBadge from "@/components/admin/AdminBadge.vue"
+import AdminFilters from "@/components/admin/AdminFilters.vue"
+import AdminPage from "@/components/admin/AdminPage.vue"
+import AdminPageHeader from "@/components/admin/AdminPageHeader.vue"
+import AdminPagination from "@/components/admin/AdminPagination.vue"
+import AdminSelect from "@/components/admin/AdminSelect.vue"
+import AppButton from "@/components/ui/AppButton.vue"
+import AppEmptyState from "@/components/ui/AppEmptyState.vue"
+import AppErrorState from "@/components/ui/AppErrorState.vue"
+import SkeletonList from "@/components/ui/skeleton/SkeletonList.vue"
 import { useAdminStore } from "@/stores/admin"
+import type { AdminAuditLogRow } from "@/types"
 
+const { t, te, locale } = useI18n()
 const adminStore = useAdminStore()
 const auditLogs = computed(() => adminStore.auditLogs)
 
 const actionFilter = ref("all")
 const targetTypeFilter = ref("all")
+const loadError = ref(false)
+const isFiltered = computed(() => actionFilter.value !== "all" || targetTypeFilter.value !== "all")
 
-function fetchData(page = 1) {
-  adminStore.fetchAuditLogs({
-    page,
-    limit: 20,
-    action: actionFilter.value,
-    target_type: targetTypeFilter.value,
-  })
+const ACTIONS = ["USER_DEACTIVATED", "USER_REACTIVATED", "USER_ROLE_CHANGED", "USER_DELETED", "REVIEW_DELETED"]
+const actionOptions = computed(() => [
+  { value: "all", label: t("admin.auditLogs.actionAll") },
+  ...ACTIONS.map((a) => ({ value: a, label: t(`admin.auditLogs.action.${a}`) })),
+])
+const targetOptions = computed(() => [
+  { value: "all", label: t("admin.auditLogs.targetAll") },
+  { value: "user", label: t("admin.auditLogs.targetUser") },
+  { value: "review", label: t("admin.auditLogs.targetReview") },
+])
+
+const VISUALS: Record<string, { tone: "danger" | "warning" | "success" | "info"; icon: Component }> = {
+  USER_DEACTIVATED: { tone: "warning", icon: UserX },
+  USER_REACTIVATED: { tone: "success", icon: UserCheck },
+  USER_ROLE_CHANGED: { tone: "info", icon: Shield },
+  USER_DELETED: { tone: "danger", icon: Trash2 },
+  REVIEW_DELETED: { tone: "danger", icon: MessageSquareOff },
 }
+const tone = (action: string) => VISUALS[action]?.tone ?? "info"
+const icon = (action: string) => VISUALS[action]?.icon ?? ScrollText
+// Unknown future actions fall back to the raw code instead of a missing-key warning.
+const actionLabel = (action: string) => (te(`admin.auditLogs.action.${action}`) ? t(`admin.auditLogs.action.${action}`) : action)
+const targetLabel = (type: string) =>
+  type === "user" ? t("admin.auditLogs.targetUser") : type === "review" ? t("admin.auditLogs.targetReview") : type
 
-function formatDate(isoStr: string) {
-  if (!isoStr) return "-"
-  return new Date(isoStr).toLocaleString()
-}
+const hasMeta = (log: AdminAuditLogRow) => !!log.meta_data && Object.keys(log.meta_data).length > 0
+const formatMeta = (v: unknown) => (typeof v === "object" && v !== null ? JSON.stringify(v) : String(v))
+const formatTime = (iso: string) => new Intl.DateTimeFormat(locale.value, { timeStyle: "short" }).format(new Date(iso))
 
-onMounted(() => {
-  fetchData(1)
+const groups = computed(() => {
+  const dayFmt = new Intl.DateTimeFormat(locale.value, { dateStyle: "full" })
+  const out: { day: string; label: string; items: AdminAuditLogRow[] }[] = []
+  for (const log of auditLogs.value) {
+    const d = new Date(log.created_at)
+    const day = Number.isNaN(d.getTime()) ? log.created_at : d.toDateString()
+    let g = out[out.length - 1]
+    if (!g || g.day !== day) {
+      g = { day, label: Number.isNaN(d.getTime()) ? day : dayFmt.format(d), items: [] }
+      out.push(g)
+    }
+    g.items.push(log)
+  }
+  return out
 })
+
+async function fetchData(page = 1) {
+  loadError.value = false
+  try {
+    await adminStore.fetchAuditLogs({
+      page,
+      limit: 20,
+      action: actionFilter.value,
+      target_type: targetTypeFilter.value,
+    })
+  } catch {
+    loadError.value = true
+  }
+}
+
+function clearFilters() {
+  actionFilter.value = "all"
+  targetTypeFilter.value = "all"
+}
+
+watch([actionFilter, targetTypeFilter], () => fetchData(1))
+onMounted(() => fetchData(1))
 </script>
 
 <style scoped>
-.admin-audit-logs-view {
+.timeline {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
 }
 
-.page-title {
-  font-size: 1.6rem;
-  font-weight: 800;
-  margin: 0;
-  color: var(--color-text-primary);
+.timeline__heading {
+  margin: 0 0 0.75rem;
+  font-size: var(--text-caption);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
 }
 
-.filter-bar {
+.timeline__list {
+  position: relative;
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.filter-controls {
+/* The rail runs behind the dots. */
+.timeline__list::before {
+  content: "";
+  position: absolute;
+  top: 0.75rem;
+  bottom: 0.75rem;
+  left: 1rem;
+  width: 1px;
+  background: var(--color-border-strong);
+}
+
+.entry {
+  --tone: var(--color-info);
+  position: relative;
+  display: flex;
+  gap: 0.875rem;
+}
+
+.entry--warning {
+  --tone: var(--color-warning);
+}
+
+.entry--success {
+  --tone: var(--color-success);
+}
+
+.entry--danger {
+  --tone: var(--color-danger);
+}
+
+.entry__dot {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid color-mix(in srgb, var(--tone) 45%, transparent);
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--tone);
 }
 
-.filter-select {
-  padding: 0.6rem 0.85rem;
-  background: var(--color-surface-2);
-  border: 1px solid var(--color-border);
-  border-radius: 0.5rem;
-  color: var(--color-text-primary);
-  font-size: 0.85rem;
-  outline: none;
-  cursor: pointer;
-}
-
-.table-container {
+.entry__body {
+  flex: 1;
+  min-width: 0;
+  padding: 0.75rem 1rem;
   background: var(--color-surface-2);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-card);
-  overflow-x: auto;
 }
 
-.admin-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-  font-size: 0.875rem;
+.entry__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.admin-table th {
-  padding: 0.85rem 1rem;
-  background: rgba(255, 255, 255, 0.02);
-  border-bottom: 1px solid var(--color-border);
-  color: var(--color-text-secondary);
-  font-weight: 600;
-}
-
-.admin-table td {
-  padding: 0.85rem 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+.entry__action {
+  font-size: var(--text-small);
   color: var(--color-text-primary);
 }
 
-.font-semibold { font-weight: 600; }
-
-.action-badge {
-  display: inline-block;
-  padding: 0.2rem 0.5.rem;
-  border-radius: 0.35rem;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
+.entry__time {
+  margin-left: auto;
+  font-size: var(--text-caption);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
 }
-.action-badge.USER_DEACTIVATED { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
-.action-badge.USER_REACTIVATED { background: rgba(16, 185, 129, 0.15); color: #10b981; }
-.action-badge.USER_ROLE_CHANGED { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
-.action-badge.REVIEW_DELETED { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
 
-.target-tag {
-  font-size: 0.775rem;
-  font-weight: 600;
-  padding: 0.2rem 0.4rem;
-  border-radius: 0.25rem;
-  background: var(--color-surface-3);
+.entry__by,
+.entry__reason {
+  margin: 0.25rem 0 0;
+  font-size: var(--text-small);
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.entry__reason.is-empty {
+  font-style: italic;
+  color: var(--color-text-muted);
+}
+
+.entry__meta {
+  margin-top: 0.5rem;
+  font-size: var(--text-caption);
   color: var(--color-text-secondary);
 }
 
-.meta-code {
-  font-family: var(--font-sans);
-  font-size: 0.75rem;
-  background: rgba(0, 0, 0, 0.3);
-  padding: 0.15rem 0.4rem;
-  border-radius: 0.25rem;
-  color: var(--color-text-secondary);
-}
-
-.text-center { text-align: center; }
-.text-secondary { color: var(--color-text-secondary); }
-.text-muted { color: var(--color-text-muted); }
-.py-8 { padding-top: 2rem; padding-bottom: 2rem; }
-
-.pagination-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.85rem;
-  color: var(--color-text-secondary);
-}
-
-.pagination-buttons {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.page-btn {
-  padding: 0.4rem 0.85rem;
-  background: var(--color-surface-2);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-primary);
-  border-radius: 0.35rem;
+.entry__meta summary {
   cursor: pointer;
+  color: var(--color-text-muted);
 }
-.page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.entry__meta dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 0.75rem;
+  margin: 0.5rem 0 0;
+}
+
+.entry__meta dt {
+  font-weight: 600;
+}
+
+.entry__meta dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
 </style>
