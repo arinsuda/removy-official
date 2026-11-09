@@ -13,12 +13,16 @@ func newRepository(db *gorm.DB) *repository {
 	return &repository{db: db}
 }
 
-func (r *repository) Create(item *BMOLItem) error {
-	return r.db.Create(item).Error
-}
-
-func (r *repository) Update(id uint, rank int) error {
-	return r.db.Model(&BMOLItem{}).Where("id = ?", id).Update("rank", rank).Error
+// Update applies only the provided fields.
+func (r *repository) Update(id uint, rank *int, note *string) error {
+	updates := map[string]any{}
+	if rank != nil {
+		updates["rank"] = *rank
+	}
+	if note != nil {
+		updates["note"] = *note
+	}
+	return r.db.Model(&BMOLItem{}).Where("id = ?", id).Updates(updates).Error
 }
 
 func (r *repository) Delete(id uint) error {
@@ -44,9 +48,10 @@ func (r *repository) FindByUser(userID uint, mediaType *movie_module.MediaType) 
 	return items, err
 }
 
-func (r *repository) FindDuplicate(userID uint, mediaID int, mediaType movie_module.MediaType) (*BMOLItem, error) {
+// FindAnyByMedia includes soft-deleted rows: the unique index covers them too.
+func findAnyByMedia(tx *gorm.DB, userID uint, mediaID int, mediaType movie_module.MediaType) (*BMOLItem, error) {
 	var item BMOLItem
-	err := r.db.Where("user_id = ? AND media_id = ? AND media_type = ? AND deleted_at IS NULL", userID, mediaID, mediaType).First(&item).Error
+	err := tx.Unscoped().Where("user_id = ? AND media_id = ? AND media_type = ?", userID, mediaID, mediaType).First(&item).Error
 	if err != nil {
 		return nil, err
 	}

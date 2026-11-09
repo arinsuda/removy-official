@@ -3,13 +3,17 @@ package bmol_module
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/arinsuda/movie-hub/internal/movie_module"
 	"github.com/arinsuda/movie-hub/internal/privacy_policy"
 	shared "github.com/arinsuda/movie-hub/internal/shared"
 	tmdbmodule "github.com/arinsuda/movie-hub/internal/tmdb_module"
+	"golang.org/x/sync/errgroup"
 	"gorm.io/gorm"
 )
+
+const tmdbConcurrency = 6
 
 var (
 	ErrDuplicate        = errors.New("media item is already ranked in your BOL")
@@ -33,31 +37,57 @@ func NewService(db *gorm.DB, policy privacy_policy.UserAccessPolicy) *Service {
 }
 
 func (s *Service) AddItem(ctx context.Context, userID uint, req CreateBMOLRequest) (*BMOLItemResponse, error) {
-	if req.MediaType != movie_module.MediaMovie && req.MediaType != movie_module.MediaSeries {
-		return nil, ErrInvalidMediaType
+	if err := validateCreate(req); err != nil {
+		return nil, err
 	}
 
-	// Check duplicates
-	existing, err := s.repo.FindDuplicate(userID, req.MediaID, req.MediaType)
-	if err == nil && existing != nil {
-		return nil, ErrDuplicate
-	}
-
-	item := &BMOLItem{
-		UserID:    userID,
-		MediaID:   req.MediaID,
-		MediaType: req.MediaType,
-		Rank:      req.Rank,
-	}
-
-	if err := s.repo.Create(item); err != nil {
+	var item *BMOLItem
+	now := time.Now()
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		existing, err := findAnyByMedia(tx, userID, req.MediaID, req.MediaType)
+		switch {
+		case err == nil && !existing.DeletedAt.Valid:
+			return ErrDuplicate
+		case err == nil:
+			// Restore the soft-deleted row (unique index includes it). The deleted_at
+			// guard makes a concurrent restore lose with RowsAffected == 0.
+			res := tx.Unscoped().Model(&BMOLItem{}).
+				Where("id = ? AND deleted_at IS NOT NULL", existing.ID).
+				Updates(map[string]any{"deleted_at": nil, "rank": req.Rank, "note": "", "created_at": now})
+			if res.Error != nil {
+				return res.Error
+			}
+			if res.RowsAffected == 0 {
+				return ErrDuplicate
+			}
+			existing.DeletedAt = gorm.DeletedAt{}
+			existing.Rank = req.Rank
+			existing.Note = ""
+			existing.CreatedAt = now
+			item = existing
+			return nil
+		case !errors.Is(err, gorm.ErrRecordNotFound):
+			return err
+		}
+		item = &BMOLItem{UserID: userID, MediaID: req.MediaID, MediaType: req.MediaType, Rank: req.Rank}
+		return tx.Create(item).Error
+	})
+	if err != nil {
+		if shared.IsPgUniqueViolation(err) {
+			return nil, ErrDuplicate
+		}
 		return nil, err
 	}
 
 	return s.toResponse(item), nil
 }
 
-func (s *Service) UpdateItem(ctx context.Context, itemID, requesterID uint, rank int) (*BMOLItemResponse, error) {
+func (s *Service) UpdateItem(ctx context.Context, itemID, requesterID uint, req UpdateBMOLRequest) (*BMOLItemResponse, error) {
+	note, err := validateUpdate(req)
+	if err != nil {
+		return nil, err
+	}
+
 	item, err := s.repo.FindOne(itemID)
 	if err != nil {
 		return nil, ErrNotFound
@@ -67,11 +97,16 @@ func (s *Service) UpdateItem(ctx context.Context, itemID, requesterID uint, rank
 		return nil, ErrForbidden
 	}
 
-	if err := s.repo.Update(itemID, rank); err != nil {
+	if err := s.repo.Update(itemID, req.Rank, note); err != nil {
 		return nil, err
 	}
 
-	item.Rank = rank
+	if req.Rank != nil {
+		item.Rank = *req.Rank
+	}
+	if note != nil {
+		item.Note = *note
+	}
 	return s.toResponse(item), nil
 }
 
@@ -104,8 +139,16 @@ func (s *Service) GetUserBMOL(ctx context.Context, viewerID, userID uint, mediaT
 
 	responses := make([]BMOLItemResponse, len(items))
 	media := make([]*shared.MediaSummary, len(items))
-	for i, item := range items {
-		responses[i] = *s.toResponse(&item)
+	var g errgroup.Group
+	g.SetLimit(tmdbConcurrency)
+	for i := range items {
+		g.Go(func() error {
+			responses[i] = *s.toResponse(&items[i])
+			return nil
+		})
+	}
+	_ = g.Wait()
+	for i := range responses {
 		media[i] = &responses[i].Media
 	}
 	if err := shared.AttachRatings(ctx, s.db, media); err != nil {
@@ -141,6 +184,7 @@ func (s *Service) toResponse(item *BMOLItem) *BMOLItemResponse {
 		Media:     media,
 		MediaType: item.MediaType,
 		Rank:      item.Rank,
+		Note:      item.Note,
 		CreatedAt: item.CreatedAt,
 	}
 }

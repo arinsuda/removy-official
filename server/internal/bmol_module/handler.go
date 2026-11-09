@@ -81,7 +81,7 @@ func (h *Handler) UpdateItem(c fiber.Ctx) error {
 		return badRequest(c, "invalid request body")
 	}
 
-	item, err := h.svc.UpdateItem(c.Context(), itemID, claims.UserID, req.Rank)
+	item, err := h.svc.UpdateItem(c.Context(), itemID, claims.UserID, req)
 	if err != nil {
 		return handleError(c, err)
 	}
@@ -133,6 +133,8 @@ func handleError(c fiber.Ctx, err error) error {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "forbidden"})
 	case errors.Is(err, ErrDuplicate):
 		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "item already ranked"})
+	case errors.Is(err, ErrInvalidInput):
+		return badRequest(c, "invalid input: rank 1-999, media_id > 0, note up to 280 characters")
 	case errors.Is(err, ErrInvalidMediaType):
 		return badRequest(c, "invalid media_type, must be movie or tv")
 	default:
