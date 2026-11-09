@@ -90,6 +90,8 @@ describe("achievement units", () => {
     const sections = groupByCategory(units)
     expect(sections.map((s) => s.key)).toEqual(["watching", "reviews", "social", "library"])
     expect(sections.find((s) => s.key === "reviews")).toMatchObject({ unlocked: 1, total: 3 })
+    const filteredSections = groupByCategory(filterUnits(units, { status: "progress", category: "all", search: "" }))
+    expect(filteredSections.find((s) => s.key === "reviews")).toMatchObject({ unlocked: 0, total: 2 })
   })
 
   it("only offers tips for actionable types", () => {
@@ -198,6 +200,24 @@ describe("AchievementsView", () => {
     await w.findAll(".tb__chip")[1]!.trigger("click")
     expect(w.text()).toContain("2 of 6 achievements")
     expect(w.findAll(".af__step.is-dim")).toHaveLength(2)
+    expect(w.findAll(".as__count").map((c) => c.text())).toEqual(["1 / 1 unlocked", "1 / 1 unlocked"])
+  })
+
+  it("marks a single badge after a family card as full-width on mobile", async () => {
+    m.list.mockResolvedValue({
+      data: [
+        ach("Critic I", "review_count", 1, 1),
+        ach("Critic II", "review_count", 10, 4),
+        ach("Contrarian", "contrarian_review_count", 1, 0),
+      ],
+      pagination: { page: 1, limit: 100, total: 3, total_pages: 1 },
+    })
+    const w = mountView(1)
+    await flushPromises()
+    const cells = w.findAll(".as__cell")
+    expect(cells).toHaveLength(2)
+    expect(cells[0]!.classes()).toContain("as__cell--wide")
+    expect(cells[1]!.classes()).toContain("as__cell--solo")
   })
 
   it("shows the locked state instead of an error when the list answers 403", async () => {

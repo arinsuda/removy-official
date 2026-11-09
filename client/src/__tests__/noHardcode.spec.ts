@@ -34,6 +34,7 @@ export const ZERO_DIRS = [
   "components/admin",
   "views/admin",
   "views/auth",
+  "views/settings",
 ]
 
 /** Single files (not whole directories) that must stay at zero as well. */
@@ -54,6 +55,8 @@ export const ZERO_FILES = [
   "layouts/AdminLayout.vue",
   "stores/admin.ts",
   "utils/adminError.ts",
+  "components/profile/UserReviews.vue",
+  "components/profile/UserAchievements.vue",
 ]
 
 describe("scanner", () => {

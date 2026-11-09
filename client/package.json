@@ -21,7 +21,6 @@
     "@vuepic/vue-datepicker": "^14.0.0",
     "@vueuse/core": "^14.3.0",
     "axios": "^1.16.1",
-    "chart.js": "^4.5.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "gsap": "^3.15.0",
@@ -34,7 +33,6 @@
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.0",
     "vue": "^3.5.32",
-    "vue-chartjs": "^5.3.4",
     "vue-i18n": "^10.0.0",
     "vue-router": "^5.0.4",
     "vue-toastification": "^2.0.0-rc.5"

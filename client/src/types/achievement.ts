@@ -49,13 +49,3 @@ export interface UserAchievementQueryParams extends PaginationParams {
   unlocked?: boolean
   action_type?: string
 }
-
-export type UnlockedFilter = "all" | "unlocked" | "locked"
-
-export interface AchievementFilterState {
-  unlockedFilter: UnlockedFilter
-  actionType: string
-  search: string
-  page: number
-  limit: number
-}

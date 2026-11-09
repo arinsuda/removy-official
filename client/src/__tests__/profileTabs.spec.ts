@@ -176,6 +176,20 @@ describe("UserReviews", () => {
     expect(w.findAll("article")).toHaveLength(1)
   })
 
+  it("picks and clears a month filter via the designed month picker", async () => {
+    const w = mountTab(UserReviews, 2)
+    await flushPromises()
+    await w.find(".mp__btn").trigger("click")
+    expect(w.find(".mp__pop").exists()).toBe(true)
+    await w.find(".mp__cell").trigger("click")
+    await flushPromises()
+    const year = new Date().getFullYear()
+    expect(m.reviews).toHaveBeenLastCalledWith(1, { year, month: 1 })
+    await w.find(`button[aria-label="${i18n.global.t("profile.reviews.clearDate")}"]`).trigger("click")
+    await flushPromises()
+    expect(m.reviews).toHaveBeenLastCalledWith(1, {})
+  })
+
   it("shows the visitor empty state without a call to action", async () => {
     m.reviews.mockResolvedValue({ data: { reviews: [] } })
     const w = mountTab(UserReviews, 2)
@@ -196,13 +210,15 @@ describe("UserAchievements", () => {
     expect(w.text()).toContain("4 / 10")
   })
 
-  it("filters locked and opens the detail dialog", async () => {
+  it("filters locked and opens the detail dialog with i18n requirement text", async () => {
     const w = mountTab(UserAchievements, 2)
     await flushPromises()
     await w.findAll(".ua__chip")[2]!.trigger("click")
     expect(w.findAll(".ab")).toHaveLength(2)
     await w.findAll(".ab")[0]!.trigger("click")
     await flushPromises()
-    expect(document.body.querySelector('[role="dialog"]')?.textContent).toContain("Ten")
+    const dialogText = document.body.querySelector('[role="dialog"]')?.textContent ?? ""
+    expect(dialogText).toContain("Ten")
+    expect(dialogText).toContain("Write 10 reviews")
   })
 })

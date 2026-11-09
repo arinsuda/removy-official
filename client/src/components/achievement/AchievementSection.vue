@@ -9,7 +9,7 @@
       <span class="as__bar" aria-hidden="true"><span class="as__fill" :style="{ width: `${pct}%` }" /></span>
     </header>
     <ul class="as__grid" :class="{ 'as__grid--few': isFew, 'as__grid--single': section.units.length === 1 && !hasFamily }">
-      <li v-for="(unit, i) in section.units" :key="unit.key" class="as__cell" :class="{ 'as__cell--wide': unit.tiers.length > 1 }" :style="{ '--i': Math.min(i, STAGGER_STEPS) }">
+      <li v-for="(unit, i) in section.units" :key="unit.key" class="as__cell" :class="{ 'as__cell--wide': unit.tiers.length > 1, 'as__cell--solo': soloIndices.has(i) }" :style="{ '--i': Math.min(i, STAGGER_STEPS) }">
         <AchievementFamily v-if="unit.tiers.length > 1" :unit="unit" @open="emit('open', $event)" />
         <AchievementBadge v-else :achievement="unit.current" shine @open="emit('open', $event)" />
       </li>
@@ -34,6 +34,23 @@ const headId = computed(() => `achievements-section-${props.section.key}`)
 const isFew = computed(() => props.section.units.length <= FEW_UNITS)
 const hasFamily = computed(() => props.section.units.some((u) => u.tiers.length > 1))
 const pct = computed(() => (props.section.total ? (props.section.unlocked / props.section.total) * 100 : 0))
+const soloIndices = computed(() => {
+  const set = new Set<number>()
+  const list = props.section.units
+  let singlesRun = 0
+  for (let i = 0; i < list.length; i++) {
+    if (list[i]!.tiers.length > 1) {
+      singlesRun = 0
+      continue
+    }
+    singlesRun++
+    const next = list[i + 1]
+    if (singlesRun % 2 === 1 && (!next || next.tiers.length > 1)) {
+      set.add(i)
+    }
+  }
+  return set
+})
 </script>
 
 <style scoped>
@@ -48,10 +65,11 @@ const pct = computed(() => (props.section.total ? (props.section.unlocked / prop
 .as__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 0.75rem; margin: 0; padding: 0; list-style: none; }
 .as__cell { display: flex; flex-direction: column; min-width: 0; animation: as-in var(--motion-base) var(--ease-out-soft) calc(var(--i) * 30ms) both; }
 .as__cell > * { flex: 1; }
-.as__cell--wide { grid-column: span 2; }
+.as__cell--wide, .as__cell--solo { grid-column: 1 / -1; }
 @keyframes as-in { from { opacity: 0; transform: translateY(8px); } }
-@media (max-width: 479px) {
-  .as__cell:last-child:nth-child(odd) { grid-column: 1 / -1; }
+@media (min-width: 480px) {
+  .as__cell--solo { grid-column: auto; }
+  .as__cell--wide { grid-column: span 2; }
 }
 @media (min-width: 768px) {
   .as__grid--few .as__cell--wide { grid-column: auto; }

@@ -53,7 +53,7 @@
       "password": "POPCORN password",
       "confirmPassword": "Confirm with password",
       "sendCode": "Send code to my email",
-      "codeSent": "We sent a 6-digit code to your email.",
+      "codeSent": "We sent a 6-digit code to {email}.",
       "code": "6-digit code",
       "confirmCode": "Confirm with code",
       "wrong": "Incorrect credentials or too many attempts.",
@@ -63,7 +63,12 @@
       "disabled": "Account linking is turned off right now.",
       "network": "Network error. Check your connection and try again.",
       "noMethods": "We can't verify this account automatically because its email address can't receive mail. Please contact support.",
-      "failedTitle": "Link problem"
+      "failedTitle": "Link problem",
+      "or": "or",
+      "resendCode": "Resend code",
+      "resendIn": "Resend in {seconds}s",
+      "usePassword": "Use password instead",
+      "codeTitle": "Enter the code"
     }
   },
   "logIn": "Log In",

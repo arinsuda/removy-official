@@ -33,7 +33,7 @@
         <span class="ua__detail-icon" :class="{ 'is-on': selected.is_unlocked }">
           <component :is="getAchievementIcon(selected.achievement.action_type)" :size="34" :stroke-width="1.6" aria-hidden="true" />
         </span>
-        <p class="ua__detail-desc">{{ selected.achievement.description }}</p>
+        <p class="ua__detail-desc">{{ description(selected.achievement) }}</p>
         <p v-if="selected.is_unlocked && selected.unlocked_at" class="ua__detail-state">{{ t("profile.tabContent.achievements.unlockedOn", { date: formatDate(selected.unlocked_at) }) }}</p>
         <template v-else-if="!selected.is_unlocked">
           <span class="ua__detail-bar" role="progressbar" :aria-valuenow="progressOf(selected)" aria-valuemin="0" aria-valuemax="100" :aria-label="t('profile.tabContent.achievements.progressLabel')">
@@ -64,12 +64,14 @@ import SkeletonGrid from "@/components/ui/skeleton/SkeletonGrid.vue"
 import type { UserAchievement } from "@/types/achievement"
 import { getAchievementIcon } from "@/utils/achievementIcons"
 import AchievementBadge from "@/components/achievement/AchievementBadge.vue"
+import { useAchievementText } from "@/components/achievement/text"
 import { useUserAchievements } from "@/components/achievement/useUserAchievements"
 import { countUnlocked, filterAchievements, progressOf, type AchievementFilter } from "@/components/achievement/achievements"
 
 const props = defineProps<{ userId: number }>()
 
 const { t, locale } = useI18n()
+const { description } = useAchievementText()
 const FILTERS: AchievementFilter[] = ["all", "unlocked", "locked"]
 
 const { all, loading, failed, load } = useUserAchievements(() => props.userId)

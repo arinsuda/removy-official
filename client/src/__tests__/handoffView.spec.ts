@@ -63,3 +63,27 @@ describe("HandoffView back to PLANZI", () => {
     expect(safeWebUrl(undefined)).toBe("")
   })
 })
+
+describe("HandoffView email code step", () => {
+  beforeEach(() => vi.clearAllMocks())
+  const t = (k: string, p?: Record<string, unknown>) => i18n.global.t(k, p ?? {})
+  const both = { response: { ...confirmRequired.response, data: { ...confirmRequired.response.data, methods: ["local_password", "email_code"] } } }
+
+  it("shows only the code field after sending, and can switch back to password", async () => {
+    vi.mocked(linkApi.redeem).mockRejectedValue(both)
+    vi.mocked(linkApi.sendCode).mockResolvedValue({} as never)
+    const w = await render("#t=x", "")
+    expect(w.findAll("input")).toHaveLength(1)
+    const send = w.findAll("button").find((b) => b.text() === t("navigation.link.handoff.sendCode"))!
+    await send.trigger("click")
+    await flushPromises()
+    expect(linkApi.sendCode).toHaveBeenCalledWith("p")
+    const inputs = w.findAll("input")
+    expect(inputs).toHaveLength(1)
+    expect(inputs[0]!.attributes("autocomplete")).toBe("one-time-code")
+    expect(w.text()).toContain(t("navigation.link.handoff.codeSent", { email: "a@b.c" }))
+    expect(w.text()).toContain(t("navigation.link.handoff.resendIn", { seconds: 30 }))
+    await w.findAll("button").find((b) => b.text() === t("navigation.link.handoff.usePassword"))!.trigger("click")
+    expect(w.get("input").attributes("type")).toBe("password")
+  })
+})
