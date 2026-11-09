@@ -1,26 +1,77 @@
 {
-  "title": "Achievements & Honors",
-  "subtitle": "Complete criteria to unlock custom badges as a movie buff",
-  "points": "{count} points",
-  "unlockedAt": "Unlocked on {date}",
-  "locked": "Locked",
-  "badge": "Badge",
-  "items": {
-    "first_review": {
-      "name": "Novice Critic",
-      "desc": "Write your first movie or series review"
-    },
-    "movie_buff": {
-      "name": "True Movie Buff",
-      "desc": "Mark 10 titles as watched"
-    },
-    "serial_watcher": {
-      "name": "Marathon Watcher",
-      "desc": "Mark 5 TV series titles as watched"
-    },
-    "social_butterfly": {
-      "name": "Social Butterfly",
-      "desc": "Follow 3 or more other users"
-    }
+  "title": {
+    "own": "My achievements",
+    "other": "{name}'s achievements"
+  },
+  "subtitle": {
+    "own": "Every badge you have earned, and the ones still to chase.",
+    "other": "Every badge {name} has earned, and the ones still to chase."
+  },
+  "hero": {
+    "level": "Level {level}",
+    "xp": "{n} XP earned",
+    "progressLabel": "Overall achievement progress",
+    "counter": "{unlocked} / {total}",
+    "latest": "Latest unlock",
+    "next": "Next up"
+  },
+  "counter": "{unlocked} / {total} unlocked",
+  "progress": "{current} / {target}",
+  "progressLabel": "Progress",
+  "xp": "+{n} XP",
+  "unlockedOn": "Unlocked {date}",
+  "filters": {
+    "all": "All",
+    "unlocked": "Unlocked",
+    "progress": "In progress",
+    "locked": "Locked"
+  },
+  "sorts": {
+    "recent": "Recently unlocked",
+    "progress": "Closest to done",
+    "name": "Name"
+  },
+  "toolbar": {
+    "count": "{shown} of {total} achievements",
+    "categories": "Categories"
+  },
+  "categories": {
+    "all": "All categories",
+    "watching": "Watching",
+    "genres": "Genres",
+    "cinema": "Cinema world",
+    "reviews": "Reviews and ratings",
+    "social": "Community",
+    "library": "Library",
+    "journey": "Your journey"
+  },
+  "family": {
+    "tier": "Tier {tier}",
+    "tiers": "{done} of {total} tiers unlocked",
+    "complete": "All {total} tiers complete"
+  },
+  "detail": {
+    "how": "How to unlock",
+    "goal": "Goal: {target}",
+    "tiers": "Tiers",
+    "tip": "Keep going, you are on your way."
+  },
+  "cta": {
+    "browse": "Find something to watch",
+    "profile": "Complete your profile",
+    "review": "Write a review",
+    "rate": "Rate a title",
+    "discover": "Discover people",
+    "library": "Open my library"
+  },
+  "states": {
+    "errorTitle": "Could not load achievements",
+    "errorBody": "Something went wrong while loading. Please try again."
+  },
+  "empty": {
+    "ownerTitle": "No achievements yet",
+    "ownerBody": "Watch, rate and review titles to start earning badges.",
+    "visitorTitle": "No achievements yet",
+    "visitorBody": "Badges will show up here as they are earned."
   }
 }

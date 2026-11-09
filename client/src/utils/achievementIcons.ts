@@ -5,9 +5,9 @@ import {
   Heart,
   Flame,
   Star,
-  Trophy,
   type LucideIcon,
 } from "lucide-vue-next"
+import { CATEGORIES, categoryOf } from "@/components/achievement/config"
 
 const ICON_MAP: Record<string, LucideIcon> = {
   profile_complete: UserCheck,
@@ -19,7 +19,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
 }
 
 export function getAchievementIcon(actionType: string): LucideIcon {
-  return ICON_MAP[actionType] ?? Trophy
+  return ICON_MAP[actionType] ?? CATEGORIES[categoryOf(actionType)].icon
 }
 
 const STATIC_LABELS: Record<string, string> = {

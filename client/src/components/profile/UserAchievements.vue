@@ -2,7 +2,7 @@
   <div class="ua">
     <SkeletonGrid v-if="loading" :count="8" min-width="140px" aspect="1 / 1" />
 
-    <AppErrorState v-else-if="loadError" :title="t('profile.states.sectionError')" @retry="load" />
+    <AppErrorState v-else-if="failed" :title="t('profile.states.sectionError')" @retry="load" />
 
     <AppEmptyState v-else-if="all.length === 0" :icon="Trophy" :title="t('profile.tabContent.achievements.emptyTitle')" :description="t('profile.tabContent.achievements.emptyBody')" />
 
@@ -56,7 +56,6 @@ import { computed, onMounted, ref } from "vue"
 import { useI18n } from "vue-i18n"
 import { RouterLink } from "vue-router"
 import { Trophy } from "lucide-vue-next"
-import { achievementApi } from "@/api/endpoints/achievement"
 import AppButton from "@/components/ui/AppButton.vue"
 import AppEmptyState from "@/components/ui/AppEmptyState.vue"
 import AppErrorState from "@/components/ui/AppErrorState.vue"
@@ -64,44 +63,22 @@ import AppModal from "@/components/ui/AppModal.vue"
 import SkeletonGrid from "@/components/ui/skeleton/SkeletonGrid.vue"
 import type { UserAchievement } from "@/types/achievement"
 import { getAchievementIcon } from "@/utils/achievementIcons"
-import AchievementBadge from "./tabs/AchievementBadge.vue"
-import { countUnlocked, filterAchievements, progressOf, sortAchievements, type AchievementFilter } from "./tabs/achievements"
+import AchievementBadge from "@/components/achievement/AchievementBadge.vue"
+import { useUserAchievements } from "@/components/achievement/useUserAchievements"
+import { countUnlocked, filterAchievements, progressOf, type AchievementFilter } from "@/components/achievement/achievements"
 
 const props = defineProps<{ userId: number }>()
 
 const { t, locale } = useI18n()
 const FILTERS: AchievementFilter[] = ["all", "unlocked", "locked"]
-const PAGE_LIMIT = 100 // server maximum
-const MAX_PAGES = 5
 
-const all = ref<UserAchievement[]>([])
-const loading = ref(false)
-const loadError = ref(false)
+const { all, loading, failed, load } = useUserAchievements(() => props.userId)
 const filter = ref<AchievementFilter>("all")
 const selected = ref<UserAchievement | null>(null)
 
 const unlocked = computed(() => countUnlocked(all.value))
 const shown = computed(() => filterAchievements(all.value, filter.value))
 const formatDate = (iso: string) => new Intl.DateTimeFormat(locale.value, { dateStyle: "long" }).format(new Date(iso))
-
-async function load() {
-  try {
-    loading.value = true
-    loadError.value = false
-    const out: UserAchievement[] = []
-    for (let page = 1; page <= MAX_PAGES; page++) {
-      const res = await achievementApi.listByUser(props.userId, { page, limit: PAGE_LIMIT })
-      out.push(...res.data)
-      if (page >= (res.pagination?.total_pages ?? 1)) break
-    }
-    all.value = sortAchievements(out)
-  } catch (err) {
-    console.error("Fetch achievements failed:", err)
-    loadError.value = true
-  } finally {
-    loading.value = false
-  }
-}
 
 onMounted(load)
 </script>

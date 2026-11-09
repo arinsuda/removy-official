@@ -9,6 +9,8 @@ import { scanDir, scanSource } from "./helpers/hardcodeScan"
  */
 export const ZERO_DIRS = [
   "views/library",
+  "views/achievement",
+  "components/achievement",
   "components/browse",
   "components/upcoming",
   "components/about",

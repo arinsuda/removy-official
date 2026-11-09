@@ -1,5 +1,5 @@
 <template>
-  <button type="button" class="ab" :class="{ 'ab--on': achievement.is_unlocked }" :aria-label="`${achievement.achievement.name}. ${status}`" @click="emit('open', achievement)">
+  <button type="button" class="ab" :class="{ 'ab--on': achievement.is_unlocked, 'ab--shine': shine }" :aria-label="`${achievement.achievement.name}. ${status}`" @click="emit('open', achievement)">
     <span class="ab__icon">
       <component :is="getAchievementIcon(achievement.achievement.action_type)" :size="26" :stroke-width="1.7" aria-hidden="true" />
       <Lock v-if="!achievement.is_unlocked" :size="12" class="ab__lock" aria-hidden="true" />
@@ -23,7 +23,7 @@ import type { UserAchievement } from "@/types/achievement"
 import { getAchievementIcon } from "@/utils/achievementIcons"
 import { progressOf } from "./achievements"
 
-const props = defineProps<{ achievement: UserAchievement }>()
+const props = defineProps<{ achievement: UserAchievement; shine?: boolean }>()
 const emit = defineEmits<{ open: [achievement: UserAchievement] }>()
 
 const { t, locale } = useI18n()
@@ -44,6 +44,9 @@ const status = computed(() => {
 .ab__lock { position: absolute; right: -0.125rem; bottom: -0.125rem; padding: 0.2rem; box-sizing: content-box; color: var(--color-text-secondary); background: var(--color-surface); border: 1px solid var(--color-border-strong); border-radius: 50%; }
 .ab--on { border-color: color-mix(in srgb, var(--color-brand) 55%, transparent); background: linear-gradient(to bottom, color-mix(in srgb, var(--color-brand) 14%, transparent), transparent 70%), var(--color-surface-2); }
 .ab--on .ab__icon { color: var(--color-accent); background: var(--color-brand); filter: none; opacity: 1; box-shadow: 0 0 20px color-mix(in srgb, var(--color-brand) 50%, transparent); }
+.ab--shine.ab--on .ab__icon { overflow: hidden; }
+.ab--shine.ab--on .ab__icon::after { content: ""; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 35%, color-mix(in srgb, var(--color-text-primary) 45%, transparent) 50%, transparent 65%); transform: translateX(-120%); animation: ab-shine 3.2s var(--ease-water) 0.6s 2; }
+@keyframes ab-shine { 0%, 55% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
 .ab__name { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: var(--text-small); font-weight: 700; line-height: 1.3; color: var(--color-text-primary); overflow-wrap: anywhere; }
 .ab:not(.ab--on) .ab__name { color: var(--color-text-secondary); }
 .ab__sub { font-size: var(--text-caption); }
@@ -56,5 +59,6 @@ const status = computed(() => {
 @media (prefers-reduced-motion: reduce) {
   .ab, .ab__fill { transition: none; }
   .ab:hover { transform: none; }
+  .ab--shine.ab--on .ab__icon::after { animation: none; }
 }
 </style>
