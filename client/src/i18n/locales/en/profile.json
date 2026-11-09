@@ -134,13 +134,7 @@
     "filterVisibility": "Visibility filter",
     "filterDate": "Filter by date",
     "clearDate": "Clear date filter",
-    "dateRange": "Date range",
-    "orMonth": "Or pick a month",
-    "from": "From date",
-    "to": "To date",
     "month": "Month and year",
-    "since": "From...",
-    "until": "Until...",
     "empty": "No reviews found",
     "helpful": "{count} found this helpful",
     "editedAt": "Last edited {date}",
@@ -150,12 +144,124 @@
     "filters": {
       "all": "All",
       "high": "High rated",
-      "low": "Critical"
+      "low": "Critical",
+      "withText": "With text"
     },
     "visibility": {
       "all": "All",
       "public": "Public",
       "private": "Private"
+    }
+  },
+  "tabContent": {
+    "common": {
+      "search": "Search this list",
+      "sort": "Sort by",
+      "filter": "Filter",
+      "view": "View",
+      "viewGrid": "Grid view",
+      "viewList": "List view",
+      "filters": {
+        "all": "All",
+        "movie": "Movies",
+        "tv": "TV"
+      },
+      "sorts": {
+        "newest": "Newest first",
+        "oldest": "Oldest first",
+        "title": "Title A-Z",
+        "tmdb": "TMDB score",
+        "popcorn": "POPCORN score"
+      },
+      "loadMore": "Load more",
+      "showing": "Showing {shown} of {total}",
+      "noMatchTitle": "Nothing matches",
+      "noMatchBody": "Try a different search or filter.",
+      "clearFilters": "Clear filters",
+      "remove": "Remove {title}",
+      "added": "Added {date}",
+      "typeMovie": "Movie",
+      "typeTv": "TV",
+      "loading": "Loading"
+    },
+    "watchlist": {
+      "count": "{n} to watch",
+      "emptyOwnerTitle": "Your watchlist is empty",
+      "emptyOwnerBody": "Save titles you want to watch next and they will show up here.",
+      "emptyVisitorTitle": "Nothing on this watchlist yet",
+      "emptyVisitorBody": "Titles they plan to watch will appear here.",
+      "browse": "Browse titles",
+      "markWatched": "Mark watched",
+      "markWatchedFor": "Mark {title} as watched"
+    },
+    "likes": {
+      "count": "{n} favorites",
+      "emptyOwnerTitle": "No favorites yet",
+      "emptyOwnerBody": "Tap the heart on any title to keep it here.",
+      "emptyVisitorTitle": "No favorites yet",
+      "emptyVisitorBody": "Titles they love will appear here.",
+      "browse": "Find something to love",
+      "heart": "Favorite"
+    },
+    "watched": {
+      "count": "{n} watched",
+      "thisYear": "{n} titles in {year}",
+      "total": "{n} in total",
+      "allYears": "All years",
+      "year": "Year",
+      "timeline": "Timeline",
+      "grid": "Grid",
+      "watchedTimes": "Watched {n} times",
+      "times": "×{n}",
+      "yourRating": "Rated {rating}",
+      "emptyOwnerTitle": "Nothing watched yet",
+      "emptyOwnerBody": "Log what you watch to build your history.",
+      "emptyVisitorTitle": "Nothing watched yet",
+      "emptyVisitorBody": "Titles they have watched will appear here.",
+      "browse": "Browse titles",
+      "monthTitles": "{n} titles",
+      "history": "Watch history"
+    },
+    "reviews": {
+      "count": "{n} reviews",
+      "average": "Average",
+      "topGenre": "Most reviewed genre",
+      "withText": "With text",
+      "filterVisibility": "Visibility",
+      "sorts": {
+        "newest": "Newest first",
+        "oldest": "Oldest first",
+        "highest": "Highest rated",
+        "lowest": "Lowest rated"
+      },
+      "readMore": "Read more",
+      "readLess": "Show less",
+      "month": "Month",
+      "allMonths": "All months",
+      "emptyOwnerTitle": "You have not reviewed anything yet",
+      "emptyOwnerBody": "Rate a title and say what you thought.",
+      "emptyVisitorTitle": "No reviews yet",
+      "emptyVisitorBody": "Their reviews will appear here.",
+      "browse": "Find a title to review",
+      "likes": "{n} likes"
+    },
+    "achievements": {
+      "counter": "{unlocked} / {total} unlocked",
+      "filters": {
+        "all": "All",
+        "unlocked": "Unlocked",
+        "locked": "Locked"
+      },
+      "unlockedOn": "Unlocked {date}",
+      "locked": "Locked",
+      "progress": "{current} / {target}",
+      "xp": "+{n} XP",
+      "viewAll": "View all",
+      "emptyTitle": "No achievements yet",
+      "emptyBody": "Achievements will show up as they are earned.",
+      "close": "Close",
+      "lockedHint": "Keep going to unlock this badge.",
+      "progressLabel": "Progress"
     }
   }
 }

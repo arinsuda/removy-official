@@ -134,13 +134,7 @@
     "filterVisibility": "กรองตามการมองเห็น",
     "filterDate": "กรองตามวันที่",
     "clearDate": "ล้างตัวกรองวันที่",
-    "dateRange": "ช่วงวันที่",
-    "orMonth": "หรือเลือกเดือน",
-    "from": "ตั้งแต่วันที่",
-    "to": "ถึงวันที่",
     "month": "เดือนและปี",
-    "since": "ตั้งแต่...",
-    "until": "ถึง...",
     "empty": "ไม่พบรีวิว",
     "helpful": "{count} คนว่ามีประโยชน์",
     "editedAt": "แก้ไขล่าสุด {date}",
@@ -150,12 +144,124 @@
     "filters": {
       "all": "ทั้งหมด",
       "high": "คะแนนสูง",
-      "low": "คะแนนต่ำ"
+      "low": "คะแนนต่ำ",
+      "withText": "มีข้อความ"
     },
     "visibility": {
       "all": "ทั้งหมด",
       "public": "สาธารณะ",
       "private": "ส่วนตัว"
+    }
+  },
+  "tabContent": {
+    "common": {
+      "search": "ค้นหาในรายการนี้",
+      "sort": "เรียงตาม",
+      "filter": "กรอง",
+      "view": "มุมมอง",
+      "viewGrid": "มุมมองตาราง",
+      "viewList": "มุมมองรายการ",
+      "filters": {
+        "all": "ทั้งหมด",
+        "movie": "ภาพยนตร์",
+        "tv": "ซีรีส์"
+      },
+      "sorts": {
+        "newest": "ใหม่สุดก่อน",
+        "oldest": "เก่าสุดก่อน",
+        "title": "ชื่อ ก-ฮ / A-Z",
+        "tmdb": "คะแนน TMDB",
+        "popcorn": "คะแนน POPCORN"
+      },
+      "loadMore": "โหลดเพิ่ม",
+      "showing": "แสดง {shown} จาก {total}",
+      "noMatchTitle": "ไม่พบรายการที่ตรงกัน",
+      "noMatchBody": "ลองเปลี่ยนคำค้นหาหรือตัวกรองดู",
+      "clearFilters": "ล้างตัวกรอง",
+      "remove": "ลบ {title}",
+      "added": "เพิ่มเมื่อ {date}",
+      "typeMovie": "ภาพยนตร์",
+      "typeTv": "ซีรีส์",
+      "loading": "กำลังโหลด"
+    },
+    "watchlist": {
+      "count": "รอดู {n} เรื่อง",
+      "emptyOwnerTitle": "รายการอยากดูยังว่างอยู่",
+      "emptyOwnerBody": "เก็บเรื่องที่อยากดูต่อไว้ แล้วจะมาอยู่ที่นี่",
+      "emptyVisitorTitle": "ยังไม่มีเรื่องในรายการอยากดู",
+      "emptyVisitorBody": "เรื่องที่เขาตั้งใจจะดูจะแสดงที่นี่",
+      "browse": "ดูหนังและซีรีส์",
+      "markWatched": "ดูแล้ว",
+      "markWatchedFor": "บันทึกว่าดู {title} แล้ว"
+    },
+    "likes": {
+      "count": "เรื่องโปรด {n} เรื่อง",
+      "emptyOwnerTitle": "ยังไม่มีเรื่องโปรด",
+      "emptyOwnerBody": "กดหัวใจที่เรื่องไหนก็ได้เพื่อเก็บไว้ที่นี่",
+      "emptyVisitorTitle": "ยังไม่มีเรื่องโปรด",
+      "emptyVisitorBody": "เรื่องที่เขารักจะแสดงที่นี่",
+      "browse": "หาเรื่องที่ถูกใจ",
+      "heart": "เรื่องโปรด"
+    },
+    "watched": {
+      "count": "ดูแล้ว {n} เรื่อง",
+      "thisYear": "{n} เรื่องในปี {year}",
+      "total": "รวม {n} เรื่อง",
+      "allYears": "ทุกปี",
+      "year": "ปี",
+      "timeline": "ไทม์ไลน์",
+      "grid": "ตาราง",
+      "watchedTimes": "ดู {n} ครั้ง",
+      "times": "×{n}",
+      "yourRating": "ให้คะแนน {rating}",
+      "emptyOwnerTitle": "ยังไม่ได้ดูเรื่องไหน",
+      "emptyOwnerBody": "บันทึกสิ่งที่ดูเพื่อสร้างประวัติการดู",
+      "emptyVisitorTitle": "ยังไม่มีเรื่องที่ดูแล้ว",
+      "emptyVisitorBody": "เรื่องที่เขาดูแล้วจะแสดงที่นี่",
+      "browse": "ดูหนังและซีรีส์",
+      "monthTitles": "{n} เรื่อง",
+      "history": "ประวัติการดู"
+    },
+    "reviews": {
+      "count": "{n} รีวิว",
+      "average": "คะแนนเฉลี่ย",
+      "topGenre": "แนวที่รีวิวมากสุด",
+      "withText": "มีข้อความ",
+      "filterVisibility": "การมองเห็น",
+      "sorts": {
+        "newest": "ใหม่สุดก่อน",
+        "oldest": "เก่าสุดก่อน",
+        "highest": "คะแนนสูงสุด",
+        "lowest": "คะแนนต่ำสุด"
+      },
+      "readMore": "อ่านต่อ",
+      "readLess": "ย่อ",
+      "month": "เดือน",
+      "allMonths": "ทุกเดือน",
+      "emptyOwnerTitle": "คุณยังไม่ได้รีวิวเรื่องไหน",
+      "emptyOwnerBody": "ให้คะแนนแล้วเล่าว่าคุณคิดยังไง",
+      "emptyVisitorTitle": "ยังไม่มีรีวิว",
+      "emptyVisitorBody": "รีวิวของเขาจะแสดงที่นี่",
+      "browse": "หาเรื่องไปรีวิว",
+      "likes": "{n} ถูกใจ"
+    },
+    "achievements": {
+      "counter": "ปลดล็อกแล้ว {unlocked} / {total}",
+      "filters": {
+        "all": "ทั้งหมด",
+        "unlocked": "ปลดล็อกแล้ว",
+        "locked": "ยังล็อกอยู่"
+      },
+      "unlockedOn": "ปลดล็อกเมื่อ {date}",
+      "locked": "ยังล็อกอยู่",
+      "progress": "{current} / {target}",
+      "xp": "+{n} XP",
+      "viewAll": "ดูทั้งหมด",
+      "emptyTitle": "ยังไม่มีความสำเร็จ",
+      "emptyBody": "ความสำเร็จจะแสดงที่นี่เมื่อปลดล็อกได้",
+      "close": "ปิด",
+      "lockedHint": "สู้ต่อเพื่อปลดล็อกตราสัญลักษณ์นี้",
+      "progressLabel": "ความคืบหน้า"
     }
   }
 }

@@ -1,427 +1,85 @@
 <template>
-  <div class="wl-root">
-    <div class="section-head">
-      <span class="eyebrow">Watchlist</span>
-      <span class="count-chip">{{ watchlist.length }}</span>
-      <div class="rule" />
-    </div>
+  <div>
+    <PosterTab tab="watchlist" :icon="Bookmark" :entries="entries" :loading="loading" :error="loadError" :is-owner="isOwner" @retry="load">
+      <template #actions="{ entry }">
+        <TabIconButton data-action="mark-watched" :label="t('profile.tabContent.watchlist.markWatchedFor', { title: entry.media.title })" @click="logTarget = entry.media">
+          <Check :size="16" aria-hidden="true" />
+        </TabIconButton>
+        <TabIconButton data-action="remove" danger :label="t('profile.tabContent.common.remove', { title: entry.media.title })" @click="askRemove(entry)">
+          <Trash2 :size="15" aria-hidden="true" />
+        </TabIconButton>
+      </template>
+    </PosterTab>
 
-    <SkeletonGrid v-if="loading" :count="8" min-width="130px" />
-
-    <AppErrorState v-else-if="loadError" :title="$t('profile.states.sectionError')" @retry="load" />
-
-    <div v-else-if="watchlist.length === 0" class="state-empty">
-      <Bookmark :size="28" :stroke-width="1.2" />
-      <p>Your watchlist is empty</p>
-    </div>
-
-    <div v-else class="poster-grid">
-      <div
-        v-for="(item, i) in watchlist"
-        :key="item.id"
-        class="poster-card"
-        :style="{ '--i': i }"
-      >
-        <div
-          class="poster-frame"
-          tabindex="0"
-          @click="goToDetail(item.mediaId, item.mediaType)"
-        >
-          <img
-            v-if="item.coverUrl"
-            :src="item.coverUrl"
-            :alt="item.title"
-            class="poster-img"
-            loading="lazy"
-          />
-          <div v-else class="poster-fallback">
-            <Film :size="18" :stroke-width="1.4" />
-          </div>
-
-          <span class="cat-badge">{{ item.category }}</span>
-
-          <button
-            v-if="isOwner"
-            class="rm-btn"
-            :aria-label="`Remove ${item.title}`"
-            @click.stop="handleRemove(item.id)"
-          >
-            <X :size="11" />
-          </button>
-
-          <div class="poster-overlay">
-            <p class="overlay-name">{{ item.title }}</p>
-            <span class="overlay-date">
-              <Clock :size="9" /> {{ item.addedAt }}
-            </span>
-          </div>
-        </div>
-
-        <div class="poster-meta">
-          <h4
-            class="poster-name"
-            @click="goToDetail(item.mediaId, item.mediaType)"
-          >
-            {{ item.title }}
-          </h4>
-        </div>
-      </div>
-    </div>
-    <ConfirmModal
-      v-model="showModal"
-      :list-type="listType"
-      :item-name="selectedItem?.title"
-      @confirm="doRemove"
-      @cancel="showModal = false"
-    />
+    <WatchLogModal v-if="logTarget" :media-id="logTarget.id" :media-type="logTarget.type" @close="logTarget = null" @logged="onLogged" />
+    <ConfirmModal v-model="showModal" :list-type="listType" :item-name="selected?.media.title" @confirm="doRemove" @cancel="showModal = false" />
   </div>
 </template>
 
 <script setup lang="ts">
-import AppErrorState from "@/components/ui/AppErrorState.vue"
-import SkeletonGrid from "@/components/ui/skeleton/SkeletonGrid.vue"
-  import { computed, onMounted, ref } from "vue"
-  import { useAuthStore } from "@/stores/auth"
-  import { Bookmark, Film, X, Clock } from "lucide-vue-next"
-  import { libraryApi } from "@/api/api"
-  import { useRouter } from "vue-router"
-  import type { ListType } from "@/types"
-  import ConfirmModal from "@/components/profile/components/ConfirmModal.vue"
+import { computed, onMounted, ref } from "vue"
+import { useI18n } from "vue-i18n"
+import { Bookmark, Check, Trash2 } from "lucide-vue-next"
+import { libraryApi } from "@/api/api"
+import type { HomeMedia } from "@/components/home/homeMedia"
+import ConfirmModal from "@/components/profile/components/ConfirmModal.vue"
+import WatchLogModal from "@/components/movie/WatchLogModal.vue"
+import { useAuthStore } from "@/stores/auth"
+import type { ListType } from "@/types"
+import PosterTab from "./tabs/PosterTab.vue"
+import TabIconButton from "./tabs/TabIconButton.vue"
+import { summaryToHomeMedia, type ProfileEntry } from "./tabs/profileMedia"
 
-  const props = defineProps<{
-    userId: number
-    listType: ListType
-  }>()
+const props = defineProps<{ userId: number; listType: ListType }>()
 
-  const router = useRouter()
+const { t } = useI18n()
+const auth = useAuthStore()
+const isOwner = computed(() => auth.user?.id === props.userId)
 
-  const auth = useAuthStore()
-  const isOwner = computed(() => auth.user?.id === props.userId)
+const entries = ref<ProfileEntry[]>([])
+const loading = ref(false)
+const loadError = ref(false)
 
-  const loading = ref(false)
-  const loadError = ref(false)
+const showModal = ref(false)
+const selected = ref<ProfileEntry | null>(null)
+const logTarget = ref<HomeMedia | null>(null)
 
-  const TMDB_IMG = "https://image.tmdb.org/t/p/w342"
-
-  const showModal = ref(false)
-  const pendingId = ref<number | null>(null)
-  const pendingType = ref<"movie" | "tv" | null>(null)
-  const selectedItem = ref<WatchlistItem | null>(null)
-
-  interface WatchlistItem {
-    id: number
-    mediaId: number
-    mediaType: string
-    title: string
-    category: string
-    coverUrl: string
-    addedAt: string
-    genres: string[]
-    rating: number
+async function load() {
+  try {
+    loading.value = true
+    loadError.value = false
+    const response = await libraryApi.getVisibleUserLibrary(props.userId, { list_type: "watchlist" })
+    entries.value = response.data.items.map((item) => ({ id: item.id, media: summaryToHomeMedia(item.media), at: item.created_at }))
+  } catch (err) {
+    console.error("Fetch failed:", err)
+    loadError.value = true
+  } finally {
+    loading.value = false
   }
+}
 
-  const watchlist = ref<WatchlistItem[]>([])
+onMounted(load)
 
-  async function load() {
-    try {
-      loading.value = true
-      loadError.value = false
-      const response = await libraryApi.getVisibleUserLibrary(props.userId, {
-        list_type: "watchlist",
-      })
+function askRemove(entry: ProfileEntry) {
+  selected.value = entry
+  showModal.value = true
+}
 
-      watchlist.value = response.data.items.map(item => ({
-        id: item.id,
-        mediaId: item.media.id,
-        mediaType: item.media.media_type,
-        title: item.media.title,
-        category: item.media.media_type,
-        coverUrl: item.media.poster_url
-          ? `${TMDB_IMG}${item.media.poster_url}`
-          : "",
-        addedAt: new Date(item.created_at).toLocaleDateString(),
-        genres: item.media.genres.map(g => g.name),
-        rating: item.media.vote_average,
-      }))
-    } catch (err) {
-      console.error("Fetch failed:", err)
-      loadError.value = true
-    } finally {
-      loading.value = false
-    }
+async function doRemove() {
+  if (!selected.value) return
+  const id = selected.value.id
+  try {
+    await libraryApi.removeItem(id)
+    entries.value = entries.value.filter((e) => e.id !== id)
+    showModal.value = false
+  } catch (err) {
+    console.error("Remove failed:", err)
   }
+}
 
-  onMounted(load)
-
-  function goToDetail(mediaId: number, mediaType: string) {
-    router.push({
-      name: mediaType === "tv" ? "tv-detail" : "movie-detail",
-      params: { id: mediaId },
-    })
-  }
-
-  function handleRemove(id: number) {
-    const item = watchlist.value.find(i => i.id === id)
-    if (!item) return
-
-    pendingId.value = id
-    pendingType.value = item.category as "movie" | "tv"
-    selectedItem.value = item
-    showModal.value = true
-  }
-
-  async function doRemove() {
-    if (pendingId.value == null || !pendingType.value) return
-
-    try {
-      await libraryApi.removeItem(pendingId.value)
-
-      watchlist.value = watchlist.value.filter(i => i.id !== pendingId.value)
-      showModal.value = false
-    } catch (err) {
-      console.error("Remove failed:", err)
-    }
-  }
+// Recording a watch can move the title off the watchlist, so reload from the server.
+function onLogged() {
+  logTarget.value = null
+  void load()
+}
 </script>
-
-<style scoped>
-  .wl-root {
-    --c-card: var(--color-surface-2);
-    --c-border: var(--color-border);
-    --c-border-h: var(--color-border-strong);
-    --c-red: var(--color-brand);
-    --c-text: var(--color-text-primary);
-    --c-sub: var(--color-text-secondary);
-    --c-muted: var(--color-text-muted);
-    --font: var(--font-sans);
-    --ease: cubic-bezier(0.16, 1, 0.3, 1);
-    font-family: var(--font-sans);
-    color: var(--c-text);
-  }
-
-  .section-head {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 20px;
-  }
-  .eyebrow {
-    font-size: 0.6rem;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--c-muted);
-    white-space: nowrap;
-  }
-  .count-chip {
-    font-size: 0.65rem;
-    font-weight: 700;
-    background: var(--c-red);
-    color: #fff;
-    padding: 2px 7px;
-    border-radius: 4px;
-  }
-  .rule {
-    flex: 1;
-    height: 1px;
-    background: var(--c-border);
-  }
-
-  .state-empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-    padding: 56px 0;
-    color: var(--c-muted);
-  }
-  .state-empty p {
-    font-size: 0.82rem;
-    margin: 0;
-    color: var(--c-sub);
-  }
-
-  /* Grid */
-  .poster-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-    gap: 16px 12px;
-  }
-
-  .poster-card {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    animation: fadeUp 0.4s var(--ease) calc(var(--i) * 60ms) both;
-  }
-  @keyframes fadeUp {
-    from {
-      opacity: 0;
-      transform: translateY(12px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  .poster-frame {
-    position: relative;
-    aspect-ratio: 2/3;
-    background: var(--c-card);
-    border: 1px solid var(--c-border);
-    border-radius: 10px;
-    overflow: hidden;
-    cursor: pointer;
-    outline: none;
-    transition:
-      transform 0.3s var(--ease),
-      border-color 0.3s,
-      box-shadow 0.3s;
-  }
-  .poster-frame:hover,
-  .poster-frame:focus-visible {
-    transform: translateY(-5px);
-    border-color: var(--c-border-h);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
-  }
-
-  .poster-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.4s var(--ease);
-  }
-  .poster-frame:hover .poster-img {
-    transform: scale(1.05);
-  }
-
-  .poster-fallback {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--c-muted);
-  }
-
-  .cat-badge {
-    position: absolute;
-    top: 7px;
-    left: 7px;
-    font-size: 0.5rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    background: rgba(0, 0, 0, 0.75);
-    color: #fff;
-    padding: 3px 6px;
-    border-radius: 4px;
-    backdrop-filter: blur(4px);
-    z-index: 2;
-  }
-
-  .rm-btn {
-    position: absolute;
-    top: 7px;
-    right: 7px;
-    width: 22px;
-    height: 22px;
-    background: rgba(0, 0, 0, 0.65);
-    backdrop-filter: blur(4px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 50%;
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    opacity: 0;
-    transform: scale(0.85);
-    transition: all 0.2s var(--ease);
-    z-index: 3;
-  }
-  .poster-frame:hover .rm-btn {
-    opacity: 1;
-    transform: scale(1);
-  }
-  .rm-btn:hover {
-    background: var(--c-red);
-    border-color: var(--c-red);
-  }
-
-  .poster-overlay {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      to top,
-      rgba(0, 0, 0, 0.9) 0%,
-      rgba(0, 0, 0, 0.4) 45%,
-      transparent 80%
-    );
-    opacity: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    padding: 10px;
-    gap: 3px;
-    transition: opacity 0.2s;
-    z-index: 1;
-  }
-  .poster-frame:hover .poster-overlay {
-    opacity: 1;
-  }
-  .overlay-name {
-    font-size: 0.62rem;
-    font-weight: 600;
-    color: #fff;
-    margin: 0;
-    line-height: 1.3;
-  }
-  .overlay-date {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    font-size: 0.58rem;
-    color: rgba(255, 255, 255, 0.6);
-  }
-
-  .poster-meta {
-    padding: 0 2px;
-  }
-  .poster-name {
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: var(--c-text);
-    margin: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    transition: color 0.2s;
-    cursor: pointer;
-  }
-  .poster-name:hover {
-    color: var(--c-red);
-  }
-
-  @media (hover: none), (max-width: 640px) {
-    .rm-btn {
-      opacity: 1;
-      transform: scale(1);
-      background: rgba(0, 0, 0, 0.75);
-    }
-  }
-
-  @media (max-width: 480px) {
-    .poster-grid {
-      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-      gap: 12px 10px;
-    }
-  }
-
-  @media (max-width: 360px) {
-    .poster-grid {
-      grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-      gap: 10px 8px;
-    }
-  }
-</style>

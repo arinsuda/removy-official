@@ -7,6 +7,7 @@ import UserLikes from "@/components/profile/UserLikes.vue"
 import UserWatched from "@/components/profile/UserWatched.vue"
 import UserWatchlist from "@/components/profile/UserWatchlist.vue"
 import { useRealI18n } from "./helpers/realI18n"
+import { createRouter, createMemoryHistory } from "vue-router"
 
 const { libraryItems } = vi.hoisted(() => ({
   libraryItems: [1, 2, 3].map((id) => ({
@@ -25,6 +26,7 @@ const { libraryItems } = vi.hoisted(() => ({
 }))
 
 vi.mock("@/api/api", () => ({
+  reviewApi: { getUserReviews: vi.fn().mockResolvedValue({ data: { reviews: [] } }) },
   libraryApi: {
     getVisibleUserLibrary: vi.fn().mockResolvedValue({ data: { items: libraryItems } }),
     removeItem: vi.fn().mockResolvedValue({}),
@@ -41,9 +43,12 @@ vi.mock("@/api/endpoints/media", () => ({
 vi.mock("@/api/endpoints/watchLog", () => ({
   watchLogApi: { getMyWatchLogs: vi.fn().mockResolvedValue({ data: {} }) },
 }))
-vi.mock("vue-router", () => ({ useRouter: () => ({ push: vi.fn() }) }))
 
 const i18n = useRealI18n()
+const router = createRouter({
+  history: createMemoryHistory(),
+  routes: ["movie-detail", "tv-detail", "movies"].map((name) => ({ name, path: `/${name}/:id?`, component: { render: () => null } })),
+})
 const origGetClientRects = HTMLElement.prototype.getClientRects
 const wrappers: VueWrapper[] = []
 
@@ -71,7 +76,7 @@ describe.each(cases)("%s remove confirm", (_name, comp, listType) => {
     useAuthStore().user = { id: viewerId } as never
     return mount(comp, {
       props: { userId: 1, listType },
-      global: { plugins: [i18n, pinia] },
+      global: { plugins: [i18n, pinia, router] },
       attachTo: document.body,
     })
   }
@@ -80,7 +85,7 @@ describe.each(cases)("%s remove confirm", (_name, comp, listType) => {
     const wrapper = mountAs(2)
     wrappers.push(wrapper)
     await flushPromises()
-    expect(wrapper.findAll(".rm-btn").length).toBe(0)
+    expect(wrapper.findAll('[data-action="remove"]').length).toBe(0)
   })
 
   it("opens exactly one dialog for one remove click", async () => {
@@ -88,7 +93,7 @@ describe.each(cases)("%s remove confirm", (_name, comp, listType) => {
     wrappers.push(wrapper)
     await flushPromises()
 
-    const removeButtons = wrapper.findAll(".rm-btn")
+    const removeButtons = wrapper.findAll('[data-action="remove"]')
     expect(removeButtons.length).toBe(3)
     await removeButtons[1].trigger("click")
     await nextTick()
