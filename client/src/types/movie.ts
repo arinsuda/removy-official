@@ -201,6 +201,8 @@ export interface BMOLItemResponse {
   media: MediaSummary
   media_type: MediaType
   rank: number
+  /** Optional "why it matters" text, up to 280 characters. */
+  note: string
   created_at: string
 }
 

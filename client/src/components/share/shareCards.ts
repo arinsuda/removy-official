@@ -121,3 +121,49 @@ export function truncateExcerpt(text: string, max: number): string {
   const cut = space >= max * 0.6 ? head.slice(0, space) : head
   return `${cut.trimEnd().replace(/[,;:.\-–—]+$/, "")}…`
 }
+
+// --- Best of Life (Hall of Fame) cards ---
+
+export type BolTemplateKey = "story" | "square"
+
+export interface BolTemplateDef {
+  key: BolTemplateKey
+  width: number
+  height: number
+  labelKey: string
+  ratio: string
+  /** How many titles the card shows, in rank order. */
+  capacity: number
+}
+
+const BOL_DEFS: Record<BolTemplateKey, BolTemplateDef> = {
+  story: { key: "story", width: 1080, height: 1920, labelKey: "library.bmol.share.templates.story", ratio: "9:16", capacity: 9 },
+  square: { key: "square", width: 1080, height: 1080, labelKey: "library.bmol.share.templates.square", ratio: "1:1", capacity: 3 },
+}
+
+export const BOL_TEMPLATES: BolTemplateDef[] = [BOL_DEFS.story, BOL_DEFS.square]
+
+export function bolTemplateDef(key: BolTemplateKey): BolTemplateDef {
+  return BOL_DEFS[key]
+}
+
+/** Stable key for a poster lookup. */
+export function bolPosterKey(item: { media_type: string; media: { id: number } }): string {
+  return `${item.media_type}:${item.media.id}`
+}
+
+/** The first `max` titles in rank order; ties keep their insertion order. */
+export function bolTopItems<T extends { rank: number }>(groups: { items: T[] }[], max: number): T[] {
+  return groups.flatMap((g) => g.items).slice(0, max)
+}
+
+/**
+ * Note on the card: only when the owner opted in, and only the note of the
+ * first rank-1 title. Everything else on the card is already public.
+ */
+export function bolShareNote(items: { rank: number; note: string }[], include: boolean, max = 140): string | null {
+  if (!include) return null
+  const top = items.find((i) => i.rank === 1)
+  const text = top?.note?.trim()
+  return text ? truncateExcerpt(text, max) : null
+}

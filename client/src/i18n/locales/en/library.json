@@ -44,33 +44,105 @@
     }
   },
   "bmol": {
-    "title": "Best of Life (BOL)",
-    "description": "Rank the best movies and TV series of your life. Customize ranks and add new records.",
-    "movieTitle": "Best Movies of Life",
-    "tvTitle": "Best TV Series of Life",
-    "empty": "You haven't ranked any media yet. Add some above!",
-    "emptyMovieTitle": "No Movie Rankings Yet",
-    "emptyTVTitle": "No TV Series Rankings Yet",
-    "emptyHint": "Type a title in the search box above to create your first rank!",
-    "addMedia": "Add New Item",
-    "searchPlaceholder": "Type to search movies or TV series...",
-    "selectRank": "Select Rank",
-    "save": "Save Rank",
-    "rank": "Rank #{rank}",
-    "rankNumber": "Rank {rank}",
-    "increaseRank": "Move Up",
-    "decreaseRank": "Move Down",
-    "deleteConfirm": "Are you sure you want to remove this item from your Best of Life?",
-    "errorDuplicate": "This media is already ranked!",
-    "errorEmptySearch": "No search results found",
-    "showAll": "Show All",
-    "showLess": "Show Less",
-    "filterPlaceholder": "Search within this rank...",
-    "backToList": "Back to List",
-    "selectMultiple": "Select Multiple",
-    "addSelected": "Add Selected ({count})",
-    "addMovie": "Add Movie to Ranking",
-    "addTV": "Add TV Series to Ranking",
-    "moreItems": "+{count} more"
+    "title": "Best of Life",
+    "descriptionOwner": "Your all-time favorites, ranked. Several titles can share a rank.",
+    "descriptionVisitor": "Their all-time favorite movies and series, ranked.",
+    "tabs": {
+      "label": "Media type",
+      "movie": "Movies",
+      "tv": "TV series"
+    },
+    "actions": {
+      "add": "Add titles",
+      "edit": "Edit",
+      "done": "Done",
+      "share": "Share"
+    },
+    "hero": {
+      "title": "The one",
+      "tie": "{count}-way tie for #1"
+    },
+    "podium": {
+      "rank": "Rank {rank}"
+    },
+    "shelf": {
+      "showAll": "Show all ({count} more)",
+      "showLess": "Show less"
+    },
+    "card": {
+      "actions": "Actions for {title}",
+      "editNote": "Edit note",
+      "addNote": "Add why it matters",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "remove": "Remove from list"
+    },
+    "note": {
+      "title": "Why it matters",
+      "label": "Your note",
+      "placeholder": "What makes this one special?",
+      "counter": "{count} / {max}"
+    },
+    "add": {
+      "title": "Add {type}",
+      "sourceLabel": "Where to pick from",
+      "tabSearch": "Search",
+      "searchLabel": "Search by title",
+      "searchPlaceholder": "Type a title...",
+      "searchHint": "Search for a title to add it.",
+      "noResults": "No results found.",
+      "loadFailed": "Could not load titles. Try again.",
+      "alreadyRanked": "Already ranked",
+      "targetRank": "Rank",
+      "tieHint": "Titles on the same rank are tied.",
+      "submit": "Add {count} to list"
+    },
+    "suggestions": {
+      "tab": "From your favorites",
+      "empty": "No suggestions yet. Rate titles 4.5 or higher, or mark them as watched."
+    },
+    "drag": {
+      "handle": "Reorder {title}. Press Space to pick up.",
+      "rank": "rank {rank}",
+      "grabbed": "{title} picked up at {rank}. Use arrow keys to choose a rank, Enter to drop, Escape to cancel.",
+      "moved": "{title} will move to {rank}.",
+      "dropped": "{title} moved to {rank}.",
+      "cancelled": "Move cancelled."
+    },
+    "toasts": {
+      "duplicate": "\"{title}\" is already in your list.",
+      "addFailed": "Could not add \"{title}\".",
+      "moveFailed": "Could not change the rank.",
+      "noteFailed": "Could not save the note.",
+      "noteSaved": "Note saved.",
+      "removeFailed": "Could not remove the title."
+    },
+    "locked": {
+      "title": "This list is private",
+      "body": "Follow this account to see their Best of Life."
+    },
+    "error": {
+      "title": "Could not load this list",
+      "body": "Check your connection and try again."
+    },
+    "empty": {
+      "title": "Nothing ranked yet",
+      "body": "This person has not picked their all-time favorites."
+    },
+    "onboarding": {
+      "title": "Pick your #1",
+      "body": "Start with the one title you would save above all others, then build the rest of your list.",
+      "cta": "Choose your #1"
+    },
+    "share": {
+      "title": "Share your Best of Life",
+      "cardTitle": "Best of Life",
+      "includeNote": "Include my note for #1",
+      "caption": "My Best of Life on POPCORN",
+      "templates": {
+        "story": "Story",
+        "square": "Top 3"
+      }
+    }
   }
 }

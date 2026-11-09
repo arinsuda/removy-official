@@ -13,4 +13,5 @@ type BMOLItem struct {
 	MediaID   int                    `gorm:"not null;uniqueIndex:idx_user_media"`
 	MediaType movie_module.MediaType `gorm:"type:varchar(10);not null;uniqueIndex:idx_user_media"`
 	Rank      int                    `gorm:"not null"`
+	Note      string                 `gorm:"type:varchar(280);not null;default:''"`
 }

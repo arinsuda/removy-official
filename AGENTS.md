@@ -63,7 +63,7 @@ client/src/
 | Reviews, comments, ratings | review_module, like_module, media_stats_module | components/movie/MovieReviews.vue, composables/useReviewForm.ts |
 | Library lists | library_module | views/library/ |
 | Watch logs | watch_log_module | api/endpoints/watchLog.ts, types/watchLog.ts |
-| Best Movie of Life (BMOL) | bmol_module | views/library/components/bmol/, components/profile/UserBmol.vue |
+| Best of Life (BMOL, "Hall of Fame"). Ranks may tie (several titles per rank, no renumbering). Items carry an optional `note` (<=280 runes) returned only by the privacy-gated `GET /bmol/user/:id`. Re-adding a soft-deleted title restores the row; `PUT /bmol/:id` takes `{rank?, note?}` (one required); validation is manual (rank 1-999, media_id > 0) | bmol_module | components/bmol/ (BmolBoard = whole UI; `useBmol` owns the `["bmol", userId]` query and optimistic mutations; `bmolRanks.ts` pure grouping/move logic; `useBmolReorder` drag + keyboard), `UserBmol.vue` and `BmolSection.vue` are thin wrappers, `ProfileBmolHighlight` shares the query key, share cards in components/share/BolShareSheet.vue + cards/Bol*Card.vue |
 | Achievements | achievements_module, database/seeder/achievement.json | views/achievement/, stores/achievement.ts |
 | Follow, feed | follow_module, feed_module | views/FeedView.vue, components/feed/, components/social/ |
 | Profiles, stats, privacy | user_module, user_stats_module, analytics_module, privacy_policy | views/user/ (thin shell), components/profile/ (ProfileHero, ProfileTastePanel, FollowListModal, tasteProfile.ts), composables/useUserProfile.ts |
