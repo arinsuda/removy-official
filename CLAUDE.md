@@ -12,6 +12,16 @@ Layout, commands, and invariants are in AGENTS.md. Don't duplicate them here.
 - Don't delete existing code unless you understand what it does.
 - New APIs follow RESTful principles: plural nouns, HTTP verbs that match the action, correct status codes, and the response shape described in AGENTS.md.
 
+# No Hardcode (permanent rule)
+Applies to every file you create or edit. Existing violations in a file you touch must be fixed in that same change.
+- **Text:** every user-visible string goes through i18n (`t()` / `$t()`), in both `en` and `th`. This includes `aria-label`, `title`, `alt`, `placeholder`, toasts, confirm dialogs, and error messages shown to users. Use vue-i18n plurals and interpolation; never build sentences by concatenating strings.
+- **Locale and formatting:** never hard-code `'th-TH'`, `'en-US'` or a date or number format. Use the current i18n locale with `Intl`, or the shared helpers.
+- **Design values:** use tokens only. That covers colors (no hex, rgb, hsl or named colors), z-index (the scale variables), radii, shadows and motion durations/easings. Spacing uses the Tailwind scale. No `!important` unless you are overriding third-party CSS.
+- **Config and data:** URLs, API paths, image sizes, page sizes, limits, timeouts and feature flags live in named constants (a `config.ts` or `constants.ts` next to the feature, or `server/config`). The server reads environment-specific values from env. Never inline secrets, IDs or magic numbers.
+- **Server (Go):** error messages, limits and TTLs are named constants. HTTP status codes use `fiber.Status*`. Don't put user-facing copy on the server; return error codes for the client to translate.
+- **Exceptions:** tests, fixtures, share-image templates where the rendered PNG must look fixed, `PopcornRatingIcon` gradients and poster scrims. Mark each exception with a short `// hardcode-ok: <reason>` comment.
+- **Enforcement:** `client/src/__tests__/noHardcode.spec.ts` scans the directories listed in its `ZERO_DIRS`. A redesigned area must be added to `ZERO_DIRS` and stay at zero. `designTokens.spec.ts` keeps ratcheting the rest of the codebase down; lower its baseline whenever counts drop, and never raise it.
+
 # Workflow
 - Reply to the user in Thai; keep code, comments, and commit messages in English.
 - Plan before changes that touch more than 3 files or touch auth, account linking, privacy, or migrations. Ask the user when requirements are unclear.

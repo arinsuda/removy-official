@@ -26,7 +26,7 @@
           <PopcornScoreBadge :average="popcorn.average" :count="popcorn.count" />
         </div>
         <span v-if="tmdb" class="tmdb-pill" :aria-label="t('media.rating.tmdbScore', { score: tmdb })">
-          <span aria-hidden="true">TMDB {{ tmdb }}</span>
+          <span aria-hidden="true">TMDB {{ tmdb }}</span> <!-- hardcode-ok: brand name -->
         </span>
       </div>
       <div class="poster-info">
@@ -233,7 +233,7 @@ const tier = computed(() => {
   background: var(--color-surface-2);
   border: 1px solid var(--color-border-strong);
   border-radius: 14px;
-  box-shadow: 0 24px 70px rgb(0 0 0 / 85%);
+  box-shadow: var(--shadow-popup);
 }
 .popup-enter-active {
   transition: opacity 0.2s, transform 0.2s var(--ease-out-soft);

@@ -20,7 +20,7 @@ const { t } = useI18n()
 </script>
 
 <style scoped>
-.bar { position: sticky; bottom: 0.75rem; z-index: 50; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.75rem 1rem; background: var(--color-surface-3); border: 1px solid var(--color-border-strong); border-radius: var(--radius-card); box-shadow: 0 8px 24px rgb(0 0 0 / 0.4); }
+.bar { position: sticky; bottom: 0.75rem; z-index: var(--z-sticky); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.75rem 1rem; background: var(--color-surface-3); border: 1px solid var(--color-border-strong); border-radius: var(--radius-card); box-shadow: var(--shadow-raised); }
 .bar__text { font-size: 0.875rem; color: var(--color-text-primary); }
 .bar__actions { display: flex; gap: 0.5rem; margin-left: auto; }
 </style>

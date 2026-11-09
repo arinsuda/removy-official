@@ -69,7 +69,7 @@ const emit = defineEmits<{ retry: []; "load-more": [] }>()
 const SIZES = "(min-width: 1280px) 190px, (min-width: 1024px) 18vw, (min-width: 768px) 23vw, (min-width: 480px) 31vw, 47vw"
 
 const { t, locale } = useI18n()
-const intlLocale = computed(() => (locale.value === "th" ? "th-TH" : "en-US"))
+const intlLocale = computed(() => locale.value)
 const groups = computed(() => groupByRelease(props.items, props.today, intlLocale.value))
 const dayFormat = computed(() => new Intl.DateTimeFormat(intlLocale.value, { weekday: "short", day: "numeric", month: "short" }))
 

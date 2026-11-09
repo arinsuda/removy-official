@@ -112,9 +112,19 @@
  * not migrated yet; do not add new hard-coded z-index values above 1000.
  */
 :root {
+  --z-sticky: 50;
+  --z-below-header: 90;
+  --z-header: 100;
+  --z-above-header: 110;
   --z-modal-base: 100000;
   --z-popover: 300000;
   --z-toast: 400000;
+
+  --color-scrim: rgb(0 0 0 / 0.6);
+  --shadow-popover: 0 20px 56px rgb(0 0 0 / 0.55);
+  --shadow-sheet: -16px 0 48px rgb(0 0 0 / 0.5);
+  --shadow-popup: 0 24px 70px rgb(0 0 0 / 0.85);
+  --shadow-raised: 0 8px 24px rgb(0 0 0 / 0.4);
 }
 
 /* The datepicker hard-codes z-index 99999, which would sit under an AppModal. */

@@ -276,7 +276,7 @@ watch(displayId, (_id, prev) => {
   background: var(--color-surface);
   overflow-x: clip;
 }
-.detail__progress { position: fixed; top: 0; left: 0; z-index: 110; width: 100%; border-radius: 0; }
+.detail__progress { position: fixed; top: 0; left: 0; z-index: var(--z-above-header); width: 100%; border-radius: 0; }
 .detail__state { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; padding: 8rem 1.5rem; text-align: center; }
 .detail__state-title { font-size: var(--text-heading); font-weight: 800; }
 .detail__state-text { max-width: 28rem; color: var(--color-text-secondary); }

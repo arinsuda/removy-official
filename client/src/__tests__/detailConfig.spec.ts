@@ -74,7 +74,7 @@ describe("adaptMovieDetail", () => {
     expect(d.cast).toHaveLength(12)
     expect(d.crewHighlights).toHaveLength(1)
     expect(d.facts.map(f => f.key)).toEqual(["status", "releaseDate", "budget"])
-    expect(d.facts.find(f => f.key === "budget")?.value).toBe("$160,000,000")
+    expect(d.facts.find(f => f.key === "budget")?.value).toBe("160000000")
   })
 
   it("normalizes status for i18n keys", () => {
