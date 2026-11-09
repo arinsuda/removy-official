@@ -8,6 +8,8 @@ export type SortKey = "recent" | "progress" | "name"
 /** Server maximum page size; the catalog (about 105 rows) needs a couple of pages. */
 export const PAGE_LIMIT = 100
 export const MAX_PAGES = 5
+/** A section with this many cards or fewer stretches them to fill the row. */
+export const FEW_UNITS = 2
 /** Grid cards animate in with a stagger; later cards share the last delay step. */
 export const STAGGER_STEPS = 12
 

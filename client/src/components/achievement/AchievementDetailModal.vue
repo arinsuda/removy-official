@@ -14,7 +14,7 @@
 
       <section class="ad__block">
         <h3 class="ad__label">{{ t("achievements.detail.how") }}</h3>
-        <p class="ad__desc">{{ achievement.achievement.description }}</p>
+        <p class="ad__desc">{{ description(achievement.achievement) }}</p>
         <p class="ad__goal"><Target :size="14" aria-hidden="true" />{{ t("achievements.detail.goal", { target: n(achievement.achievement.target_count) }) }}</p>
       </section>
 
@@ -63,6 +63,7 @@ import type { UserAchievement } from "@/types/achievement"
 import { getAchievementIcon } from "@/utils/achievementIcons"
 import { progressOf } from "./achievements"
 import { TIER_NUMERALS, categoryOf, ctaFor } from "./config"
+import { useAchievementText } from "./text"
 
 const props = defineProps<{
   achievement: UserAchievement | null
@@ -74,6 +75,7 @@ const props = defineProps<{
 const emit = defineEmits<{ close: []; select: [achievement: UserAchievement] }>()
 
 const { t, n, locale } = useI18n()
+const { description } = useAchievementText()
 const category = computed(() => categoryOf(props.achievement?.achievement.action_type ?? ""))
 const cta = computed(() => (props.achievement ? ctaFor(props.achievement.achievement.action_type) : null))
 const pct = computed(() => (props.achievement ? progressOf(props.achievement) : 0))

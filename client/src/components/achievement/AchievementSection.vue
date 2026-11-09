@@ -8,7 +8,7 @@
       </div>
       <span class="as__bar" aria-hidden="true"><span class="as__fill" :style="{ width: `${pct}%` }" /></span>
     </header>
-    <ul class="as__grid">
+    <ul class="as__grid" :class="{ 'as__grid--few': isFew, 'as__grid--single': section.units.length === 1 && !hasFamily }">
       <li v-for="(unit, i) in section.units" :key="unit.key" class="as__cell" :class="{ 'as__cell--wide': unit.tiers.length > 1 }" :style="{ '--i': Math.min(i, STAGGER_STEPS) }">
         <AchievementFamily v-if="unit.tiers.length > 1" :unit="unit" @open="emit('open', $event)" />
         <AchievementBadge v-else :achievement="unit.current" shine @open="emit('open', $event)" />
@@ -23,7 +23,7 @@ import { useI18n } from "vue-i18n"
 import type { UserAchievement } from "@/types/achievement"
 import AchievementBadge from "./AchievementBadge.vue"
 import AchievementFamily from "./AchievementFamily.vue"
-import { CATEGORIES, STAGGER_STEPS } from "./config"
+import { CATEGORIES, FEW_UNITS, STAGGER_STEPS } from "./config"
 import type { CategorySummary } from "./units"
 
 const props = defineProps<{ section: CategorySummary }>()
@@ -31,6 +31,8 @@ const emit = defineEmits<{ open: [achievement: UserAchievement] }>()
 
 const { t, n } = useI18n()
 const headId = computed(() => `achievements-section-${props.section.key}`)
+const isFew = computed(() => props.section.units.length <= FEW_UNITS)
+const hasFamily = computed(() => props.section.units.some((u) => u.tiers.length > 1))
 const pct = computed(() => (props.section.total ? (props.section.unlocked / props.section.total) * 100 : 0))
 </script>
 
@@ -43,22 +45,17 @@ const pct = computed(() => (props.section.total ? (props.section.unlocked / prop
 .as__count { margin: 0; font-size: var(--text-caption); color: var(--color-text-secondary); }
 .as__bar { grid-column: 1 / -1; display: block; height: 0.25rem; overflow: hidden; background: var(--color-surface-3); border-radius: 9999px; }
 .as__fill { display: block; height: 100%; background: var(--color-brand); border-radius: inherit; transition: width var(--motion-base) var(--ease-out-soft); }
-.as__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; margin: 0; padding: 0; list-style: none; }
+.as__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 0.75rem; margin: 0; padding: 0; list-style: none; }
 .as__cell { display: flex; flex-direction: column; min-width: 0; animation: as-in var(--motion-base) var(--ease-out-soft) calc(var(--i) * 30ms) both; }
 .as__cell > * { flex: 1; }
 .as__cell--wide { grid-column: span 2; }
 @keyframes as-in { from { opacity: 0; transform: translateY(8px); } }
-@media (min-width: 480px) {
-  .as__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 479px) {
+  .as__cell:last-child:nth-child(odd) { grid-column: 1 / -1; }
 }
 @media (min-width: 768px) {
-  .as__grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-}
-@media (min-width: 1024px) {
-  .as__grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-}
-@media (min-width: 1280px) {
-  .as__grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .as__grid--few .as__cell--wide { grid-column: auto; }
+  .as__grid--single { max-width: 20rem; }
 }
 @media (prefers-reduced-motion: reduce) {
   .as__cell { animation: none; }

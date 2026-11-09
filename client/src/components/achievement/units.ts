@@ -17,6 +17,8 @@ export interface AchievementUnit {
   pct: number
   /** Newest unlock time in ms, 0 when nothing is unlocked. */
   lastUnlockedAt: number
+  /** Ids of the tiers that pass the active filters; set by `filterUnits`, absent on raw units. */
+  matched?: ReadonlySet<number>
 }
 
 export interface CategorySummary {
@@ -82,15 +84,35 @@ export interface UnitQuery {
   status: StatusFilter
   category: CategoryKey | "all"
   search: string
+  /** Text shown for a requirement, so search matches what the user reads. */
+  describe?: (a: UserAchievement) => string
 }
 
+/** Status of a single tier; a locked tier counts as in progress once it has any progress. */
+export function tierStatus(a: UserAchievement): UnitStatus {
+  return a.is_unlocked ? "unlocked" : progressOf(a) > 0 ? "progress" : "locked"
+}
+
+function matchesSearch(a: UserAchievement, search: string, describe?: UnitQuery["describe"]): boolean {
+  const needle = search.trim().toLowerCase()
+  if (!needle) return true
+  return a.achievement.name.toLowerCase().includes(needle) || (describe?.(a) ?? a.achievement.description).toLowerCase().includes(needle)
+}
+
+/** Keeps units with at least one tier matching status and search; `matched` lists those tiers. */
 export function filterUnits(units: AchievementUnit[], q: UnitQuery): AchievementUnit[] {
-  const needle = q.search.trim().toLowerCase()
-  return units.filter((u) => {
-    if (q.status !== "all" && u.status !== q.status) return false
-    if (q.category !== "all" && u.category !== q.category) return false
-    return !needle || u.tiers.some((t) => t.achievement.name.toLowerCase().includes(needle) || t.achievement.description.toLowerCase().includes(needle))
-  })
+  const out: AchievementUnit[] = []
+  for (const u of units) {
+    if (q.category !== "all" && u.category !== q.category) continue
+    const hits = u.tiers.filter((t) => (q.status === "all" || tierStatus(t) === q.status) && matchesSearch(t, q.search, q.describe))
+    if (hits.length > 0) out.push({ ...u, matched: new Set(hits.map((t) => t.achievement_id)) })
+  }
+  return out
+}
+
+/** Number of individual achievements (tiers) that pass the filters. */
+export function matchedCount(units: AchievementUnit[]): number {
+  return units.reduce((sum, u) => sum + (u.matched?.size ?? u.tiers.length), 0)
 }
 
 export function sortUnits(units: AchievementUnit[], sort: SortKey, locale: string): AchievementUnit[] {
@@ -112,8 +134,15 @@ export function groupByCategory(units: AchievementUnit[]): CategorySummary[] {
   }).filter((c) => c.units.length > 0)
 }
 
+/** Counts individual achievements per status; pass units already filtered by status "all". */
 export function countByStatus(units: AchievementUnit[]): Record<StatusFilter, number> {
-  const out: Record<StatusFilter, number> = { all: units.length, unlocked: 0, progress: 0, locked: 0 }
-  for (const u of units) out[u.status]++
+  const out: Record<StatusFilter, number> = { all: 0, unlocked: 0, progress: 0, locked: 0 }
+  for (const u of units) {
+    for (const t of u.tiers) {
+      if (u.matched && !u.matched.has(t.achievement_id)) continue
+      out.all++
+      out[tierStatus(t)]++
+    }
+  }
   return out
 }

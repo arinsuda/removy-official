@@ -11,7 +11,7 @@
     </button>
 
     <ol class="af__track" :aria-label="t('achievements.family.tiers', { done: doneCount, total: unit.tiers.length })">
-      <li v-for="(tier, i) in unit.tiers" :key="tier.achievement_id" class="af__step" :class="{ 'is-done': tier.is_unlocked, 'is-current': tier === unit.current && unit.status !== 'unlocked', 'is-linked': i > 0 && unit.tiers[i - 1]?.is_unlocked }">
+      <li v-for="(tier, i) in unit.tiers" :key="tier.achievement_id" class="af__step" :class="{ 'is-done': tier.is_unlocked, 'is-current': tier === unit.current && unit.status !== 'unlocked', 'is-linked': i > 0 && unit.tiers[i - 1]?.is_unlocked, 'is-dim': isDim(tier) }">
         <button type="button" class="af__node" :aria-current="tier === unit.current ? 'step' : undefined" :aria-label="`${tier.achievement.name}. ${t('achievements.family.tier', { tier: TIER_NUMERALS[i] ?? i + 1 })}`" @click="emit('open', tier)">
           <span class="af__dot">
             <Check v-if="tier.is_unlocked" :size="14" :stroke-width="3" aria-hidden="true" />
@@ -41,6 +41,8 @@ const emit = defineEmits<{ open: [achievement: UserAchievement] }>()
 
 const { t, n } = useI18n()
 const current = computed(() => props.unit.current.achievement)
+/** Tiers outside the active status/search filter fade so the matching ones stand out. */
+const isDim = (tier: UserAchievement) => !!props.unit.matched && props.unit.matched.size < props.unit.tiers.length && !props.unit.matched.has(tier.achievement_id)
 const doneCount = computed(() => props.unit.tiers.filter((x) => x.is_unlocked).length)
 const summary = computed(() =>
   props.unit.status === "unlocked"
@@ -64,6 +66,7 @@ const summary = computed(() =>
 .af__step:first-child { flex: 0 0 auto; min-width: 0; }
 .af__step::before { content: ""; position: absolute; inset-block-start: 50%; inset-inline: 0 2.75rem; height: 2px; background: var(--color-surface-3); transform: translateY(-50%); }
 .af__step:first-child::before { display: none; }
+.af__step.is-dim .af__node { opacity: 0.4; }
 .af__step.is-linked::before { background: var(--color-brand); }
 .af__node { position: relative; display: grid; place-items: center; width: 2.75rem; height: 2.75rem; padding: 0; font: inherit; font-size: var(--text-caption); font-weight: 700; color: var(--color-text-muted); background: none; border: 0; border-radius: 50%; cursor: pointer; }
 .af__dot { display: grid; place-items: center; width: 2rem; height: 2rem; background: var(--color-surface-3); border: 1px solid var(--color-border-strong); border-radius: 50%; }

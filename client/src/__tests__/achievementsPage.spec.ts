@@ -6,7 +6,7 @@ import { createMemoryHistory, createRouter } from "vue-router"
 import { useAuthStore } from "@/stores/auth"
 import AchievementsView from "@/views/achievement/AchievementsView.vue"
 import { categoryOf, ctaFor } from "@/components/achievement/config"
-import { buildUnits, countByStatus, filterUnits, groupByCategory, latestUnlock, nextUp, sortUnits, summarize } from "@/components/achievement/units"
+import { buildUnits, countByStatus, filterUnits, groupByCategory, latestUnlock, matchedCount, nextUp, sortUnits, summarize } from "@/components/achievement/units"
 import type { UserAchievement } from "@/types/achievement"
 import { useRealI18n } from "./helpers/realI18n"
 
@@ -59,10 +59,23 @@ describe("achievement units", () => {
 
   it("filters by status, category and search, and counts statuses", () => {
     const units = buildUnits(sample())
-    expect(countByStatus(units)).toEqual({ all: 4, unlocked: 1, progress: 2, locked: 1 })
+    expect(countByStatus(filterUnits(units, { status: "all", category: "all", search: "" }))).toEqual({ all: 6, unlocked: 2, progress: 3, locked: 1 })
+    expect(countByStatus(filterUnits(units, { status: "all", category: "reviews", search: "" }))).toEqual({ all: 3, unlocked: 1, progress: 2, locked: 0 })
     expect(filterUnits(units, { status: "locked", category: "all", search: "" })).toHaveLength(1)
     expect(filterUnits(units, { status: "all", category: "reviews", search: "" })).toHaveLength(1)
     expect(filterUnits(units, { status: "all", category: "all", search: "critic iii" })).toHaveLength(1)
+  })
+
+  it("keeps a family under a status filter when any tier matches and tracks the matching tiers", () => {
+    const units = buildUnits(sample())
+    const unlocked = filterUnits(units, { status: "unlocked", category: "all", search: "" })
+    expect(unlocked.map((u) => u.key)).toContain("family:review_count")
+    const critic = unlocked.find((u) => u.key === "family:review_count")!
+    expect([...critic.matched!]).toEqual([critic.tiers[0]!.achievement_id])
+    expect(matchedCount(unlocked)).toBe(2)
+    expect(matchedCount(filterUnits(units, { status: "progress", category: "all", search: "" }))).toBe(3)
+    const search = filterUnits(units, { status: "all", category: "all", search: "critic iii", describe: () => "" })
+    expect(countByStatus(search)).toEqual({ all: 1, unlocked: 0, progress: 1, locked: 0 })
   })
 
   it("sorts and groups into category sections", () => {
@@ -137,9 +150,18 @@ describe("AchievementsView", () => {
     await w.find(".af__main").trigger("click")
     await flushPromises()
     const dialog = document.body.querySelector('[role="dialog"]')!
-    expect(dialog.textContent).toContain("Critic II description")
+    expect(dialog.textContent).toContain("Write 10 reviews")
     expect(dialog.textContent).toContain("4 / 10")
     expect(dialog.textContent).not.toContain("Find something")
+  })
+
+  it("falls back to the server description for an unknown action type", async () => {
+    m.list.mockResolvedValue({ data: [ach("Mystery", "brand_new_type", 5, 1)], pagination: { page: 1, limit: 100, total: 1, total_pages: 1 } })
+    const w = mountView(1)
+    await flushPromises()
+    await w.find(".ab").trigger("click")
+    await flushPromises()
+    expect(document.body.querySelector('[role="dialog"]')!.textContent).toContain("Mystery description")
   })
 
   it("shows the action tip for the owner on a locked badge", async () => {
@@ -157,9 +179,21 @@ describe("AchievementsView", () => {
     await flushPromises()
     await w.findAll(".tb__chip")[3]!.trigger("click")
     expect(w.findAll(".as")).toHaveLength(1)
+    expect(w.text()).toContain("1 of 6 achievements")
     await w.find(".tb__input").setValue("zzzz")
     expect(w.findAll(".as")).toHaveLength(0)
     expect(w.text()).toContain("Clear")
+  })
+
+  it("counts individual achievements in the chips and the toolbar", async () => {
+    const w = mountView(1)
+    await flushPromises()
+    const chips = w.findAll(".tb__chip").map((c) => c.text())
+    expect(chips.join("|")).toMatch(/All.*6.*Unlocked.*2.*In progress.*3.*Locked.*1/)
+    expect(w.text()).toContain("6 of 6 achievements")
+    await w.findAll(".tb__chip")[1]!.trigger("click")
+    expect(w.text()).toContain("2 of 6 achievements")
+    expect(w.findAll(".af__step.is-dim")).toHaveLength(2)
   })
 
   it("shows the empty, error and not found states", async () => {
