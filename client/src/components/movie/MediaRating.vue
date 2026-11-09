@@ -23,7 +23,14 @@
             class="flex items-center gap-2 whitespace-nowrap text-caption"
           >
             <RatingSourceMark :source="s.key" class="w-[44px] justify-start" />
-            <span aria-hidden="true" class="tabular-nums" :class="s.value ? 'font-semibold text-text-primary' : 'text-text-muted'">{{ s.value ?? "—" }}</span>
+            <SkeletonBlock
+              v-if="!s.value && externalLoading && s.key !== 'tmdb'"
+              :data-test="`${s.key}-loading`"
+              width="36px"
+              height="12px"
+              radius="4px"
+            />
+            <span v-else aria-hidden="true" class="tabular-nums" :class="s.value ? 'font-semibold text-text-primary' : 'text-text-muted'">{{ s.value ?? "—" }}</span>
           </li>
         </ul>
       </div>
@@ -48,6 +55,7 @@ import { computed } from "vue"
 import { useI18n } from "vue-i18n"
 import type { MediaRatings, RatingSource } from "@/types/movie"
 import PopcornScoreBadge from "./PopcornScoreBadge.vue"
+import SkeletonBlock from "@/components/ui/skeleton/SkeletonBlock.vue"
 import RatingSourceMark from "./RatingSourceMark.vue"
 
 const props = withDefaults(
@@ -56,8 +64,10 @@ const props = withDefaults(
     /** Legacy TMDB 0-10 score, used when the API did not send `ratings.tmdb`. */
     voteAverage?: number | null
     variant?: "card" | "detail"
+    /** IMDb / Rotten Tomatoes are still loading: show a skeleton in empty slots. */
+    externalLoading?: boolean
   }>(),
-  { ratings: null, voteAverage: null, variant: "card" },
+  { ratings: null, voteAverage: null, variant: "card", externalLoading: false },
 )
 
 const { t } = useI18n()

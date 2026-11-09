@@ -16,14 +16,19 @@ import (
 )
 
 const (
-	freshTTL        = 7 * 24 * time.Hour
-	notFoundTTL     = 24 * time.Hour
-	requestTimeout  = 3 * time.Second
-	coldMissWait    = 1500 * time.Millisecond
-	dailyBudget     = 900
-	defaultOMDbURL  = "https://www.omdbapi.com"
-	MediaTypeMovie  = "movie"
-	MediaTypeSeries = "tv"
+	freshTTL       = 7 * 24 * time.Hour
+	notFoundTTL    = 24 * time.Hour
+	requestTimeout = 3 * time.Second
+	coldMissWait   = 1500 * time.Millisecond
+	dailyBudget    = 900
+	// Prewarm never spends the last prewarmReserve units; those stay for on-demand detail views.
+	prewarmReserve     = 300
+	prewarmMaxIDs      = 20
+	prewarmConcurrency = 3
+	prewarmTimeout     = 2 * time.Minute
+	defaultOMDbURL     = "https://www.omdbapi.com"
+	MediaTypeMovie     = "movie"
+	MediaTypeSeries    = "tv"
 )
 
 var (
@@ -35,6 +40,8 @@ var (
 type Store interface {
 	Find(ctx context.Context, mediaType string, tmdbID int) (*ExternalRating, error)
 	Save(ctx context.Context, row *ExternalRating) error
+	// FindMany returns existing rows keyed by tmdb id (one query).
+	FindMany(ctx context.Context, mediaType string, tmdbIDs []int) (map[int]*ExternalRating, error)
 }
 
 // IMDbIDResolver finds the IMDb id for a TMDB title (used when the caller does not know it).
@@ -58,14 +65,17 @@ type budget struct {
 	now   func() time.Time
 }
 
-func (b *budget) take() bool {
+func (b *budget) take() bool { return b.takeKeeping(0) }
+
+// takeKeeping takes one unit only while more than keep units remain.
+func (b *budget) takeKeeping(keep int) bool {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	day := b.now().UTC().Format("2006-01-02")
 	if day != b.day {
 		b.day, b.used = day, 0
 	}
-	if b.used >= b.limit {
+	if b.limit-b.used <= keep || b.used >= b.limit {
 		return false
 	}
 	b.used++
@@ -157,6 +167,77 @@ func (s *Service) Get(ctx context.Context, mediaType string, tmdbID int, knownIM
 	}
 }
 
+// Prewarm fills the cache for titles that have no fresh row, in the background.
+// It handles at most prewarmMaxIDs ids, runs prewarmConcurrency at a time, shares
+// singleflight with Get, and stops spending once the budget is down to
+// prewarmReserve. It never blocks the caller.
+func (s *Service) Prewarm(mediaType string, ids []int) {
+	if !s.Enabled() || len(ids) == 0 {
+		return
+	}
+	seen := make(map[int]bool, len(ids))
+	uniq := make([]int, 0, prewarmMaxIDs)
+	for _, id := range ids {
+		if id <= 0 || seen[id] {
+			continue
+		}
+		seen[id] = true
+		if uniq = append(uniq, id); len(uniq) == prewarmMaxIDs {
+			break
+		}
+	}
+	if len(uniq) == 0 {
+		return
+	}
+	go s.prewarm(mediaType, uniq)
+}
+
+func (s *Service) prewarm(mediaType string, ids []int) {
+	defer func() { _ = recover() }() // background work must never crash the server
+	ctx, cancel := context.WithTimeout(context.Background(), prewarmTimeout)
+	defer cancel()
+
+	rows, err := s.store.FindMany(ctx, mediaType, ids)
+	if err != nil {
+		log.Printf("external ratings: prewarm cache read failed: %v", err)
+		return
+	}
+	todo := make([]int, 0, len(ids))
+	for _, id := range ids {
+		if r := rows[id]; r == nil || !s.fresh(r) {
+			todo = append(todo, id)
+		}
+	}
+
+	sem := make(chan struct{}, prewarmConcurrency)
+	var wg sync.WaitGroup
+	for _, id := range todo {
+		if ctx.Err() != nil {
+			break
+		}
+		sem <- struct{}{}
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			defer func() { _ = recover() }()
+			key := fmt.Sprintf("%s:%d", mediaType, id)
+			prev := rows[id]
+			ch := s.group.DoChan(key, func() (any, error) {
+				if !s.budget.takeKeeping(prewarmReserve) {
+					return nil, errBudgetExhausted
+				}
+				return s.refresh(mediaType, id, "", prev)
+			})
+			select {
+			case <-ch:
+			case <-ctx.Done():
+			}
+		}(id)
+	}
+	wg.Wait()
+}
+
 func (s *Service) fresh(row *ExternalRating) bool {
 	ttl := freshTTL
 	if row.NotFound {
@@ -230,6 +311,19 @@ func (g *GormStore) Find(ctx context.Context, mediaType string, tmdbID int) (*Ex
 		return nil, err
 	}
 	return &row, nil
+}
+
+func (g *GormStore) FindMany(ctx context.Context, mediaType string, tmdbIDs []int) (map[int]*ExternalRating, error) {
+	var rows []ExternalRating
+	err := g.db.WithContext(ctx).Where("media_type = ? AND tmdb_id IN ?", mediaType, tmdbIDs).Find(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[int]*ExternalRating, len(rows))
+	for i := range rows {
+		out[rows[i].TMDBID] = &rows[i]
+	}
+	return out, nil
 }
 
 func (g *GormStore) Save(ctx context.Context, row *ExternalRating) error {

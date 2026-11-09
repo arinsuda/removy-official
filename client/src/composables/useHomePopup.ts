@@ -20,6 +20,8 @@ export interface HomePopup {
   getState(item: HomeMedia): TrailerState
   /** Ratings from the detail endpoint (adds IMDb / Rotten Tomatoes), once fetched. */
   detailRatings(item: HomeMedia): MediaRatings | undefined
+  /** True while the detail ratings request or its pending-retry is running. */
+  ratingsLoading(item: HomeMedia): boolean
   /** Hover enter. */
   show(item: HomeMedia, key: string, el: HTMLElement): void
   /** Keyboard focus; ignored unless the browser reports :focus-visible. */
@@ -50,6 +52,7 @@ export function provideHomePopup(): HomePopup {
   // Detail ratings cached per media key; list endpoints do not carry imdb/rt.
   const ratingsCache = shallowReactive(new Map<string, MediaRatings>())
   const ratingsRequested = new Set<string>()
+  const ratingsLoading = shallowReactive(new Set<string>())
   let hoveredKey: string | null = null
   let insidePopup = false
   let showTimer: ReturnType<typeof setTimeout> | null = null
@@ -93,10 +96,17 @@ export function provideHomePopup(): HomePopup {
       : (await movieApi.getById(item.id)).data?.movie?.ratings
   }
 
+  /** The card is hovered (or focused), or its popup is open. */
+  function isActive(item: HomeMedia): boolean {
+    const open = openKey.value
+    return hoveredKey === item.key || (!!open && open.slice(open.indexOf(":") + 1) === item.key)
+  }
+
   async function loadRatings(item: HomeMedia, attempt = 0) {
     if (attempt === 0) {
       if (ratingsRequested.has(item.key)) return
       ratingsRequested.add(item.key)
+      ratingsLoading.add(item.key)
     }
     let pending = false
     try {
@@ -106,17 +116,25 @@ export function provideHomePopup(): HomePopup {
     } catch {
       // Silent: the popup keeps the list-endpoint ratings.
     }
-    if (!pending) return
-    if (attempt < RATINGS_MAX_RETRIES && hoveredKey === item.key) {
+    if (!pending) {
+      ratingsLoading.delete(item.key)
+      return
+    }
+    if (attempt < RATINGS_MAX_RETRIES && isActive(item)) {
       ratingsTimer = setTimeout(() => {
         ratingsTimer = null
-        if (hoveredKey === item.key) void loadRatings(item, attempt + 1)
-        else ratingsRequested.delete(item.key)
+        if (isActive(item)) void loadRatings(item, attempt + 1)
+        else giveUpRatings(item)
       }, RATINGS_RETRY_DELAY)
     } else {
-      // Gave up while OMDb was still pending; allow a later hover to ask again.
-      ratingsRequested.delete(item.key)
+      giveUpRatings(item)
     }
+  }
+
+  /** Gave up while OMDb was still pending; allow a later hover to ask again. */
+  function giveUpRatings(item: HomeMedia) {
+    ratingsRequested.delete(item.key)
+    ratingsLoading.delete(item.key)
   }
 
   function place(el: HTMLElement) {
@@ -141,10 +159,12 @@ export function provideHomePopup(): HomePopup {
     insidePopup = false
     hoveredKey = item.key
     void loadTrailer(item)
+    // Hover intent: ratings start loading now, so they are ready when the popup opens.
+    void loadRatings(item)
     showTimer = setTimeout(() => {
       place(el)
       openKey.value = key
-      void loadRatings(item)
+      void loadRatings(item) // no-op unless the hover-time request was given up
       if (getState(item).currentTrailer.value) getState(item).scheduleMount()
     }, SHOW_DELAY)
   }
@@ -210,6 +230,7 @@ export function provideHomePopup(): HomePopup {
     isDesktop,
     getState,
     detailRatings: (item) => ratingsCache.get(item.key),
+    ratingsLoading: (item) => ratingsLoading.has(item.key),
     show,
     focus,
     leave,

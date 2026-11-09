@@ -35,6 +35,19 @@ func (m *memStore) Find(_ context.Context, t string, id int) (*ExternalRating, e
 	return nil, nil
 }
 
+func (m *memStore) FindMany(_ context.Context, t string, ids []int) (map[int]*ExternalRating, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	out := map[int]*ExternalRating{}
+	for _, id := range ids {
+		if r, ok := m.rows[key(t, id)]; ok {
+			c := *r
+			out[id] = &c
+		}
+	}
+	return out, nil
+}
+
 func (m *memStore) Save(_ context.Context, r *ExternalRating) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -302,4 +315,96 @@ func TestTVResolvesIMDbIDWhenUnknown(t *testing.T) {
 	s.resolver = func(context.Context, string, int) (string, error) { return "", nil }
 	assert.Equal(t, Ratings{}, s.Get(context.Background(), "tv", 5, ""))
 	assert.EqualValues(t, 1, atomic.LoadInt32(&calls))
+}
+
+func waitFor(t *testing.T, cond func() bool) {
+	t.Helper()
+	require.Eventually(t, cond, 2*time.Second, 5*time.Millisecond)
+}
+
+func TestPrewarmDisabledIsNoop(t *testing.T) {
+	store := newMemStore()
+	s := NewService(store, "", nil)
+	s.Prewarm("movie", []int{1, 2})
+	time.Sleep(30 * time.Millisecond)
+	assert.Empty(t, store.rows)
+	var nilSvc *Service
+	nilSvc.Prewarm("movie", []int{1})
+}
+
+func TestPrewarmSkipsFreshRowsAndCapsIDs(t *testing.T) {
+	store := newMemStore()
+	var calls int32
+	s := newTestService(store, &calls, func() (string, error) { return okBody, nil })
+	setNow(s, time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))
+	require.NoError(t, store.Save(context.Background(), &ExternalRating{MediaType: "movie", TMDBID: 1, FetchedAt: s.now()}))
+
+	ids := []int{1, 1}
+	for i := 2; i <= 40; i++ {
+		ids = append(ids, i)
+	}
+	s.Prewarm("movie", ids)
+	// 20 unique ids kept (1..20); id 1 is fresh, so 19 fetches.
+	waitFor(t, func() bool { return atomic.LoadInt32(&calls) == 19 })
+	time.Sleep(30 * time.Millisecond)
+	assert.EqualValues(t, 19, atomic.LoadInt32(&calls))
+	_, err := store.Find(context.Background(), "movie", 21)
+	require.NoError(t, err)
+	assert.Nil(t, func() *ExternalRating { r, _ := store.Find(context.Background(), "movie", 21); return r }())
+}
+
+func TestPrewarmLimitsConcurrency(t *testing.T) {
+	var cur, peak int32
+	var calls int32
+	s := newTestService(newMemStore(), &calls, func() (string, error) {
+		n := atomic.AddInt32(&cur, 1)
+		for {
+			p := atomic.LoadInt32(&peak)
+			if n <= p || atomic.CompareAndSwapInt32(&peak, p, n) {
+				break
+			}
+		}
+		time.Sleep(20 * time.Millisecond)
+		atomic.AddInt32(&cur, -1)
+		return okBody, nil
+	})
+	s.Prewarm("movie", []int{1, 2, 3, 4, 5, 6, 7, 8})
+	waitFor(t, func() bool { return atomic.LoadInt32(&calls) == 8 })
+	assert.LessOrEqual(t, atomic.LoadInt32(&peak), int32(prewarmConcurrency))
+}
+
+func TestPrewarmRespectsReserve(t *testing.T) {
+	var calls int32
+	s := newTestService(newMemStore(), &calls, func() (string, error) { return okBody, nil })
+	s.budget.day = s.now().UTC().Format("2006-01-02")
+	s.budget.used = s.budget.limit - prewarmReserve - 2 // two units above the reserve
+	s.Prewarm("movie", []int{1, 2, 3, 4, 5})
+	waitFor(t, func() bool { return atomic.LoadInt32(&calls) == 2 })
+	time.Sleep(30 * time.Millisecond)
+	assert.EqualValues(t, 2, atomic.LoadInt32(&calls))
+	assert.Equal(t, s.budget.limit-prewarmReserve, s.budget.used)
+
+	// On-demand can still use the reserve.
+	r := s.Get(context.Background(), "movie", 99, "tt99")
+	require.NotNil(t, r.IMDbRating)
+}
+
+func TestPrewarmDedupsWithOnDemandGet(t *testing.T) {
+	var calls int32
+	release := make(chan struct{})
+	s := newTestService(newMemStore(), &calls, func() (string, error) {
+		<-release
+		return okBody, nil
+	})
+	s.wait = 2 * time.Second
+	s.Prewarm("movie", []int{5})
+	waitFor(t, func() bool { return atomic.LoadInt32(&calls) == 1 })
+	done := make(chan Ratings)
+	go func() { done <- s.Get(context.Background(), "movie", 5, "tt5") }()
+	time.Sleep(30 * time.Millisecond)
+	close(release)
+	r := <-done
+	require.NotNil(t, r.IMDbRating)
+	assert.EqualValues(t, 1, atomic.LoadInt32(&calls), "prewarm and Get share one upstream call")
+	assert.Equal(t, 1, s.budget.used)
 }
