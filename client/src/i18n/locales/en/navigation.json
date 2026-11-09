@@ -85,6 +85,8 @@
     "feedHint": "What people are watching",
     "adminHint": "Manage the platform",
     "planziHint": "Opens PLANZI",
-    "platforms": "Platforms"
-  }
+    "platforms": "Platforms",
+    "settingsHint": "Account, privacy and security"
+  },
+  "settings": "Settings"
 }

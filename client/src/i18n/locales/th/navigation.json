@@ -85,6 +85,8 @@
     "feedHint": "ดูว่าคนอื่นกำลังดูอะไร",
     "adminHint": "จัดการแพลตฟอร์ม",
     "planziHint": "เปิด PLANZI",
-    "platforms": "แพลตฟอร์ม"
-  }
+    "platforms": "แพลตฟอร์ม",
+    "settingsHint": "บัญชี ความเป็นส่วนตัว และความปลอดภัย"
+  },
+  "settings": "ตั้งค่า"
 }

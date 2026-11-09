@@ -1,0 +1,117 @@
+{
+  "title": "Settings",
+  "backToProfile": "Back to profile",
+  "saved": "Settings saved",
+  "saveFailed": "Could not save your changes. Please try again.",
+  "unsavedConfirm": "You have unsaved changes. Leave without saving?",
+  "sections": {
+    "profile": "Profile",
+    "preferences": "Preferences",
+    "privacy": "Privacy",
+    "security": "Security",
+    "connections": "Connections"
+  },
+  "saveBar": {
+    "label": "Unsaved changes",
+    "unsaved": "You have unsaved changes",
+    "failed": "Saving failed. Try again.",
+    "save": "Save changes",
+    "discard": "Discard"
+  },
+  "avatar": {
+    "change": "Change photo",
+    "hint": "JPG, PNG, WebP or GIF, up to 5 MB.",
+    "cropTitle": "Crop your photo",
+    "cropHelp": "Drag the image or use the arrow keys to move it. Use the slider, + and - to zoom.",
+    "zoom": "Zoom",
+    "apply": "Use photo",
+    "error": {
+      "type": "Choose a JPG, PNG, WebP or GIF image.",
+      "size": "This image is larger than 5 MB."
+    }
+  },
+  "profile": {
+    "title": "Profile",
+    "desc": "This is what other people see on your profile.",
+    "displayName": "Display name",
+    "username": "Username",
+    "usernameHint": "Your username cannot be changed.",
+    "bio": "Bio",
+    "bioPlaceholder": "Tell us a bit about yourself...",
+    "dob": "Date of birth",
+    "gender": "Gender",
+    "genders": {
+      "male": "Male",
+      "female": "Female",
+      "other": "Other"
+    },
+    "genderOther": "Describe your gender"
+  },
+  "preferences": {
+    "title": "Preferences",
+    "desc": "Favorite genres shape what we recommend to you."
+  },
+  "privacy": {
+    "title": "Privacy",
+    "private": "Private account",
+    "privateDesc": "Only people you approve can see your activity.",
+    "hiddenTitle": "When your account is private, people who do not follow you cannot see:",
+    "hidden": {
+      "library": "Your watched, watchlist and likes counts",
+      "taste": "Your taste profile",
+      "bmol": "Your Best Movies of Life",
+      "achievements": "Your achievements",
+      "lists": "Your reviews and lists"
+    },
+    "visibleNote": "Your name, photo, bio, and review, follower and following counts stay visible."
+  },
+  "email": {
+    "title": "Email",
+    "label": "Email",
+    "verify": "Verify email",
+    "change": "Change email",
+    "sendCode": "Send codes",
+    "confirm": "Confirm",
+    "done": "Verified!",
+    "inputHint": "Enter your new email. We will send a 6-digit code to your current email ({current}) and another to the new address, and you need both.",
+    "currentCodeHint": "Code sent to your current email {email}",
+    "newCodeHint": "Code sent to your new email {email}",
+    "currentCodeLabel": "Current email code",
+    "newCodeLabel": "New email code",
+    "verificationSent": "Verification email sent to {email}.",
+    "verificationFailed": "Failed to resend verification email.",
+    "errors": {
+      "invalid": "Invalid email format.",
+      "same": "This is already your current email.",
+      "inUse": "This email is already in use. Please use another one.",
+      "sendFailed": "Could not send the codes. Please try again.",
+      "invalidCode": "Invalid code."
+    }
+  },
+  "password": {
+    "title": "Password",
+    "current": "Current password",
+    "new": "New password",
+    "newHint": "At least 8 characters",
+    "confirm": "Confirm new password",
+    "mismatch": "Passwords do not match",
+    "show": "Show passwords",
+    "submit": "Update password",
+    "success": "Password changed successfully!",
+    "wrongCurrent": "Current password is incorrect.",
+    "invalid": "Invalid request.",
+    "failed": "Something went wrong. Please try again.",
+    "notSet": "This account has no password yet. Sign out, then use \"Forgot password\" on the login page to set one."
+  },
+  "connections": {
+    "title": "Connections",
+    "google": "Google account",
+    "connectedAs": "Connected: {email}",
+    "notConnected": "Not connected",
+    "connect": "Connect Google",
+    "disconnect": "Disconnect",
+    "onlyMethod": "Cannot disconnect your only sign-in method",
+    "connectFailed": "Failed to start Google linking.",
+    "disconnectFailed": "Failed to disconnect Google account."
+  }
+}
