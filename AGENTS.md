@@ -50,6 +50,8 @@ client/src/
 - Dependencies are passed through each module's `RegisterRoutes`/`New`; wiring order lives in `router.go`.
 - API prefix is `/api`. Most modules mount on the `protected` group. `auth`, `link`, `follow`, and `achievements` receive `api` and apply auth per route.
 - **There is no success envelope.** Handlers return named keys such as `{"review": ...}` or `{"reviews": [...]}`. Errors are `{"error": "..."}`, or `{"code","error"}` through `shared.WriteAPIError`. Follow the style of the module you edit.
+- **Public (guest) routes:** `GET /movies/:id`, `/movies/:id/similar`, `/movies/:id/watch-providers`, the same three under `/tv`, `GET /reviews/media/:mediaType/:mediaId` (+ `/rating`), `GET /stats/:media_type/:media_id`. They are registered by `router.RegisterPublicRoutes` (per route: `OptionalAuth`, then the guest limiter `PublicReadLimiter`, `PublicReadRateMax` per `PublicReadRateWindow` per IP; signed-in users are not counted). `OptionalAuth`: no token = guest (handlers see no claims, viewer id 0), a present but invalid or stale token = 401, DB error = 503. Everything else, including `/movies/popular`, `POST /stats/.../view` and `/api/achievements`, needs a session. Public ids use `:id<int>` so fixed paths like `/movies/popular` fall through to the protected router.
+- **Fiber v3 group gotcha:** `api.Group("/", handlers...)` registers a USE on the whole prefix, so it runs in front of every route registered after it. `protected := api.Group("/", mw.RequireAuth)` therefore gates every `api` route registered after it (that is why `/api/achievements` is auth-gated although it has no middleware). Register public routes on `api` BEFORE that line, with per-route middleware (`middleware.GetRoute`); never `api.Group("/", OptionalAuth, ...)`. Modules with public and protected routes expose `New(...)`, `RegisterPublicRoutes` and `RegisterRoutes` sharing one handler/service.
 - Socket.io bypasses Fiber: `main.go` hands it directly to `notifHub.Handler()`, with its own CORS headers.
 
 ## Feature -> files map
@@ -62,6 +64,7 @@ client/src/
 | Movie / TV detail pages | movie_module (GET /movies/:id, /tv/:id), tmdb_module | components/detail/ (DetailPage + detailConfig adapters; reviews/ split), composables/useMediaDetail.ts, useMediaActivity.ts; views/movie/MovieDetailView.vue and views/tv/TVDetailView.vue are thin wrappers |
 | Reviews, comments, ratings | review_module, like_module, media_stats_module | components/movie/MovieReviews.vue, composables/useReviewForm.ts |
 | Library lists | library_module | views/library/ |
+| User-made lists (named, ordered, per-list visibility; caps and codes in `list_module/model.go`, `shared/apierr.go`) | list_module, `privacy_policy.CanViewList` | |
 | Watch logs | watch_log_module | api/endpoints/watchLog.ts, types/watchLog.ts |
 | Best of Life (BMOL, "Hall of Fame"). Ranks may tie (several titles per rank, no renumbering). Items carry an optional `note` (<=280 runes) returned only by the privacy-gated `GET /bmol/user/:id`. Re-adding a soft-deleted title restores the row; `PUT /bmol/:id` takes `{rank?, note?}` (one required); validation is manual (rank 1-999, media_id > 0) | bmol_module | components/bmol/ (BmolBoard = whole UI; `useBmol` owns the `["bmol", userId]` query and optimistic mutations; `bmolRanks.ts` pure grouping/move logic; `useBmolReorder` drag + keyboard), `UserBmol.vue` and `BmolSection.vue` are thin wrappers, `ProfileBmolHighlight` shares the query key, share cards in components/share/BolShareSheet.vue + cards/Bol*Card.vue |
 | Achievements | achievements_module, database/seeder/achievement.json | views/achievement/, stores/achievement.ts |
@@ -140,6 +143,9 @@ Changing any of these affects stored data, live sessions, or other systems:
 - `node_modules` is platform-specific. After moving between OSes, run `npm ci` in `client/`.
 - `client/dist` is committed, so `npm run build-only` dirties the tree. Restore it with `git restore client/dist && git clean -fd client/dist` unless you mean to update it.
 - `npm run lint` rewrites files, so run it only when you accept those edits.
+- `tmdb_module` caches movie and TV detail in process (`detailCacheTTL`, `detailCacheMax`; keyed by type + id + the configured TMDB language). Tests that fake TMDB should use ids no other test caches.
+- `users.onboarded_at` is set once when favorite genres are saved or skipped (`PATCH /users/:id/genres`); existing users have NULL until they do. Self-delete (`DELETE /users/:id`) needs `{password}` or, for accounts without a password, `{confirm_username}`.
+- Activity-type defaults live only in `privacy_policy/activity_defaults.go` (feed SQL is generated from it).
 - Huge files: UserBmol.vue (~2.4k), BmolSection.vue (~1.8k), TVDetailView / EditProfile / MovieDetailView (~1.6k), HomeView (~1.4k), MainLayout (~1.3k), MovieReviews (~1.3k). Use grep + ranged reads, not full reads.
 - `server/tmp/` is air build output (`.air.toml`). `components/HelloWorld.vue`, `TheWelcome.vue`, and `WelcomeItem.vue` look like Vite scaffold leftovers; check usage before relying on or removing them.
 

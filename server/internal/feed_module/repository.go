@@ -176,16 +176,7 @@ func (r *repository) FindFeed(ctx context.Context, userID uint, pq PaginationQue
 			Where(`
 				(uf.status = 'accepted' AND ae.is_visible = true)
 				AND (
-					(aps.enabled IS NULL AND (
-						(ae.type = 'review_created' AND true) OR
-						(ae.type = 'review_commented' AND true) OR
-						(ae.type = 'review_liked' AND false) OR
-						(ae.type = 'media_liked' AND false) OR
-						(ae.type = 'watchlist_added' AND false) OR
-						(ae.type = 'watched_added' AND false) OR
-						(ae.type = 'achievement_unlocked' AND true) OR
-						(ae.type = 'user_followed' AND false)
-					)) OR aps.enabled = true
+					` + activityEnabledSQL + `
 				)
 				AND (
 					(u.is_private = false OR uf.status = 'accepted')
@@ -235,16 +226,7 @@ func (r *repository) FindUserActivities(ctx context.Context, targetUserID, reque
 				(ae.actor_id = ? OR (
 					ae.is_visible = true
 					AND (
-						(aps.enabled IS NULL AND (
-							(ae.type = 'review_created' AND true) OR
-							(ae.type = 'review_commented' AND true) OR
-							(ae.type = 'review_liked' AND false) OR
-							(ae.type = 'media_liked' AND false) OR
-							(ae.type = 'watchlist_added' AND false) OR
-							(ae.type = 'watched_added' AND false) OR
-							(ae.type = 'achievement_unlocked' AND true) OR
-							(ae.type = 'user_followed' AND false)
-						)) OR aps.enabled = true
+						`+activityEnabledSQL+`
 					)
 					AND (u.is_private = false OR uf.status = 'accepted')
 					AND (
@@ -282,7 +264,7 @@ func (r *repository) IsEnabled(ctx context.Context, userID uint, t ActivityType)
 	var setting ActivityPrivacySetting
 	err := r.db.WithContext(ctx).Where("user_id = ? AND activity_type = ?", userID, string(t)).First(&setting).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return defaultEnabled[t], nil
+		return privacy_policy.ActivityEnabledByDefault(t), nil
 	}
 	if err != nil {
 		return false, err
@@ -310,16 +292,7 @@ func (r *repository) CountNewFeedItems(ctx context.Context, userID uint, afterAc
 		Where(`
 			(uf.status = 'accepted' AND ae.is_visible = true)
 			AND (
-				(aps.enabled IS NULL AND (
-					(ae.type = 'review_created' AND true) OR
-					(ae.type = 'review_commented' AND true) OR
-					(ae.type = 'review_liked' AND false) OR
-					(ae.type = 'media_liked' AND false) OR
-					(ae.type = 'watchlist_added' AND false) OR
-					(ae.type = 'watched_added' AND false) OR
-					(ae.type = 'achievement_unlocked' AND true) OR
-					(ae.type = 'user_followed' AND false)
-				)) OR aps.enabled = true
+				` + activityEnabledSQL + `
 			)
 			AND (
 				(u.is_private = false OR uf.status = 'accepted')
@@ -342,3 +315,6 @@ func (r *repository) CountNewFeedItems(ctx context.Context, userID uint, afterAc
 	err := db.Count(&count).Error
 	return count, err
 }
+
+// activityEnabledSQL is the preference-or-default predicate shared by the feed queries.
+var activityEnabledSQL = privacy_policy.ActivityEnabledSQL("ae.type")

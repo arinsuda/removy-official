@@ -104,6 +104,8 @@ type ActivitySettingsResponse struct {
 	WatchedAdded        bool `json:"watched_added"`
 	AchievementUnlocked bool `json:"achievement_unlocked"`
 	UserFollowed        bool `json:"user_followed"`
+	WatchLogCreated     bool `json:"watch_log_created"`
+	Rewatched           bool `json:"rewatched"`
 }
 
 type UpdateActivitySettingsRequest struct {
@@ -115,4 +117,6 @@ type UpdateActivitySettingsRequest struct {
 	WatchedAdded        *bool `json:"watched_added"`
 	AchievementUnlocked *bool `json:"achievement_unlocked"`
 	UserFollowed        *bool `json:"user_followed"`
+	WatchLogCreated     *bool `json:"watch_log_created"`
+	Rewatched           *bool `json:"rewatched"`
 }

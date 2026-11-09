@@ -178,6 +178,8 @@ func (s *service) UpdateSettings(ctx context.Context, userID uint, req UpdateAct
 		ActivityWatchedAdded:        req.WatchedAdded,
 		ActivityAchievementUnlocked: req.AchievementUnlocked,
 		ActivityUserFollowed:        req.UserFollowed,
+		ActivityWatchLogCreated:     req.WatchLogCreated,
+		ActivityRewatched:           req.Rewatched,
 	}
 
 	for activityType, value := range updates {
@@ -240,7 +242,7 @@ func (s *service) broadcastActivityDelete(ctx context.Context, actorID uint, act
 func toSettingsResponse(rows []ActivityPrivacySetting) *ActivitySettingsResponse {
 	enabled := make(map[ActivityType]bool, len(AllActivityTypes))
 	for _, t := range AllActivityTypes {
-		enabled[t] = defaultEnabled[t]
+		enabled[t] = privacy_policy.ActivityEnabledByDefault(t)
 	}
 	for _, row := range rows {
 		enabled[row.ActivityType] = row.Enabled
@@ -255,6 +257,8 @@ func toSettingsResponse(rows []ActivityPrivacySetting) *ActivitySettingsResponse
 		WatchedAdded:        enabled[ActivityWatchedAdded],
 		AchievementUnlocked: enabled[ActivityAchievementUnlocked],
 		UserFollowed:        enabled[ActivityUserFollowed],
+		WatchLogCreated:     enabled[ActivityWatchLogCreated],
+		Rewatched:           enabled[ActivityRewatched],
 	}
 }
 

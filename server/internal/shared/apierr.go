@@ -11,6 +11,15 @@ const (
 	ErrorCodeWatchLogNotFound  ErrorCode = "WATCH_LOG_NOT_FOUND"
 	ErrorCodeInvalidDate       ErrorCode = "INVALID_DATE"
 	ErrorCodeFutureDate        ErrorCode = "FUTURE_DATE"
+	ErrorCodeInvalidInput      ErrorCode = "INVALID_INPUT"
+	ErrorCodeInvalidMediaType  ErrorCode = "INVALID_MEDIA_TYPE"
+	ErrorCodeListNotFound      ErrorCode = "LIST_NOT_FOUND"
+	ErrorCodeListLimit         ErrorCode = "LIST_LIMIT"
+	ErrorCodeListFull          ErrorCode = "LIST_FULL"
+	ErrorCodeItemExists        ErrorCode = "ITEM_EXISTS"
+	ErrorCodeItemNotFound      ErrorCode = "ITEM_NOT_FOUND"
+	ErrorCodeOrderMismatch     ErrorCode = "ORDER_MISMATCH"
+	ErrorCodeForbidden         ErrorCode = "FORBIDDEN"
 )
 
 type APIError struct {

@@ -165,3 +165,29 @@ func TestVerificationTokenHashMigration(t *testing.T) {
 		t.Fatalf("legacy raw link no longer verifies: %v", err)
 	}
 }
+
+// Existing accounts count as onboarded after the backfill; accounts created afterwards stay NULL.
+func TestBackfillOnboardedAt(t *testing.T) {
+	db := newTestDB(t)
+	old := seedUser(t, db, "old@x.test", true, "pw-oldold1")
+	db.Exec(`UPDATE users SET onboarded_at = NULL, first_login_at = NULL WHERE id = ?`, old)
+	if err := db.Exec(`DELETE FROM migration_history WHERE version = '20261109_backfill_onboarded_at'`).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := database.Migrate(db, testConfig()); err != nil {
+		t.Fatal(err)
+	}
+	var n int64
+	db.Raw(`SELECT count(*) FROM users WHERE id = ? AND onboarded_at IS NOT NULL`, old).Scan(&n)
+	if n != 1 {
+		t.Fatal("existing user not backfilled")
+	}
+	fresh := seedUser(t, db, "new@x.test", true, "pw-newnew1")
+	if err := database.Migrate(db, testConfig()); err != nil {
+		t.Fatal(err)
+	}
+	db.Raw(`SELECT count(*) FROM users WHERE id = ? AND onboarded_at IS NULL`, fresh).Scan(&n)
+	if n != 1 {
+		t.Fatal("a rerun of Migrate must not onboard later users")
+	}
+}

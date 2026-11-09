@@ -166,6 +166,7 @@ func (s *Service) toResponse(item *BMOLItem) *BMOLItemResponse {
 	case movie_module.MediaMovie:
 		if details, err := tmdbmodule.GetMovieByID(item.MediaID); err == nil && details != nil {
 			media.Title = details.Title
+			media.ReleaseDate = details.ReleaseDate
 			media.PosterURL = details.PosterPath
 			media.Genres = details.Genres
 			media.VoteAverage = float32(details.VoteAverage)
@@ -173,6 +174,7 @@ func (s *Service) toResponse(item *BMOLItem) *BMOLItemResponse {
 	case movie_module.MediaSeries:
 		if details, err := tmdbmodule.GetSeriesByID(item.MediaID); err == nil && details != nil {
 			media.Title = details.Name
+			media.ReleaseDate = details.FirstAirDate
 			media.PosterURL = details.PosterPath
 			media.Genres = details.Genres
 			media.VoteAverage = float32(details.VoteAverage)

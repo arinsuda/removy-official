@@ -63,6 +63,8 @@ type User struct {
 	IsPrivate       bool       `gorm:"default:false"`
 	IsActive        bool       `gorm:"default:true"`
 	FirstLoginAt    *time.Time `gorm:"default:null"`
+	// OnboardedAt is set once, when the user saves or skips favorite genres.
+	OnboardedAt *time.Time
 
 	// Read-only for GORM: written only through the identity policy (raw SQL).
 	// -:migration keeps AutoMigrate from adding them; migration 20261107_account_security_columns does.

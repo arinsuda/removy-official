@@ -3,14 +3,32 @@ package movie_module
 import (
 	external "github.com/arinsuda/movie-hub/internal/external_rating_module"
 	"github.com/arinsuda/movie-hub/internal/shared"
+	mw "github.com/arinsuda/movie-hub/middleware"
 	"github.com/gofiber/fiber/v3"
 )
 
-func RegisterRoutes(router fiber.Router, ratingRepo shared.RatingStatsReader, ext *external.Service) {
+// New builds the handler shared by RegisterPublicRoutes and RegisterRoutes.
+func New(ratingRepo shared.RatingStatsReader, ext *external.Service) *Handler {
 	svc := NewMovieService(ratingRepo)
 	svc.SetExternalRatings(ext)
-	h := NewHandler(svc)
+	return NewHandler(svc)
+}
 
+// RegisterPublicRoutes mounts the detail endpoints guests may read. Register it on the root
+// /api router before any auth group; ids are constrained to integers so /movies/popular and
+// the other fixed paths fall through to RegisterRoutes.
+func RegisterPublicRoutes(router fiber.Router, h *Handler, guards ...fiber.Handler) {
+	mw.GetRoute(router, "/movies/:id<int>", h.GetByID, guards...)
+	mw.GetRoute(router, "/movies/:id<int>/similar", h.GetSimilar, guards...)
+	mw.GetRoute(router, "/movies/:id<int>/watch-providers", h.GetMovieWatchProviders, guards...)
+
+	mw.GetRoute(router, "/tv/:id<int>", h.GetSeriesByID, guards...)
+	mw.GetRoute(router, "/tv/:id<int>/similar", h.GetSimilarSeries, guards...)
+	mw.GetRoute(router, "/tv/:id<int>/watch-providers", h.GetSeriesWatchProviders, guards...)
+}
+
+// RegisterRoutes mounts the browse, search and actor endpoints on the authenticated router.
+func RegisterRoutes(router fiber.Router, h *Handler) {
 	movies := router.Group("/movies")
 	movies.Get("/popular", h.GetPopular)
 	movies.Get("/now-playing", h.GetNowPlaying)
@@ -20,9 +38,6 @@ func RegisterRoutes(router fiber.Router, ratingRepo shared.RatingStatsReader, ex
 	movies.Get("/search", h.Search)
 	movies.Get("/genres", h.GetGenres)
 	movies.Get("/recommended", h.GetRecommended)
-	movies.Get("/:id", h.GetByID)
-	movies.Get("/:id/similar", h.GetSimilar)
-	movies.Get("/:id/watch-providers", h.GetMovieWatchProviders)
 
 	series := router.Group("/tv")
 	series.Get("/popular", h.GetPopularSeries)
@@ -30,9 +45,6 @@ func RegisterRoutes(router fiber.Router, ratingRepo shared.RatingStatsReader, ex
 	series.Get("/top-rated", h.GetTopRatedSeries)
 	series.Get("/search", h.SearchSeries)
 	series.Get("/genres", h.GetSeriesGenres)
-	series.Get("/:id", h.GetSeriesByID)
-	series.Get("/:id/similar", h.GetSimilarSeries)
-	series.Get("/:id/watch-providers", h.GetSeriesWatchProviders)
 
 	actors := router.Group("/actors")
 	actors.Get("/search", h.SearchActor)

@@ -46,7 +46,7 @@ func TestSelfDeleteRevokesSessions(t *testing.T) {
 	uid := seedUser(t, e.db, "me@x.test", true, "my-password1")
 	p := e.loginPair("me@x.test", "my-password1")
 
-	if code, body := e.do("DELETE", fmt.Sprintf("/api/users/%d", uid), nil, p.AccessToken); code != 204 {
+	if code, body := e.do("DELETE", fmt.Sprintf("/api/users/%d", uid), map[string]string{"password": "my-password1"}, p.AccessToken); code != 204 {
 		t.Fatalf("self delete: %d %v", code, body)
 	}
 	if code, _ := e.do("GET", "/api/ping", nil, p.AccessToken); code != 401 {
@@ -63,7 +63,7 @@ func TestLastAdminCannotSelfDelete(t *testing.T) {
 	uid := e.seedAdmin("admin@x.test", "admin-password1")
 	p := e.loginPair("admin@x.test", "admin-password1")
 
-	if code, _ := e.do("DELETE", fmt.Sprintf("/api/users/%d", uid), nil, p.AccessToken); code != 409 {
+	if code, _ := e.do("DELETE", fmt.Sprintf("/api/users/%d", uid), map[string]string{"password": "admin-password1"}, p.AccessToken); code != 409 {
 		t.Fatalf("last admin self-delete: %d, want 409", code)
 	}
 	if code, _ := e.do("GET", "/api/ping", nil, p.AccessToken); code != 200 {
@@ -137,15 +137,16 @@ func TestConcurrentLastAdminRemovalKeepsOneAdmin(t *testing.T) {
 		return errors.Is(err, user_module.ErrFinalAdmin) || errors.Is(err, admin_module.ErrFinalAdminProtection)
 	}
 	type op func() error
+	adminPw := user_module.DeleteAccountRequest{Password: "admin-password1"}
 	scenarios := map[string]func(a, b uint) (op, op){
 		"both self-delete": func(a, b uint) (op, op) {
-			return func() error { return e.users.DeleteUser(a, a, 0) }, func() error { return e.users.DeleteUser(b, b, 0) }
+			return func() error { return e.users.DeleteUser(a, a, 0, adminPw) }, func() error { return e.users.DeleteUser(b, b, 0, adminPw) }
 		},
 		"deactivate each other": func(a, b uint) (op, op) {
 			return func() error { return repo.UpdateUserStatus(a, b, false, nil) }, func() error { return repo.UpdateUserStatus(b, a, false, nil) }
 		},
 		"self-delete vs deactivate the other": func(a, b uint) (op, op) {
-			return func() error { return e.users.DeleteUser(a, a, 0) }, func() error { return repo.UpdateUserStatus(b, a, false, nil) }
+			return func() error { return e.users.DeleteUser(a, a, 0, adminPw) }, func() error { return repo.UpdateUserStatus(b, a, false, nil) }
 		},
 	}
 	for name, build := range scenarios {
@@ -223,4 +224,100 @@ func TestVerifyRejectsStoredValueAsToken(t *testing.T) {
 	if _, err := e.auth.VerifyEmail("mailed-token", ptr("pw-rawraw1"), false); err != nil {
 		t.Fatalf("mailed token: %v", err)
 	}
+}
+
+// A wrong or missing password changes nothing; the right one deactivates.
+func TestSelfDeleteRequiresPassword(t *testing.T) {
+	e := newEnv(t)
+	uid := seedUser(t, e.db, "pw@x.test", true, "my-password1")
+	p := e.loginPair("pw@x.test", "my-password1")
+	path := fmt.Sprintf("/api/users/%d", uid)
+
+	for _, body := range []any{nil, map[string]string{"password": "wrong-password1"}, map[string]string{"confirm_username": "ignored"}} {
+		code, out := e.do("DELETE", path, body, p.AccessToken)
+		if code != 400 || out["code"] != "WRONG_PASSWORD" {
+			t.Fatalf("body %v: %d %v, want 400 WRONG_PASSWORD", body, code, out)
+		}
+	}
+	if code, _ := e.do("GET", "/api/ping", nil, p.AccessToken); code != 200 {
+		t.Fatalf("a refused delete must keep the session: %d", code)
+	}
+	if n := e.count(`SELECT count(*) FROM users WHERE id = ? AND is_active = true`, uid); n != 1 {
+		t.Fatal("account deactivated by a refused delete")
+	}
+	if code, out := e.do("DELETE", path, map[string]string{"password": "my-password1"}, p.AccessToken); code != 204 {
+		t.Fatalf("correct password: %d %v", code, out)
+	}
+}
+
+// Google-only accounts (no password) confirm by typing their username.
+func TestSelfDeleteGoogleOnlyConfirmsUsername(t *testing.T) {
+	e := newEnv(t)
+	uid := seedUser(t, e.db, "g@x.test", true, "")
+	e.seedGoogleIdentity(uid, "sub-g", "g@x.test")
+	e.google.set(auth_module.GoogleIdentityClaims{Subject: "sub-g", Email: "g@x.test", EmailVerified: true})
+	var username string
+	e.db.Raw(`SELECT username FROM users WHERE id = ?`, uid).Scan(&username)
+	p, _, err := e.googleLogin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := fmt.Sprintf("/api/users/%d", uid)
+
+	if code, out := e.do("DELETE", path, map[string]string{"confirm_username": "someone-else"}, p.AccessToken); code != 400 || out["code"] != "CONFIRM_MISMATCH" {
+		t.Fatalf("mismatch: %d %v", code, out)
+	}
+	if code, out := e.do("DELETE", path, map[string]string{"confirm_username": username}, p.AccessToken); code != 204 {
+		t.Fatalf("matching username: %d %v", code, out)
+	}
+}
+
+// Failed confirmations are rate limited per user; success is not counted.
+func TestSelfDeleteFailuresAreRateLimited(t *testing.T) {
+	e := newEnv(t)
+	uid := seedUser(t, e.db, "rl@x.test", true, "my-password1")
+	p := e.loginPair("rl@x.test", "my-password1")
+	path := fmt.Sprintf("/api/users/%d", uid)
+	var last int
+	for i := 0; i < 7; i++ {
+		last, _ = e.do("DELETE", path, map[string]string{"password": "wrong-password1"}, p.AccessToken)
+	}
+	if last != 429 {
+		t.Fatalf("after repeated failures: %d, want 429", last)
+	}
+}
+
+// Saving or skipping favorite genres marks onboarding done once; only the owner sees it.
+func TestSkipGenresSetsOnboardedAtOnce(t *testing.T) {
+	e := newEnv(t)
+	uid := seedUser(t, e.db, "ob@x.test", true, "my-password1")
+	other := seedUser(t, e.db, "ob2@x.test", true, "my-password1")
+	p := e.loginPair("ob@x.test", "my-password1")
+	path := fmt.Sprintf("/api/users/%d", uid)
+
+	_, out := e.do("GET", path, nil, p.AccessToken)
+	if out["onboarded_at"] != nil {
+		t.Fatalf("fresh account already onboarded: %v", out["onboarded_at"])
+	}
+	code, out := e.do("PATCH", path+"/genres", map[string]any{"favorite_genres": []int{}}, p.AccessToken)
+	if code != 200 {
+		t.Fatalf("skip: %d %v", code, out)
+	}
+	user, _ := out["user"].(map[string]any)
+	first := user["onboarded_at"]
+	if first == nil {
+		t.Fatal("skip did not set onboarded_at")
+	}
+	_, out = e.do("PATCH", path+"/genres", map[string]any{"favorite_genres": []int{28}}, p.AccessToken)
+	if user, _ := out["user"].(map[string]any); user["onboarded_at"] != first {
+		t.Fatalf("onboarded_at moved: %v -> %v", first, user["onboarded_at"])
+	}
+	code, out = e.do("POST", "/api/auth/login", map[string]string{"identifier": "ob@x.test", "password": "my-password1"}, "")
+	if u, _ := out["user"].(map[string]any); code != 200 || u["onboarded_at"] != first {
+		t.Fatalf("login response: %d %v", code, out)
+	}
+	if _, out = e.do("GET", fmt.Sprintf("/api/users/%d", uid), nil, e.loginPair("ob2@x.test", "my-password1").AccessToken); out["onboarded_at"] != nil {
+		t.Fatalf("other users must not see onboarded_at: %v", out["onboarded_at"])
+	}
+	_ = other
 }

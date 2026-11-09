@@ -25,11 +25,16 @@ import (
 	"github.com/arinsuda/movie-hub/internal/bmol_module"
 	"github.com/arinsuda/movie-hub/internal/library_module"
 	"github.com/arinsuda/movie-hub/internal/link_module"
+	"github.com/arinsuda/movie-hub/internal/list_module"
 	"github.com/arinsuda/movie-hub/internal/mailer"
+	"github.com/arinsuda/movie-hub/internal/media_stats_module"
+	"github.com/arinsuda/movie-hub/internal/movie_module"
 	"github.com/arinsuda/movie-hub/internal/privacy_policy"
+	"github.com/arinsuda/movie-hub/internal/review_module"
 	"github.com/arinsuda/movie-hub/internal/user_module"
 	"github.com/arinsuda/movie-hub/internal/user_stats_module"
 	"github.com/arinsuda/movie-hub/middleware"
+	"github.com/arinsuda/movie-hub/router"
 	"github.com/gofiber/fiber/v3"
 	"gorm.io/gorm"
 )
@@ -251,7 +256,17 @@ func newEnv(t *testing.T) *env {
 	e.link = link_module.RegisterRoutes(api, db, e.cfg, m, e.auth)
 
 	mw := middleware.NewAuthMiddleware(e.cfg, db)
+	// Same order as router.Register: guest-readable routes first, then the auth group.
+	policy := privacy_policy.NewUserAccessPolicy(db)
+	movieH := movie_module.New(review_module.NewRatingStatsReader(db), nil)
+	reviewH := review_module.New(db, nil, nil, nil, nil, nil, policy)
+	statsH := media_stats_module.New(db)
+	router.RegisterPublicRoutes(api, mw.OptionalAuth, router.PublicReadLimiter(e.cfg.TrustedProxyHops), movieH, reviewH, statsH)
+
 	protected := api.Group("/", mw.RequireAuth)
+	movie_module.RegisterRoutes(protected, movieH)
+	review_module.RegisterRoutes(protected, reviewH)
+	media_stats_module.RegisterRoutes(protected, statsH)
 	protected.Get("/ping", func(c fiber.Ctx) error {
 		return c.JSON(fiber.Map{"uid": middleware.GetClaims(c).UserID})
 	})
@@ -260,6 +275,7 @@ func newEnv(t *testing.T) *env {
 	e.auth.SetUserService(e.users)
 	e.users.SetSessionReissuer(e.auth)
 	bmol_module.RegisterRoutes(protected, db, privacy_policy.NewUserAccessPolicy(db))
+	list_module.RegisterRoutes(protected, db, privacy_policy.NewUserAccessPolicy(db))
 	user_stats_module.RegisterRoutes(protected, db, privacy_policy.NewUserAccessPolicy(db))
 	achieve := achievementsmodule.New(db, privacy_policy.NewUserAccessPolicy(db))
 	achieve.RegisterRoutes(api, mw.RequireAuth)

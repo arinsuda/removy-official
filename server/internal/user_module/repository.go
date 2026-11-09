@@ -26,6 +26,8 @@ var (
 	ErrPasswordNotSet             = errors.New("no password set, use password reset to create one")
 	ErrSessionStale               = errors.New("session is no longer valid")
 	ErrFinalAdmin                 = errors.New("cannot delete the final active admin")
+	ErrWrongPassword              = errors.New("incorrect password")
+	ErrConfirmMismatch            = errors.New("username confirmation does not match")
 )
 
 type repository struct {
@@ -93,6 +95,22 @@ func (r *repository) FindByEmail(email string) (*User, error) {
 		return nil, err
 	}
 	return &user, nil
+}
+
+// findCredentials returns the active user's username and password hash (nil when none is set).
+func (r *repository) findCredentials(id uint) (username string, password *string, err error) {
+	var row struct {
+		Username string
+		Password *string
+	}
+	res := r.db.Raw(`SELECT username, password FROM users WHERE id = ? AND deleted_at IS NULL`, id).Scan(&row)
+	if res.Error != nil {
+		return "", nil, res.Error
+	}
+	if res.RowsAffected == 0 {
+		return "", nil, ErrUserNotFound
+	}
+	return row.Username, row.Password, nil
 }
 
 func (r *repository) UpdateProfile(id uint, updates map[string]any) error {

@@ -189,34 +189,50 @@ func (s *Service) GetUserReviews(ctx context.Context, userID, requesterID uint, 
 	return responses, nil
 }
 
-func (s *Service) GetMediaReviews(ctx context.Context, mediaID int, mediaType string, requesterID uint) ([]ReviewResponse, error) {
-	reviews, err := s.repo.FindReviewsByMedia(mediaID, mediaType)
+// GetMediaReviews returns one page of a title's reviews. page and pageSize are normalised
+// (page >= 1, pageSize defaults to DefaultMediaReviewsPageSize and is capped at MaxMediaReviewsPageSize).
+func (s *Service) GetMediaReviews(ctx context.Context, mediaID int, mediaType string, requesterID uint, page, pageSize int) ([]ReviewResponse, Pagination, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = DefaultMediaReviewsPageSize
+	}
+	if pageSize > MaxMediaReviewsPageSize {
+		pageSize = MaxMediaReviewsPageSize
+	}
+	pg := Pagination{Page: page, PageSize: pageSize}
+
+	reviews, total, err := s.repo.FindReviewsByMedia(mediaID, mediaType, requesterID, (page-1)*pageSize, pageSize)
 	if err != nil {
-		return nil, err
+		return nil, pg, err
 	}
+	pg.Total = total
+	pg.HasMore = int64(page*pageSize) < total
 
-	var visibleReviews []Review
-	for _, r := range reviews {
-		canView, err := s.policy.CanViewProfileSection(ctx, requesterID, r.UserID, privacy_policy.SectionReviews)
-		if err == nil && canView {
-			if r.UserID == requesterID || r.Visibility == "public" || r.IsPublic {
-				visibleReviews = append(visibleReviews, r)
-			}
-		}
-	}
-
-	ids := make([]uint, len(visibleReviews))
-	for i, r := range visibleReviews {
+	ids := make([]uint, len(reviews))
+	for i, r := range reviews {
 		ids[i] = r.ID
 	}
 	likedMap, _ := s.repo.FindLikedIDs(ids, requesterID)
 	helpfulMap, _ := s.repo.FindHelpfulIDs(ids, requesterID)
 
-	responses := make([]ReviewResponse, len(visibleReviews))
-	for i, r := range visibleReviews {
+	responses := make([]ReviewResponse, len(reviews))
+	for i, r := range reviews {
 		responses[i] = *toReviewResponse(&r, likedMap[r.ID], helpfulMap[r.ID], s.minio)
 	}
-	return responses, nil
+	return responses, pg, nil
+}
+
+// GetMyMediaReview returns the caller's own review of a title regardless of visibility, or nil.
+func (s *Service) GetMyMediaReview(userID uint, mediaID int, mediaType string) (*ReviewResponse, error) {
+	review, err := s.repo.FindUserReviewByMedia(userID, mediaID, mediaType)
+	if err != nil || review == nil {
+		return nil, err
+	}
+	liked, _ := s.repo.IsLiked(review.ID, userID)
+	helpful, _ := s.repo.IsHelpful(review.ID, userID)
+	return toReviewResponse(review, liked, helpful, s.minio), nil
 }
 
 func (s *Service) UpdateReview(ctx context.Context, reviewID, requesterID uint, req UpdateReviewRequest) (*ReviewResponse, error) {

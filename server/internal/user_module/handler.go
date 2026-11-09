@@ -89,7 +89,7 @@ func (h *Handler) RequestEmailChange(c fiber.Ctx) error {
 
 	var req RequestEmailChangeRequest
 	if err := c.Bind().JSON(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"code": codeInvalidBody, "error": msgInvalidBody})
 	}
 
 	if strings.TrimSpace(req.NewEmail) == "" {
@@ -115,7 +115,14 @@ func (h *Handler) DeleteUser(c fiber.Ctx) error {
 
 	claims := mw.GetClaims(c)
 
-	if err := h.svc.DeleteUser(targetID, claims.UserID, claims.TokenVersion); err != nil {
+	var req DeleteAccountRequest
+	if len(c.Body()) > 0 {
+		if err := c.Bind().JSON(&req); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"code": codeInvalidBody, "error": msgInvalidBody})
+		}
+	}
+
+	if err := h.svc.DeleteUser(targetID, claims.UserID, claims.TokenVersion, req); err != nil {
 		return handleError(c, err)
 	}
 
@@ -132,7 +139,7 @@ func (h *Handler) UpdateFavoriteGenres(c fiber.Ctx) error {
 
 	var req UpdateFavoriteGenresRequest
 	if err := c.Bind().JSON(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"code": codeInvalidBody, "error": msgInvalidBody})
 	}
 
 	profile, err := h.svc.UpdateFavoriteGenres(targetID, claims.UserID, req.FavoriteGenres)
@@ -153,7 +160,7 @@ func (h *Handler) VerifyEmailChange(c fiber.Ctx) error {
 
 	var req VerifyEmailChangeRequest
 	if err := c.Bind().JSON(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"code": codeInvalidBody, "error": msgInvalidBody})
 	}
 
 	if req.OTP == "" || req.NewEmailOTP == "" {
@@ -178,7 +185,7 @@ func (h *Handler) ChangePassword(c fiber.Ctx) error {
 
 	var req ChangePasswordRequest
 	if err := c.Bind().JSON(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"code": codeInvalidBody, "error": msgInvalidBody})
 	}
 	if req.OldPassword == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "old_password is required"})
@@ -371,7 +378,14 @@ func parseUserID(c fiber.Ctx) (uint, error) {
 }
 
 // codeFinalAdmin is the machine-readable code of ErrFinalAdmin (shared cannot be imported here: cycle).
-const codeFinalAdmin = "FINAL_ADMIN"
+const (
+	codeFinalAdmin      = "FINAL_ADMIN"
+	codeWrongPassword   = "WRONG_PASSWORD"
+	codeConfirmMismatch = "CONFIRM_MISMATCH"
+	codeInvalidBody     = "INVALID_BODY"
+
+	msgInvalidBody = "invalid request body"
+)
 
 func handleError(c fiber.Ctx, err error) error {
 	switch {
@@ -381,6 +395,10 @@ func handleError(c fiber.Ctx, err error) error {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "forbidden"})
 	case errors.Is(err, ErrSessionStale):
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	case errors.Is(err, ErrWrongPassword):
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"code": codeWrongPassword, "error": ErrWrongPassword.Error()})
+	case errors.Is(err, ErrConfirmMismatch):
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"code": codeConfirmMismatch, "error": ErrConfirmMismatch.Error()})
 	case errors.Is(err, ErrFinalAdmin):
 		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"code": codeFinalAdmin, "error": ErrFinalAdmin.Error()})
 	default:

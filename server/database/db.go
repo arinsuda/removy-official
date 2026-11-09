@@ -19,6 +19,7 @@ import (
 	"github.com/arinsuda/movie-hub/internal/follow_module"
 	"github.com/arinsuda/movie-hub/internal/library_module"
 	"github.com/arinsuda/movie-hub/internal/like_module"
+	"github.com/arinsuda/movie-hub/internal/list_module"
 	"github.com/arinsuda/movie-hub/internal/media_stats_module"
 	noti "github.com/arinsuda/movie-hub/internal/notification_module"
 	"github.com/arinsuda/movie-hub/internal/review_module"
@@ -126,6 +127,8 @@ func autoMigrate(db *gorm.DB) error {
 		&feed_module.ActivityPrivacySetting{},
 
 		&bmol_module.BMOLItem{},
+		&list_module.UserList{},
+		&list_module.UserListItem{},
 		&admin_module.AdminAuditLog{},
 		&watch_log_module.MediaWatchLog{},
 
@@ -446,6 +449,19 @@ func runSQLMigrations(db *gorm.DB, cfg *config.Config) error {
 
 	if err := runSchemaMigrationTx(db, "20261109_email_verification_token_hash", cfg.DB.MigrationLockTimeoutMs, cfg.DB.MigrationStatementTimeoutMs, func(tx *gorm.DB) error {
 		return tx.Exec(migrate.EmailVerificationTokenHash).Error
+	}); err != nil {
+		return err
+	}
+
+	if err := runMigrationWithHistoryTx(db, "20261109_user_lists_constraints", cfg.DB.MigrationLockTimeoutMs, cfg.DB.MigrationStatementTimeoutMs, func(tx *gorm.DB) error {
+		return tx.Exec(migrate.UserListsConstraints).Error
+	}); err != nil {
+		return err
+	}
+
+	// Everyone who existed before onboarded_at counts as onboarded; new users start NULL.
+	if err := runMigrationWithHistoryTx(db, "20261109_backfill_onboarded_at", cfg.DB.MigrationLockTimeoutMs, cfg.DB.MigrationStatementTimeoutMs, func(tx *gorm.DB) error {
+		return tx.Exec(migrate.BackfillOnboardedAt).Error
 	}); err != nil {
 		return err
 	}

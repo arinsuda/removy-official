@@ -7,12 +7,13 @@ import (
 	"github.com/arinsuda/movie-hub/internal/privacy_policy"
 	"github.com/arinsuda/movie-hub/internal/shared/storage"
 	stats "github.com/arinsuda/movie-hub/internal/user_stats_module"
+	mw "github.com/arinsuda/movie-hub/middleware"
 	"github.com/gofiber/fiber/v3"
 	"gorm.io/gorm"
 )
 
-func RegisterRoutes(
-	router fiber.Router,
+// New builds the handler shared by RegisterPublicRoutes and RegisterRoutes.
+func New(
 	db *gorm.DB,
 	mc *storage.MinIOClient,
 	exp stats.ExpAdder,
@@ -20,15 +21,24 @@ func RegisterRoutes(
 	notif *notification_module.Service,
 	feed feed_module.Service,
 	policy privacy_policy.UserAccessPolicy,
-) {
-	svc := NewService(db, mc, exp, achieve, notif, feed, policy)
-	h := NewHandler(svc)
+) *Handler {
+	return NewHandler(NewService(db, mc, exp, achieve, notif, feed, policy))
+}
 
+// RegisterPublicRoutes mounts the media review reads guests may use (viewer id 0: the service
+// only returns public reviews of accounts the policy lets a guest see). Register it on the
+// root /api router before any auth group.
+func RegisterPublicRoutes(router fiber.Router, h *Handler, guards ...fiber.Handler) {
+	mw.GetRoute(router, "/reviews/media/:mediaType/:mediaId", h.GetMediaReviews, guards...)
+	mw.GetRoute(router, "/reviews/media/:mediaType/:mediaId/rating", h.GetMediaRating, guards...)
+}
+
+func RegisterRoutes(router fiber.Router, h *Handler) {
 	reviews := router.Group("/reviews")
 	reviews.Post("", h.CreateReview)
 	reviews.Get("/user/:userId", h.GetUserReviews)
-	reviews.Get("/media/:mediaType/:mediaId", h.GetMediaReviews)
-	reviews.Get("/media/:mediaType/:mediaId/rating", h.GetMediaRating)
+	// Distinct from the public /media/:mediaType/:mediaId[/rating] routes: the extra /me segment never matches them.
+	reviews.Get("/media/:mediaType/:mediaId/me", h.GetMyMediaReview)
 	reviews.Patch("/:reviewId", h.UpdateReview)
 	reviews.Delete("/:reviewId", h.DeleteReview)
 

@@ -1,0 +1,255 @@
+//go:build integration
+
+package integration
+
+import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	"github.com/arinsuda/movie-hub/config"
+	tmdbmodule "github.com/arinsuda/movie-hub/internal/tmdb_module"
+	"github.com/arinsuda/movie-hub/router"
+)
+
+// useFakeTMDB points the TMDB client at a local server that answers every path with minimal valid JSON.
+func useFakeTMDB(t *testing.T) {
+	t.Helper()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if strings.HasSuffix(r.URL.Path, "/watch/providers") {
+			_, _ = w.Write([]byte(`{"id":1,"results":{}}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"id":603,"title":"Fake Movie","name":"Fake Show","overview":"o","poster_path":"/p.jpg","genres":[],"results":[],"cast":[],"crew":[],"page":1,"total_pages":1,"total_results":0}`))
+	}))
+	t.Cleanup(srv.Close)
+	tmdbmodule.Init(&config.Config{TMDB: config.TMDBConfig{BaseURL: srv.URL, APIKey: "test"}})
+}
+
+var guestPublicPaths = []string{
+	"/api/movies/603", "/api/movies/603/similar", "/api/movies/603/watch-providers",
+	"/api/tv/1399", "/api/tv/1399/similar", "/api/tv/1399/watch-providers",
+	"/api/reviews/media/movies/603", "/api/reviews/media/movies/603/rating",
+	"/api/stats/movie/603",
+}
+
+func TestGuestCanReadPublicRoutes(t *testing.T) {
+	useFakeTMDB(t)
+	e := newEnv(t)
+	for _, p := range guestPublicPaths {
+		if code, out := e.do("GET", p, nil, ""); code != 200 {
+			t.Errorf("guest GET %s: %d %v", p, code, out)
+		}
+	}
+	// A signed-in user keeps using the same routes.
+	seedUser(t, e.db, "me@x.test", true, "my-password1")
+	tok := e.loginPair("me@x.test", "my-password1").AccessToken
+	for _, p := range guestPublicPaths {
+		if code, out := e.do("GET", p, nil, tok); code != 200 {
+			t.Errorf("user GET %s: %d %v", p, code, out)
+		}
+	}
+}
+
+func TestGuestIsRejectedFromEverythingElse(t *testing.T) {
+	useFakeTMDB(t)
+	e := newEnv(t)
+	uid := seedUser(t, e.db, "me@x.test", true, "my-password1")
+	tok := e.loginPair("me@x.test", "my-password1").AccessToken
+
+	for _, c := range []struct{ method, path string }{
+		{"GET", fmt.Sprintf("/api/library/user/%d", uid)},
+		{"GET", "/api/lists"},
+		{"POST", "/api/lists"},
+		{"POST", "/api/stats/movie/603/view"},
+		{"GET", "/api/movies/popular"}, // browse stays signed-in only
+		{"GET", "/api/tv/popular"},
+		{"GET", fmt.Sprintf("/api/reviews/user/%d", uid)},
+		{"POST", "/api/reviews"},
+		{"GET", fmt.Sprintf("/api/users/%d", uid)},
+		{"GET", "/api/ping"},
+	} {
+		if code, _ := e.do(c.method, c.path, nil, ""); code != 401 {
+			t.Errorf("guest %s %s: %d, want 401", c.method, c.path, code)
+		}
+	}
+	// The fixed paths still work when signed in: the public :id<int> routes do not shadow them.
+	if code, out := e.do("GET", "/api/movies/popular", nil, tok); code != 200 {
+		t.Errorf("user GET /movies/popular: %d %v", code, out)
+	}
+	if code, out := e.do("POST", "/api/stats/movie/603/view", nil, tok); code != 204 {
+		t.Errorf("user POST view: %d %v", code, out)
+	}
+}
+
+// /api/achievements is registered on the root router AFTER the auth group, so the group's USE
+// already ran: it is auth-gated in practice (same order as router.Register).
+func TestAchievementsListIsAuthGatedToday(t *testing.T) {
+	e := newEnv(t)
+	if code, _ := e.do("GET", "/api/achievements", nil, ""); code != 401 {
+		t.Fatalf("guest GET /achievements: %d, want 401 (documented as auth-gated)", code)
+	}
+}
+
+func TestGuestOnlySeesPublicReviewsOfOpenAccounts(t *testing.T) {
+	e := newEnv(t)
+	insert := func(email, visibility string, isPublic, privateAccount bool) uint {
+		uid := seedUser(t, e.db, email, true, "pw-password1")
+		if privateAccount {
+			e.db.Exec(`UPDATE users SET is_private = true WHERE id = ?`, uid)
+		}
+		if err := e.db.Exec(`INSERT INTO reviews (created_at, updated_at, user_id, media_id, media_type, rating, body, is_public, visibility)
+			VALUES (now(), now(), ?, 603, 'movie', 4.0, ?, ?, ?)`, uid, email, isPublic, visibility).Error; err != nil {
+			t.Fatal(err)
+		}
+		return uid
+	}
+	insert("public@x.test", "public", true, false)
+	insert("private@x.test", "private", false, false)
+	insert("legacy@x.test", "private", true, false) // flags disagree: a guest must not see it
+	lockedOwner := insert("locked@x.test", "public", true, true)
+
+	bodies := func(token string) map[string]bool {
+		code, out := e.do("GET", "/api/reviews/media/movies/603", nil, token)
+		if code != 200 {
+			t.Fatalf("GET reviews: %d %v", code, out)
+		}
+		got := map[string]bool{}
+		for _, r := range out["reviews"].([]any) {
+			got[r.(map[string]any)["body"].(string)] = true
+		}
+		return got
+	}
+
+	guest := bodies("")
+	if len(guest) != 1 || !guest["public@x.test"] {
+		t.Fatalf("guest sees %v, want only the public review of an open account", guest)
+	}
+
+	// An accepted follower of the locked account sees its review; a guest and a stranger do not.
+	follower := seedUser(t, e.db, "f@x.test", true, "pw-password1")
+	stranger := seedUser(t, e.db, "s@x.test", true, "pw-password1")
+	_ = stranger
+	e.db.Exec(`INSERT INTO user_follows (follower_id, followee_id, status, created_at, updated_at) VALUES (?, ?, 'accepted', now(), now())`, follower, lockedOwner)
+	followerTok := e.loginPair("f@x.test", "pw-password1").AccessToken
+	if got := bodies(followerTok); !got["locked@x.test"] || !got["public@x.test"] {
+		t.Fatalf("follower sees %v", got)
+	}
+	if got := bodies(e.loginPair("s@x.test", "pw-password1").AccessToken); got["locked@x.test"] || got["private@x.test"] {
+		t.Fatalf("stranger sees %v", got)
+	}
+}
+
+// A token that is present but stale or malformed is 401 even on a public route, so the client
+// refreshes instead of silently browsing as a guest.
+func TestStaleOrInvalidTokenOnPublicRouteIs401(t *testing.T) {
+	useFakeTMDB(t)
+	e := newEnv(t)
+	uid := seedUser(t, e.db, "me@x.test", true, "my-password1")
+	old := e.loginPair("me@x.test", "my-password1").AccessToken
+	if code, _ := e.do("GET", "/api/movies/603", nil, old); code != 200 {
+		t.Fatalf("valid token: %d", code)
+	}
+	e.db.Exec(`UPDATE users SET token_version = token_version + 1 WHERE id = ?`, uid)
+	if code, _ := e.do("GET", "/api/movies/603", nil, old); code != 401 {
+		t.Fatalf("stale token: %d, want 401", code)
+	}
+	if code, _ := e.do("GET", "/api/movies/603", nil, "not-a-jwt"); code != 401 {
+		t.Fatalf("garbage token: %d, want 401", code)
+	}
+}
+
+func TestGuestReadsAreRateLimitedPerIP(t *testing.T) {
+	e := newEnv(t)
+	seedUser(t, e.db, "me@x.test", true, "my-password1")
+	tok := e.loginPair("me@x.test", "my-password1").AccessToken
+
+	var last int
+	for i := 0; i < router.PublicReadRateMax+1; i++ {
+		last, _ = e.do("GET", "/api/stats/movie/603", nil, "")
+	}
+	if last != 429 {
+		t.Fatalf("request %d: %d, want 429", router.PublicReadRateMax+1, last)
+	}
+	if code, out := e.do("GET", "/api/stats/movie/603", nil, ""); code != 429 || out["code"] != "RATE_LIMITED" {
+		t.Fatalf("still limited: %d %v", code, out)
+	}
+	if code, _ := e.do("GET", "/api/stats/movie/603", nil, tok); code != 200 {
+		t.Fatalf("signed-in user shares the guest budget: %d", code)
+	}
+}
+
+func TestMediaReviewsArePaginatedAndKeepPrivacy(t *testing.T) {
+	e := newEnv(t)
+	const total = 25
+	for i := 0; i < total; i++ {
+		uid := seedUser(t, e.db, fmt.Sprintf("r%d@x.test", i), true, "pw-password1")
+		e.db.Exec(`INSERT INTO reviews (created_at, updated_at, user_id, media_id, media_type, rating, body, is_public, visibility)
+			VALUES (now() - make_interval(secs => ?), now(), ?, 77, 'movie', 3.0, 'b', true, 'public')`, i, uid)
+	}
+	locked := seedUser(t, e.db, "locked@x.test", true, "pw-password1")
+	e.db.Exec(`UPDATE users SET is_private = true WHERE id = ?`, locked)
+	e.db.Exec(`INSERT INTO reviews (created_at, updated_at, user_id, media_id, media_type, rating, body, is_public, visibility)
+		VALUES (now(), now(), ?, 77, 'movie', 3.0, 'b', true, 'public')`, locked)
+
+	page := func(q string) (int, []any, map[string]any) {
+		code, out := e.do("GET", "/api/reviews/media/movies/77"+q, nil, "")
+		revs, _ := out["reviews"].([]any)
+		pg, _ := out["pagination"].(map[string]any)
+		return code, revs, pg
+	}
+	code, revs, pg := page("")
+	if code != 200 || len(revs) != 20 || pg["total"] != float64(total) || pg["has_more"] != true || pg["page"] != float64(1) || pg["page_size"] != float64(20) {
+		t.Fatalf("page 1: %d len=%d %v", code, len(revs), pg)
+	}
+	_, revs, pg = page("?page=2")
+	if len(revs) != 5 || pg["has_more"] != false {
+		t.Fatalf("page 2: len=%d %v", len(revs), pg)
+	}
+	_, revs, pg = page("?page_size=1000")
+	if len(revs) != 50 && len(revs) != total || pg["page_size"] != float64(50) {
+		t.Fatalf("page_size cap: len=%d %v", len(revs), pg)
+	}
+}
+
+func TestMyMediaReview(t *testing.T) {
+	e := newEnv(t)
+	insert := func(email, visibility string) string {
+		uid := seedUser(t, e.db, email, true, "pw-password1")
+		if err := e.db.Exec(`INSERT INTO reviews (created_at, updated_at, user_id, media_id, media_type, rating, body, is_public, visibility)
+			VALUES (now(), now(), ?, 88, 'movie', 4.0, ?, ?, ?)`, uid, "mine-"+email, visibility == "public", visibility).Error; err != nil {
+			t.Fatal(err)
+		}
+		return e.loginPair(email, "pw-password1").AccessToken
+	}
+	privTok := insert("priv@x.test", "private")
+	insert("pub@x.test", "public")
+	seedUser(t, e.db, "none@x.test", true, "pw-password1")
+	noneTok := e.loginPair("none@x.test", "pw-password1").AccessToken
+	const path = "/api/reviews/media/movies/88/me"
+
+	if code, _ := e.do("GET", path, nil, ""); code != 401 {
+		t.Fatalf("guest: %d, want 401", code)
+	}
+	code, out := e.do("GET", path, nil, privTok)
+	if r, _ := out["review"].(map[string]any); code != 200 || r == nil || r["body"] != "mine-priv@x.test" {
+		t.Fatalf("own private review: %d %v", code, out)
+	}
+	code, out = e.do("GET", path, nil, noneTok)
+	if v, present := out["review"]; code != 200 || !present || v != nil {
+		t.Fatalf("no review: %d %v, want review null", code, out)
+	}
+	if code, out := e.do("GET", "/api/reviews/media/book/88/me", nil, noneTok); code != 400 || out["code"] != "INVALID_MEDIA_TYPE" {
+		t.Fatalf("bad type: %d %v", code, out)
+	}
+	if code, out := e.do("GET", "/api/reviews/media/movies/abc/me", nil, noneTok); code != 400 || out["code"] != "INVALID_INPUT" {
+		t.Fatalf("bad id: %d %v", code, out)
+	}
+	// The public list is untouched and still guest-readable.
+	if code, _ := e.do("GET", "/api/reviews/media/movies/88", nil, ""); code != 200 {
+		t.Fatalf("public list: %d", code)
+	}
+}

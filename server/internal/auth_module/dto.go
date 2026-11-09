@@ -28,6 +28,7 @@ type UserResponse struct {
 	FavoriteGenres *string    `json:"favorite_genres"`
 	IsPrivate      bool       `json:"is_private"`
 	Level          int        `json:"level"`
+	OnboardedAt    *time.Time `json:"onboarded_at"`
 }
 
 type AuthResponse struct {

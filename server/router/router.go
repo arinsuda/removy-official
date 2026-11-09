@@ -16,6 +16,7 @@ import (
 	"github.com/arinsuda/movie-hub/internal/library_module"
 	"github.com/arinsuda/movie-hub/internal/like_module"
 	"github.com/arinsuda/movie-hub/internal/link_module"
+	"github.com/arinsuda/movie-hub/internal/list_module"
 	"github.com/arinsuda/movie-hub/internal/mailer"
 	"github.com/arinsuda/movie-hub/internal/media_stats_module"
 	"github.com/arinsuda/movie-hub/internal/movie_module"
@@ -72,6 +73,16 @@ func Register(app *fiber.App, db *gorm.DB, cfg *config.Config, m *mailer.Mailer)
 	link_module.RegisterRoutes(api, db, cfg, m, authSvc)
 
 	mw := middleware.NewAuthMiddleware(cfg, db)
+
+	// Guest-readable routes go on the root router before the auth group (see RegisterPublicRoutes).
+	ratingRepo := review_module.NewRatingStatsReader(db)
+	extRatings := external_rating_module.NewService(
+		external_rating_module.NewGormStore(db), cfg.OMDb.APIKey, movie_module.SeriesIMDbResolver)
+	movieHandler := movie_module.New(ratingRepo, extRatings)
+	reviewHandler := review_module.New(db, mc, statsSvc, achieveModule.Service, notifSvc, feedModule.Service, policy)
+	statsHandler := media_stats_module.New(db)
+	RegisterPublicRoutes(api, mw.OptionalAuth, PublicReadLimiter(cfg.TrustedProxyHops), movieHandler, reviewHandler, statsHandler)
+
 	protected := api.Group("/", mw.RequireAuth)
 
 	userSvc := user_module.RegisterRoutes(protected, db, mc, statsSvc, authSvc, passwordResetMailer, policy, cfg.Brevo)
@@ -84,18 +95,16 @@ func Register(app *fiber.App, db *gorm.DB, cfg *config.Config, m *mailer.Mailer)
 	notification_module.RegisterRoutes(protected, notifSvc, notifHub)
 
 	follow_module.RegisterRoutes(api, db, achieveModule.Service, notifSvc, feedModule.Service)
-	review_module.RegisterRoutes(protected, db, mc, statsSvc, achieveModule.Service, notifSvc, feedModule.Service, policy)
+	review_module.RegisterRoutes(protected, reviewHandler)
 	libSvc := library_module.RegisterRoutes(protected, db, statsSvc, achieveModule.Service, notifSvc, feedModule.Service, policy)
 	watch_log_module.RegisterRoutes(protected, db, feedModule.Service, libSvc, policy)
 	like_module.RegisterRoutes(protected, db, achieveModule.Service, notifSvc, feedModule.Service, policy)
 	bmol_module.RegisterRoutes(protected, db, policy)
+	list_module.RegisterRoutes(protected, db, policy)
 
 	analytics_module.RegisterRoutes(protected, db)
-	ratingRepo := review_module.NewRatingStatsReader(db)
-	extRatings := external_rating_module.NewService(
-		external_rating_module.NewGormStore(db), cfg.OMDb.APIKey, movie_module.SeriesIMDbResolver)
-	movie_module.RegisterRoutes(protected, ratingRepo, extRatings)
-	media_stats_module.RegisterRoutes(protected, db)
+	movie_module.RegisterRoutes(protected, movieHandler)
+	media_stats_module.RegisterRoutes(protected, statsHandler)
 	user_stats_module.RegisterRoutes(protected, db, policy)
 	admin_module.RegisterRoutes(protected, db, notifHub, mc, mw.RequireCurrentAdmin(db))
 
@@ -109,4 +118,3 @@ func welcomeHandler(c fiber.Ctx) error {
 func healthHandler(c fiber.Ctx) error {
 	return c.JSON(fiber.Map{"status": "ok"})
 }
-

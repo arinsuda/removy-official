@@ -13,6 +13,11 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	deleteFailMax    = 5
+	deleteFailWindow = 15 * time.Minute
+)
+
 func RegisterRoutes(
 	router fiber.Router,
 	db *gorm.DB,
@@ -27,7 +32,7 @@ func RegisterRoutes(
 	svc := NewService(db, mc, statsSvc, mailer, emailVerifier, passwordResetMailer, policy)
 	h := NewHandler(svc)
 
-	emailChangeKey := func(c fiber.Ctx) string {
+	userKey := func(c fiber.Ctx) string {
 		claims := mw.GetClaims(c)
 		if claims == nil {
 			return ""
@@ -38,9 +43,9 @@ func RegisterRoutes(
 	users := router.Group("/users")
 	users.Get("/:userId", h.GetProfile)
 	users.Patch("/:userId", h.UpdateProfile)
-	users.Delete("/:userId", h.DeleteUser)
+	users.Delete("/:userId", ratelimit.NewFailedOnly(deleteFailMax, deleteFailWindow, userKey), h.DeleteUser)
 	users.Patch("/:userId/genres", h.UpdateFavoriteGenres)
-	users.Post("/:userId/email", ratelimit.New(5, time.Hour, emailChangeKey), h.RequestEmailChange)
+	users.Post("/:userId/email", ratelimit.New(5, time.Hour, userKey), h.RequestEmailChange)
 	users.Put("/:userId/email", h.VerifyEmailChange)
 	users.Patch("/:userId/password", h.ChangePassword)
 
