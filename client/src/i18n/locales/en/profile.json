@@ -71,6 +71,12 @@
       "description": "You're about to unlink",
       "suffix": ". You can link it again later from the user menu.",
       "confirm": "Unlink"
+    },
+    "custom_list_delete": {
+      "title": "Delete this list?",
+      "description": "Delete",
+      "suffix": ". The titles stay in your library; only the list is removed.",
+      "confirm": "Delete list"
     }
   },
   "hero": {
@@ -171,7 +177,8 @@
         "oldest": "Oldest first",
         "title": "Title A-Z",
         "tmdb": "TMDB score",
-        "popcorn": "POPCORN score"
+        "popcorn": "POPCORN score",
+        "release": "Release date"
       },
       "loadMore": "Load more",
       "showing": "Showing {shown} of {total}",

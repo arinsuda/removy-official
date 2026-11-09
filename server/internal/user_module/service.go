@@ -67,6 +67,7 @@ func (s *Service) GetProfile(targetUserID, requesterID uint) (*UserProfileRespon
 		// Email is account-identifying data; only the owner may read it.
 		profile.Email = ""
 		profile.VerifiedEmailAt = nil
+		profile.OnboardedAt = nil
 	}
 
 	if user.IsPrivate && requesterID != targetUserID {
@@ -149,9 +150,25 @@ func (s *Service) UpdateProfile(
 
 // DeleteUser deactivates the caller's own account and ends all of its sessions.
 // Admins remove other users through the admin module, never through this path.
-func (s *Service) DeleteUser(targetUserID, requesterID uint, sessionVersion int) error {
+//
+// Confirmation comes first and changes nothing when it fails: an account with a password needs
+// that password; a Google-only account (no password) must type its username instead. The check
+// runs before the transaction so bcrypt does not hold the admin guard lock; a password change in
+// between bumps token_version and the transaction then rejects the stale session.
+func (s *Service) DeleteUser(targetUserID, requesterID uint, sessionVersion int, req DeleteAccountRequest) error {
 	if targetUserID != requesterID {
 		return ErrForbidden
+	}
+	username, password, err := s.repo.findCredentials(targetUserID)
+	if err != nil {
+		return err
+	}
+	if password != nil && *password != "" {
+		if req.Password == "" || bcrypt.CompareHashAndPassword([]byte(*password), []byte(req.Password)) != nil {
+			return ErrWrongPassword
+		}
+	} else if !strings.EqualFold(strings.TrimSpace(req.ConfirmUsername), username) {
+		return ErrConfirmMismatch
 	}
 	if err := s.repo.DeleteUser(targetUserID, sessionVersion); err != nil {
 		return err
@@ -175,7 +192,11 @@ func (s *Service) UpdateFavoriteGenres(targetUserID, requesterID uint, genres []
 		stored = &str
 	}
 
-	if err := s.repo.UpdateProfile(targetUserID, map[string]any{"favorite_genres": stored}); err != nil {
+	updates := map[string]any{
+		"favorite_genres": stored,
+		"onboarded_at":    gorm.Expr("COALESCE(onboarded_at, now())"),
+	}
+	if err := s.repo.UpdateProfile(targetUserID, updates); err != nil {
 		return nil, err
 	}
 	return s.GetProfile(targetUserID, requesterID)
@@ -607,5 +628,6 @@ func toProfileResponse(u *User, reviewCount, followerCount, followingCount, leve
 		Level:           level,
 		Role:            string(u.Role.RoleName),
 		CreatedAt:       u.CreatedAt,
+		OnboardedAt:     u.OnboardedAt,
 	}
 }

@@ -6,13 +6,23 @@ import { updateDocumentTitle } from "@/i18n"
 function hasGenres(genres: string | null | undefined): boolean {
   if (!genres) return false
   if (genres === "null") return false
-  // Set locally by the onboarding "skip" action; without it the guard bounces the user back.
-  if (genres === "skip") return true
   try {
     const parsed = JSON.parse(genres)
     return Array.isArray(parsed) && parsed.length > 0
   } catch {
     return false
+  }
+}
+
+/** Onboarding is done once the server stamped `onboarded_at` (save or skip) or genres exist. */
+function isOnboarded(user: { onboarded_at?: string | null; favorite_genres?: string | null } | null | undefined): boolean {
+  return !!user && (!!user.onboarded_at || hasGenres(user.favorite_genres))
+}
+
+declare module "vue-router" {
+  interface RouteMeta {
+    /** Reachable without a session; guests see a read-only page. */
+    public?: boolean
   }
 }
 
@@ -107,7 +117,7 @@ const router = createRouter({
           path: "movies/:id",
           name: "movie-detail",
           component: () => import("@/views/movie/MovieDetailView.vue"),
-          meta: { titleKey: "navigation.movies" }
+          meta: { public: true, titleKey: "navigation.movies" }
         },
         {
           path: "tv",
@@ -119,7 +129,7 @@ const router = createRouter({
           path: "tv/:id",
           name: "tv-detail",
           component: () => import("@/views/tv/TVDetailView.vue"),
-          meta: { titleKey: "navigation.tvSeries" }
+          meta: { public: true, titleKey: "navigation.tvSeries" }
         },
         {
           path: "upcoming",
@@ -131,13 +141,13 @@ const router = createRouter({
           path: "about-us",
           name: "about-us",
           component: () => import("@/views/aboutus/AboutUsView.vue"),
-          meta: { titleKey: "navigation.aboutUs" }
+          meta: { public: true, titleKey: "navigation.aboutUs" }
         },
         {
           path: "donate",
           name: "donate",
           component: () => import("@/views/aboutus/DonateView.vue"),
-          meta: { titleKey: "navigation.donate" }
+          meta: { public: true, titleKey: "navigation.donate" }
         },
         {
           path: "users/:userId",
@@ -234,7 +244,8 @@ router.beforeEach(async to => {
     return
   }
 
-  const needsAuth = to.matched.some(r => r.meta.requiresAuth)
+  const requiresAuth = to.matched.some(r => r.meta.requiresAuth)
+  const needsAuth = requiresAuth && !to.meta.public
 
   // ยังไม่ login → ไป login
   if (needsAuth && !authStore.isLoggedIn)
@@ -254,9 +265,9 @@ router.beforeEach(async to => {
 
   // ✅ ต้อง requiresAuth ด้วย ไม่งั้น guest route ก็โดน redirect
   if (
-    needsAuth &&
+    requiresAuth &&
     authStore.isLoggedIn &&
-    !hasGenres(authStore.user?.favorite_genres) &&
+    !isOnboarded(authStore.user) &&
     to.name !== "onboarding"
   ) {
     return { name: "onboarding" }
@@ -265,7 +276,7 @@ router.beforeEach(async to => {
   // ✅ ใช้ hasGenres ให้สอดคล้องกัน
   if (
     authStore.isLoggedIn &&
-    hasGenres(authStore.user?.favorite_genres) &&
+    isOnboarded(authStore.user) &&
     to.name === "onboarding"
   ) {
     return { name: "home" }

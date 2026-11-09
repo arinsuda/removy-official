@@ -16,6 +16,8 @@ export interface UserProfile {
   level: number
   role: string
   created_at: string
+  /** Owner-only: set once favorite genres are saved or skipped. */
+  onboarded_at?: string | null
 }
 
 export interface UpdateProfileRequest {

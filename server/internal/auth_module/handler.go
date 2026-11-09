@@ -514,5 +514,6 @@ func toUserResponse(u *user_module.User) UserResponse {
 		FavoriteGenres: u.FavoriteGenres,
 		IsPrivate:      u.IsPrivate,
 		Level:          1,
+		OnboardedAt:    u.OnboardedAt,
 	}
 }

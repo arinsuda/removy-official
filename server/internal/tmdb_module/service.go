@@ -132,6 +132,11 @@ func DiscoverUpcomingByYear(year, page int) (*PaginatedResult[Movie], error) {
 }
 
 func GetMovieByID(tmdbID int) (*MovieDetail, error) {
+	key := detailKey{detailKindMovie, tmdbID, currentLanguage()}
+	if v, ok := details.get(key); ok {
+		cached := v.(MovieDetail)
+		return &cached, nil
+	}
 	var movie MovieDetail
 	path := fmt.Sprintf("/movie/%d", tmdbID)
 
@@ -151,6 +156,7 @@ func GetMovieByID(tmdbID int) (*MovieDetail, error) {
 		movie.EnglishTitle = enMovie.Title
 	}
 
+	details.set(key, movie)
 	return &movie, nil
 }
 
@@ -218,6 +224,11 @@ func GetPopularSeries(page int) (*PaginatedResult[TVSeries], error) {
 }
 
 func GetSeriesByID(tmdbID int) (*TVSeriesDetail, error) {
+	key := detailKey{detailKindTV, tmdbID, currentLanguage()}
+	if v, ok := details.get(key); ok {
+		cached := v.(TVSeriesDetail)
+		return &cached, nil
+	}
 	var series TVSeriesDetail
 	path := fmt.Sprintf("/tv/%d", tmdbID)
 
@@ -237,6 +248,7 @@ func GetSeriesByID(tmdbID int) (*TVSeriesDetail, error) {
 		series.EnglishTitle = enSeries.Name
 	}
 
+	details.set(key, series)
 	return &series, nil
 }
 

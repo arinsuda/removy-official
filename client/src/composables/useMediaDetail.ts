@@ -1,6 +1,7 @@
 import { onScopeDispose, ref, shallowRef, watch, type Ref } from "vue"
 import { isAxiosError } from "axios"
 import { mediaApi } from "@/api/endpoints/media"
+import { useAuthStore } from "@/stores/auth"
 import type { DetailConfig, DetailData } from "@/components/detail/detailConfig"
 
 const RATINGS_RETRY_DELAY = 1500
@@ -14,6 +15,7 @@ export type DetailStatus = "loading" | "ready" | "error" | "notFound"
  * blanking; only the newest request may write state.
  */
 export function useMediaDetail(config: DetailConfig, idRef: Ref<number>) {
+  const auth = useAuthStore()
   const status = ref<DetailStatus>("loading")
   const data = shallowRef<DetailData | null>(null)
   let requestSeq = 0
@@ -59,9 +61,9 @@ export function useMediaDetail(config: DetailConfig, idRef: Ref<number>) {
       data.value = result
       status.value = "ready"
       if (result.ratings?.external_pending) scheduleRatingsRetry(id, seq, 0)
-      if (!viewRecorded.has(id)) {
+      if (auth.isLoggedIn && !viewRecorded.has(id)) {
         viewRecorded.add(id)
-        mediaApi.recordMediaView(config.type, id).catch(err => console.warn("record view failed:", err))
+        mediaApi.recordMediaView(config.type, id).catch(err => console.warn("record view failed, status:", isAxiosError(err) ? err.response?.status : undefined))
       }
     } catch (err) {
       if (seq !== requestSeq) return
@@ -70,7 +72,7 @@ export function useMediaDetail(config: DetailConfig, idRef: Ref<number>) {
         data.value = null
         status.value = "notFound"
       } else {
-        console.error("load media detail failed:", err)
+        console.error("load media detail failed, status:", code)
         status.value = "error"
       }
     }

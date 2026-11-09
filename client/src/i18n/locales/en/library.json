@@ -207,6 +207,90 @@
         "story": "Story",
         "square": "Top 3"
       }
+    },
+    "view": {
+      "label": "Layout",
+      "board": "Ranking",
+      "timeline": "Timeline"
+    },
+    "timeline": {
+      "unknown": "Unknown year",
+      "count": "{count} title | {count} titles"
+    }
+  },
+  "customLists": {
+    "title": "Your lists",
+    "new": "New list",
+    "limit": "You have reached the limit of {max} lists.",
+    "loadFailed": "Could not load your lists.",
+    "locked": "This person's lists are private.",
+    "emptyOwnerTitle": "No custom lists yet",
+    "emptyOwnerBody": "Create a list to group titles your way, like a marathon night or a director's films.",
+    "emptyVisitorTitle": "No lists to show",
+    "emptyVisitorBody": "Lists this person shares with you will appear here.",
+    "editor": {
+      "createTitle": "New list",
+      "editTitle": "Edit list",
+      "name": "Name",
+      "description": "Description",
+      "descriptionPlaceholder": "What is this list about?",
+      "counter": "{n} / {max}",
+      "nameRequired": "Give your list a name.",
+      "nameTooLong": "Names can be up to {max} characters.",
+      "descTooLong": "Descriptions can be up to {max} characters.",
+      "cover": "Cover",
+      "coverHint": "Pick a poster from this list, or let the collage choose.",
+      "coverAuto": "Auto collage",
+      "save": "Save changes",
+      "create": "Create list"
+    },
+    "detail": {
+      "edit": "Edit",
+      "delete": "Delete",
+      "notFoundTitle": "List not found",
+      "notFoundBody": "It may have been deleted or made private.",
+      "forbiddenTitle": "This list is private",
+      "forbiddenBody": "You do not have access to it.",
+      "errorTitle": "Could not load this list",
+      "errorBody": "Check your connection and try again.",
+      "emptyOwnerTitle": "This list is empty",
+      "emptyOwnerBody": "Open a movie or series and choose Add to list to put titles here.",
+      "emptyVisitorTitle": "This list is empty",
+      "reorderHint": "Switch the sort to Your order to rearrange titles.",
+      "dragHandle": "Drag to reorder {title}",
+      "moveUp": "Move {title} earlier",
+      "moveDown": "Move {title} later",
+      "remove": "Remove {title} from this list",
+      "reorderLoadFailed": "Could not load the whole list to reorder it.",
+      "moved": "{title} moved to position {position}",
+      "deleted": "List deleted.",
+      "sorts": {
+        "position": "Your order",
+        "newest": "Recently added",
+        "title": "Title A-Z",
+        "release": "Release date"
+      }
+    },
+    "sheet": {
+      "title": "Add to list",
+      "action": "Add to list",
+      "empty": "You have no lists yet. Create your first one below.",
+      "newLabel": "New list",
+      "newPlaceholder": "List name",
+      "create": "Create and add",
+      "removeFailed": "Could not remove it from this list. Please try again."
+    },
+    "errors": {
+      "generic": "Something went wrong. Please try again.",
+      "LIST_NOT_FOUND": "That list no longer exists.",
+      "ITEM_NOT_FOUND": "That title is no longer in the list.",
+      "ITEM_EXISTS": "That title is already in this list.",
+      "LIST_LIMIT": "You have reached the limit of 50 lists.",
+      "LIST_FULL": "This list is full (500 titles).",
+      "ORDER_MISMATCH": "The list changed. Reloaded it, try again.",
+      "INVALID_INPUT": "Check the name and description and try again.",
+      "INVALID_VISIBILITY": "Choose a valid visibility.",
+      "INVALID_MEDIA_TYPE": "That kind of title cannot be added."
     }
   }
 }

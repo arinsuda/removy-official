@@ -334,6 +334,7 @@ func fetchMediaSummaryHelper(mediaID int, mediaType movie_module.MediaType) shar
 	case movie_module.MediaMovie:
 		if details, err := tmdbmodule.GetMovieByID(mediaID); err == nil && details != nil {
 			media.Title = details.Title
+			media.ReleaseDate = details.ReleaseDate
 			media.PosterURL = details.PosterPath
 			media.Genres = details.Genres
 			media.VoteAverage = float32(details.VoteAverage)
@@ -341,6 +342,7 @@ func fetchMediaSummaryHelper(mediaID int, mediaType movie_module.MediaType) shar
 	case movie_module.MediaSeries:
 		if details, err := tmdbmodule.GetSeriesByID(mediaID); err == nil && details != nil {
 			media.Title = details.Name
+			media.ReleaseDate = details.FirstAirDate
 			media.PosterURL = details.PosterPath
 			media.Genres = details.Genres
 			media.VoteAverage = float32(details.VoteAverage)

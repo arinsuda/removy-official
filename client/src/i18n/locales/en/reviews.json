@@ -21,7 +21,9 @@
     "showSpoiler": "Show Spoiler",
     "edited": "edited",
     "by": "by",
-    "replies": "replies"
+    "replies": "replies",
+    "total": "{count} review | {count} reviews",
+    "loadMore": "Load more reviews"
   },
   "errors": {
     "alreadyExists": "You have already reviewed this media",
@@ -56,5 +58,6 @@
     "comments": "{count} comment | {count} comments"
   },
   "guestPrompt": "Sign in to write a review.",
-  "loadFailed": "Could not load reviews."
+  "loadFailed": "Could not load reviews.",
+  "ownLoadFailed": "Could not check whether you already reviewed this title."
 }

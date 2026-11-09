@@ -9,7 +9,9 @@
     "preferences": "Preferences",
     "privacy": "Privacy",
     "security": "Security",
-    "connections": "Connections"
+    "connections": "Connections",
+    "activity": "Activity",
+    "danger": "Delete account"
   },
   "saveBar": {
     "label": "Unsaved changes",
@@ -114,5 +116,42 @@
     "onlyMethod": "Cannot disconnect your only sign-in method",
     "connectFailed": "Failed to start Google linking.",
     "disconnectFailed": "Failed to disconnect Google account."
+  },
+  "activity": {
+    "title": "Feed activity",
+    "description": "Choose which of your activities appear in the feed of people who follow you.",
+    "loadFailed": "Could not load these settings.",
+    "saveFailed": "Could not save this setting. Please try again.",
+    "options": {
+      "review_created": "Wrote a review",
+      "review_commented": "Commented on a review",
+      "review_liked": "Liked a review",
+      "media_liked": "Liked a movie or series",
+      "watchlist_added": "Added to watchlist",
+      "watched_added": "Marked as watched",
+      "watch_log_created": "Logged a watch",
+      "rewatched": "Rewatched a title",
+      "achievement_unlocked": "Unlocked an achievement",
+      "user_followed": "Followed someone"
+    }
+  },
+  "danger": {
+    "title": "Delete account",
+    "description": "Your account is deactivated and you are signed out everywhere. Your reviews are hidden.",
+    "open": "Delete my account",
+    "modalTitle": "Delete your account?",
+    "modalBody": "This signs you out on every device and hides your reviews. Confirm it is you to continue.",
+    "password": "Your password",
+    "confirmUsername": "Type your username ({username}) to confirm",
+    "noPassword": "I don't have a password",
+    "usePassword": "Use my password instead",
+    "confirm": "Delete account",
+    "done": "Your account has been deleted.",
+    "errors": {
+      "wrongPassword": "That password is not correct.",
+      "confirmMismatch": "That username does not match.",
+      "tooMany": "Too many attempts. Try again in a few minutes.",
+      "generic": "Could not delete the account. Please try again."
+    }
   }
 }

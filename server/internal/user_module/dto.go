@@ -20,6 +20,7 @@ type UserProfileResponse struct {
 	Level           int        `json:"level"`
 	Role            string     `json:"role"`
 	CreatedAt       time.Time  `json:"created_at"`
+	OnboardedAt     *time.Time `json:"onboarded_at"` // owner only
 }
 
 type UpdateProfileRequest struct {
@@ -71,4 +72,11 @@ type ResetPasswordRequest struct {
 	UserID          uint   `json:"user_id"`
 	NewPassword     string `json:"new_password"`
 	ConfirmPassword string `json:"confirm_password"`
+}
+
+// DeleteAccountRequest confirms a self-delete: Password for accounts that have one,
+// ConfirmUsername for accounts without a password (Google sign-in only).
+type DeleteAccountRequest struct {
+	Password        string `json:"password"`
+	ConfirmUsername string `json:"confirm_username"`
 }

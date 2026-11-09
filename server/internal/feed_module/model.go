@@ -37,19 +37,6 @@ var AllActivityTypes = []ActivityType{
 	ActivityRewatched,
 }
 
-var defaultEnabled = map[ActivityType]bool{
-	ActivityReviewCreated:       true,
-	ActivityReviewCommented:     true,
-	ActivityReviewLiked:         false,
-	ActivityMediaLiked:          false,
-	ActivityWatchlistAdded:      false,
-	ActivityWatchedAdded:        false,
-	ActivityAchievementUnlocked: true,
-	ActivityUserFollowed:        false,
-	ActivityWatchLogCreated:     false,
-	ActivityRewatched:           false,
-}
-
 type ActivityEvent struct {
 	ID uint `gorm:"primarykey;autoIncrement"`
 

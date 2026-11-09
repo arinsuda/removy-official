@@ -16,6 +16,7 @@ var (
 type UserAccessPolicy interface {
 	CanViewProfileSection(ctx context.Context, viewerID, ownerID uint, section ProfileSection) (bool, error)
 	CanViewActivity(ctx context.Context, viewerID, actorID uint, activityType ActivityType, visibility ActivityVisibility) (bool, error)
+	CanViewList(ctx context.Context, viewerID, ownerID uint, visibility ListVisibility) (bool, error)
 }
 
 type userAccessPolicy struct {
@@ -77,19 +78,7 @@ func (p *userAccessPolicy) CanViewActivity(ctx context.Context, viewerID, actorI
 	enabled := true
 	if err != nil {
 		// Fallback to default settings
-		defaults := map[ActivityType]bool{
-			ActivityReviewCreated:       true,
-			ActivityReviewCommented:     true,
-			ActivityReviewLiked:         false,
-			ActivityMediaLiked:          false,
-			ActivityWatchlistAdded:      false,
-			ActivityWatchedAdded:        false,
-			ActivityAchievementUnlocked: true,
-			ActivityUserFollowed:        false,
-		}
-		if val, exists := defaults[activityType]; exists {
-			enabled = val
-		}
+		enabled = ActivityEnabledByDefault(activityType)
 	} else {
 		enabled = dbEnabled
 	}
@@ -133,5 +122,47 @@ func (p *userAccessPolicy) CanViewActivity(ctx context.Context, viewerID, actorI
 		return true, nil
 	default:
 		return true, nil
+	}
+}
+
+// CanViewList decides in order: the owner always may; then the owner's library section
+// (inactive owner -> ErrNotFound, locked private profile -> false); then the list's own
+// visibility, where "followers" needs an accepted follow.
+func (p *userAccessPolicy) CanViewList(ctx context.Context, viewerID, ownerID uint, visibility ListVisibility) (bool, error) {
+	if viewerID == ownerID {
+		return true, nil
+	}
+	canView, err := p.CanViewProfileSection(ctx, viewerID, ownerID, SectionLibrary)
+	if err != nil || !canView {
+		return false, err
+	}
+	switch visibility {
+	case ListPublic:
+		return true, nil
+	case ListFollowers:
+		var count int64
+		err = p.db.WithContext(ctx).Table("user_follows").
+			Where("follower_id = ? AND followee_id = ? AND status = 'accepted'", viewerID, ownerID).
+			Count(&count).Error
+		return count > 0, err
+	default:
+		return false, nil
+	}
+}
+
+// VisibleAuthorScope restricts a query to rows whose author (userIDColumn, e.g. "reviews.user_id")
+// the viewer may see content from: the viewer themselves, or an active, non-deleted account that
+// is public or followed by the viewer (accepted). It is the set form of CanViewProfileSection, so
+// list endpoints filter in the same query instead of asking the policy once per row.
+// viewerID 0 is a guest and matches no row through the first branch.
+func VisibleAuthorScope(viewerID uint, userIDColumn string) func(*gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where(`(`+userIDColumn+` = ? OR EXISTS (
+			SELECT 1 FROM users pu
+			WHERE pu.id = `+userIDColumn+` AND pu.is_active = true AND pu.deleted_at IS NULL
+			AND (pu.is_private = false OR EXISTS (
+				SELECT 1 FROM user_follows pf
+				WHERE pf.follower_id = ? AND pf.followee_id = pu.id AND pf.status = 'accepted'))))`,
+			viewerID, viewerID)
 	}
 }

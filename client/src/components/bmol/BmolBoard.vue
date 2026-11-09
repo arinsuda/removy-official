@@ -13,7 +13,7 @@
       </div>
       <div v-if="isOwner && !isLoading && !isError" class="board__actions">
         <AppButton size="sm" @click="openAdd()"><Plus :size="16" aria-hidden="true" />{{ t("library.bmol.actions.add") }}</AppButton>
-        <AppButton v-if="typeItems.length" size="sm" variant="outline" :aria-pressed="editing" @click="editing = !editing">
+        <AppButton v-if="typeItems.length && view === 'board'" size="sm" variant="outline" :aria-pressed="editing" @click="editing = !editing">
           <component :is="editing ? Check : PenLine" :size="16" aria-hidden="true" />{{ editing ? t("library.bmol.actions.done") : t("library.bmol.actions.edit") }}
         </AppButton>
         <AppButton v-if="typeItems.length" size="sm" variant="outline" @click="showShare = true">
@@ -22,7 +22,14 @@
       </div>
     </header>
 
-    <AppTabs v-model="mediaType" :tabs="tabs" :controls="false" :label="t('library.bmol.tabs.label')" class="board__tabs" />
+    <div class="board__bar">
+      <AppTabs v-model="mediaType" :tabs="tabs" :controls="false" :label="t('library.bmol.tabs.label')" class="board__tabs" />
+      <div v-if="typeItems.length" class="board__view" role="group" :aria-label="t('library.bmol.view.label')">
+        <button v-for="v in VIEWS" :key="v.key" type="button" class="board__view-btn" :class="{ 'is-active': view === v.key }" :aria-pressed="view === v.key" data-bmol-view @click="view = v.key">
+          <component :is="v.icon" :size="15" aria-hidden="true" />{{ t(`library.bmol.view.${v.key}`) }}
+        </button>
+      </div>
+    </div>
 
     <SkeletonGrid v-if="isLoading" :count="8" min-width="140px" />
     <AppErrorState v-else-if="isError" :title="t('library.bmol.error.title')" :description="t('library.bmol.error.body')" @retry="refetch()" />
@@ -35,6 +42,12 @@
       </AppEmptyState>
       <AppEmptyState v-else :icon="Trophy" :title="t('library.bmol.empty.title')" :description="t('library.bmol.empty.body')" />
     </template>
+
+    <BmolTimeline v-else-if="view === 'timeline'" :items="typeItems">
+      <template #default="{ items: yearItems }">
+        <BmolCard v-for="item in yearItems" :key="item.id" :item="item" variant="shelf" />
+      </template>
+    </BmolTimeline>
 
     <div v-else class="board__tiers" :class="{ 'is-reordering': reorderActive }">
       <BmolHero v-if="heroGroup" :group="heroGroup" :is-target="reorder.targetRank === 1 && reorder.grabbedId !== null">
@@ -83,7 +96,7 @@
 <script setup lang="ts">
 import { computed, ref, useId, watch } from "vue"
 import { useI18n } from "vue-i18n"
-import { Check, Lock, PenLine, Plus, Share2, Trophy } from "lucide-vue-next"
+import { CalendarRange, Check, LayoutGrid, Lock, PenLine, Plus, Share2, Trophy } from "lucide-vue-next"
 import AppButton from "@/components/ui/AppButton.vue"
 import AppEmptyState from "@/components/ui/AppEmptyState.vue"
 import AppErrorState from "@/components/ui/AppErrorState.vue"
@@ -99,6 +112,7 @@ import BmolHero from "./BmolHero.vue"
 import BmolNoteEditor from "./BmolNoteEditor.vue"
 import BmolPodium from "./BmolPodium.vue"
 import BmolShelf from "./BmolShelf.vue"
+import BmolTimeline from "./BmolTimeline.vue"
 import { groupByRank, moveTarget } from "./bmolRanks"
 import { useBmol, type BmolCandidate } from "./useBmol"
 import { provideBmolReorder } from "./useBmolReorder"
@@ -114,6 +128,12 @@ const isOwner = computed(() => auth.user?.id === props.userId)
 const username = computed(() => auth.user?.display_name || auth.user?.username || "")
 const mediaType = ref<MediaType>("movie")
 const editing = ref(false)
+const VIEWS = [
+  { key: "board" as const, icon: LayoutGrid },
+  { key: "timeline" as const, icon: CalendarRange },
+]
+const view = ref<(typeof VIEWS)[number]["key"]>("board")
+watch(view, () => (editing.value = false))
 
 const typeItems = computed(() => items.value.filter((i) => i.media_type === mediaType.value))
 const groups = computed(() => groupByRank(typeItems.value))
@@ -216,7 +236,12 @@ watch(isOwner, (owner) => {
 .board__title { display: flex; align-items: center; gap: 0.5rem; font-size: var(--text-title); font-weight: 800; color: var(--color-text-primary); }
 .board__desc { margin-top: 0.25rem; font-size: var(--text-small); color: var(--color-text-secondary); }
 .board__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.board__bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; }
 .board__tabs { overflow-x: auto; }
+.board__view { display: inline-flex; padding: 2px; background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--radius-btn); }
+.board__view-btn { display: inline-flex; align-items: center; gap: 0.375rem; min-height: 2rem; padding: 0 0.75rem; font: inherit; font-size: var(--text-caption); color: var(--color-text-muted); background: none; border: 0; border-radius: var(--radius-btn); cursor: pointer; transition: color var(--motion-fast) var(--ease-water), background-color var(--motion-fast) var(--ease-water); }
+.board__view-btn.is-active { color: var(--color-text-primary); background: var(--color-surface-3); }
+@media (prefers-reduced-motion: reduce) { .board__view-btn { transition: none; } }
 .board__tiers { display: flex; flex-direction: column; gap: 1.5rem; }
 @media (min-width: 768px) {
   .board__head { flex-direction: row; align-items: flex-start; justify-content: space-between; }

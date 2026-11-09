@@ -70,3 +70,16 @@ type CommentResponse struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
+
+// Media review list paging.
+const (
+	DefaultMediaReviewsPageSize = 20
+	MaxMediaReviewsPageSize     = 50
+)
+
+type Pagination struct {
+	Page     int   `json:"page"`
+	PageSize int   `json:"page_size"`
+	Total    int64 `json:"total"`
+	HasMore  bool  `json:"has_more"`
+}

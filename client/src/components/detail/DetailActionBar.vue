@@ -20,11 +20,16 @@
       <Bookmark :size="20" :fill="watchlisted ? 'currentColor' : 'none'" aria-hidden="true" />
       <span>{{ t(watchlisted ? "media.detail.actions.inWatchlist" : "media.detail.actions.watchlist") }}</span>
     </button>
+    <button type="button" class="bar__btn" data-test="action-list" @click="onAddToList">
+      <ListPlus :size="20" aria-hidden="true" />
+      <span>{{ t("library.customLists.sheet.action") }}</span>
+    </button>
     <button type="button" class="bar__btn" data-test="action-share" @click="emit('share')">
       <Share2 :size="20" aria-hidden="true" />
       <span>{{ t("share.share") }}</span>
     </button>
 
+    <AddToListSheet v-if="showLists" v-model="showLists" :media-id="mediaId" :media-type="mediaType" />
     <WatchLogModal v-if="showLog" :media-id="mediaId" :media-type="mediaType" @close="showLog = false" @logged="emit('logged')" />
   </div>
 </template>
@@ -32,7 +37,8 @@
 <script setup lang="ts">
 import { ref, watch } from "vue"
 import { useI18n } from "vue-i18n"
-import { Bookmark, CalendarCheck, Share2, Star } from "lucide-vue-next"
+import { Bookmark, CalendarCheck, ListPlus, Share2, Star } from "lucide-vue-next"
+import AddToListSheet from "@/components/lists/AddToListSheet.vue"
 import WatchLogModal from "@/components/movie/WatchLogModal.vue"
 
 const props = defineProps<{
@@ -54,12 +60,20 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const showLog = ref(false)
+const showLists = ref(false)
 
 // A log must never be saved against a different title than the one it was opened for.
-watch(() => [props.mediaId, props.mediaType], () => (showLog.value = false))
+watch(() => [props.mediaId, props.mediaType], () => {
+  showLog.value = false
+  showLists.value = false
+})
 
 function onRate() {
   if (props.requireLogin()) emit("rate")
+}
+
+function onAddToList() {
+  if (props.requireLogin()) showLists.value = true
 }
 
 function onLog() {
@@ -73,7 +87,7 @@ function onLog() {
   inset: auto 0 0;
   z-index: var(--z-below-header);
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.25rem;
   padding: 0.5rem 0.75rem calc(0.5rem + env(safe-area-inset-bottom));
   background: color-mix(in srgb, var(--color-surface) 92%, transparent);

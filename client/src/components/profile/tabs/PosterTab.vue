@@ -33,6 +33,9 @@
       />
       <template v-else>
         <MediaGrid :items="list.visible.value.map((e) => e.media)" :rail="tab" :label="t(`profile.tabs.${tab}`)">
+          <template v-if="tab === 'watchlist'" #badge="{ item }">
+            <ReleaseBadge :date="item.date" />
+          </template>
           <template #footer="{ item }">
             <span class="pt__meta">
               <Heart v-if="tab === 'likes'" :size="12" fill="currentColor" class="pt__heart" role="img" :aria-label="t('profile.tabContent.likes.heart')" />
@@ -59,6 +62,7 @@ import AppErrorState from "@/components/ui/AppErrorState.vue"
 import SkeletonGrid from "@/components/ui/skeleton/SkeletonGrid.vue"
 import type { HomeMedia } from "@/components/home/homeMedia"
 import MediaGrid from "./MediaGrid.vue"
+import ReleaseBadge from "./ReleaseBadge.vue"
 import TabEmptyState from "./TabEmptyState.vue"
 import TabToolbar from "./TabToolbar.vue"
 import { ENTRY_FILTERS, ENTRY_SORTS, ENTRY_SORT_KEYS, type ProfileEntry } from "./profileMedia"

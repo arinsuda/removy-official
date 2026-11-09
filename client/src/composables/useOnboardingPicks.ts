@@ -70,7 +70,7 @@ export function useOnboardingPicks() {
     } catch {
       // ignored on purpose
     }
-    authStore.setUser({ ...authStore.user, favorite_genres: "skip" })
+    authStore.setUser({ ...authStore.user, onboarded_at: new Date().toISOString() })
     saving.value = false
   }
 

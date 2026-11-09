@@ -109,7 +109,8 @@
       "title": "Rating breakdown",
       "empty": "No public reviews yet.",
       "row": "{value} stars: {count} review | {value} stars: {count} reviews",
-      "basedOn": "Based on {count} public review | Based on {count} public reviews"
+      "basedOn": "Based on {count} public review | Based on {count} public reviews",
+      "basedOnLoaded": "Based on {count} public reviews loaded so far, out of {total}"
     },
     "activity": {
       "title": "Your activity",
@@ -170,5 +171,9 @@
       "fresh": "Fresh Pop",
       "hot": "Hot Pop"
     }
+  },
+  "release": {
+    "upcoming": "Coming {date}",
+    "released": "Released"
   }
 }

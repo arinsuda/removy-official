@@ -65,6 +65,13 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    // Guests browsing public pages: a 401 is just "sign in required", so there is nothing to
+    // refresh and no reason to redirect. Bootstrap (not initialized yet) still refreshes.
+    const guestAuth = useAuthStore();
+    if (guestAuth.isInitialized && !guestAuth.isLoggedIn) {
+      return Promise.reject(error);
+    }
+
     originalRequest._retry = true;
 
     if (isRefreshing) {

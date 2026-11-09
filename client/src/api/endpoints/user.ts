@@ -31,7 +31,8 @@ export const userApi = {
       headers: { "Content-Type": "multipart/form-data" },
     }),
 
-  deleteUser: (userId: number) => api.delete(`/users/${userId}`),
+  deleteUser: (userId: number, body: { password?: string; confirm_username?: string } = {}) =>
+    api.delete(`/users/${userId}`, { data: body }),
 
   updateFavoriteGenres: (userId: number, genres: number[]) =>
     api.patch<{ user: UserProfile }>(`/users/${userId}/genres`, {

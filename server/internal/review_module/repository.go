@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/arinsuda/movie-hub/internal/privacy_policy"
 	"github.com/arinsuda/movie-hub/internal/shared"
 	"gorm.io/gorm"
 )
@@ -74,13 +75,36 @@ func (r *repository) FindReviewsByUser(userID uint, filter ReviewFilter) ([]Revi
 	return reviews, err
 }
 
-func (r *repository) FindReviewsByMedia(mediaID int, mediaType string) ([]Review, error) {
+// FindReviewsByMedia returns one page of the public reviews of a title whose authors the viewer
+// may see (privacy_policy.VisibleAuthorScope, one query) plus the total. Guests (viewerID 0)
+// additionally need the legacy is_public flag.
+func (r *repository) FindReviewsByMedia(mediaID int, mediaType string, viewerID uint, offset, limit int) ([]Review, int64, error) {
+	q := r.db.Model(&Review{}).
+		Where("reviews.media_id = ? AND reviews.media_type = ? AND reviews.visibility = 'public'", mediaID, mediaType).
+		Scopes(privacy_policy.VisibleAuthorScope(viewerID, "reviews.user_id"))
+	if viewerID == 0 {
+		q = q.Where("reviews.is_public = true")
+	}
+	var total int64
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
 	var reviews []Review
+	err := q.Preload("User").Order("reviews.created_at DESC, reviews.id DESC").
+		Offset(offset).Limit(limit).Find(&reviews).Error
+	return reviews, total, err
+}
+
+// FindUserReviewByMedia returns the user's own live review of a title, any visibility; nil when none.
+func (r *repository) FindUserReviewByMedia(userID uint, mediaID int, mediaType string) (*Review, error) {
+	var review Review
 	err := r.db.Preload("User").
-		Where("media_id = ? AND media_type = ? AND visibility = 'public'", mediaID, mediaType).
-		Order("created_at DESC").
-		Find(&reviews).Error
-	return reviews, err
+		Where("user_id = ? AND media_id = ? AND media_type = ?", userID, mediaID, mediaType).
+		First(&review).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return &review, err
 }
 
 func (r *repository) FindReviewByID(reviewID uint) (*Review, error) {

@@ -77,12 +77,40 @@ func (h *Handler) GetMediaReviews(c fiber.Ctx) error {
 		return badRequest(c, "invalid media type")
 	}
 
-	claims := mw.GetClaims(c)
-	reviews, err := h.svc.GetMediaReviews(c.Context(), mediaID, mt, claims.UserID)
+	// Public route: guests have no claims and read as viewer 0.
+	var viewerID uint
+	if claims := mw.GetClaims(c); claims != nil {
+		viewerID = claims.UserID
+	}
+	page, _ := strconv.Atoi(c.Query("page"))
+	pageSize, _ := strconv.Atoi(c.Query("page_size"))
+	reviews, pagination, err := h.svc.GetMediaReviews(c.Context(), mediaID, mt, viewerID, page, pageSize)
 	if err != nil {
 		return handleError(c, err)
 	}
-	return c.JSON(fiber.Map{"reviews": reviews})
+	return c.JSON(fiber.Map{"reviews": reviews, "pagination": pagination})
+}
+
+// GetMyMediaReview handles GET /reviews/media/:mediaType/:mediaId/me: the caller's own review
+// of the title in any visibility, or {"review": null}.
+func (h *Handler) GetMyMediaReview(c fiber.Ctx) error {
+	claims := mw.GetClaims(c)
+	if claims == nil || claims.UserID == 0 {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	}
+	mediaID, err := strconv.Atoi(c.Params("mediaId"))
+	if err != nil || mediaID <= 0 {
+		return shared.WriteAPIError(c, fiber.StatusBadRequest, shared.ErrorCodeInvalidInput, "invalid media id")
+	}
+	mt := routeToMediaType(c.Params("mediaType"))
+	if mt == "" {
+		return shared.WriteAPIError(c, fiber.StatusBadRequest, shared.ErrorCodeInvalidMediaType, "invalid media type")
+	}
+	review, err := h.svc.GetMyMediaReview(claims.UserID, mediaID, mt)
+	if err != nil {
+		return handleError(c, err)
+	}
+	return c.JSON(fiber.Map{"review": review})
 }
 
 func (h *Handler) UpdateReview(c fiber.Ctx) error {

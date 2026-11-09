@@ -136,6 +136,7 @@ func (s *Service) GetLikes(ctx context.Context, ownerID, requesterID uint) ([]Li
 		case movie_module.MediaMovie:
 			if details, err := tmdbmodule.GetMovieByID(like.MediaID); err == nil && details != nil {
 				media.Title = details.Title
+				media.ReleaseDate = details.ReleaseDate
 				media.PosterURL = details.PosterPath
 				media.Genres = details.Genres
 				media.VoteAverage = float32(details.VoteAverage)
@@ -143,6 +144,7 @@ func (s *Service) GetLikes(ctx context.Context, ownerID, requesterID uint) ([]Li
 		case movie_module.MediaSeries:
 			if details, err := tmdbmodule.GetSeriesByID(like.MediaID); err == nil && details != nil {
 				media.Title = details.Name
+				media.ReleaseDate = details.FirstAirDate
 				media.PosterURL = details.PosterPath
 				media.Genres = details.Genres
 				media.VoteAverage = float32(details.VoteAverage)

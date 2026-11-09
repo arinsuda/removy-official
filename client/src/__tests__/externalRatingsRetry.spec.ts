@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { defineComponent, h, ref } from "vue"
 import { flushPromises, mount } from "@vue/test-utils"
+import { createPinia, setActivePinia } from "pinia"
 
 const m = vi.hoisted(() => ({
   getById: vi.fn(),
@@ -26,6 +27,7 @@ const movieRes = (r: ReturnType<typeof ratings>) => ({ data: { movie: { ratings:
 
 describe("popup ratings retry", () => {
   beforeEach(() => {
+    setActivePinia(createPinia())
     vi.useFakeTimers()
     vi.stubGlobal("matchMedia", () => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }))
     m.getById.mockReset()

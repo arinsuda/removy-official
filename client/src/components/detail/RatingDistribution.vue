@@ -21,7 +21,9 @@
         {{
           includeAll
             ? t("profile.taste.basedOn", { count: result.total }, result.total)
-            : t("media.detail.distribution.basedOn", { count: result.total }, result.total)
+            : partial
+              ? t("media.detail.distribution.basedOnLoaded", { count: result.total, total: totalCount })
+              : t("media.detail.distribution.basedOn", { count: result.total }, result.total)
         }}
       </p>
     </template>
@@ -38,10 +40,14 @@ const props = defineProps<{
   reviews: Pick<ReviewResponse, "rating" | "visibility">[]
   title?: string
   includeAll?: boolean
+  /** Reviews that exist in total; when more than are loaded the chart says so. */
+  totalCount?: number
 }>()
 const { t } = useI18n()
 const titleId = useId()
 const result = computed(() => ratingDistribution(props.reviews, { includeAll: props.includeAll }))
+/** Only some pages are loaded, so the bars cover part of the reviews. */
+const partial = computed(() => !props.includeAll && props.totalCount !== undefined && props.reviews.length < props.totalCount)
 /** Highest rating first. */
 const rows = computed(() => [...result.value.buckets].reverse())
 </script>
