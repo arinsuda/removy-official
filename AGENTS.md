@@ -66,7 +66,8 @@ client/src/
 | Best Movie of Life (BMOL) | bmol_module | views/library/components/bmol/, components/profile/UserBmol.vue |
 | Achievements | achievements_module, database/seeder/achievement.json | views/achievement/, stores/achievement.ts |
 | Follow, feed | follow_module, feed_module | views/FeedView.vue, components/feed/, components/social/ |
-| Profiles, stats, privacy | user_module, user_stats_module, analytics_module, privacy_policy | views/user/, components/profile/ |
+| Profiles, stats, privacy | user_module, user_stats_module, analytics_module, privacy_policy | views/user/ (thin shell), components/profile/ (ProfileHero, ProfileTastePanel, FollowListModal, tasteProfile.ts), composables/useUserProfile.ts |
+| Settings (profile form + avatar crop, preferences, privacy, email/password, Google/PLANZI connections) | user_module, auth_module | views/settings/SettingsView.vue (route `/settings`, anchors #profile #preferences #privacy #security #connections), components/settings/ |
 | Notifications, realtime | notification_module (`socket.go` = hub) | views/NotificationsView.vue, stores/notification.ts, composables/useSocket.ts |
 | Share images | `shareImageProxyHandler` in router.go | components/share/, composables/useShareImage.ts |
 | Admin | admin_module | views/admin/, layouts/AdminLayout.vue, stores/admin.ts |

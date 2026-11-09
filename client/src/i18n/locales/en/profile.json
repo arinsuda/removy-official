@@ -12,27 +12,8 @@
     "watched": "Watched",
     "watchlist": "Watchlist",
     "likes": "Likes",
-    "achievements": "Achievements"
-  },
-  "editProfile": {
-    "title": "Edit Profile Information",
-    "avatarLabel": "Profile Image",
-    "avatarUrl": "Avatar URL",
-    "usernameLabel": "Username",
-    "usernamePlaceholder": "Enter your username",
-    "bioLabel": "Short Bio",
-    "bioPlaceholder": "Tell us a bit about yourself...",
-    "emailLabel": "Email (Cannot be modified)",
-    "save": "Save Changes",
-    "success": "Your profile information has been successfully updated!",
-    "emailChange": {
-      "inputHint": "Enter your new email. We will send a 6-digit code to your current email ({current}) and another to the new address, and you need both.",
-      "currentCodeHint": "Code sent to your current email {email}",
-      "newCodeHint": "Code sent to your new email {email}",
-      "currentCodeLabel": "Current email code",
-      "newCodeLabel": "New email code"
-    },
-    "passwordNotSet": "This account has no password yet. Sign out, then use \"Forgot password\" on the login page to set one."
+    "achievements": "Achievements",
+    "bol": "Best movies"
   },
   "actions": {
     "follow": "Follow",
@@ -84,6 +65,97 @@
       "description": "Remove",
       "suffix": " from your Best Movies of Life list.",
       "confirm": "Remove"
+    },
+    "unlink_account": {
+      "title": "Unlink account?",
+      "description": "You're about to unlink",
+      "suffix": ". You can link it again later from the user menu.",
+      "confirm": "Unlink"
+    }
+  },
+  "hero": {
+    "level": "Lv.{level}",
+    "private": "Private",
+    "joined": "Joined {date}",
+    "reviews": "Reviews",
+    "followers": "Followers",
+    "following": "Following",
+    "editProfile": "Edit profile"
+  },
+  "follow": {
+    "follow": "Follow",
+    "following": "Following",
+    "requested": "Requested",
+    "cancelRequest": "Cancel follow request",
+    "listTitle": "Connections",
+    "requests": "Requests",
+    "accept": "Accept",
+    "reject": "Reject",
+    "privateList": "This account is private. Follow it to see who is connected.",
+    "empty": {
+      "followers": "No followers yet.",
+      "following": "Not following anyone yet.",
+      "requests": "No pending requests."
+    }
+  },
+  "states": {
+    "notFoundTitle": "User not found",
+    "notFoundBody": "This profile does not exist or was removed.",
+    "errorTitle": "Something went wrong",
+    "errorBody": "We could not load this profile. Please try again.",
+    "sectionError": "Could not load this section",
+    "lockedTitle": "This account is private",
+    "lockedBody": "Follow this account and wait for approval to see their reviews, lists and taste."
+  },
+  "taste": {
+    "title": "Taste profile",
+    "persona": {
+      "generous": "Generous rater",
+      "balanced": "Balanced rater",
+      "tough": "Tough critic",
+      "new": "Just getting started"
+    },
+    "topGenres": "Top genres",
+    "distribution": "Rating distribution",
+    "basedOn": "Based on {count} review | Based on {count} reviews",
+    "watched": "Watched",
+    "watchlist": "Watchlist",
+    "likes": "Likes",
+    "level": "Level {level}",
+    "noAchievements": "No achievements unlocked yet."
+  },
+  "bmol": {
+    "title": "Best Movies of Life",
+    "viewAll": "View all"
+  },
+  "reviews": {
+    "titleOwn": "My reviews",
+    "titleOther": "Reviews",
+    "filterVisibility": "Visibility filter",
+    "filterDate": "Filter by date",
+    "clearDate": "Clear date filter",
+    "dateRange": "Date range",
+    "orMonth": "Or pick a month",
+    "from": "From date",
+    "to": "To date",
+    "month": "Month and year",
+    "since": "From...",
+    "until": "Until...",
+    "empty": "No reviews found",
+    "helpful": "{count} found this helpful",
+    "editedAt": "Last edited {date}",
+    "options": "Options for {title}",
+    "edit": "Edit",
+    "delete": "Delete",
+    "filters": {
+      "all": "All",
+      "high": "High rated",
+      "low": "Critical"
+    },
+    "visibility": {
+      "all": "All",
+      "public": "Public",
+      "private": "Private"
     }
   }
 }

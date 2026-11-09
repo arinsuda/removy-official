@@ -17,11 +17,14 @@ export interface RatingDistributionResult {
  * Histogram of ratings 0.5-5.0 from the visible PUBLIC reviews only. Followers
  * and private reviews are left out so the chart matches the POPCORN average.
  */
-export function ratingDistribution(reviews: Pick<ReviewResponse, "rating" | "visibility">[]): RatingDistributionResult {
+export function ratingDistribution(
+  reviews: Pick<ReviewResponse, "rating" | "visibility">[],
+  options: { /** Count every review regardless of visibility (profile views). */ includeAll?: boolean } = {},
+): RatingDistributionResult {
   const counts = new Array<number>(10).fill(0)
   let total = 0
   for (const r of reviews) {
-    if (r.visibility !== "public") continue
+    if (!options.includeAll && r.visibility !== "public") continue
     const idx = Math.round(r.rating * 2) - 1
     if (idx < 0 || idx > 9) continue
     counts[idx] = (counts[idx] ?? 0) + 1

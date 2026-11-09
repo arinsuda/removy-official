@@ -1,6 +1,6 @@
 <template>
   <section class="dist" :aria-labelledby="titleId">
-    <h2 :id="titleId" class="dist__title">{{ t("media.detail.distribution.title") }}</h2>
+    <h2 :id="titleId" class="dist__title">{{ title ?? t("media.detail.distribution.title") }}</h2>
     <p v-if="result.total === 0" class="dist__empty">{{ t("media.detail.distribution.empty") }}</p>
     <template v-else>
       <ol class="dist__rows">
@@ -18,7 +18,11 @@
         </li>
       </ol>
       <p class="dist__based" data-test="dist-based">
-        {{ t("media.detail.distribution.basedOn", { count: result.total }, result.total) }}
+        {{
+          includeAll
+            ? t("profile.taste.basedOn", { count: result.total }, result.total)
+            : t("media.detail.distribution.basedOn", { count: result.total }, result.total)
+        }}
       </p>
     </template>
   </section>
@@ -30,10 +34,14 @@ import { useI18n } from "vue-i18n"
 import type { ReviewResponse } from "@/types/review"
 import { ratingDistribution } from "./ratingDistribution"
 
-const props = defineProps<{ reviews: Pick<ReviewResponse, "rating" | "visibility">[] }>()
+const props = defineProps<{
+  reviews: Pick<ReviewResponse, "rating" | "visibility">[]
+  title?: string
+  includeAll?: boolean
+}>()
 const { t } = useI18n()
 const titleId = useId()
-const result = computed(() => ratingDistribution(props.reviews))
+const result = computed(() => ratingDistribution(props.reviews, { includeAll: props.includeAll }))
 /** Highest rating first. */
 const rows = computed(() => [...result.value.buckets].reverse())
 </script>

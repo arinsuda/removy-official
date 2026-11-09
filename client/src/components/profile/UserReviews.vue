@@ -1,7 +1,7 @@
 <template>
   <div class="reviews-root">
     <div class="section-head">
-      <span class="eyebrow">My Reviews</span>
+      <h2 class="eyebrow">{{ isOwner ? t("profile.reviews.titleOwn") : t("profile.reviews.titleOther") }}</h2>
       <span class="count-chip">{{ reviews.length }}</span>
       <div class="rule" />
     </div>
@@ -12,7 +12,7 @@
 
       <div class="toolbar-right">
         <!-- Visibility: compact icon-only segmented control -->
-        <div class="seg-control" role="tablist" aria-label="Visibility filter">
+        <div class="seg-control" role="tablist" :aria-label="t('profile.reviews.filterVisibility')">
           <button
             v-for="v in visibilityOptions"
             :key="v.key"
@@ -34,7 +34,7 @@
             class="date-trigger"
             :class="{ 'date-trigger--active': hasDateFilter }"
             @click="isDatePopoverOpen = !isDatePopoverOpen"
-            aria-label="Filter by date"
+            :aria-label="t('profile.reviews.filterDate')"
           >
             <Calendar :size="13" :stroke-width="2" />
             <span v-if="hasDateFilter" class="date-trigger-label">{{
@@ -44,7 +44,7 @@
               v-if="hasDateFilter"
               class="date-trigger-clear"
               type="button"
-              aria-label="Clear date filter"
+              :aria-label="t('profile.reviews.clearDate')"
               @click.stop="clearDateFilters"
             >
               <X :size="10" />
@@ -53,14 +53,14 @@
 
           <Transition name="dropdown">
             <div v-if="isDatePopoverOpen" class="date-popover">
-              <span class="date-popover-label">ช่วงวันที่</span>
+              <span class="date-popover-label">{{ t("profile.reviews.dateRange") }}</span>
               <div class="date-filters">
                 <input
                   v-model="dateFrom"
                   type="date"
                   class="date-input"
                   :max="dateTo || undefined"
-                  aria-label="From date"
+                  :aria-label="t('profile.reviews.from')"
                   @change="onDateRangeChange"
                 />
                 <span class="date-sep">–</span>
@@ -69,16 +69,16 @@
                   type="date"
                   class="date-input"
                   :min="dateFrom || undefined"
-                  aria-label="To date"
+                  :aria-label="t('profile.reviews.to')"
                   @change="onDateRangeChange"
                 />
               </div>
-              <span class="date-popover-label">หรือเลือกเดือน</span>
+              <span class="date-popover-label">{{ t("profile.reviews.orMonth") }}</span>
               <input
                 v-model="monthFilter"
                 type="month"
                 class="date-input date-input--full"
-                aria-label="Month / Year"
+                :aria-label="t('profile.reviews.month')"
                 @change="onMonthFilterChange"
               />
             </div>
@@ -90,9 +90,11 @@
     <!-- States -->
     <SkeletonList v-if="loading" :count="4" />
 
+    <AppErrorState v-else-if="loadError" :title="$t('profile.states.sectionError')" @retry="fetchReviews" />
+
     <div v-else-if="filteredReviews.length === 0" class="state-empty">
       <Star :size="28" :stroke-width="1.2" />
-      <p>No reviews found</p>
+      <p>{{ t("profile.reviews.empty") }}</p>
     </div>
 
     <!-- List -->
@@ -148,7 +150,7 @@
               class="private-icon"
               :size="12"
               :stroke-width="2.2"
-              :title="review.visibility"
+              :title="t(`visibility.${review.visibility}`)"
             />
           </div>
 
@@ -179,18 +181,18 @@
                 :size="11"
                 :fill="review.isHelpfulVoted ? 'currentColor' : 'none'"
               />
-              {{ review.helpfulCount }} คนว่ามีประโยชน์
+              {{ t("profile.reviews.helpful", { count: review.helpfulCount }) }}
             </span>
           </div>
         </div>
 
         <!-- Actions Menu -->
-        <div class="menu-wrap" @click.stop>
+        <div v-if="isOwner" class="menu-wrap" @click.stop>
           <button
             class="menu-trigger"
             :class="{ 'menu-trigger--open': openMenuId === review.id }"
             @click="toggleMenu(review.id)"
-            :aria-label="'Options for ' + review.targetName"
+            :aria-label="t('profile.reviews.options', { title: review.targetName })"
           >
             <MoreHorizontal :size="14" />
           </button>
@@ -198,16 +200,16 @@
             <div v-if="openMenuId === review.id" class="dropdown">
               <div v-if="review.isEdited" class="dropdown-info">
                 <Pencil :size="10" :stroke-width="2" />
-                <span>แก้ไขล่าสุด {{ review.updatedLabel }}</span>
+                <span>{{ t("profile.reviews.editedAt", { date: review.updatedLabel }) }}</span>
               </div>
               <button class="dropdown-item" @click="openEdit(review)">
-                <Pencil :size="12" /> Edit
+                <Pencil :size="12" /> {{ t("profile.reviews.edit") }}
               </button>
               <button
                 class="dropdown-item dropdown-item--del"
                 @click="openDelete(review)"
               >
-                <Trash2 :size="12" /> Delete
+                <Trash2 :size="12" /> {{ t("profile.reviews.delete") }}
               </button>
             </div>
           </Transition>
@@ -234,6 +236,9 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from "vue-i18n";
+import { useAuthStore } from "@/stores/auth";
+import AppErrorState from "@/components/ui/AppErrorState.vue"
 import AppTabs from "@/components/ui/AppTabs.vue"
 import StarRatingInput from "@/components/movie/Starratinginput.vue"
 import SkeletonList from "@/components/ui/skeleton/SkeletonList.vue"
@@ -265,28 +270,29 @@ const router = useRouter();
 
 const props = defineProps<{ userId: number }>();
 
+const { t, locale } = useI18n();
+const auth = useAuthStore();
+const isOwner = computed(() => auth.user?.id === props.userId);
+
 const loading = ref(false);
+const loadError = ref(false);
 
 // ── Rating filter (client-side) ──────────────────────────────────
 type FilterKey = "all" | "high" | "low";
 const activeFilter = ref<FilterKey>("all");
-const filters: { key: FilterKey; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "high", label: "High Rated" },
-  { key: "low", label: "Critical" },
-];
+const filters = computed<{ key: FilterKey; label: string }[]>(() => [
+  { key: "all", label: t("profile.reviews.filters.all") },
+  { key: "high", label: t("profile.reviews.filters.high") },
+  { key: "low", label: t("profile.reviews.filters.low") },
+]);
 
 // ── Visibility filter (server-side, icon-only segmented control) ──
 type VisibilityKey = "all" | "public" | "private";
-const visibilityOptions: {
-  key: VisibilityKey;
-  label: string;
-  icon: typeof Layers;
-}[] = [
-  { key: "all", label: "ทั้งหมด", icon: Layers },
-  { key: "public", label: "Public", icon: Globe2 },
-  { key: "private", label: "Private", icon: Lock },
-];
+const visibilityOptions = computed<{ key: VisibilityKey; label: string; icon: typeof Layers }[]>(() => [
+  { key: "all", label: t("profile.reviews.visibility.all"), icon: Layers },
+  { key: "public", label: t("profile.reviews.visibility.public"), icon: Globe2 },
+  { key: "private", label: t("profile.reviews.visibility.private"), icon: Lock },
+]);
 const visibilityFilter = ref<VisibilityKey>("all");
 
 function onVisibilityChange(key: VisibilityKey) {
@@ -310,14 +316,14 @@ const dateSummaryLabel = computed(() => {
       number,
       number,
     ];
-    return new Date(year, month - 1).toLocaleDateString("th-TH", {
+    return new Date(year, month - 1).toLocaleDateString(locale.value, {
       month: "short",
       year: "numeric",
     });
   }
-  if (dateFrom.value && dateTo.value) return "ช่วงวันที่";
-  if (dateFrom.value) return "ตั้งแต่...";
-  if (dateTo.value) return "ถึง...";
+  if (dateFrom.value && dateTo.value) return t("profile.reviews.dateRange");
+  if (dateFrom.value) return t("profile.reviews.since");
+  if (dateTo.value) return t("profile.reviews.until");
   return "";
 });
 
@@ -412,7 +418,7 @@ function formatWatched(dateStr: string | null): string | null {
   if (!dateStr) return null;
   const d = new Date(dateStr);
   const hasTime = d.getHours() !== 0 || d.getMinutes() !== 0;
-  return d.toLocaleString("th-TH", {
+  return d.toLocaleString(locale.value, {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -422,7 +428,7 @@ function formatWatched(dateStr: string | null): string | null {
 
 function formatUpdatedAt(dateStr: string): string {
   const d = new Date(dateStr);
-  return d.toLocaleString("th-TH", {
+  return d.toLocaleString(locale.value, {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -438,7 +444,7 @@ const displayReviews = computed(() =>
     posterUrl: r.media.poster_url || null,
     mediaId: r.media.id,
     mediaType: r.media.media_type,
-    createdAt: new Date(r.created_at).toLocaleDateString("th-TH", {
+    createdAt: new Date(r.created_at).toLocaleDateString(locale.value, {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -458,6 +464,7 @@ const displayReviews = computed(() =>
 async function fetchReviews() {
   try {
     loading.value = true;
+    loadError.value = false;
 
     const params: GetUserReviewsParams = {};
 
@@ -481,6 +488,7 @@ async function fetchReviews() {
     reviews.value = res.data.reviews ?? [];
   } catch (err) {
     console.error("Fetch reviews failed:", err);
+    loadError.value = true;
   } finally {
     loading.value = false;
   }
@@ -513,20 +521,18 @@ onMounted(fetchReviews);
   margin-bottom: 20px;
 }
 .eyebrow {
-  font-size: 0.6rem;
+  font-size: var(--text-small);
   font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--c-muted);
+  color: var(--color-text-primary);
   white-space: nowrap;
 }
 .count-chip {
-  font-size: 0.65rem;
-  font-weight: 700;
-  background: var(--c-red);
-  color: #fff;
-  padding: 2px 7px;
-  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: var(--color-surface-3);
+  color: var(--color-text-secondary);
+  padding: 2px 10px;
+  border-radius: 999px;
 }
 .rule {
   flex: 1;
@@ -641,7 +647,7 @@ onMounted(fetchReviews);
   display: flex;
   flex-direction: column;
   gap: 8px;
-  background: #1e1e1e;
+  background: var(--color-surface-3);
   border: 1px solid var(--c-border-h);
   border-radius: 10px;
   padding: 12px;
@@ -705,28 +711,20 @@ onMounted(fetchReviews);
 .reviews-list {
   display: flex;
   flex-direction: column;
+  gap: 0.75rem;
 }
 
 .review-card {
   display: grid;
   grid-template-columns: 56px 1fr auto;
   gap: 0 16px;
-  padding: 20px 0;
-  border-bottom: 1px solid var(--c-border);
+  padding: 1.25rem;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
   align-items: start;
   position: relative;
   animation: cardIn 0.4s var(--ease) calc(var(--i) * 50ms) both;
-  transition: background 0.15s;
-}
-.review-card:last-child {
-  border-bottom: none;
-}
-.review-card:hover {
-  background: rgba(255, 255, 255, 0.015);
-  padding-left: 8px;
-  padding-right: 8px;
-  margin: 0 -8px;
-  border-radius: 10px;
 }
 
 @keyframes cardIn {
@@ -904,7 +902,7 @@ onMounted(fetchReviews);
   top: calc(100% + 6px);
   right: 0;
   min-width: 160px;
-  background: #1e1e1e;
+  background: var(--color-surface-3);
   border: 1px solid var(--c-border-h);
   border-radius: 8px;
   padding: 4px;
