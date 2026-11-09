@@ -64,5 +64,27 @@
       "network": "Network error. Check your connection and try again.",
       "noMethods": "We can't verify this account automatically because its email address can't receive mail. Please contact support."
     }
+  },
+  "logIn": "Log In",
+  "signUp": "Sign Up",
+  "header": {
+    "mainNav": "Main navigation",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "accountMenu": "Account menu",
+    "notifications": "Notifications",
+    "notificationsUnread": "Notifications, {count} unread",
+    "language": "Language",
+    "level": "Lv. {level}",
+    "yourSpace": "Your space",
+    "community": "Community",
+    "account": "Account",
+    "profileHint": "View and edit your profile",
+    "libraryHint": "Lists and watch history",
+    "achievementHint": "Badges you have earned",
+    "feedHint": "What people are watching",
+    "adminHint": "Manage the platform",
+    "planziHint": "Opens PLANZI",
+    "platforms": "Platforms"
   }
 }
