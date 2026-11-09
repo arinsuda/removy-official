@@ -1,27 +1,88 @@
 {
-  "title": "Actor Details",
-  "knownFor": "Known For",
-  "born": "Born",
-  "died": "Died",
-  "age": "years old",
-  "agedAtDeath": "aged",
-  "birthplace": "Place of Birth",
-  "biography": "Biography",
-  "noBiography": "No biography information available for this actor.",
-  "showMore": "Read More",
-  "showLess": "Show Less",
-  "workography": "Workography",
-  "moviesTab": "Movies",
-  "tvTab": "TV Series",
-  "asCharacter": "as {character}",
-  "unknownCharacter": "Uncredited Role",
-  "noMovieCredits": "No movie credits recorded yet.",
-  "noTVCredits": "No TV series credits recorded yet.",
-  "notFoundTitle": "Actor Not Found",
-  "notFoundDetail": "The requested actor could not be found or the ID is invalid.",
-  "errorTitle": "Failed to Load Actor Information",
-  "errorDetail": "Unable to connect to the server to fetch actor details.",
+  "title": "Actor details",
+  "back": "Back",
+  "backToHome": "Back to home",
   "retry": "Retry",
-  "backToHome": "Back to Home",
-  "back": "Back"
+  "notFoundTitle": "Actor not found",
+  "notFoundDetail": "We could not find this person, or the link is invalid.",
+  "errorTitle": "Could not load this actor",
+  "errorDetail": "Check your connection and try again.",
+  "photo": "Photo of {name}",
+  "knownFor": "Known for",
+  "knownForSubtitle": "Most popular titles",
+  "biography": "Biography",
+  "noBiography": "No biography is available for this person.",
+  "showMore": "Read more",
+  "showLess": "Show less",
+  "bornOn": "Born {date}",
+  "diedOn": "Died {date}",
+  "age": "{n} year old | {n} years old",
+  "agedAtDeath": "aged {n}",
+  "birthplace": "Place of birth",
+  "imdb": "IMDb profile",
+  "departments": {
+    "Acting": "Acting",
+    "Directing": "Directing",
+    "Writing": "Writing",
+    "Production": "Production",
+    "Sound": "Sound",
+    "Camera": "Camera",
+    "Editing": "Editing",
+    "Art": "Art",
+    "Crew": "Crew",
+    "Costume & Make-Up": "Costume & make-up",
+    "Visual Effects": "Visual effects",
+    "Lighting": "Lighting",
+    "Creator": "Creator"
+  },
+  "stats": {
+    "label": "Career at a glance",
+    "credits": "Credits",
+    "movies": "Movies",
+    "tv": "TV series",
+    "yearsActive": "Years active",
+    "range": "{from} – {to}",
+    "single": "{year}",
+    "none": "–"
+  },
+  "filmography": {
+    "title": "Filmography",
+    "roleLabel": "Credit type",
+    "roles": {
+      "acting": "Acting",
+      "crew": "Crew"
+    },
+    "sortLabel": "Sort credits",
+    "sort": {
+      "popular": "Most popular",
+      "newest": "Newest",
+      "oldest": "Oldest"
+    },
+    "filterLabel": "Filter by type",
+    "filter": {
+      "all": "All",
+      "movie": "Movies",
+      "tv": "TV series"
+    },
+    "viewLabel": "Layout",
+    "view": {
+      "grid": "Posters",
+      "timeline": "Timeline"
+    },
+    "count": "{n} credit | {n} credits",
+    "showMore": "Show more",
+    "unknownYear": "Year unknown",
+    "empty": {
+      "acting": "No acting credits yet.",
+      "crew": "No crew credits yet.",
+      "filtered": "No credits match this filter."
+    }
+  },
+  "credit": {
+    "asCharacter": "as {character}",
+    "uncredited": "Uncredited role",
+    "caption": "{year} · {character}",
+    "movie": "Movie",
+    "tv": "TV series"
+  }
 }

@@ -1,5 +1,5 @@
-import type { Component } from "vue";
-import type { ActivityType } from "@/types/feed";
+import type { Component } from "vue"
+import type { ActivityType } from "@/types/feed"
 import {
   PenTool,
   MessageSquare,
@@ -10,32 +10,37 @@ import {
   UserPlus,
   HelpCircle,
   Eye,
-  Repeat
-} from "lucide-vue-next";
+  Repeat,
+} from "lucide-vue-next"
+
+export type ActivityTone = "success" | "danger" | "info" | "brand" | "warning" | "muted"
 
 interface ActivityMeta {
-  label: string;
-  icon: Component;
+  /** i18n key of the short label, e.g. "feed.types.review_created.label". */
+  labelKey: string
+  icon: Component
+  tone: ActivityTone
 }
 
-const ACTIVITY_META: Record<ActivityType, ActivityMeta> = {
-  review_created: { label: "รีวิวภาพยนตร์", icon: PenTool },
-  review_commented: { label: "แสดงความคิดเห็น", icon: MessageSquare },
-  review_liked: { label: "ถูกใจรีวิว", icon: Heart },
-  media_liked: { label: "ถูกใจ", icon: Heart },
-  watchlist_added: { label: "เพิ่มลงวอทช์ลิสต์", icon: Bookmark },
-  watched_added: { label: "ดูแล้ว", icon: CheckCircle2 },
-  achievement_unlocked: { label: "ปลดล็อกความสำเร็จ", icon: Trophy },
-  user_followed: { label: "ติดตามผู้ใช้", icon: UserPlus },
-  watch_log_created: { label: "บันทึกการดู", icon: Eye },
-  rewatched: { label: "ดูซ้ำ", icon: Repeat },
-};
+const ACTIVITY_META: Record<ActivityType, Omit<ActivityMeta, "labelKey">> = {
+  review_created: { icon: PenTool, tone: "success" },
+  review_commented: { icon: MessageSquare, tone: "success" },
+  review_liked: { icon: Heart, tone: "danger" },
+  media_liked: { icon: Heart, tone: "danger" },
+  watchlist_added: { icon: Bookmark, tone: "info" },
+  watched_added: { icon: CheckCircle2, tone: "brand" },
+  achievement_unlocked: { icon: Trophy, tone: "warning" },
+  user_followed: { icon: UserPlus, tone: "info" },
+  watch_log_created: { icon: Eye, tone: "brand" },
+  rewatched: { icon: Repeat, tone: "brand" },
+}
 
 export function getActivityMeta(type: ActivityType): ActivityMeta {
-  return ACTIVITY_META[type] ?? { label: type, icon: HelpCircle };
+  const meta = ACTIVITY_META[type] ?? { icon: HelpCircle, tone: "muted" as const }
+  return { ...meta, labelKey: ACTIVITY_META[type] ? `feed.types.${type}.label` : "feed.types.unknown.label" }
 }
 
-// แปลง media_type จาก backend ให้เป็น prefix ของ route ฝั่ง FE
+// Maps the backend media_type to the client route prefix.
 export function mediaRoutePrefix(mediaType: string): "movies" | "tv" {
-  return mediaType === "tv" || mediaType === "series" ? "tv" : "movies";
+  return mediaType === "tv" || mediaType === "series" ? "tv" : "movies"
 }

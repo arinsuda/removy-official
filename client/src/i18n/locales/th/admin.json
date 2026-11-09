@@ -16,7 +16,26 @@
     "totalReviews": "รีวิวทั้งหมด",
     "totalMediaLikes": "การถูกใจสื่อทั้งหมด",
     "growthChartTitle": "แนวโน้มการสมัครสมาชิก (12 เดือนย้อนหลัง)",
-    "noPreviousBaseline": "ไม่มีข้อมูลเดือนก่อนหน้า"
+    "noPreviousBaseline": "ไม่มีข้อมูลเดือนก่อนหน้า",
+    "subtitle": "ภาพรวมสุขภาพของชุมชน",
+    "vsLastMonth": "เทียบกับเดือนก่อน ({previous} → {current})",
+    "socketsNow": "การเชื่อมต่อที่เปิดอยู่ตอนนี้",
+    "activeActors": "ผู้ใช้ที่ใช้งาน",
+    "todayCount": "วันนี้ {count}",
+    "accountStatus": "สถานะบัญชี",
+    "activityTitle": "ผู้ใช้ที่ใช้งานตามช่วงเวลา",
+    "windowDay": "วันนี้ (DAU)",
+    "windowWeek": "7 วัน (WAU)",
+    "windowMonth": "30 วัน (MAU)",
+    "registrationsSeries": "สมัครสมาชิกใหม่",
+    "chartSummary": "แผนภูมิแท่งการสมัครใหม่รายเดือน {count} เดือน สูงสุด {peak} ในเดือน {month}",
+    "chartMonth": "เดือน",
+    "chartCount": "จำนวนสมัคร",
+    "noGrowthData": "ยังไม่มีข้อมูลการสมัคร",
+    "errorTitle": "โหลดแดชบอร์ดไม่สำเร็จ",
+    "retry": "ลองใหม่",
+    "growthUp": "เติบโต",
+    "growthDown": "ลดลง"
   },
   "users": {
     "title": "จัดการผู้ใช้",
@@ -41,7 +60,16 @@
     "confirmDeactivate": "คุณแน่ใจหรือไม่ที่จะระงับบัญชี {username}? ผู้ใช้จะไม่สามารถเข้าสู่ระบบได้",
     "confirmReactivate": "คุณแน่ใจหรือไม่ที่จะปลดระงับบัญชี {username}?",
     "confirmChangeRole": "ต้องการเปลี่ยนสิทธิ์ของ {username} เป็น {role} หรือไม่?",
-    "reasonPrompt": "ระบุเหตุผล (ไม่จำเป็น):"
+    "reasonPrompt": "ระบุเหตุผล (ไม่จำเป็น):",
+    "sortAsc": "น้อยไปมาก",
+    "sortDesc": "มากไปน้อย",
+    "actionDelete": "ลบบัญชี",
+    "actionMakeAdmin": "ตั้งเป็นผู้ดูแล",
+    "actionMakeUser": "ถอนสิทธิ์ผู้ดูแล",
+    "you": "คุณ",
+    "emptyTitle": "ไม่พบผู้ใช้",
+    "emptyDesc": "ไม่มีบัญชีที่ตรงกับการค้นหานี้",
+    "roleInactiveHint": "เปิดใช้งานบัญชีอีกครั้งก่อนจึงจะเปลี่ยนสิทธิ์ได้"
   },
   "reviews": {
     "title": "จัดการรีวิว",
@@ -62,7 +90,26 @@
     "colActions": "การจัดการ",
     "actionDelete": "ลบรีวิว",
     "confirmDelete": "คุณแน่ใจหรือไม่ที่จะลบรีวิวนี้? ระบบจะทำการลบแบบ Soft Delete",
-    "reasonPrompt": "ระบุเหตุผลในการลบ (ไม่จำเป็น):"
+    "reasonPrompt": "ระบุเหตุผลในการลบ (ไม่จำเป็น):",
+    "sortCreated": "วันที่",
+    "sortRating": "คะแนน",
+    "sortLikes": "ถูกใจ",
+    "mediaMovie": "ภาพยนตร์",
+    "mediaTv": "ซีรีส์",
+    "private": "ส่วนตัว",
+    "public": "สาธารณะ",
+    "view": "ดูรายละเอียด",
+    "emptyTitle": "ไม่พบรีวิว",
+    "emptyDesc": "ไม่มีรีวิวที่ตรงกับการค้นหานี้",
+    "detailTitle": "รีวิว #{id}",
+    "openMedia": "ไปที่หน้าเรื่อง",
+    "author": "ผู้เขียน",
+    "visibility": "การมองเห็น",
+    "likes": "ถูกใจ",
+    "date": "วันที่",
+    "body": "ข้อความรีวิว",
+    "close": "ปิด",
+    "ratingOutOf": "{rating} / 5.0"
   },
   "auditLogs": {
     "title": "บันทึกการทำงานของผู้ดูแลระบบ",
@@ -74,7 +121,23 @@
     "colTarget": "เป้าหมาย",
     "colReason": "เหตุผล",
     "colMetadata": "ข้อมูลเพิ่มเติม",
-    "colTimestamp": "เวลา"
+    "colTimestamp": "เวลา",
+    "subtitle": "ทุกการดำเนินการของผู้ดูแล เรียงจากใหม่สุด",
+    "emptyTitle": "ยังไม่มีบันทึก",
+    "emptyDesc": "ยังไม่มีรายการที่ตรงกับตัวกรองเหล่านี้",
+    "byAdmin": "โดย {'@'}{admin}",
+    "target": "{type} #{id}",
+    "noReason": "ไม่ได้ระบุเหตุผล",
+    "details": "รายละเอียด",
+    "targetUser": "ผู้ใช้",
+    "targetReview": "รีวิว",
+    "action": {
+      "USER_DEACTIVATED": "ระงับบัญชี",
+      "USER_REACTIVATED": "เปิดใช้งานบัญชีอีกครั้ง",
+      "USER_ROLE_CHANGED": "เปลี่ยนสิทธิ์",
+      "USER_DELETED": "ลบบัญชี",
+      "REVIEW_DELETED": "ลบรีวิว"
+    }
   },
   "nav": {
     "adminMode": "โหมดผู้ดูแลระบบ",
@@ -82,16 +145,77 @@
     "users": "จัดการผู้ใช้",
     "reviews": "จัดการรีวิว",
     "auditLogs": "บันทึกประวัติ",
-    "exitAdmin": "ออกจากโหมดผู้ดูแล"
+    "exitAdmin": "ออกจากโหมดผู้ดูแล",
+    "openMenu": "เปิดเมนู",
+    "closeMenu": "ปิดเมนู",
+    "collapse": "ย่อแถบด้านข้าง",
+    "expand": "ขยายแถบด้านข้าง",
+    "primary": "เมนูผู้ดูแลระบบ",
+    "backToApp": "กลับสู่ POPCORN"
   },
   "pagination": {
     "showing": "แสดง {from}–{to} จาก {total}",
     "previous": "ก่อนหน้า",
-    "next": "ถัดไป"
+    "next": "ถัดไป",
+    "page": "หน้า {page} จาก {pages}",
+    "label": "การแบ่งหน้า"
   },
   "confirmModal": {
     "processing": "กำลังดำเนินการ...",
     "reasonLabel": "เหตุผลประกอบ (ไม่จำเป็นต้องระบุ)",
     "reasonPlaceholder": "ระบุเหตุผลในการดำเนินรายการ..."
+  },
+  "table": {
+    "emptyTitle": "ยังไม่มีข้อมูล",
+    "noResultsTitle": "ไม่พบผลลัพธ์",
+    "noResultsDesc": "ไม่มีรายการที่ตรงกับการค้นหาหรือตัวกรอง",
+    "clearFilters": "ล้างตัวกรอง",
+    "errorTitle": "โหลดข้อมูลไม่สำเร็จ",
+    "errorDesc": "ตรวจสอบการเชื่อมต่อแล้วลองใหม่อีกครั้ง",
+    "sortBy": "เรียงตาม {column}",
+    "rowActions": "การดำเนินการของ {name}",
+    "search": "ค้นหา",
+    "filters": "ตัวกรอง",
+    "scrollHint": "เลื่อนไปด้านข้างเพื่อดูทุกคอลัมน์"
+  },
+  "userModal": {
+    "deactivateTitle": "ระงับบัญชีนี้?",
+    "deactivateDesc": "{username} จะถูกออกจากระบบทุกอุปกรณ์ทันที และเข้าสู่ระบบไม่ได้จนกว่าคุณจะเปิดใช้งานบัญชีอีกครั้ง",
+    "deactivateConfirm": "ระงับบัญชี",
+    "reactivateTitle": "เปิดใช้งานบัญชีนี้อีกครั้ง?",
+    "reactivateDesc": "{username} จะเข้าสู่ระบบได้อีกครั้ง เซสชันที่ยังค้างอยู่จะถูกยุติ จึงต้องเข้าสู่ระบบใหม่",
+    "reactivateConfirm": "เปิดใช้งานบัญชี",
+    "toAdminTitle": "ให้สิทธิ์ผู้ดูแลระบบ?",
+    "toAdminDesc": "{username} จะเข้าถึงคอนโซลนี้ได้เต็มรูปแบบ รวมถึงจัดการผู้ใช้และลบรีวิว",
+    "toAdminConfirm": "ตั้งเป็นผู้ดูแล",
+    "toUserTitle": "ถอนสิทธิ์ผู้ดูแลระบบ?",
+    "toUserDesc": "{username} จะเข้าถึงคอนโซลนี้ไม่ได้อีก ไม่สามารถถอนสิทธิ์ผู้ดูแลที่ใช้งานอยู่คนสุดท้ายได้",
+    "toUserConfirm": "ถอนสิทธิ์ผู้ดูแล",
+    "deleteTitle": "ลบบัญชีนี้?",
+    "deleteDesc": "{username} จะถูกออกจากระบบทุกที่และเข้าสู่ระบบไม่ได้ รีวิว กิจกรรม บันทึกการดู และคลังของผู้ใช้จะถูกลบแบบ soft delete และบันทึกใน audit log",
+    "deleteConfirm": "ลบบัญชี",
+    "reasonNote": "เหตุผลที่คุณกรอกจะถูกบันทึกใน audit log",
+    "roleUpdated": "อัปเดตสิทธิ์ของ {'@'}{username} แล้ว",
+    "deactivated": "ระงับ {'@'}{username} แล้ว",
+    "reactivated": "เปิดใช้งาน {'@'}{username} อีกครั้งแล้ว",
+    "deleted": "ลบ {'@'}{username} แล้ว"
+  },
+  "reviewModal": {
+    "title": "ลบรีวิวนี้?",
+    "desc": "รีวิวจะถูกลบแบบ soft delete และซ่อนจากแอป ผู้เขียนจะไม่ได้รับการแจ้งเตือน และบันทึกใน audit log",
+    "confirm": "ลบรีวิว",
+    "target": "รีวิว #{id} โดย {'@'}{username}",
+    "deleted": "ลบรีวิว #{id} แล้ว"
+  },
+  "errors": {
+    "finalAdmin": "ไม่สามารถถอนสิทธิ์ ระงับ หรือลบผู้ดูแลที่ใช้งานอยู่คนสุดท้ายได้",
+    "inactiveRole": "เปิดใช้งานบัญชีอีกครั้งก่อนจึงจะเปลี่ยนสิทธิ์ได้",
+    "selfDeactivate": "คุณไม่สามารถระงับบัญชีของตัวเองได้",
+    "selfDelete": "คุณไม่สามารถลบบัญชีของตัวเองได้",
+    "alreadyStatus": "บัญชีนี้อยู่ในสถานะดังกล่าวอยู่แล้ว",
+    "invalidRole": "สิทธิ์ไม่ถูกต้อง",
+    "notFound": "ไม่พบรายการนี้แล้ว รายการจะถูกรีเฟรช",
+    "forbidden": "คุณไม่มีสิทธิ์ดำเนินการนี้",
+    "generic": "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง"
   }
 }

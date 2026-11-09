@@ -261,3 +261,12 @@ export interface WatchProviders {
   rent: WatchProvider[]
   buy: WatchProvider[]
 }
+
+/** One row of /actors/search. */
+export interface PersonSearchResult {
+  id: number
+  name: string
+  profile_path: string | null
+  known_for_department: string
+  popularity: number
+}

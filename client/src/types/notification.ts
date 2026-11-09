@@ -61,38 +61,20 @@ export interface SocketNotificationDeletedPayload {
   ids: number[] | null
 }
 
-const TITLE_BY_TYPE: Record<NotificationType, string> = {
-  followed_you: "ผู้ติดตามใหม่",
-  following_reviewed: "กิจกรรมจากคนที่คุณติดตาม",
-  following_liked_review: "กิจกรรมจากคนที่คุณติดตาม",
-  following_added_watchlist: "กิจกรรมจากคนที่คุณติดตาม",
-  following_added_watched: "กิจกรรมจากคนที่คุณติดตาม",
-  following_marked_helpful: "กิจกรรมจากคนที่คุณติดตาม",
-  following_commented: "กิจกรรมจากคนที่คุณติดตาม",
-  following_liked_media: "กิจกรรมจากคนที่คุณติดตาม",
-  review_liked: "มีคนถูกใจรีวิวของคุณ",
-  review_commented: "มีคอมเมนต์ใหม่ในรีวิวของคุณ",
-  review_marked_helpful: "รีวิวของคุณถูกโหวตว่ามีประโยชน์",
-  achievement_unlocked: "ปลดล็อกความสำเร็จ!",
-  movie_now_playing: "หนังในวอทช์ลิสต์เข้าฉายแล้ว",
-  email_verified: "ยืนยันอีเมลสำเร็จ",
-  password_changed: "เปลี่ยนรหัสผ่านสำเร็จ",
-  welcome: "ยินดีต้อนรับ",
-  follow_requested: "คำขอติดตามใหม่",
-  follow_accepted: "ยอมรับคำขอติดตาม",
+/** i18n key of the notification title; unknown types fall back to the generic one. */
+export function notificationTitleKey(type: NotificationType): string {
+  return `notifications.titles.${type}`
 }
 
-export function getNotificationTitle(n: AppNotification): string {
-  return TITLE_BY_TYPE[n.type] ?? "การแจ้งเตือน"
-}
-
+/**
+ * In-app route for a notification, or null when the target has no page.
+ * Reviews have no standalone page, so review notifications are not links.
+ */
 export function getNotificationActionUrl(n: AppNotification): string | null {
   if (!n.target_ref || n.target_id == null) return null
   switch (n.target_ref) {
-    case "review":
-      return `/reviews/${n.target_id}`
     case "user":
-      return `/profile/${n.target_id}`
+      return `/users/${n.target_id}`
     case "movie":
       return `/movies/${n.target_id}`
     default:
@@ -100,22 +82,4 @@ export function getNotificationActionUrl(n: AppNotification): string | null {
   }
 }
 
-export const CATEGORY_LABELS: Record<NotificationCategory, string> = {
-  social: "ติดตามและโซเชียล",
-  media: "หนังและซีรีส์",
-  achievement: "ความสำเร็จ",
-  system: "ระบบ",
-}
-
-export interface NotificationCategoryTab {
-  label: string
-  value: NotificationCategory | null
-}
-
-export const NOTIFICATION_CATEGORY_TABS: NotificationCategoryTab[] = [
-  { label: "ทั้งหมด", value: null },
-  { label: CATEGORY_LABELS.social, value: "social" },
-  { label: CATEGORY_LABELS.media, value: "media" },
-  { label: CATEGORY_LABELS.achievement, value: "achievement" },
-  { label: CATEGORY_LABELS.system, value: "system" },
-]
+export const NOTIFICATION_CATEGORIES: NotificationCategory[] = ["social", "media", "achievement", "system"]

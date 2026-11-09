@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { mount } from "@vue/test-utils"
+import { createPinia } from "pinia"
 import FeedItem from "@/components/feed/FeedItem.vue"
 import { i18n } from "@/i18n"
 import type { FeedItemResponse } from "@/types/feed"
@@ -19,7 +20,7 @@ const build = (avatar: string | null, targetAvatar: string | null = null): FeedI
 const mountItem = (item: FeedItemResponse) =>
   mount(FeedItem, {
     props: { item },
-    global: { plugins: [i18n], stubs: { RouterLink: { template: "<a><slot /></a>" } } },
+    global: { plugins: [createPinia(), i18n], stubs: { RouterLink: { template: "<a><slot /></a>" } } },
   })
 
 describe("FeedItem avatars", () => {

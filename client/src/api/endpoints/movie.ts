@@ -9,6 +9,7 @@ import type {
   TVSeries,
   TVSeriesDetail,
   PersonDetail,
+  PersonSearchResult,
   PersonMovieCredits,
   PersonTVCredits,
   WatchProviders,
@@ -113,6 +114,8 @@ export const movieApi = {
 }
 
 export const actorApi = {
+  search: (q: string, page = 1) =>
+    api.get<PaginatedResult<PersonSearchResult>>("/actors/search", { params: { q, page } }),
   getById: (id: number) => api.get<PersonDetail>(`/actors/${id}`),
   getMovies: (id: number) => api.get<PersonMovieCredits>(`/actors/${id}/movies`),
   getTVSeries: (id: number) => api.get<PersonTVCredits>(`/actors/${id}/tv`),

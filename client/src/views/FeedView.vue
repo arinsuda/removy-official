@@ -1,46 +1,36 @@
 <template>
-  <div class="mx-auto max-w-2xl px-4 py-8 text-white">
-    <!-- Header Section -->
-    <header class="mb-8 flex items-end justify-between">
-      <div>
-        <h1 class="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-white/95 to-white/60 bg-clip-text text-transparent">
-          ฟีดกิจกรรม
-        </h1>
-        <p class="mt-1.5 text-sm text-white/50">
-          ความเคลื่อนไหวล่าสุดจากเพื่อน ๆ และผู้ใช้ที่คุณติดตาม
-        </p>
+  <main class="feed-page">
+    <header class="feed-header">
+      <div class="feed-header__text">
+        <h1 class="feed-title">{{ t("feed.title") }}</h1>
+        <p class="feed-subtitle">{{ t("feed.subtitle") }}</p>
       </div>
 
-      <div class="flex items-center gap-2">
-        <button
-          type="button"
-          class="flex h-10 w-10 items-center justify-center rounded-xl border border-white/5 bg-white/5 text-white/60 transition-all duration-300 hover:bg-white/10 hover:text-white hover:scale-105 active:scale-95 disabled:opacity-50"
-          title="รีเฟรชฟีด"
+      <div class="feed-header__actions">
+        <AppButton
+          variant="outline"
+          size="sm"
+          icon-only
+          :aria-label="t('feed.refresh')"
           :disabled="feedStore.loading"
           @click="feedStore.refresh"
         >
-          <RefreshCw
-            class="h-4.5 w-4.5"
-            :class="{ 'animate-spin': feedStore.loading }"
-          />
-        </button>
+          <RefreshCw :size="16" :class="{ 'is-spinning': feedStore.loading }" aria-hidden="true" />
+        </AppButton>
 
-        <div ref="settingsRef" class="relative">
-          <button
-            type="button"
-            class="flex h-10 w-10 items-center justify-center rounded-xl border border-white/5 bg-white/5 text-white/60 transition-all duration-300 hover:bg-white/10 hover:text-white hover:scale-105 active:scale-95"
-            :class="{ 'bg-white/10 text-white border-white/20': isSettingsOpen }"
-            title="ตั้งค่าฟีด"
+        <div ref="settingsRef" class="feed-settings">
+          <AppButton
+            variant="outline"
+            size="sm"
+            icon-only
+            :aria-label="t('feed.settings.open')"
+            :aria-expanded="isSettingsOpen"
             @click="isSettingsOpen = !isSettingsOpen"
           >
-            <Settings class="h-4.5 w-4.5" />
-          </button>
-
-          <Transition name="fade-slide">
-            <div
-              v-if="isSettingsOpen"
-              class="absolute right-0 top-full z-20 mt-2"
-            >
+            <Settings :size="16" aria-hidden="true" />
+          </AppButton>
+          <Transition name="feed-pop">
+            <div v-if="isSettingsOpen" class="feed-settings__panel">
               <FeedSettingsPanel />
             </div>
           </Transition>
@@ -48,44 +38,17 @@
       </div>
     </header>
 
-    <!-- Category Tabs Filter -->
-    <div class="mb-6 flex gap-1 border-b border-white/5 pb-px overflow-x-auto scrollbar-none">
-      <button
-        v-for="tab in tabs"
-        :key="tab.value"
-        type="button"
-        class="relative px-4 py-3 text-sm font-medium transition-all duration-300 shrink-0 cursor-pointer"
-        :class="feedStore.selectedCategory === tab.value ? 'text-red-500 font-semibold' : 'text-white/40 hover:text-white/75'"
-        @click="feedStore.setCategory(tab.value)"
-      >
-        <span>{{ tab.label }}</span>
-        <Transition name="tab-line">
-          <span
-            v-if="feedStore.selectedCategory === tab.value"
-            class="absolute bottom-0 left-2 right-2 h-0.5 bg-red-500 rounded-full"
-          />
-        </Transition>
-      </button>
-    </div>
+    <FeedFilters :model-value="feedStore.selectedCategory" @update:model-value="feedStore.setCategory" />
 
-    <!-- Floating New Feed Items Alert -->
-    <Transition name="slide-down">
-      <div
-        v-if="feedStore.newItemsCount > 0"
-        class="sticky top-6 z-10 mb-6 flex justify-center"
-      >
-        <button
-          type="button"
-          class="flex items-center gap-1.5 rounded-full border border-red-500/30 bg-red-950/80 px-5 py-2.5 text-sm font-semibold text-red-400 backdrop-blur-md transition-all duration-300 hover:bg-red-900/90 active:scale-95 shadow-lg shadow-red-500/10 cursor-pointer"
-          @click="feedStore.showNewItems()"
-        >
-          <ArrowUp class="h-4 w-4" />
-          มี {{ feedStore.newItemsCount }} กิจกรรมใหม่ในหน้านี้
-        </button>
+    <Transition name="feed-pill">
+      <div v-if="feedStore.newItemsCount > 0" class="feed-new">
+        <AppButton size="sm" role="status" @click="feedStore.showNewItems()">
+          <ArrowUp :size="14" aria-hidden="true" />
+          {{ t("feed.newItems", { n: feedStore.newItemsCount }, feedStore.newItemsCount) }}
+        </AppButton>
       </div>
     </Transition>
 
-    <!-- Feed List Component -->
     <FeedList
       :items="feedStore.items"
       :loading="feedStore.loading"
@@ -93,82 +56,164 @@
       :error="feedStore.error"
       :has-more="feedStore.hasMore"
       :is-empty="feedStore.isEmpty"
+      :filtered="feedStore.selectedCategory !== ''"
       :current-user-id="currentUserId"
       @load-more="feedStore.loadMore"
       @retry="feedStore.refresh"
-      @update-visibility="feedStore.updateVisibility"
-      @delete-activity="feedStore.deleteActivity"
+      @update-visibility="changeVisibility"
+      @delete-activity="removeActivity"
     />
-  </div>
+  </main>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from "vue";
-import { useFeedStore } from "@/stores/feed";
-import { useClickOutside } from "@/composables/useClickOutside";
-import FeedList from "@/components/feed/FeedList.vue";
-import FeedSettingsPanel from "@/components/feed/FeedSettingsPanel.vue";
-import { useAuthStore } from "@/stores/auth";
-import { RefreshCw, Settings, ArrowUp } from "lucide-vue-next";
+import { computed, onMounted, onUnmounted, ref } from "vue"
+import { useI18n } from "vue-i18n"
+import { ArrowUp, RefreshCw, Settings } from "lucide-vue-next"
+import AppButton from "@/components/ui/AppButton.vue"
+import FeedFilters from "@/components/feed/FeedFilters.vue"
+import FeedList from "@/components/feed/FeedList.vue"
+import FeedSettingsPanel from "@/components/feed/FeedSettingsPanel.vue"
+import { useClickOutside } from "@/composables/useClickOutside"
+import { useAuthStore } from "@/stores/auth"
+import { useFeedStore } from "@/stores/feed"
+import { useUIStore } from "@/stores/ui"
+import type { Visibility } from "@/components/feed/feedConfig"
 
-const feedStore = useFeedStore();
-const authStore = useAuthStore();
-const currentUserId = computed(() => authStore.user?.id);
+const { t } = useI18n()
+const feedStore = useFeedStore()
+const authStore = useAuthStore()
+const ui = useUIStore()
+const currentUserId = computed(() => authStore.user?.id)
 
-const isSettingsOpen = ref(false);
-const settingsRef = ref<HTMLElement | null>(null);
-useClickOutside(settingsRef, () => (isSettingsOpen.value = false));
+// The store rolls back optimistic updates and rethrows, so surface the failure here.
+async function changeVisibility(id: number, visibility: Visibility) {
+  try {
+    await feedStore.updateVisibility(id, visibility)
+  } catch {
+    ui.addToast(t("feed.manage.visibilityFailed"), "error")
+  }
+}
 
-const tabs = [
-  { label: "ทั้งหมด", value: "" },
-  { label: "รีวิวภาพยนตร์", value: "reviews" },
-  { label: "ลิสต์ภาพยนตร์", value: "lists" },
-  { label: "โซเชียล & ความสำเร็จ", value: "social" }
-];
+async function removeActivity(id: number) {
+  try {
+    await feedStore.deleteActivity(id)
+  } catch {
+    ui.addToast(t("feed.manage.deleteFailed"), "error")
+  }
+}
+
+const isSettingsOpen = ref(false)
+const settingsRef = ref<HTMLElement | null>(null)
+useClickOutside(settingsRef, () => (isSettingsOpen.value = false))
 
 onMounted(() => {
-  feedStore.bindSocket();
-  if (feedStore.items.length === 0) feedStore.fetchFeed(1);
-});
+  feedStore.bindSocket()
+  if (feedStore.items.length === 0) feedStore.fetchFeed(1)
+})
 
 onUnmounted(() => {
-  feedStore.unbindSocket();
-});
+  feedStore.unbindSocket()
+})
 </script>
 
 <style scoped>
-.fade-slide-enter-active {
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+.feed-page {
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 4rem;
+  color: var(--color-text-primary);
 }
-.fade-slide-leave-active {
-  transition: all 0.2s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+.feed-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
-.fade-slide-enter-from,
-.fade-slide-leave-to {
-  opacity: 0;
-  transform: translateY(-8px) scale(0.96);
+.feed-title {
+  margin: 0;
+  font-size: var(--text-heading);
+  font-weight: 800;
+  line-height: 1.2;
+}
+.feed-subtitle {
+  margin: 0.25rem 0 0;
+  font-size: var(--text-small);
+  color: var(--color-text-muted);
+}
+.feed-header__actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 0.5rem;
+}
+.feed-settings {
+  position: relative;
+}
+.feed-settings__panel {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: var(--z-popover);
+  margin-top: 0.5rem;
+  max-width: calc(100vw - 2rem);
+}
+.is-spinning {
+  animation: feed-spin 0.8s linear infinite;
+}
+.feed-new {
+  position: sticky;
+  top: 4.5rem;
+  z-index: 5;
+  display: flex;
+  justify-content: center;
+  margin: 0.75rem 0;
 }
 
-.slide-down-enter-active,
-.slide-down-leave-active {
+.feed-pop-enter-active,
+.feed-pill-enter-active {
   transition:
-    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-    opacity 0.2s ease;
+    opacity var(--motion-base) var(--ease-out-soft),
+    transform var(--motion-base) var(--ease-spring);
 }
-.slide-down-enter-from,
-.slide-down-leave-to {
-  transform: translateY(-12px);
+.feed-pop-leave-active,
+.feed-pill-leave-active {
+  transition:
+    opacity var(--motion-fast) ease,
+    transform var(--motion-fast) ease;
+}
+.feed-pop-enter-from,
+.feed-pop-leave-to,
+.feed-pill-enter-from,
+.feed-pill-leave-to {
   opacity: 0;
+  transform: translateY(-8px);
 }
 
-.tab-line-enter-active,
-.tab-line-leave-active {
-  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+@keyframes feed-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
-.tab-line-enter-from,
-.tab-line-leave-to {
-  opacity: 0;
-  transform: scaleX(0.1);
+
+@media (min-width: 768px) {
+  .feed-page {
+    padding: 2rem 1.5rem 5rem;
+  }
+  .feed-title {
+    font-size: var(--text-page);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .is-spinning {
+    animation: none;
+  }
+  .feed-pop-enter-from,
+  .feed-pop-leave-to,
+  .feed-pill-enter-from,
+  .feed-pill-leave-to {
+    transform: none;
+  }
 }
 </style>
-

@@ -155,7 +155,31 @@
     "empty": "No movies or TV series found. Try checking your spelling or search another keyword.",
     "moviesTab": "Movies ({count})",
     "tvTab": "TV Series ({count})",
-    "peopleTab": "People ({count})"
+    "peopleTab": "People ({count})",
+    "promptTitle": "Search POPCORN",
+    "promptHint": "Type a movie, series or person name in the search bar above.",
+    "count": "{n} result | {n} results",
+    "tabs": {
+      "label": "Result type",
+      "all": "All",
+      "movie": "Movies",
+      "tv": "Series",
+      "people": "People"
+    },
+    "filters": {
+      "year": "Year",
+      "anyYear": "Any year",
+      "genre": "Genre",
+      "anyGenre": "Any genre",
+      "clear": "Clear filters"
+    },
+    "error": "We couldn't load the results",
+    "errorHint": "Check your connection and try again.",
+    "noResults": "No results for \"{query}\"",
+    "noResultsHint": "Check the spelling, try fewer words, or search by another title or name.",
+    "noMatch": "No titles match these filters",
+    "noMatchHint": "Try a different year or genre.",
+    "suggestionsTitle": "Popular right now"
   },
   "rating": {
     "popcornScore": "POPCORN score {score} out of 5",

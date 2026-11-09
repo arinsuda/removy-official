@@ -1,9 +1,9 @@
 <template>
   <Transition name="auth-alert">
     <div v-if="message" class="auth-alert" role="alert">
-      <IconAlertCircle :size="16" class="auth-alert__icon" />
+      <IconAlertCircle :size="16" class="auth-alert__icon" aria-hidden="true" />
       <span class="auth-alert__text">{{ message }}</span>
-      <button class="auth-alert__close" type="button" aria-label="Dismiss" @click="emit('dismiss')">
+      <button class="auth-alert__close" type="button" :aria-label="t('auth.common.dismiss')" @click="emit('dismiss')">
         <IconX :size="14" />
       </button>
     </div>
@@ -11,9 +11,11 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from "vue-i18n"
 import { AlertCircle as IconAlertCircle, X as IconX } from "lucide-vue-next"
 
 defineProps<{ message: string }>()
+const { t } = useI18n()
 const emit = defineEmits<{ dismiss: [] }>()
 </script>
 
@@ -23,17 +25,17 @@ const emit = defineEmits<{ dismiss: [] }>()
   align-items: center;
   gap: 8px;
   padding: 0.625rem 0.75rem;
-  background: rgb(245 67 44 / 12%);
-  border: 1px solid rgb(245 67 44 / 35%);
-  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-danger) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-danger) 40%, transparent);
+  border-radius: var(--radius-card);
   font-size: 0.8125rem;
   line-height: 1.4;
-  color: #fca5a5;
+  color: var(--color-text-primary);
 }
 
 .auth-alert__icon {
   flex-shrink: 0;
-  color: var(--color-brand);
+  color: var(--color-danger);
 }
 
 .auth-alert__text {

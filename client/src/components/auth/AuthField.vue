@@ -11,13 +11,13 @@
         class="field__input"
         data-focus-custom
         :aria-invalid="!!error || undefined"
-        :aria-describedby="error ? errorId : undefined"
+        :aria-describedby="describedBy"
       />
       <button
         v-if="isPassword"
         type="button"
         class="field__toggle"
-        :aria-label="revealed ? 'Hide password' : 'Show password'"
+        :aria-label="revealed ? t('auth.common.hidePassword') : t('auth.common.showPassword')"
         :aria-pressed="revealed"
         @click="revealed = !revealed"
       >
@@ -29,8 +29,9 @@
       </span>
     </div>
     <slot />
+    <p v-if="hint && !error" :id="hintId" class="field__hint">{{ hint }}</p>
     <Transition name="field-error">
-      <p v-if="error" :id="errorId" class="field__error">
+      <p v-if="error" :id="errorId" class="field__error" role="alert">
         <IconAlertCircle :size="12" />
         {{ error }}
       </p>
@@ -40,6 +41,7 @@
 
 <script setup lang="ts">
 import { computed, ref, useId, type Component } from "vue"
+import { useI18n } from "vue-i18n"
 import {
   AlertCircle as IconAlertCircle,
   Check as IconCheck,
@@ -55,15 +57,19 @@ const props = withDefaults(
     icon: Component
     type?: string
     error?: string
+    hint?: string
     valid?: boolean
   }>(),
-  { type: "text", error: "", valid: false },
+  { type: "text", error: "", hint: "", valid: false },
 )
 
 const model = defineModel<string>({ required: true })
 
+const { t } = useI18n()
 const inputId = useId()
 const errorId = `${inputId}-error`
+const hintId = `${inputId}-hint`
+const describedBy = computed(() => (props.error ? errorId : props.hint ? hintId : undefined))
 const revealed = ref(false)
 const isPassword = computed(() => props.type === "password")
 const inputType = computed(() => (isPassword.value && revealed.value ? "text" : props.type))
@@ -79,7 +85,7 @@ const inputType = computed(() => (isPassword.value && revealed.value ? "text" : 
 .field__label {
   font-size: 0.8125rem;
   font-weight: 500;
-  color: #d4d4d4;
+  color: var(--color-text-secondary);
 }
 
 .field__control {
@@ -99,14 +105,14 @@ const inputType = computed(() => (isPassword.value && revealed.value ? "text" : 
 
 .field__icon {
   left: 14px;
-  color: #737373;
+  color: var(--color-text-muted);
   pointer-events: none;
   transition: color var(--motion-base) var(--ease-out-soft);
 }
 
 .field__check {
   right: 14px;
-  color: #22c55e;
+  color: var(--color-success);
   pointer-events: none;
 }
 
@@ -118,22 +124,22 @@ const inputType = computed(() => (isPassword.value && revealed.value ? "text" : 
   background: none;
   border: 0;
   border-radius: 50%;
-  color: #8a8a8a;
+  color: var(--color-text-muted);
   cursor: pointer;
   transition: color var(--motion-fast) var(--ease-out-soft);
 }
 
 .field__input {
   width: 100%;
-  min-height: 46px;
+  min-height: 48px;
   padding: 0 2.75rem;
   box-sizing: border-box;
-  background: rgb(255 255 255 / 5%);
-  border: 1px solid rgb(255 255 255 / 12%);
-  border-radius: 12px;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-card);
   outline: none;
   font-size: 0.9375rem;
-  color: #fff;
+  color: var(--color-text-primary);
   transition:
     background var(--motion-base) var(--ease-out-soft),
     border-color var(--motion-base) var(--ease-out-soft),
@@ -142,8 +148,8 @@ const inputType = computed(() => (isPassword.value && revealed.value ? "text" : 
 
 /* Keep browser autofill on the dark surface. */
 .field__input:-webkit-autofill {
-  -webkit-text-fill-color: #fff;
-  caret-color: #fff;
+  -webkit-text-fill-color: var(--color-text-primary);
+  caret-color: var(--color-text-primary);
   transition: background-color 9999s;
 }
 
@@ -153,7 +159,7 @@ const inputType = computed(() => (isPassword.value && revealed.value ? "text" : 
 }
 
 .field__input:focus {
-  background: rgb(255 255 255 / 8%);
+  background: var(--color-surface-3);
   border-color: transparent;
   box-shadow: var(--focus-input-shadow);
 }
@@ -163,12 +169,18 @@ const inputType = computed(() => (isPassword.value && revealed.value ? "text" : 
 }
 
 .is-valid .field__input:not(:focus) {
-  border-color: rgb(34 197 94 / 55%);
+  border-color: color-mix(in srgb, var(--color-success) 60%, transparent);
 }
 
 .is-error .field__input:not(:focus) {
-  background: rgb(245 67 44 / 7%);
-  border-color: rgb(248 113 113 / 75%);
+  background: color-mix(in srgb, var(--color-danger) 8%, transparent);
+  border-color: color-mix(in srgb, var(--color-danger) 75%, transparent);
+}
+
+.field__hint {
+  margin: 0;
+  font-size: var(--text-caption);
+  color: var(--color-text-muted);
 }
 
 .field__error {
@@ -177,7 +189,7 @@ const inputType = computed(() => (isPassword.value && revealed.value ? "text" : 
   gap: 4px;
   margin: 0;
   font-size: 0.75rem;
-  color: #f87171;
+  color: var(--color-danger);
 }
 
 .field-error-enter-active,
@@ -195,11 +207,11 @@ const inputType = computed(() => (isPassword.value && revealed.value ? "text" : 
 
 @media (hover: hover) {
   .field__toggle:hover {
-    color: #fff;
+    color: var(--color-text-primary);
   }
 
   .field__input:hover:not(:focus, :disabled) {
-    border-color: rgb(255 255 255 / 24%);
+    border-color: color-mix(in srgb, var(--color-text-primary) 28%, transparent);
   }
 }
 </style>
