@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { ENTRY_SORTS, summaryToHomeMedia, type ProfileEntry } from "@/components/profile/tabs/profileMedia"
 import { REVIEW_FILTERS, REVIEW_SORTS, summarizeReviews } from "@/components/profile/tabs/reviewList"
 import { dedupeWatched, groupByMonth, inYear, yearsOf, type WatchedEntry } from "@/components/profile/tabs/watched"
-import { countUnlocked, filterAchievements, progressOf, sortAchievements } from "@/components/profile/tabs/achievements"
+import { countUnlocked, filterAchievements, progressOf, sortAchievements } from "@/components/achievement/achievements"
 import type { ReviewResponse } from "@/types"
 import type { UserAchievement } from "@/types/achievement"
 

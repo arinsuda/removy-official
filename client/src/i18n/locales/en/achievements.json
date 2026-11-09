@@ -1,26 +1,142 @@
 {
-  "title": "Achievements & Honors",
-  "subtitle": "Complete criteria to unlock custom badges as a movie buff",
-  "points": "{count} points",
-  "unlockedAt": "Unlocked on {date}",
-  "locked": "Locked",
-  "badge": "Badge",
-  "items": {
-    "first_review": {
-      "name": "Novice Critic",
-      "desc": "Write your first movie or series review"
-    },
-    "movie_buff": {
-      "name": "True Movie Buff",
-      "desc": "Mark 10 titles as watched"
-    },
-    "serial_watcher": {
-      "name": "Marathon Watcher",
-      "desc": "Mark 5 TV series titles as watched"
-    },
-    "social_butterfly": {
-      "name": "Social Butterfly",
-      "desc": "Follow 3 or more other users"
-    }
+  "title": {
+    "own": "My achievements",
+    "other": "{name}'s achievements"
+  },
+  "subtitle": {
+    "own": "Every badge you have earned, and the ones still to chase.",
+    "other": "Every badge {name} has earned, and the ones still to chase."
+  },
+  "hero": {
+    "level": "Level {level}",
+    "xp": "{n} XP earned",
+    "progressLabel": "Overall achievement progress",
+    "counter": "{unlocked} / {total}",
+    "latest": "Latest unlock",
+    "next": "Next up"
+  },
+  "counter": "{unlocked} / {total} unlocked",
+  "progress": "{current} / {target}",
+  "progressLabel": "Progress",
+  "xp": "+{n} XP",
+  "unlockedOn": "Unlocked {date}",
+  "filters": {
+    "all": "All",
+    "unlocked": "Unlocked",
+    "progress": "In progress",
+    "locked": "Locked"
+  },
+  "sorts": {
+    "recent": "Recently unlocked",
+    "progress": "Closest to done",
+    "name": "Name"
+  },
+  "toolbar": {
+    "count": "{shown} of {total} achievements",
+    "categories": "Categories"
+  },
+  "categories": {
+    "all": "All categories",
+    "watching": "Watching",
+    "genres": "Genres",
+    "cinema": "Cinema world",
+    "reviews": "Reviews and ratings",
+    "social": "Community",
+    "library": "Library",
+    "journey": "Your journey"
+  },
+  "family": {
+    "tier": "Tier {tier}",
+    "tiers": "{done} of {total} tiers unlocked",
+    "complete": "All {total} tiers complete"
+  },
+  "detail": {
+    "how": "How to unlock",
+    "goal": "Goal: {target}",
+    "tiers": "Tiers",
+    "tip": "Keep going, you are on your way."
+  },
+  "cta": {
+    "browse": "Find something to watch",
+    "profile": "Complete your profile",
+    "review": "Write a review",
+    "rate": "Rate a title",
+    "discover": "Discover people",
+    "library": "Open my library"
+  },
+  "states": {
+    "errorTitle": "Could not load achievements",
+    "errorBody": "Something went wrong while loading. Please try again."
+  },
+  "empty": {
+    "ownerTitle": "No achievements yet",
+    "ownerBody": "Watch, rate and review titles to start earning badges.",
+    "visitorTitle": "No achievements yet",
+    "visitorBody": "Badges will show up here as they are earned."
+  },
+  "requirements": {
+    "achievement_unlocked_count": "Unlock {target} achievements",
+    "actor_watch_meryl_streep": "Watch {target} films starring Meryl Streep",
+    "actor_watch_rdj": "Watch {target} films starring Robert Downey Jr.",
+    "classic_movie_watched_count": "Watch {target} movies released before 1990",
+    "contrarian_review_count": "Review {target} movies where your rating differs from the TMDB average by more than 2 points",
+    "country_watch_france": "Watch {target} French titles",
+    "country_watch_india": "Watch {target} Indian titles",
+    "country_watch_japan": "Watch {target} Japanese titles",
+    "country_watch_korea": "Watch {target} Korean movies or series",
+    "country_watch_thailand": "Watch {target} Thai titles",
+    "director_watch_miyazaki": "Watch {target} Hayao Miyazaki films",
+    "director_watch_nolan": "Watch {target} Christopher Nolan films",
+    "director_watch_tarantino": "Watch {target} Quentin Tarantino films",
+    "early_adopter": "Join during the Popcorn launch period",
+    "follower_count": "Get your first follower | Get {target} followers",
+    "following_count": "Follow {target} people",
+    "genre_all_unlocked": "Watch at least one title in every genre",
+    "genre_watch_action": "Watch {target} action titles",
+    "genre_watch_animation": "Watch {target} animated titles",
+    "genre_watch_comedy": "Watch {target} comedy titles",
+    "genre_watch_crime": "Watch {target} crime titles",
+    "genre_watch_documentary": "Watch {target} documentaries",
+    "genre_watch_drama": "Watch {target} drama titles",
+    "genre_watch_fantasy": "Watch {target} fantasy titles",
+    "genre_watch_horror": "Watch {target} horror titles",
+    "genre_watch_romance": "Watch {target} romance titles",
+    "genre_watch_scifi": "Watch {target} sci-fi titles",
+    "genre_watch_thriller": "Watch {target} thriller titles",
+    "golden_age_movie_watched_count": "Watch {target} movies released before 1970",
+    "library_total_count": "Add {target} items to your library in total",
+    "like_count": "Like {target} movies or series",
+    "login_streak": "Visit Popcorn {target} days in a row",
+    "long_movie_watched_count": "Watch {target} movies longer than 3 hours",
+    "low_rating_count": "Rate titles below 3 stars more than {target} times",
+    "midnight_activity_count": "Mark titles as watched between midnight and 4 AM, {target} times",
+    "new_release_early_watched_count": "Watch {target} movies within 7 days of their theatrical release",
+    "obscure_movie_review_count": "Review {target} movies with fewer than 1,000 votes",
+    "profile_complete": "Complete every profile field, including bio and favorite genres",
+    "rating_five_star_count": "Give 5 stars to {target} titles",
+    "rating_one_star_count": "Give 1 star to {target} titles",
+    "reach_level": "Reach level {target}",
+    "remake_watched_count": "Watch {target} remakes of movies you have already seen",
+    "review_count": "Write your first review | Write {target} reviews",
+    "review_daily_streak": "Write at least one review a day for {target} days in a row",
+    "review_like_given_count": "Like {target} reviews by other people",
+    "review_like_received_count": "Get {target} likes on your reviews",
+    "reviews_in_one_day": "Write {target} reviews in a single day",
+    "sequel_rated_lower_count": "Rate a sequel lower than its predecessor {target} times",
+    "series_completed_count": "Finish every season of {target} series",
+    "series_watchlist_no_watch_count": "Add {target} series to your watchlist without watching a single episode",
+    "short_movie_watched_count": "Watch {target} short films under 90 minutes",
+    "studio_watch_a24": "Watch {target} A24 titles",
+    "studio_watch_dc": "Watch {target} DC Studios titles",
+    "studio_watch_ghibli": "Watch {target} Studio Ghibli titles",
+    "studio_watch_marvel": "Watch {target} Marvel Studios titles",
+    "studio_watch_neon": "Watch {target} NEON titles",
+    "studio_watch_pixar": "Watch {target} Pixar titles",
+    "studio_watch_universal": "Watch {target} Universal Pictures titles",
+    "unique_country_count": "Watch titles from at least {target} countries",
+    "watched_count": "Watch your first movie or series | Watch {target} movies or series",
+    "watched_in_one_day": "Mark {target} titles as watched in a single day",
+    "watched_oscar_best_picture_count": "Watch {target} Academy Award Best Picture winners",
+    "watchlist_count": "Add {target} titles to your watchlist"
   }
 }
