@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/arinsuda/movie-hub/internal/identity_policy"
 	tmdbmodule "github.com/arinsuda/movie-hub/internal/tmdb_module"
+	"github.com/arinsuda/movie-hub/internal/user_module"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -453,6 +455,10 @@ func (r *gormRepository) ListAuditLogs(filter AuditLogFilter) ([]AdminAuditLogRo
 
 func (r *gormRepository) UpdateUserRole(adminID, targetUserID uint, newRoleName string, reason *string) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
+		// Before any row lock: see identity_policy.LockAdminGuard.
+		if err := identity_policy.LockAdminGuard(tx); err != nil {
+			return err
+		}
 		type userRoleState struct {
 			ID       uint
 			IsActive bool
@@ -460,7 +466,7 @@ func (r *gormRepository) UpdateUserRole(adminID, targetUserID uint, newRoleName 
 		}
 		var target userRoleState
 		err := tx.Table("users").
-			Clauses(clause.Locking{Strength: "UPDATE"}).
+			Clauses(clause.Locking{Strength: "UPDATE", Table: clause.Table{Name: "users"}}).
 			Select("users.id, users.is_active, roles.role_name").
 			Joins("JOIN roles ON roles.id = users.role_id").
 			Where("users.id = ? AND users.deleted_at IS NULL", targetUserID).
@@ -483,12 +489,9 @@ func (r *gormRepository) UpdateUserRole(adminID, targetUserID uint, newRoleName 
 			return nil
 		}
 
-		if oldRoleName == "admin" && newRoleName != "admin" {
-			var activeAdminCount int64
-			if err := tx.Table("users").
-				Joins("JOIN roles ON roles.id = users.role_id").
-				Where("roles.role_name = 'admin' AND users.is_active = true AND users.deleted_at IS NULL").
-				Count(&activeAdminCount).Error; err != nil {
+		if oldRoleName == string(user_module.RoleAdmin) && newRoleName != string(user_module.RoleAdmin) {
+			activeAdminCount, err := identity_policy.CountActiveAdmins(tx, string(user_module.RoleAdmin))
+			if err != nil {
 				return err
 			}
 			if activeAdminCount <= 1 {
@@ -524,7 +527,12 @@ func (r *gormRepository) UpdateUserStatus(adminID, targetUserID uint, isActive b
 		return ErrSelfDeactivation
 	}
 
-	return r.db.Transaction(func(tx *gorm.DB) error {
+	var out identity_policy.Outcome
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		// Before any row lock: see identity_policy.LockAdminGuard.
+		if err := identity_policy.LockAdminGuard(tx); err != nil {
+			return err
+		}
 		type userRoleState struct {
 			ID       uint
 			IsActive bool
@@ -532,7 +540,7 @@ func (r *gormRepository) UpdateUserStatus(adminID, targetUserID uint, isActive b
 		}
 		var target userRoleState
 		err := tx.Table("users").
-			Clauses(clause.Locking{Strength: "UPDATE"}).
+			Clauses(clause.Locking{Strength: "UPDATE", Table: clause.Table{Name: "users"}}).
 			Select("users.id, users.is_active, roles.role_name").
 			Joins("JOIN roles ON roles.id = users.role_id").
 			Where("users.id = ? AND users.deleted_at IS NULL", targetUserID).
@@ -545,12 +553,9 @@ func (r *gormRepository) UpdateUserStatus(adminID, targetUserID uint, isActive b
 			return ErrUserAlreadyInStatus
 		}
 
-		if !isActive && target.RoleName == "admin" {
-			var activeAdminCount int64
-			if err := tx.Table("users").
-				Joins("JOIN roles ON roles.id = users.role_id").
-				Where("roles.role_name = 'admin' AND users.is_active = true AND users.deleted_at IS NULL").
-				Count(&activeAdminCount).Error; err != nil {
+		if !isActive && target.RoleName == string(user_module.RoleAdmin) {
+			activeAdminCount, err := identity_policy.CountActiveAdmins(tx, string(user_module.RoleAdmin))
+			if err != nil {
 				return err
 			}
 			if activeAdminCount <= 1 {
@@ -558,9 +563,18 @@ func (r *gormRepository) UpdateUserStatus(adminID, targetUserID uint, isActive b
 			}
 		}
 
-		if err := tx.Table("users").Where("id = ?", targetUserID).Update("is_active", isActive).Error; err != nil {
+		// Any status change ends the target's sessions. Reactivation matters too: accounts
+		// deactivated before sessions were revoked on deactivation may still hold tokens.
+		if err := tx.Table("users").Where("id = ?", targetUserID).Updates(map[string]any{
+			"is_active":     isActive,
+			"token_version": gorm.Expr("token_version + 1"),
+		}).Error; err != nil {
 			return err
 		}
+		if err := identity_policy.RevokeSessionScope(tx, targetUserID); err != nil {
+			return err
+		}
+		out.SessionsRevoked = true
 
 		action := ActionUserDeactivated
 		if isActive {
@@ -583,6 +597,11 @@ func (r *gormRepository) UpdateUserStatus(adminID, targetUserID uint, isActive b
 		}
 		return tx.Create(&auditLog).Error
 	})
+	if err != nil {
+		return err
+	}
+	out.Publish(targetUserID)
+	return nil
 }
 
 func (r *gormRepository) DeleteUser(adminID, targetUserID uint, reason *string) error {
@@ -590,7 +609,12 @@ func (r *gormRepository) DeleteUser(adminID, targetUserID uint, reason *string) 
 		return ErrSelfDeletion
 	}
 
-	return r.db.Transaction(func(tx *gorm.DB) error {
+	var out identity_policy.Outcome
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		// Before any row lock: see identity_policy.LockAdminGuard.
+		if err := identity_policy.LockAdminGuard(tx); err != nil {
+			return err
+		}
 		type userRoleState struct {
 			ID       uint
 			IsActive bool
@@ -600,7 +624,7 @@ func (r *gormRepository) DeleteUser(adminID, targetUserID uint, reason *string) 
 		}
 		var target userRoleState
 		err := tx.Table("users").
-			Clauses(clause.Locking{Strength: "UPDATE"}).
+			Clauses(clause.Locking{Strength: "UPDATE", Table: clause.Table{Name: "users"}}).
 			Select("users.id, users.is_active, roles.role_name, users.username, users.email").
 			Joins("JOIN roles ON roles.id = users.role_id").
 			Where("users.id = ? AND users.deleted_at IS NULL", targetUserID).
@@ -609,12 +633,9 @@ func (r *gormRepository) DeleteUser(adminID, targetUserID uint, reason *string) 
 			return ErrUserNotFound
 		}
 
-		if target.RoleName == "admin" {
-			var activeAdminCount int64
-			if err := tx.Table("users").
-				Joins("JOIN roles ON roles.id = users.role_id").
-				Where("roles.role_name = 'admin' AND users.is_active = true AND users.deleted_at IS NULL").
-				Count(&activeAdminCount).Error; err != nil {
+		if target.RoleName == string(user_module.RoleAdmin) {
+			activeAdminCount, err := identity_policy.CountActiveAdmins(tx, string(user_module.RoleAdmin))
+			if err != nil {
 				return err
 			}
 			if activeAdminCount <= 1 {
@@ -625,11 +646,16 @@ func (r *gormRepository) DeleteUser(adminID, targetUserID uint, reason *string) 
 		now := time.Now().UTC()
 
 		if err := tx.Table("users").Where("id = ?", targetUserID).Updates(map[string]any{
-			"deleted_at": now,
-			"is_active":  false,
+			"deleted_at":    now,
+			"is_active":     false,
+			"token_version": gorm.Expr("token_version + 1"),
 		}).Error; err != nil {
 			return err
 		}
+		if err := identity_policy.RevokeSessionScope(tx, targetUserID); err != nil {
+			return err
+		}
+		out.SessionsRevoked = true
 
 		_ = tx.Table("reviews").Where("user_id = ? AND deleted_at IS NULL", targetUserID).Update("deleted_at", now).Error
 		_ = tx.Table("activity_events").Where("actor_id = ? AND deleted_at IS NULL", targetUserID).Update("deleted_at", now).Error
@@ -654,6 +680,11 @@ func (r *gormRepository) DeleteUser(adminID, targetUserID uint, reason *string) 
 		}
 		return tx.Create(&auditLog).Error
 	})
+	if err != nil {
+		return err
+	}
+	out.Publish(targetUserID)
+	return nil
 }
 
 func (r *gormRepository) DeleteReview(adminID, reviewID uint, reason *string) error {

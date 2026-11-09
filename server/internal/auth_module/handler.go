@@ -178,11 +178,8 @@ func (h *Handler) ResendVerification(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "email required"})
 	}
 
-	if err := h.svc.ResendVerification(body.Email); err != nil {
-		if errors.Is(err, ErrAlreadyVerified) {
-			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "email already verified"})
-		}
-	}
+	// The outcome is deliberately not reflected in the response.
+	_ = h.svc.ResendVerification(body.Email)
 
 	return c.JSON(MessageResponse{Message: "if the email exists, a verification link has been sent"})
 }

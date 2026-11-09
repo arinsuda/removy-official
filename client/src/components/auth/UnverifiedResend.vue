@@ -55,9 +55,7 @@
       await authApi.resendVerification(targetEmail.value)
       ui.toastSuccess(t("auth.login.resendSent"))
     } catch (e) {
-      const status = (e as { response?: { status?: number } })?.response?.status
       if (isRateLimited(e)) note.value = t("auth.login.resendRateLimited")
-      else if (status === 409) note.value = t("auth.login.resendAlreadyVerified")
       else note.value = t("auth.login.resendFailed")
     } finally {
       sending.value = false

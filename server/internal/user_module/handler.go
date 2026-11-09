@@ -105,6 +105,8 @@ func (h *Handler) RequestEmailChange(c fiber.Ctx) error {
 	})
 }
 
+// DeleteUser lets a user remove their own account. It is a deactivation (is_active=false,
+// sessions revoked), not the admin soft delete: reviews stay public and the email stays reserved.
 func (h *Handler) DeleteUser(c fiber.Ctx) error {
 	targetID, err := parseUserID(c)
 	if err != nil {
@@ -113,7 +115,7 @@ func (h *Handler) DeleteUser(c fiber.Ctx) error {
 
 	claims := mw.GetClaims(c)
 
-	if err := h.svc.DeleteUser(targetID, claims.UserID, claims.Role); err != nil {
+	if err := h.svc.DeleteUser(targetID, claims.UserID, claims.TokenVersion); err != nil {
 		return handleError(c, err)
 	}
 
@@ -368,12 +370,19 @@ func parseUserID(c fiber.Ctx) (uint, error) {
 	return uint(id), nil
 }
 
+// codeFinalAdmin is the machine-readable code of ErrFinalAdmin (shared cannot be imported here: cycle).
+const codeFinalAdmin = "FINAL_ADMIN"
+
 func handleError(c fiber.Ctx, err error) error {
 	switch {
 	case errors.Is(err, ErrUserNotFound):
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "user not found"})
 	case errors.Is(err, ErrForbidden):
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "forbidden"})
+	case errors.Is(err, ErrSessionStale):
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	case errors.Is(err, ErrFinalAdmin):
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"code": codeFinalAdmin, "error": ErrFinalAdmin.Error()})
 	default:
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal server error"})
 	}

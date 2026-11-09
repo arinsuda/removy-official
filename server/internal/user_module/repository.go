@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/arinsuda/movie-hub/internal/identity_policy"
 	"gorm.io/gorm"
 )
 
@@ -24,6 +25,7 @@ var (
 	ErrPasswordResetTokenInvalid  = errors.New("password reset token invalid")
 	ErrPasswordNotSet             = errors.New("no password set, use password reset to create one")
 	ErrSessionStale               = errors.New("session is no longer valid")
+	ErrFinalAdmin                 = errors.New("cannot delete the final active admin")
 )
 
 type repository struct {
@@ -104,12 +106,50 @@ func (r *repository) UpdateProfile(id uint, updates map[string]any) error {
 	return nil
 }
 
-func (r *repository) DeleteUser(id uint) error {
-	result := r.db.Model(&User{}).Where("id = ?", id).Update("is_active", false)
-	if result.RowsAffected == 0 {
-		return ErrUserNotFound
-	}
-	return result.Error
+// DeleteUser deactivates the account and revokes its sessions in one transaction.
+// The last active admin cannot remove itself.
+func (r *repository) DeleteUser(id uint, sessionVersion int) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := identity_policy.LockAdminGuard(tx); err != nil {
+			return err
+		}
+		if err := identity_policy.EnsureSession(tx, id, sessionVersion, true); err != nil {
+			if errors.Is(err, identity_policy.ErrSessionStale) {
+				return ErrSessionStale
+			}
+			return err
+		}
+
+		var roleName string
+		if err := tx.Table("users").
+			Select("roles.role_name").
+			Joins("JOIN roles ON roles.id = users.role_id").
+			Where("users.id = ? AND users.deleted_at IS NULL", id).
+			Scan(&roleName).Error; err != nil {
+			return err
+		}
+		if roleName == string(RoleAdmin) {
+			activeAdmins, err := identity_policy.CountActiveAdmins(tx, string(RoleAdmin))
+			if err != nil {
+				return err
+			}
+			if activeAdmins <= 1 {
+				return ErrFinalAdmin
+			}
+		}
+
+		result := tx.Exec(
+			"UPDATE users SET is_active = false, token_version = token_version + 1, updated_at = now() WHERE id = ? AND deleted_at IS NULL",
+			id,
+		)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return ErrUserNotFound
+		}
+		return identity_policy.RevokeSessionScope(tx, id)
+	})
 }
 
 func (r *repository) UpsertEmailChangeRequest(req *EmailChangeRequest) error {
