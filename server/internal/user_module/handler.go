@@ -8,7 +8,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
+	"github.com/arinsuda/movie-hub/internal/shared/storage"
 	mw "github.com/arinsuda/movie-hub/middleware"
 	"github.com/gofiber/fiber/v3"
 )
@@ -227,6 +229,8 @@ func handleEmailChangeError(c fiber.Ctx, err error) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "user not found"})
 	case errors.Is(err, ErrForbidden):
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "forbidden"})
+	case errors.Is(err, storage.ErrInvalidImage):
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "avatar must be a JPEG, PNG, WebP or GIF image"})
 	case errors.Is(err, ErrInvalidEmailFormat):
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid email format"})
 	case errors.Is(err, ErrEmailSameAsCurrent):
@@ -249,6 +253,12 @@ func handleEmailChangeError(c fiber.Ctx, err error) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 }
+
+const (
+	maxDisplayNameRunes = 60
+	maxBioRunes         = 200
+	maxGenderOtherRunes = 100
+)
 
 type multipartFile struct {
 	file   multipart.File
@@ -282,27 +292,48 @@ func parseUpdateProfileForm(c fiber.Ctx) (UpdateProfileRequest, error) {
 	}
 
 	var req UpdateProfileRequest
-	if v := c.FormValue("display_name"); v != "" {
+	// A key that is present but empty clears the field.
+	if _, ok := form.Value["display_name"]; ok {
+		v := strings.TrimSpace(c.FormValue("display_name"))
+		if utf8.RuneCountInString(v) > maxDisplayNameRunes {
+			return req, fmt.Errorf("display_name must be at most %d characters", maxDisplayNameRunes)
+		}
 		req.DisplayName = &v
 	}
-	if v := c.FormValue("bio"); v != "" {
+	if _, ok := form.Value["bio"]; ok {
+		v := strings.TrimSpace(c.FormValue("bio"))
+		if utf8.RuneCountInString(v) > maxBioRunes {
+			return req, fmt.Errorf("bio must be at most %d characters", maxBioRunes)
+		}
 		req.Bio = &v
 	}
 	if v := c.FormValue("gender"); v != "" {
 		req.Gender = GenderType(v)
 	}
-	if v := c.FormValue("gender_other"); v != "" {
+	if _, ok := form.Value["gender_other"]; ok {
+		v := strings.TrimSpace(c.FormValue("gender_other"))
+		if utf8.RuneCountInString(v) > maxGenderOtherRunes {
+			return req, fmt.Errorf("gender_other must be at most %d characters", maxGenderOtherRunes)
+		}
 		req.GenderOther = &v
 	}
 	if v := c.FormValue("favorite_genres"); v != "" {
 		req.FavoriteGenres = &v
 	}
-	if v := c.FormValue("date_of_birth"); v != "" {
-		t, err := time.Parse("2006-01-02", v)
-		if err != nil {
-			return req, errors.New("date_of_birth must be YYYY-MM-DD")
+	if _, ok := form.Value["date_of_birth"]; ok {
+		v := c.FormValue("date_of_birth")
+		if v == "" {
+			req.ClearDateOfBirth = true
+		} else {
+			t, err := time.Parse("2006-01-02", v)
+			if err != nil {
+				return req, errors.New("date_of_birth must be YYYY-MM-DD")
+			}
+			if t.Before(time.Date(1900, 1, 1, 0, 0, 0, 0, time.UTC)) || t.After(time.Now().UTC()) {
+				return req, errors.New("date_of_birth must be between 1900-01-01 and today")
+			}
+			req.DateOfBirth = &t
 		}
-		req.DateOfBirth = &t
 	}
 	if v := c.FormValue("is_private"); v != "" {
 		b := v == "true"

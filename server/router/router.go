@@ -88,7 +88,7 @@ func Register(app *fiber.App, db *gorm.DB, cfg *config.Config, m *mailer.Mailer)
 	libSvc := library_module.RegisterRoutes(protected, db, statsSvc, achieveModule.Service, notifSvc, feedModule.Service, policy)
 	watch_log_module.RegisterRoutes(protected, db, feedModule.Service, libSvc, policy)
 	like_module.RegisterRoutes(protected, db, achieveModule.Service, notifSvc, feedModule.Service, policy)
-	bmol_module.RegisterRoutes(protected, db)
+	bmol_module.RegisterRoutes(protected, db, policy)
 
 	analytics_module.RegisterRoutes(protected, db)
 	ratingRepo := review_module.NewRatingStatsReader(db)
@@ -96,7 +96,7 @@ func Register(app *fiber.App, db *gorm.DB, cfg *config.Config, m *mailer.Mailer)
 		external_rating_module.NewGormStore(db), cfg.OMDb.APIKey, movie_module.SeriesIMDbResolver)
 	movie_module.RegisterRoutes(protected, ratingRepo, extRatings)
 	media_stats_module.RegisterRoutes(protected, db)
-	user_stats_module.RegisterRoutes(protected, db)
+	user_stats_module.RegisterRoutes(protected, db, policy)
 	admin_module.RegisterRoutes(protected, db, notifHub, mc, mw.RequireCurrentAdmin(db))
 
 	return notifHub

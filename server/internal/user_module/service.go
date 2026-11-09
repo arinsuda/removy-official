@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"math/big"
 	"mime/multipart"
 	"os"
@@ -64,6 +63,12 @@ func (s *Service) GetProfile(targetUserID, requesterID uint) (*UserProfileRespon
 	level := s.fetchLevel(targetUserID)
 	profile := toProfileResponse(user, reviewCount, followerCount, followingCount, level)
 
+	if requesterID != targetUserID {
+		// Email is account-identifying data; only the owner may read it.
+		profile.Email = ""
+		profile.VerifiedEmailAt = nil
+	}
+
 	if user.IsPrivate && requesterID != targetUserID {
 		canView, err := s.policy.CanViewProfileSection(context.Background(), requesterID, targetUserID, privacy_policy.SectionProfile)
 		if err != nil || !canView {
@@ -94,13 +99,16 @@ func (s *Service) UpdateProfile(
 	}
 
 	updates := map[string]any{}
+	// An empty string clears the column (NULL).
 	if req.DisplayName != nil {
-		updates["display_name"] = req.DisplayName
+		updates["display_name"] = nullIfEmpty(req.DisplayName)
 	}
 	if req.Bio != nil {
-		updates["bio"] = req.Bio
+		updates["bio"] = nullIfEmpty(req.Bio)
 	}
-	if req.DateOfBirth != nil {
+	if req.ClearDateOfBirth {
+		updates["date_of_birth"] = nil
+	} else if req.DateOfBirth != nil {
 		updates["date_of_birth"] = req.DateOfBirth
 	}
 	if req.Gender != "" {
@@ -110,7 +118,7 @@ func (s *Service) UpdateProfile(
 		updates["gender"] = req.Gender
 	}
 	if req.GenderOther != nil {
-		updates["gender_other"] = req.GenderOther
+		updates["gender_other"] = nullIfEmpty(req.GenderOther)
 	}
 	if req.FavoriteGenres != nil {
 		updates["favorite_genres"] = req.FavoriteGenres
@@ -130,7 +138,6 @@ func (s *Service) UpdateProfile(
 			_ = s.minio.DeleteObject(context.Background(), oldKey)
 		}
 	}
-	log.Printf("DEBUG updates map: %+v", updates)
 	if len(updates) > 0 {
 		if err := s.repo.UpdateProfile(targetUserID, updates); err != nil {
 			return nil, err
@@ -566,6 +573,13 @@ func (s *Service) currentAvatarKey(userID uint) string {
 		return *user.AvatarURL
 	}
 	return ""
+}
+
+func nullIfEmpty(v *string) any {
+	if v == nil || *v == "" {
+		return nil
+	}
+	return *v
 }
 
 func toProfileResponse(u *User, reviewCount, followerCount, followingCount, level int) *UserProfileResponse {

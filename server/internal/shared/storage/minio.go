@@ -2,10 +2,11 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
-	"path/filepath"
+	"net/http"
 	"strings"
 	"time"
 
@@ -70,20 +71,47 @@ func (m *MinIOClient) ensureBucket(ctx context.Context) error {
 	return nil
 }
 
+// ErrInvalidImage is returned when an avatar's content is not an allowed image.
+var ErrInvalidImage = errors.New("storage: avatar is not an allowed image type")
+
+var avatarTypes = map[string]string{
+	"image/jpeg": ".jpg",
+	"image/png":  ".png",
+	"image/webp": ".webp",
+	"image/gif":  ".gif",
+}
+
+// DetectAvatarType sniffs the first 512 bytes, rewinds the file, and returns the
+// content type and extension. A declared Content-Type that disagrees is rejected.
+func DetectAvatarType(file io.ReadSeeker, declared string) (contentType, ext string, err error) {
+	buf := make([]byte, 512)
+	n, err := io.ReadFull(file, buf)
+	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) && !errors.Is(err, io.EOF) {
+		return "", "", err
+	}
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		return "", "", err
+	}
+	contentType = http.DetectContentType(buf[:n])
+	ext, ok := avatarTypes[contentType]
+	if !ok {
+		return "", "", ErrInvalidImage
+	}
+	if declared != "" && declared != contentType {
+		return "", "", ErrInvalidImage
+	}
+	return contentType, ext, nil
+}
+
 func (m *MinIOClient) UploadAvatar(ctx context.Context, userID uint, file multipart.File, header *multipart.FileHeader) (string, error) {
-	ext := strings.ToLower(filepath.Ext(header.Filename))
-	if ext == "" {
-		ext = ".jpg"
+	contentType, ext, err := DetectAvatarType(file, header.Header.Get("Content-Type"))
+	if err != nil {
+		return "", err
 	}
 
 	objectKey := fmt.Sprintf("avatars/%d/%s%s", userID, uuid.NewString(), ext)
 
-	contentType := header.Header.Get("Content-Type")
-	if contentType == "" {
-		contentType = "application/octet-stream"
-	}
-
-	_, err := m.client.PutObject(ctx, m.bucketName, objectKey, file, header.Size, minio.PutObjectOptions{
+	_, err = m.client.PutObject(ctx, m.bucketName, objectKey, file, header.Size, minio.PutObjectOptions{
 		ContentType: contentType,
 	})
 	if err != nil {

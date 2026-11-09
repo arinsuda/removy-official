@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/arinsuda/movie-hub/internal/movie_module"
+	"github.com/arinsuda/movie-hub/internal/privacy_policy"
 	shared "github.com/arinsuda/movie-hub/internal/shared"
 	tmdbmodule "github.com/arinsuda/movie-hub/internal/tmdb_module"
 	"gorm.io/gorm"
@@ -18,14 +19,16 @@ var (
 )
 
 type Service struct {
-	repo *repository
-	db   *gorm.DB
+	repo   *repository
+	db     *gorm.DB
+	policy privacy_policy.UserAccessPolicy
 }
 
-func NewService(db *gorm.DB) *Service {
+func NewService(db *gorm.DB, policy privacy_policy.UserAccessPolicy) *Service {
 	return &Service{
-		repo: newRepository(db),
-		db:   db,
+		repo:   newRepository(db),
+		db:     db,
+		policy: policy,
 	}
 }
 
@@ -85,7 +88,15 @@ func (s *Service) RemoveItem(ctx context.Context, itemID, requesterID uint) erro
 	return s.repo.Delete(itemID)
 }
 
-func (s *Service) GetUserBMOL(ctx context.Context, userID uint, mediaType *movie_module.MediaType) ([]BMOLItemResponse, error) {
+func (s *Service) GetUserBMOL(ctx context.Context, viewerID, userID uint, mediaType *movie_module.MediaType) ([]BMOLItemResponse, error) {
+	canView, err := s.policy.CanViewProfileSection(ctx, viewerID, userID, privacy_policy.SectionLibrary)
+	if err != nil {
+		return nil, err
+	}
+	if !canView {
+		return nil, ErrForbidden
+	}
+
 	items, err := s.repo.FindByUser(userID, mediaType)
 	if err != nil {
 		return nil, err
