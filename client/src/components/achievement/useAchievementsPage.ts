@@ -23,7 +23,7 @@ export function useAchievementsPage(userId: Ref<number>) {
     enabled: computed(() => userId.value > 0),
     retry: false,
   })
-  const { all, loading, failed, load } = useUserAchievements(userId)
+  const { all, loading, failed, locked, load } = useUserAchievements(userId)
 
   const notFound = computed(() => profile.isError.value && isAxiosError(profile.error.value) && profile.error.value.response?.status === 404)
   const profileFailed = computed(() => profile.isError.value && !notFound.value)
@@ -64,5 +64,5 @@ export function useAchievementsPage(userId: Ref<number>) {
     void load()
   }, { immediate: true })
 
-  return { isOwner, profile, notFound, profileFailed, all, loading, failed, status, category, search, sort, selected, summary, latest, next, categories, counts, sections, visibleCount, selectedTiers, clearFilters, reload }
+  return { isOwner, profile, notFound, profileFailed, all, loading, failed, locked, status, category, search, sort, selected, summary, latest, next, categories, counts, sections, visibleCount, selectedTiers, clearFilters, reload }
 }

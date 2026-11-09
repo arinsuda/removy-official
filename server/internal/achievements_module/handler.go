@@ -1,10 +1,18 @@
 package achievementsmodule
 
 import (
+	"errors"
 	"strconv"
 
+	"github.com/arinsuda/movie-hub/internal/privacy_policy"
 	"github.com/arinsuda/movie-hub/middleware"
 	"github.com/gofiber/fiber/v3"
+)
+
+const (
+	msgForbidden    = "forbidden"
+	msgUserNotFound = "user not found"
+	msgInternal     = "internal server error"
 )
 
 type handler struct {
@@ -72,7 +80,14 @@ func (h *handler) listUserAchievements(c fiber.Ctx) error {
 
 	res, err := h.svc.ListUserAchievements(c.Context(), uint(userID), requesterID, filter)
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		switch {
+		case errors.Is(err, privacy_policy.ErrForbidden):
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": msgForbidden})
+		case errors.Is(err, privacy_policy.ErrNotFound):
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": msgUserNotFound})
+		default:
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": msgInternal})
+		}
 	}
 	return c.JSON(res)
 }

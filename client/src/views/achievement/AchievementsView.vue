@@ -8,6 +8,8 @@
       </template>
     </AppEmptyState>
 
+    <PrivateSectionLock v-else-if="page.locked.value" :user-id="userId" @reload="page.reload()" />
+
     <AppErrorState v-else-if="page.failed.value || page.profileFailed.value" :title="t('achievements.states.errorTitle')" :description="t('achievements.states.errorBody')" @retry="page.reload()" />
 
     <div v-else class="av__layout">
@@ -38,6 +40,7 @@ import { computed } from "vue"
 import { useI18n } from "vue-i18n"
 import { useRoute } from "vue-router"
 import { Trophy, UserX } from "lucide-vue-next"
+import PrivateSectionLock from "@/components/profile/PrivateSectionLock.vue"
 import AchievementCategoryChips from "@/components/achievement/AchievementCategoryChips.vue"
 import AchievementDetailModal from "@/components/achievement/AchievementDetailModal.vue"
 import AchievementHero from "@/components/achievement/AchievementHero.vue"
