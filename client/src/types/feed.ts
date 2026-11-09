@@ -73,6 +73,8 @@ export interface ActivitySettingsResponse {
   watched_added: boolean;
   achievement_unlocked: boolean;
   user_followed: boolean;
+  watch_log_created: boolean;
+  rewatched: boolean;
 }
 
 export type UpdateActivitySettingsRequest = Partial<ActivitySettingsResponse>;

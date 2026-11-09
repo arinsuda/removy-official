@@ -42,15 +42,19 @@ export const reviewApi = {
   getMediaReviews: (
     mediaType: "movie" | "tv" | "movies",
     mediaId: number,
-    params?: { page?: number; limit?: number; sort?: string },
+    params?: { page?: number; page_size?: number },
   ) => {
     // Convert movies -> movie, tv remains tv/series
     const mt = mediaType === "movies" ? "movie" : mediaType === "tv" ? "tv" : mediaType;
-    return api.get<{ reviews: ReviewResponse[] }>(
+    return api.get<{ reviews: ReviewResponse[]; pagination: { page: number; page_size: number; total: number; has_more: boolean } }>(
       `/reviews/media/${mt}/${mediaId}`,
       { params },
     );
   },
+
+  /** The signed-in user's own review of a title, or null. GET /reviews/media/:type/:id/me */
+  getMyReview: (mediaType: "movie" | "tv", mediaId: number) =>
+    api.get<{ review: ReviewResponse | null }>(`/reviews/media/${mediaType}/${mediaId}/me`),
 
   updateReview: (reviewId: number, data: UpdateReviewRequest) =>
     api.patch<{ review: ReviewResponse }>(

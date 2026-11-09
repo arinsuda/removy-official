@@ -86,12 +86,12 @@ describe("onboarding view", () => {
     expect(push).toHaveBeenCalledWith({ name: "home" })
   })
 
-  it("skips with an empty payload and marks the user as skipped", async () => {
+  it("skips with an empty payload and stamps onboarded_at", async () => {
     const { w, auth } = await mountView()
     await w.get(".bar__skip").trigger("click")
     await flushPromises()
     expect(updateFavoriteGenres).toHaveBeenCalledWith(7, [])
-    expect(auth.user?.favorite_genres).toBe("skip")
+    expect(auth.user?.onboarded_at).toBeTruthy()
     expect(push).toHaveBeenCalledWith({ name: "home" })
   })
 
@@ -100,7 +100,7 @@ describe("onboarding view", () => {
     const { w, auth } = await mountView()
     await w.get(".bar__skip").trigger("click")
     await flushPromises()
-    expect(auth.user?.favorite_genres).toBe("skip")
+    expect(auth.user?.onboarded_at).toBeTruthy()
     expect(push).toHaveBeenCalledWith({ name: "home" })
   })
 

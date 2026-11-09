@@ -62,7 +62,7 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   const needsOnboarding = computed(
-    () => isLoggedIn.value && !user.value?.favorite_genres,
+    () => isLoggedIn.value && !user.value?.favorite_genres && !user.value?.onboarded_at,
   )
 
   async function register(data: RegisterRequest) {
@@ -103,11 +103,16 @@ export const useAuthStore = defineStore("auth", () => {
     try {
       await authApi.logout()
     } finally {
-      _generation++
-      clearUser()
-      isInitialized.value = true
-      initError.value = null
+      endSession()
     }
+  }
+
+  /** Local teardown of the session (no API call): used by logout and after the account is deleted. */
+  function endSession() {
+    _generation++
+    clearUser()
+    isInitialized.value = true
+    initError.value = null
   }
 
   // The session a refresh started with is still the stored one. With no refresh token
@@ -277,6 +282,7 @@ export const useAuthStore = defineStore("auth", () => {
     register,
     applySession,
     logout,
+    endSession,
     fetchMe,
     initialize,
   }

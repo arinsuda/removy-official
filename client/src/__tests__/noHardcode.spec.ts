@@ -22,6 +22,7 @@ export const ZERO_DIRS = [
   "components/layout",
   "components/onboarding",
   "components/home",
+  "components/lists",
 ]
 
 describe("scanner", () => {

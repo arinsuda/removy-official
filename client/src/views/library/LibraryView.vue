@@ -45,8 +45,11 @@
           :likes="data.likes.value"
           :reviews="data.reviews.value"
           :reload-key="reloadKey"
+          :custom-list-id="customListId"
           :list-to="listTo"
+          :custom-list-to="customListTo"
           @open="openList"
+          @open-custom="openCustomList"
           @add="showAdd = true"
         />
         <BmolSection v-else :user-id="userId" />
@@ -88,7 +91,7 @@ const userId = computed(() => {
 const isOwner = computed(() => auth.user?.id === userId.value)
 
 const data = useLibraryData(userId)
-const { tab, list, setTab, openList, listTo, tabTo } = useLibraryRoute()
+const { tab, list, customListId, setTab, openList, openCustomList, listTo, customListTo, tabTo } = useLibraryRoute()
 
 const tabsRef = useTemplateRef<{ tabId: (key: LibraryTab) => string; panelId: (key: LibraryTab) => string }>("tabsRef")
 const tabId = computed(() => tabsRef.value?.tabId(tab.value))

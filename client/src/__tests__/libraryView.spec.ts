@@ -32,6 +32,7 @@ vi.mock("@/api/endpoints/social", async (orig) => ({
   followApi: { getFollowStatus: vi.fn().mockResolvedValue({ data: {} }), follow: vi.fn(), unfollow: vi.fn() },
 }))
 vi.mock("@/api/endpoints/media", () => ({ mediaApi: { getLikeByUserId: m.likes, unlikeMedia: vi.fn() } }))
+vi.mock("@/api/endpoints/list", () => ({ listApi: { getOwn: vi.fn().mockResolvedValue({ data: { lists: [] } }), getForUser: vi.fn().mockResolvedValue({ data: { lists: [] } }) } }))
 vi.mock("@/api/endpoints/watchLog", () => ({ watchLogApi: { getMyWatchLogs: vi.fn().mockResolvedValue({ data: {} }) } }))
 vi.mock("@/views/library/components/bmol/BmolSection.vue", () => ({ default: { render: () => h("div", { "data-testid": "bmol" }) } }))
 

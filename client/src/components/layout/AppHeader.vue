@@ -79,6 +79,7 @@ import { Bell, Menu } from "lucide-vue-next"
 import { useAuthStore } from "@/stores/auth"
 import { useAdminStore } from "@/stores/admin"
 import { useNotificationStore } from "@/stores/notification"
+import { useSessionReset } from "@/composables/useSessionReset"
 import { i18n } from "@/i18n"
 import NotificationPanel from "@/components/common/NotificationPanel.vue"
 import HeaderSearch from "@/components/search/HeaderSearch.vue"
@@ -92,6 +93,7 @@ import MobileNavSheet from "./MobileNavSheet.vue"
 import { formatBadge } from "./navItems"
 
 const { t } = useI18n()
+const resetSession = useSessionReset()
 const router = useRouter()
 const authStore = useAuthStore()
 const adminStore = useAdminStore()
@@ -136,8 +138,7 @@ function toggleMobileMenu() {
 async function handleLogout() {
   userMenuOpen.value = false
   mobileMenuOpen.value = false
-  adminStore.reset()
-  notificationStore.reset() // closes the socket and clears the previous user's notifications
+  resetSession()
   await authStore.logout()
   router.push({ name: "login" })
 }

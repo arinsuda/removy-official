@@ -39,7 +39,7 @@
   import AppModal from "@/components/ui/AppModal.vue"
   import type { ListType } from "@/types"
 
-  type ConfirmModalType = ListType | "email_change" | "unfollow" | "bmol_delete" | "unlink_account"
+  type ConfirmModalType = ListType | "email_change" | "unfollow" | "bmol_delete" | "custom_list_delete" | "unlink_account"
 
   const props = defineProps<{
     modelValue: boolean
@@ -68,6 +68,7 @@
     email_change: { icon: Mail, tone: "info", variant: "primary" },
     unfollow: { icon: UserMinus, tone: "danger", variant: "danger" },
     bmol_delete: { icon: Trash2, tone: "danger", variant: "danger" },
+    custom_list_delete: { icon: Trash2, tone: "danger", variant: "danger" },
     unlink_account: { icon: Unlink, tone: "danger", variant: "danger" },
   }
 

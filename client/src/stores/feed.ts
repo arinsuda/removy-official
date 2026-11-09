@@ -193,7 +193,7 @@ export const useFeedStore = defineStore("feed", () => {
       settings.value = res.data;
     } catch (err) {
       console.error("fetchSettings failed:", err);
-      settingsError.value = "โหลดการตั้งค่าไม่สำเร็จ";
+      settingsError.value = "load_failed";
     } finally {
       settingsLoading.value = false;
     }

@@ -22,6 +22,7 @@
           <SettingsProfileSection :user="user" :form="form" :avatar-preview="avatarPreview" @avatar="setAvatar" />
           <SettingsPreferencesSection v-model="form.favorite_genres" />
           <SettingsPrivacySection v-model="form.is_private" />
+          <SettingsActivitySection />
 
           <section id="security" class="settings__group" aria-labelledby="security-heading">
             <h2 id="security-heading" class="settings__group-title">{{ t("settings.sections.security") }}</h2>
@@ -30,6 +31,7 @@
           </section>
 
           <SettingsConnectionsSection />
+          <SettingsDangerSection :user="user" />
 
           <SettingsSaveBar :dirty="isDirty" :saving="saving" :error="error" @save="onSave" @discard="reset" />
         </div>
@@ -57,9 +59,11 @@ import SettingsEmailSection from "@/components/settings/SettingsEmailSection.vue
 import SettingsPasswordSection from "@/components/settings/SettingsPasswordSection.vue"
 import SettingsConnectionsSection from "@/components/settings/SettingsConnectionsSection.vue"
 import { RETURN_FLAG } from "@/components/settings/connectionsReturn"
+import SettingsActivitySection from "@/components/settings/SettingsActivitySection.vue"
+import SettingsDangerSection from "@/components/settings/SettingsDangerSection.vue"
 import SettingsSaveBar from "@/components/settings/SettingsSaveBar.vue"
 
-const SECTIONS = ["profile", "preferences", "privacy", "security", "connections"] as const
+const SECTIONS = ["profile", "preferences", "privacy", "activity", "security", "connections", "danger"] as const
 type SectionId = (typeof SECTIONS)[number]
 const sections = SECTIONS
 

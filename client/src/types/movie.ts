@@ -146,6 +146,8 @@ export interface MediaSummary {
   genres: Genre[] 
   vote_average: number
   ratings?: MediaRatings
+  /** Release or first-air date, YYYY-MM-DD; empty when TMDB has none. */
+  release_date?: string
   created_at: string
 }
 

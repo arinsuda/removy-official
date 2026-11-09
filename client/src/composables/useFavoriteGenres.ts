@@ -3,7 +3,7 @@ import { useAuthStore } from "@/stores/auth"
 
 /**
  * `favorite_genres` is stored as a JSON array string, with legacy values
- * "null" / "skip" / a plain comma list. Exposes whether the user picked any
+ * "null" / a plain comma list. Exposes whether the user picked any
  * and the comma-joined id list the recommended endpoint expects.
  */
 export function useFavoriteGenres() {
@@ -11,7 +11,7 @@ export function useFavoriteGenres() {
 
   const raw = computed(() => {
     const g = authStore.user?.favorite_genres
-    return !g || g === "null" || g === "skip" ? "" : g
+    return !g || g === "null" ? "" : g
   })
 
   const hasGenres = computed(() => {
