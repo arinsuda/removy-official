@@ -119,8 +119,6 @@
 
       <BmolSection
         v-else-if="activeTab === 'bmol'"
-        v-model:bmolItems="bmolItems"
-        :is-owner="isOwner"
         :user-id="userId"
       />
 
@@ -143,12 +141,11 @@ import SkeletonProfile from "@/components/ui/skeleton/SkeletonProfile.vue"
 import { ref, computed, onMounted, watch } from "vue"
 import { useRoute } from "vue-router"
 import { useAuthStore } from "@/stores/auth"
-import { libraryApi, reviewApi, userApi, bmolApi } from "@/api/api"
+import { libraryApi, reviewApi, userApi } from "@/api/api"
 import type { UserProfile } from "@/types/user"
 import type {
   LibraryItemResponse,
   ReviewResponse,
-  BMOLItemResponse,
   LibraryTab,
   LibraryListTab
 } from "@/types"
@@ -167,6 +164,7 @@ import {
 import DashboardSection from "./components/DashboardSection.vue"
 import ListsSection from "./components/ListsSection.vue"
 import BmolSection from "./components/bmol/BmolSection.vue"
+import { useBmol } from "@/components/bmol/useBmol"
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -184,7 +182,8 @@ const watchlistItems = ref<LibraryItemResponse[]>([])
 const watchedItems = ref<LibraryItemResponse[]>([])
 const likedItems = ref<LibraryItemResponse[]>([])
 const userReviews = ref<ReviewResponse[]>([])
-const bmolItems = ref<BMOLItemResponse[]>([])
+// Same query as the BMOL tab, so the count follows every add/remove.
+const { items: bmolItems } = useBmol(userId)
 
 const isOwner = computed(() => auth.user?.id === userId.value)
 
@@ -209,19 +208,17 @@ const loadData = async () => {
     profileUser.value = profileRes.data.user
 
     // Fetch lists in parallel
-    const [watchlistRes, watchedRes, likedRes, reviewsRes, bmolRes] = await Promise.all([
+    const [watchlistRes, watchedRes, likedRes, reviewsRes] = await Promise.all([
       libraryApi.getVisibleUserLibrary(id, { list_type: "watchlist" }),
       libraryApi.getVisibleUserLibrary(id, { list_type: "watched" }),
       libraryApi.getVisibleUserLibrary(id, { list_type: "likes" }),
-      reviewApi.getUserReviews(id),
-      bmolApi.getUserBMOL(id)
+      reviewApi.getUserReviews(id)
     ])
 
     watchlistItems.value = watchlistRes.data.items
     watchedItems.value = watchedRes.data.items
     likedItems.value = likedRes.data.items
     userReviews.value = reviewsRes.data.reviews
-    bmolItems.value = bmolRes.data.items
   } catch (err) {
     console.error("Failed to load library data:", err)
   } finally {

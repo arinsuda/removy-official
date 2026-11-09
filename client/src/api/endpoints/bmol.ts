@@ -17,10 +17,10 @@ export const bmolApi = {
     api.get<{ items: BMOLItemResponse[] }>(`/bmol/user/${userId}`, { params }),
 
   /**
-   * อัปเดตอันดับไอเทมใน BMOL
+   * อัปเดตอันดับและ/หรือโน้ตของไอเทมใน BMOL (ต้องส่งอย่างน้อยหนึ่งฟิลด์)
    * PUT /api/bmol/:itemId
    */
-  updateItem: (itemId: number, data: { rank: number }) =>
+  updateItem: (itemId: number, data: { rank?: number; note?: string }) =>
     api.put<{ item: BMOLItemResponse }>(`/bmol/${itemId}`, data),
 
   /**
