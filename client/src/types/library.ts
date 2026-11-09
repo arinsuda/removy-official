@@ -1,9 +1,4 @@
-export type LibraryTab =
-  | "dashboard"
-  | "bmol"
-  | "watchlist"
-  | "watched"
-  | "likes"
-  | "reviews"
+export type LibraryTab = "dashboard" | "lists" | "bmol"
 
-export type LibraryListTab = Exclude<LibraryTab, "dashboard" | "bmol">
+/** The lists a library holds. The server has no custom lists, so this set is fixed. */
+export type LibraryListKey = "watchlist" | "watched" | "likes" | "reviews"

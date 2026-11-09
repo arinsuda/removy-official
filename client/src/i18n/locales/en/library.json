@@ -1,47 +1,111 @@
 {
-  "title": "Personal Library",
-  "subtitle": "A collection of movies and series you saved in each list state",
+  "title": {
+    "own": "My library",
+    "other": "{name}'s library"
+  },
+  "subtitle": {
+    "own": "Everything you watch, save and love, in one place.",
+    "other": "What {name} watches, saves and loves."
+  },
   "tabs": {
-    "all": "All",
-    "watched": "Watched",
-    "watchlist": "Watchlist",
-    "likes": "Favorites",
-    "reviews": "Reviews"
+    "label": "Library sections",
+    "dashboard": "Overview",
+    "lists": "Lists",
+    "bmol": "Best of Life"
   },
-  "empty": "No movies or TV series found in this list",
-  "empty_reviews": "This user hasn't written any reviews yet",
+  "levelChip": "Level {level}",
+  "chips": {
+    "label": "List sizes"
+  },
+  "lists": {
+    "names": {
+      "watchlist": "Watchlist",
+      "watched": "Watched",
+      "likes": "Favorites",
+      "reviews": "Reviews"
+    },
+    "descriptions": {
+      "watchlist": "Titles you plan to watch",
+      "watched": "Titles you have finished",
+      "likes": "Titles you marked as favorites",
+      "reviews": "Titles you rated and reviewed"
+    },
+    "count": "No titles | {n} title | {n} titles",
+    "updated": "Updated {date}",
+    "noActivity": "Nothing here yet",
+    "open": "Open",
+    "back": "All lists",
+    "addTitles": "Add titles"
+  },
   "dashboard": {
-    "title": "Media Stats Dashboard",
-    "totalReviews": "Total Reviews",
-    "reviewsThisMonth": "Reviews This Month",
-    "vsLastMonth": "vs Last Month",
-    "moreThanLastMonth": "{count} more than last month",
-    "lessThanLastMonth": "{count} less than last month",
-    "equalLastMonth": "Same as last month",
-    "totalWatched": "Total Watched",
-    "watchlist": "Watchlist Items",
-    "favorites": "Favorites",
-    "averageRating": "Avg Rating Given",
-    "topGenre": "Top Favorite Genre",
-    "noWatchedData": "No watched media yet"
-  },
-  "filters": {
-    "search": "Search media...",
-    "mediaType": "Media Type",
-    "genre": "Genre",
-    "sortBy": "Sort By",
-    "allMedia": "All Media",
-    "movies": "Movies",
-    "tvSeries": "TV Series",
-    "allGenres": "All Genres",
-    "sort": {
-      "newest": "Date Saved (Newest)",
-      "oldest": "Date Saved (Oldest)",
-      "ratingHigh": "My Rating (High-Low)",
-      "ratingLow": "My Rating (Low-High)",
-      "titleAZ": "Title (A - Z)",
-      "titleZA": "Title (Z - A)"
+    "stats": {
+      "watched": "Watched",
+      "watchlist": "Watchlist",
+      "likes": "Favorites",
+      "reviews": "Reviews",
+      "average": "Average rating",
+      "topGenre": "Top genre"
+    },
+    "averageOf": "{value} out of {max}",
+    "noData": "No data yet",
+    "trend": {
+      "more": "{count} more than last month",
+      "less": "{count} fewer than last month",
+      "same": "Same as last month"
+    },
+    "upNext": {
+      "title": "Up next",
+      "seeAll": "See watchlist",
+      "empty": "Your watchlist is empty. Save a title to see it here."
+    },
+    "recent": {
+      "title": "Recently watched",
+      "seeAll": "See watched",
+      "empty": "Nothing watched yet."
+    },
+    "genres": {
+      "title": "Top genres",
+      "count": "{n} titles",
+      "empty": "Mark titles as watched to see your genres."
+    },
+    "ratings": {
+      "title": "Your ratings",
+      "bar": "{rating} stars: {count}",
+      "empty": "Rate a title to see how you score."
+    },
+    "actions": {
+      "title": "Quick actions",
+      "browseMovies": "Find a movie",
+      "browseSeries": "Find a series",
+      "add": "Add to watchlist",
+      "bmol": "Build Best of Life"
+    },
+    "onboarding": {
+      "title": "Start your library",
+      "body": "Save titles to your watchlist, mark what you have watched and rate your favorites. Your stats appear here.",
+      "cta": "Browse movies"
     }
+  },
+  "states": {
+    "errorTitle": "Could not load this library",
+    "errorBody": "Check your connection and try again.",
+    "partialTitle": "Some lists could not be loaded",
+    "partialBody": "The numbers below may be incomplete."
+  },
+  "add": {
+    "title": "Add to watchlist",
+    "searchLabel": "Search by title",
+    "searchPlaceholder": "Type a movie or series title...",
+    "hint": "Search for a title to save it.",
+    "noResults": "No results found.",
+    "loadFailed": "Could not search. Try again.",
+    "action": "Add {title}",
+    "added": "Saved",
+    "inList": "Already saved",
+    "typeMovie": "Movie",
+    "typeSeries": "Series",
+    "toastAdded": "\"{title}\" added to your watchlist.",
+    "toastFailed": "Could not add \"{title}\"."
   },
   "bmol": {
     "title": "Best of Life",
