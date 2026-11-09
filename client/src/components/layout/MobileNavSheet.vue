@@ -56,6 +56,9 @@
                 <RouterLink :to="{ name: 'feed' }" class="mns-row" @click="close">
                   <Rss :size="20" aria-hidden="true" />{{ t("navigation.feed") }}
                 </RouterLink>
+                <RouterLink to="/settings" class="mns-row" @click="close">
+                  <Settings :size="20" aria-hidden="true" />{{ t("navigation.settings") }}
+                </RouterLink>
                 <button v-if="isAdmin" type="button" class="mns-row" @click="emitAndClose('enterAdmin')">
                   <Shield :size="20" aria-hidden="true" />{{ t("navigation.adminMode") }}
                 </button>
@@ -93,7 +96,7 @@
 import { computed, onBeforeUnmount, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 import { useI18n } from "vue-i18n"
-import { BookMarked, ExternalLink, LogOut, Rss, Shield, Trophy, X } from "lucide-vue-next"
+import { BookMarked, ExternalLink, LogOut, Rss, Settings, Shield, Trophy, X } from "lucide-vue-next"
 import AppAvatar from "@/components/ui/AppAvatar.vue"
 import AppButton from "@/components/ui/AppButton.vue"
 import LanguageToggle from "./LanguageToggle.vue"

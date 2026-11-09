@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { nextTick, type Component } from "vue"
 import { flushPromises, mount, type VueWrapper } from "@vue/test-utils"
-import { createPinia } from "pinia"
+import { createPinia, setActivePinia } from "pinia"
+import { useAuthStore } from "@/stores/auth"
 import UserLikes from "@/components/profile/UserLikes.vue"
 import UserWatched from "@/components/profile/UserWatched.vue"
 import UserWatchlist from "@/components/profile/UserWatchlist.vue"
@@ -64,12 +65,26 @@ const cases: [string, Component, string][] = [
 ]
 
 describe.each(cases)("%s remove confirm", (_name, comp, listType) => {
-  it("opens exactly one dialog for one remove click", async () => {
-    const wrapper = mount(comp, {
+  function mountAs(viewerId: number) {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useAuthStore().user = { id: viewerId } as never
+    return mount(comp, {
       props: { userId: 1, listType },
-      global: { plugins: [i18n, createPinia()] },
+      global: { plugins: [i18n, pinia] },
       attachTo: document.body,
     })
+  }
+
+  it("hides remove buttons from visitors", async () => {
+    const wrapper = mountAs(2)
+    wrappers.push(wrapper)
+    await flushPromises()
+    expect(wrapper.findAll(".rm-btn").length).toBe(0)
+  })
+
+  it("opens exactly one dialog for one remove click", async () => {
+    const wrapper = mountAs(1)
     wrappers.push(wrapper)
     await flushPromises()
 

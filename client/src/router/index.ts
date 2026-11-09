@@ -146,6 +146,12 @@ const router = createRouter({
           meta: { titleKey: "navigation.profile" }
         },
         {
+          path: "settings",
+          name: "settings",
+          component: () => import("@/views/settings/SettingsView.vue"),
+          meta: { requiresAuth: true, titleKey: "navigation.settings" }
+        },
+        {
           path: "users/:userId/library",
           name: "user-library",
           component: () => import("@/views/library/LibraryView.vue"),

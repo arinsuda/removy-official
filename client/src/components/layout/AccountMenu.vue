@@ -89,7 +89,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId } from "vue"
 import { useI18n } from "vue-i18n"
-import { BookMarked, ChevronDown, ExternalLink, LogOut, Rss, Shield, Trophy, User as UserIcon } from "lucide-vue-next"
+import { BookMarked, ChevronDown, ExternalLink, LogOut, Rss, Settings, Shield, Trophy, User as UserIcon } from "lucide-vue-next"
 import AppAvatar from "@/components/ui/AppAvatar.vue"
 import type { AuthUser } from "@/types/auth"
 
@@ -109,6 +109,7 @@ const spaceItems = computed(() => [
   { key: "profile", to: `/users/${props.user.id}`, icon: UserIcon, title: "navigation.profile", hint: "navigation.header.profileHint" },
   { key: "library", to: `/users/${props.user.id}/library`, icon: BookMarked, title: "navigation.myLibrary", hint: "navigation.header.libraryHint" },
   { key: "achievements", to: `/users/${props.user.id}/achievements`, icon: Trophy, title: "navigation.achievement", hint: "navigation.header.achievementHint" },
+  { key: "settings", to: "/settings", icon: Settings, title: "navigation.settings", hint: "navigation.header.settingsHint" },
 ])
 
 const items = () => Array.from(root.value?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])

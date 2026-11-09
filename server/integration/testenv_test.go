@@ -20,10 +20,12 @@ import (
 
 	"github.com/arinsuda/movie-hub/config"
 	"github.com/arinsuda/movie-hub/internal/auth_module"
+	"github.com/arinsuda/movie-hub/internal/bmol_module"
 	"github.com/arinsuda/movie-hub/internal/link_module"
 	"github.com/arinsuda/movie-hub/internal/mailer"
 	"github.com/arinsuda/movie-hub/internal/privacy_policy"
 	"github.com/arinsuda/movie-hub/internal/user_module"
+	"github.com/arinsuda/movie-hub/internal/user_stats_module"
 	"github.com/arinsuda/movie-hub/middleware"
 	"github.com/gofiber/fiber/v3"
 	"gorm.io/gorm"
@@ -254,6 +256,8 @@ func newEnv(t *testing.T) *env {
 		user_module.NewBrevoPasswordResetMailer(e.cfg.Brevo), privacy_policy.NewUserAccessPolicy(db), e.cfg.Brevo)
 	e.auth.SetUserService(e.users)
 	e.users.SetSessionReissuer(e.auth)
+	bmol_module.RegisterRoutes(protected, db, privacy_policy.NewUserAccessPolicy(db))
+	user_stats_module.RegisterRoutes(protected, db, privacy_policy.NewUserAccessPolicy(db))
 	return e
 }
 

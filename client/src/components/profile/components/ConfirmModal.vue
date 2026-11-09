@@ -34,12 +34,12 @@
 <script setup lang="ts">
   import { computed, useId } from "vue"
   import { useI18n } from "vue-i18n"
-  import { Heart, Bookmark, Eye, Mail, UserMinus, Trash2 } from "lucide-vue-next"
+  import { Heart, Bookmark, Eye, Mail, UserMinus, Trash2, Unlink } from "lucide-vue-next"
   import AppButton from "@/components/ui/AppButton.vue"
   import AppModal from "@/components/ui/AppModal.vue"
   import type { ListType } from "@/types"
 
-  type ConfirmModalType = ListType | "email_change" | "unfollow" | "bmol_delete"
+  type ConfirmModalType = ListType | "email_change" | "unfollow" | "bmol_delete" | "unlink_account"
 
   const props = defineProps<{
     modelValue: boolean
@@ -68,6 +68,7 @@
     email_change: { icon: Mail, tone: "info", variant: "primary" },
     unfollow: { icon: UserMinus, tone: "danger", variant: "danger" },
     bmol_delete: { icon: Trash2, tone: "danger", variant: "danger" },
+    unlink_account: { icon: Unlink, tone: "danger", variant: "danger" },
   }
 
   const config = computed(() => configs[props.listType])

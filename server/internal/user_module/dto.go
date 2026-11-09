@@ -31,6 +31,9 @@ type UpdateProfileRequest struct {
 	GenderOther    *string    `json:"gender_other"`
 	FavoriteGenres *string    `json:"favorite_genres"`
 	IsPrivate      *bool      `json:"is_private"`
+
+	// ClearDateOfBirth is set when date_of_birth is sent empty.
+	ClearDateOfBirth bool `json:"-"`
 }
 
 type UpdateFavoriteGenresRequest struct {

@@ -4,22 +4,40 @@ import (
 	"errors"
 	"strconv"
 
+	"github.com/arinsuda/movie-hub/internal/privacy_policy"
+	mw "github.com/arinsuda/movie-hub/middleware"
 	"github.com/gofiber/fiber/v3"
 )
 
 type Handler struct {
-	svc *Service
+	svc    *Service
+	policy privacy_policy.UserAccessPolicy
 }
 
-func NewHandler(svc *Service) *Handler {
-	return &Handler{svc: svc}
+func NewHandler(svc *Service, policy privacy_policy.UserAccessPolicy) *Handler {
+	return &Handler{svc: svc, policy: policy}
 }
 
-// GetUserStats GET /users/:userId/stats — public, anyone can view profile stats.
+// GetUserStats GET /users/:userId/stats — library counts follow the library privacy rule.
 func (h *Handler) GetUserStats(c fiber.Ctx) error {
 	userID, err := strconv.Atoi(c.Params("userId"))
 	if err != nil || userID <= 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid user id"})
+	}
+
+	claims := mw.GetClaims(c)
+	if claims == nil || claims.UserID == 0 {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	}
+	canView, err := h.policy.CanViewProfileSection(c.Context(), claims.UserID, uint(userID), privacy_policy.SectionLibrary)
+	if err != nil {
+		if errors.Is(err, privacy_policy.ErrNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "user not found"})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal server error"})
+	}
+	if !canView {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "forbidden"})
 	}
 
 	stats, err := h.svc.GetUserStats(uint(userID))

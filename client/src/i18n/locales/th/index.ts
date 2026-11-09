@@ -5,6 +5,7 @@ import home from "./home.json";
 import media from "./media.json";
 import reviews from "./reviews.json";
 import profile from "./profile.json";
+import settings from "./settings.json";
 import feed from "./feed.json";
 import notifications from "./notifications.json";
 import achievements from "./achievements.json";
@@ -31,6 +32,7 @@ export default {
   media,
   reviews,
   profile,
+  settings,
   feed,
   notifications,
   achievements,

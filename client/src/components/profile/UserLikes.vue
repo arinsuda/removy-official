@@ -8,6 +8,8 @@
 
     <SkeletonGrid v-if="loading" :count="8" min-width="130px" />
 
+    <AppErrorState v-else-if="loadError" :title="$t('profile.states.sectionError')" @retry="load" />
+
     <div v-else-if="items.length === 0" class="state-empty">
       <Heart :size="28" :stroke-width="1.2" />
       <p>No favorites yet</p>
@@ -39,6 +41,7 @@
           <span class="cat-badge">{{ item.category }}</span>
 
           <button
+            v-if="isOwner"
             class="rm-btn"
             :aria-label="`Remove ${item.title}`"
             @click.stop="handleRemove(item.id)"
@@ -80,10 +83,12 @@
 </template>
 
 <script setup lang="ts">
+import AppErrorState from "@/components/ui/AppErrorState.vue"
 import MediaRating from "@/components/movie/MediaRating.vue"
 import type { MediaRatings } from "@/types/movie"
 import SkeletonGrid from "@/components/ui/skeleton/SkeletonGrid.vue"
-  import { onMounted, ref } from "vue"
+  import { computed, onMounted, ref } from "vue"
+  import { useAuthStore } from "@/stores/auth"
   import { Heart, Film, X, Clock } from "lucide-vue-next"
   import { mediaApi } from "@/api/endpoints/media"
   import { useRouter } from "vue-router"
@@ -99,7 +104,11 @@ import SkeletonGrid from "@/components/ui/skeleton/SkeletonGrid.vue"
     listType: ListType
   }>()
 
+  const auth = useAuthStore()
+  const isOwner = computed(() => auth.user?.id === props.userId)
+
   const loading = ref(false)
+  const loadError = ref(false)
 
   const showModal = ref(false)
   const pendingId = ref<number | null>(null)
@@ -119,9 +128,10 @@ import SkeletonGrid from "@/components/ui/skeleton/SkeletonGrid.vue"
 
   const items = ref<MappedMedia[]>([])
 
-  onMounted(async () => {
+  async function load() {
     try {
       loading.value = true
+      loadError.value = false
       const response = await mediaApi.getLikeByUserId(props.userId)
 
       items.value = response.data.likes.map((item: LikeItem) => ({
@@ -138,10 +148,13 @@ import SkeletonGrid from "@/components/ui/skeleton/SkeletonGrid.vue"
       }))
     } catch (err) {
       console.error("Fetch favorites failed:", err)
+      loadError.value = true
     } finally {
       loading.value = false
     }
-  })
+  }
+
+  onMounted(load)
 
   function goToDetail(mediaId: number, mediaType: string) {
     router.push({

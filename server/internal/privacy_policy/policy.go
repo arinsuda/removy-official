@@ -2,6 +2,7 @@ package privacy_policy
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 
 	"gorm.io/gorm"
@@ -9,6 +10,7 @@ import (
 
 var (
 	ErrForbidden = errors.New("forbidden")
+	ErrNotFound  = errors.New("user not found")
 )
 
 type UserAccessPolicy interface {
@@ -30,10 +32,10 @@ func (p *userAccessPolicy) CanViewProfileSection(ctx context.Context, viewerID, 
 	}
 
 	var isPrivate bool
-	err := p.db.WithContext(ctx).Table("users").Select("is_private").Where("id = ? AND is_active = true", ownerID).Row().Scan(&isPrivate)
+	err := p.db.WithContext(ctx).Table("users").Select("is_private").Where("id = ? AND is_active = true AND deleted_at IS NULL", ownerID).Row().Scan(&isPrivate)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return false, nil
+		if errors.Is(err, gorm.ErrRecordNotFound) || errors.Is(err, sql.ErrNoRows) {
+			return false, ErrNotFound
 		}
 		return false, err
 	}

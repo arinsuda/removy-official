@@ -6,7 +6,21 @@ import type {
   VerifyEmailChangeRequest,
 } from "@/types"
 
+export interface UserStats {
+  user_id: number
+  level: number
+  current_exp: number
+  review_count: number
+  like_count: number
+  watchlist_count: number
+  watched_count: number
+  follower_count: number
+  following_count: number
+}
+
 export const userApi = {
+  getStats: (userId: number) => api.get<{ stats: UserStats }>(`/users/${userId}/stats`),
+
   me: (userId: number) => api.get<{ user: UserProfile }>(`/users/${userId}`),
 
   getProfile: (userId: number) =>

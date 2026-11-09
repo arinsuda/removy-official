@@ -1,5 +1,11 @@
 <template>
-  <div class="bmol-root">
+  <AppEmptyState
+    v-if="forbidden"
+    :icon="Lock"
+    :title="$t('profile.states.lockedTitle')"
+    :description="$t('profile.states.lockedBody')"
+  />
+  <div v-else class="bmol-root">
     <!-- BREADCRUMB HEADER (When viewing a specific Rank's detail list) -->
     <div v-if="selectedRankDetail !== null" class="bmol-breadcrumb-card">
       <div class="breadcrumb-left">
@@ -491,13 +497,15 @@
 <script setup lang="ts">
 import MediaRating from "@/components/movie/MediaRating.vue"
 import AppSpinner from "@/components/ui/AppSpinner.vue"
+import AppEmptyState from "@/components/ui/AppEmptyState.vue"
 import SkeletonGrid from "@/components/ui/skeleton/SkeletonGrid.vue"
 import { ref, computed, onMounted, watch, onBeforeUnmount } from "vue"
 import { useRouter } from "vue-router"
+import { isAxiosError } from "axios"
 import { useAuthStore } from "@/stores/auth"
 import { bmolApi, movieApi } from "@/api/api"
 import type { BMOLItemResponse, Movie, TVSeries } from "@/types"
-import { Search, Film, Trophy, ChevronLeft, Sparkles, Share2 } from "lucide-vue-next"
+import { Search, Film, Trophy, ChevronLeft, Sparkles, Share2, Lock } from "lucide-vue-next"
 import ConfirmModal from "@/components/profile/components/ConfirmModal.vue"
 import BolShareModal from "@/components/share/BolShareModal.vue"
 
@@ -516,6 +524,7 @@ function goToDetail(id: number, type: string) {
 const TMDB_IMG = "https://image.tmdb.org/t/p/w342"
 
 const loading = ref(false)
+const forbidden = ref(false)
 const subTab = ref<"movie" | "tv">("movie")
 const bmolItems = ref<BMOLItemResponse[]>([])
 
@@ -958,7 +967,9 @@ onMounted(async () => {
     const res = await bmolApi.getUserBMOL(props.userId)
     bmolItems.value = res.data.items
   } catch (err) {
-    console.error("Failed to fetch BMOL items:", err)
+    // 403: the owner's account is private and the viewer is not an accepted follower.
+    if (isAxiosError(err) && err.response?.status === 403) forbidden.value = true
+    else console.error("Failed to fetch BMOL items:", err)
   } finally {
     loading.value = false
   }

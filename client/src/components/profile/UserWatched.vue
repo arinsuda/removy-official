@@ -8,6 +8,8 @@
 
     <SkeletonGrid v-if="loading" :count="8" min-width="130px" />
 
+    <AppErrorState v-else-if="loadError" :title="$t('profile.states.sectionError')" @retry="load" />
+
     <div v-else-if="watchlist.length === 0" class="state-empty">
       <Bookmark :size="28" :stroke-width="1.2" />
       <p>Your watchlist is empty</p>
@@ -39,6 +41,7 @@
           <span class="cat-badge">{{ item.category }}</span>
 
           <button
+            v-if="isOwner"
             class="rm-btn"
             :aria-label="`Remove ${item.title}`"
             @click.stop="handleRemove(item.id)"
@@ -121,6 +124,7 @@
 </template>
 
 <script setup lang="ts">
+import AppErrorState from "@/components/ui/AppErrorState.vue"
 import MediaRating from "@/components/movie/MediaRating.vue"
 import type { MediaRatings } from "@/types/movie"
 import SkeletonGrid from "@/components/ui/skeleton/SkeletonGrid.vue"
@@ -147,6 +151,7 @@ import SkeletonGrid from "@/components/ui/skeleton/SkeletonGrid.vue"
   const isOwner = computed(() => auth.user?.id === props.userId)
 
   const loading = ref(false)
+  const loadError = ref(false)
   const TMDB_IMG = "https://image.tmdb.org/t/p/w342"
 
   const showModal = ref(false)
@@ -232,9 +237,10 @@ import SkeletonGrid from "@/components/ui/skeleton/SkeletonGrid.vue"
     }
   }
 
-  onMounted(async () => {
+  async function load() {
     try {
       loading.value = true
+      loadError.value = false
       const response = await libraryApi.getVisibleUserLibrary(props.userId, {
         list_type: "watched",
       })
@@ -269,10 +275,13 @@ import SkeletonGrid from "@/components/ui/skeleton/SkeletonGrid.vue"
       }
     } catch (err) {
       console.error("Fetch failed:", err)
+      loadError.value = true
     } finally {
       loading.value = false
     }
-  })
+  }
+
+  onMounted(load)
 
   function goToDetail(mediaId: number, mediaType: string) {
     router.push({
