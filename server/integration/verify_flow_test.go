@@ -72,8 +72,11 @@ func TestT4b_WrongPasswordChangesNothingAndKeepsToken(t *testing.T) {
 	if verified || pw == nil || ver != 0 || e.count(`SELECT count(*) FROM user_identities WHERE user_id = ?`, uid) != 1 {
 		t.Fatalf("a wrong password changed the account: verified=%v pw=%v ver=%d", verified, pw != nil, ver)
 	}
-	if e.count(`SELECT count(*) FROM email_verifications WHERE token = ?`, tok) != 1 {
+	if e.count(`SELECT count(*) FROM email_verifications WHERE token = ?`, auth_module.HashToken(tok)) != 1 {
 		t.Fatal("a wrong password consumed the token")
+	}
+	if e.count(`SELECT count(*) FROM email_verifications WHERE token = ?`, tok) != 0 {
+		t.Fatal("the raw token is stored in the database")
 	}
 	// neither password nor skip: refused without touching anything
 	if code, body = e.do("POST", "/api/auth/verify-email", map[string]any{"token": tok}, ""); code != 400 || body["code"] != "PASSWORD_OR_SKIP_REQUIRED" {

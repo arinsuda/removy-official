@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/arinsuda/movie-hub/database"
+	"github.com/arinsuda/movie-hub/internal/auth_module"
 	"github.com/arinsuda/movie-hub/internal/user_module"
 	"gorm.io/gorm"
 )
@@ -56,7 +57,7 @@ func TestAutoMigrateDoesNotAddSecurityColumns(t *testing.T) {
 
 // legacyVersions are the migrations that add the new columns/indexes; forgetting them and
 // dropping the columns turns a freshly migrated database back into the pre-release one.
-var legacyVersions = []string{"20261107_account_security_columns", "20261108_email_verification_attempts"}
+var legacyVersions = []string{"20261107_account_security_columns", "20261108_email_verification_attempts", "20261109_email_verification_token_hash"}
 
 // makeLegacy restores the schema the old binary left behind: the new columns are gone and
 // their migrations are unrecorded, so the next Migrate really runs them.
@@ -109,11 +110,11 @@ func TestLegacyRowsSurviveAdditiveMigration(t *testing.T) {
 		t.Fatalf("legacy row changed: version=%d reset=%v email=%s", u.TokenVersion, u.IdentityResetAt, u.Email)
 	}
 	var ev user_module.EmailVerification
-	if err := db.Where("token = 'legacy-token'").First(&ev).Error; err != nil || ev.Email != nil {
+	if err := db.Where("token = ?", auth_module.HashToken("legacy-token")).First(&ev).Error; err != nil || ev.Email != nil {
 		t.Fatalf("legacy verification: err=%v email=%v", err, ev.Email)
 	}
 	var attempts int
-	db.Raw(`SELECT attempts FROM email_verifications WHERE token = 'legacy-token'`).Scan(&attempts)
+	db.Raw(`SELECT attempts FROM email_verifications WHERE token = ?`, auth_module.HashToken("legacy-token")).Scan(&attempts)
 	if attempts != 0 {
 		t.Fatalf("legacy verification attempts = %d, want 0", attempts)
 	}
@@ -136,5 +137,31 @@ func TestLegacyRowsSurviveAdditiveMigration(t *testing.T) {
 	db.Raw(`SELECT token_version FROM users WHERE id = ?`, nu.ID).Scan(&v)
 	if v != 5 {
 		t.Fatalf("model write clobbered token_version: %d", v)
+	}
+}
+
+// Unexpired raw tokens mailed before the hash change must still verify after the migration;
+// expired rows are dropped and nothing raw is left behind.
+func TestVerificationTokenHashMigration(t *testing.T) {
+	e := newEnv(t)
+	uid := seedUser(t, e.db, "hash@x.test", false, "pw-hashhash1")
+	other := seedUser(t, e.db, "old@x.test", false, "pw-oldoldold")
+	if err := e.db.Exec(`DELETE FROM migration_history WHERE version = '20261109_email_verification_token_hash'`).Error; err != nil {
+		t.Fatal(err)
+	}
+	e.db.Exec(`INSERT INTO email_verifications (user_id, token, email, expires_at, created_at) VALUES (?, 'raw-live-token', 'hash@x.test', now() + interval '1 hour', now())`, uid)
+	e.db.Exec(`INSERT INTO email_verifications (user_id, token, email, expires_at, created_at) VALUES (?, 'raw-expired-token', 'old@x.test', now() - interval '1 hour', now())`, other)
+
+	if err := database.Migrate(e.db, testConfig()); err != nil {
+		t.Fatal(err)
+	}
+	if e.count(`SELECT count(*) FROM email_verifications WHERE token LIKE 'raw-%'`) != 0 {
+		t.Fatal("raw tokens remain after migration")
+	}
+	if e.count(`SELECT count(*) FROM email_verifications WHERE user_id = ?`, other) != 0 {
+		t.Fatal("expired row survived")
+	}
+	if _, err := e.auth.VerifyEmail("raw-live-token", ptr("pw-hashhash1"), false); err != nil {
+		t.Fatalf("legacy raw link no longer verifies: %v", err)
 	}
 }
