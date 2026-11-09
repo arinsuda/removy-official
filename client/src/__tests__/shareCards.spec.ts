@@ -6,7 +6,7 @@ import en from "@/i18n/locales/en/share.json"
 import ShareImageModal from "@/components/share/ShareImageModal.vue"
 import TakeCard from "@/components/share/cards/TakeCard.vue"
 import PosterStoryCard from "@/components/share/cards/PosterStoryCard.vue"
-import { availableTemplates, publicExcerpt, shareTier, truncateExcerpt } from "@/components/share/shareCards"
+import { availableTemplates, BOL_TEMPLATES, bolShareNote, bolTopItems, publicExcerpt, shareTier, truncateExcerpt } from "@/components/share/shareCards"
 import { useShareImage } from "@/composables/useShareImage"
 import type { ShareMediaContext, ShareReviewContext, ShareStatsContext } from "@/types/share"
 
@@ -214,5 +214,33 @@ describe("native share / clipboard fallbacks", () => {
     vi.stubGlobal("ClipboardItem", undefined)
     expect(s.canCopyImage()).toBe(false)
     expect(await s.copyImage(blob)).toBe(false)
+  })
+})
+
+describe("Best of Life cards", () => {
+  const groups = [
+    { rank: 1, items: [{ rank: 1, note: "  Changed me  " }, { rank: 1, note: "" }] },
+    { rank: 2, items: [{ rank: 2, note: "" }] },
+    { rank: 3, items: [{ rank: 3, note: "" }, { rank: 3, note: "" }] },
+  ]
+
+  it("offers a story and a top-3 square at export size", () => {
+    expect(BOL_TEMPLATES.map((d) => [d.key, d.width, d.height, d.capacity])).toEqual([
+      ["story", 1080, 1920, 9],
+      ["square", 1080, 1080, 3],
+    ])
+  })
+
+  it("takes the top titles in rank order, ties included", () => {
+    expect(bolTopItems(groups, 3).map((i) => i.rank)).toEqual([1, 1, 2])
+    expect(bolTopItems(groups, 99)).toHaveLength(5)
+  })
+
+  it("shows the rank-1 note only when the owner opts in", () => {
+    const flat = groups.flatMap((g) => g.items)
+    expect(bolShareNote(flat, false)).toBeNull()
+    expect(bolShareNote(flat, true)).toBe("Changed me")
+    expect(bolShareNote([{ rank: 1, note: "" }], true)).toBeNull()
+    expect(bolShareNote([{ rank: 2, note: "not first" }], true)).toBeNull()
   })
 })
