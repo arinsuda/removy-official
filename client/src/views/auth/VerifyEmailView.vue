@@ -61,18 +61,27 @@
         <AppButton to="/login" variant="ghost" block>{{ t("auth.verifyEmail.backToLogin") }}</AppButton>
       </div>
     </AuthStatus>
+
+    <ResendEmailModal
+      :open="promptOpen"
+      :title="t('auth.verifyEmail.resendLink')"
+      :label="t('auth.verifyEmail.promptEmail')"
+      @close="promptOpen = false"
+      @submit="confirmEmail"
+    />
   </AuthShell>
 </template>
 
 <script setup lang="ts">
 import AppSpinner from "@/components/ui/AppSpinner.vue"
   import AppButton from "@/components/ui/AppButton.vue"
+  import ResendEmailModal from "@/components/auth/ResendEmailModal.vue"
   import AuthAlert from "@/components/auth/AuthAlert.vue"
   import AuthField from "@/components/auth/AuthField.vue"
   import AuthShell from "@/components/auth/AuthShell.vue"
   import AuthStatus from "@/components/auth/AuthStatus.vue"
   import { computed, ref, onMounted } from "vue"
-  import { useRoute, RouterLink } from "vue-router"
+  import { useRoute } from "vue-router"
   import { useI18n } from "vue-i18n"
   import { isRateLimited } from "@/utils/rateLimit"
   import { authApi } from "@/api/api"
@@ -98,6 +107,7 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
   const rateLimited = ref(false)
   const resendStatus = ref<ResendStatus>("idle")
   const email = ref("")
+  const promptOpen = ref(false)
 
   const title = computed(() => {
     if (status.value === "loading") return t("auth.verifyEmail.verifyingTitle")
@@ -141,11 +151,16 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
     }
   }
 
+  function confirmEmail(address: string) {
+    email.value = address
+    promptOpen.value = false
+    void resend()
+  }
+
   async function resend() {
     if (!email.value) {
-      const input = window.prompt(t("auth.verifyEmail.promptEmail"))
-      if (!input) return
-      email.value = input
+      promptOpen.value = true
+      return
     }
 
     rateLimited.value = false

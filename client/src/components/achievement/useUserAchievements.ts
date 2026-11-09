@@ -2,6 +2,7 @@ import { isAxiosError } from "axios"
 import { ref, toValue, type MaybeRefOrGetter } from "vue"
 import { achievementApi } from "@/api/endpoints/achievement"
 import type { UserAchievement } from "@/types/achievement"
+import { logApiError } from "@/utils/logApiError"
 import { MAX_PAGES, PAGE_LIMIT } from "./config"
 import { sortAchievements } from "./achievements"
 
@@ -29,7 +30,7 @@ export function useUserAchievements(userId: MaybeRefOrGetter<number>) {
       if (isAxiosError(err) && err.response?.status === 403) {
         locked.value = true
       } else {
-        console.error("Fetch achievements failed:", err)
+        logApiError("loadAchievements", err)
         failed.value = true
       }
     } finally {

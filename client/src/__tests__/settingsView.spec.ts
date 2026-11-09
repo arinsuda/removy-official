@@ -77,17 +77,28 @@ describe("SettingsView", () => {
     expect(body.has("username")).toBe(false)
   })
 
-  it("blocks leaving with unsaved changes unless confirmed", async () => {
+  it("blocks leaving with unsaved changes unless confirmed in AppModal", async () => {
     const { wrapper, router } = await mountSettings()
     await wrapper.find("textarea").setValue("changed")
-    const confirm = vi.fn().mockReturnValue(false)
-    vi.stubGlobal("confirm", confirm)
-    await router.push("/elsewhere")
-    expect(confirm).toHaveBeenCalled()
+
+    const nav1 = router.push("/elsewhere")
+    await flushPromises()
+    const dialog1 = document.body.querySelector('[role="dialog"]')!
+    expect(dialog1).not.toBeNull()
+    expect(dialog1.textContent).toContain(t("settings.unsavedConfirm"))
+    const cancelBtn = Array.from(dialog1.querySelectorAll("button")).find(b => b.textContent === t("common.cancel"))!
+    cancelBtn.click()
+    await nav1
+    await flushPromises()
     expect(router.currentRoute.value.path).toBe("/settings")
-    confirm.mockReturnValue(true)
-    await router.push("/elsewhere")
+
+    const nav2 = router.push("/elsewhere")
+    await flushPromises()
+    const dialog2 = document.body.querySelector('[role="dialog"]')!
+    const discardBtn = Array.from(dialog2.querySelectorAll("button")).find(b => b.textContent === t("settings.saveBar.discard"))!
+    discardBtn.click()
+    await nav2
+    await flushPromises()
     expect(router.currentRoute.value.path).toBe("/elsewhere")
-    vi.unstubAllGlobals()
   })
 })

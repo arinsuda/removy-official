@@ -37,6 +37,14 @@
         </div>
       </div>
     </div>
+
+    <AppModal :model-value="leaveOpen" size="sm" :title="t('settings.saveBar.label')" @close="decideLeave(false)">
+      <p class="settings__modal-text">{{ t("settings.unsavedConfirm") }}</p>
+      <template #footer>
+        <AppButton variant="outline" @click="decideLeave(false)">{{ t("common.cancel") }}</AppButton>
+        <AppButton variant="danger" @click="decideLeave(true)">{{ t("settings.saveBar.discard") }}</AppButton>
+      </template>
+    </AppModal>
   </div>
 </template>
 
@@ -51,7 +59,9 @@ import { useAuthStore } from "@/stores/auth"
 import { useUIStore } from "@/stores/ui"
 import { useProfileForm } from "@/components/settings/useProfileForm"
 import SkeletonProfile from "@/components/ui/skeleton/SkeletonProfile.vue"
+import AppButton from "@/components/ui/AppButton.vue"
 import AppErrorState from "@/components/ui/AppErrorState.vue"
+import AppModal from "@/components/ui/AppModal.vue"
 import SettingsProfileSection from "@/components/settings/SettingsProfileSection.vue"
 import SettingsPreferencesSection from "@/components/settings/SettingsPreferencesSection.vue"
 import SettingsPrivacySection from "@/components/settings/SettingsPrivacySection.vue"
@@ -105,16 +115,30 @@ watch(user, (next, prev) => !prev && next && scrollToHash())
 onMounted(() => user.value && scrollToHash())
 
 // ── unsaved changes guard ──
+const leaveOpen = ref(false)
+let resolveLeave: ((allow: boolean) => void) | null = null
+function decideLeave(allow: boolean) {
+  leaveOpen.value = false
+  resolveLeave?.(allow)
+  resolveLeave = null
+}
 function onBeforeUnload(e: BeforeUnloadEvent) {
   if (!isDirty.value) return
   e.preventDefault()
   e.returnValue = ""
 }
 window.addEventListener("beforeunload", onBeforeUnload)
-onBeforeUnmount(() => window.removeEventListener("beforeunload", onBeforeUnload))
+onBeforeUnmount(() => {
+  window.removeEventListener("beforeunload", onBeforeUnload)
+  resolveLeave?.(false)
+})
 onBeforeRouteLeave(() => {
   if (!isDirty.value || saving.value) return true
-  return window.confirm(t("settings.unsavedConfirm"))
+  resolveLeave?.(false)
+  leaveOpen.value = true
+  return new Promise<boolean>((resolve) => {
+    resolveLeave = resolve
+  })
 })
 </script>
 
@@ -126,13 +150,14 @@ onBeforeRouteLeave(() => {
 .settings__back { display: inline-flex; align-items: center; gap: 0.375rem; font-size: 0.8125rem; color: var(--color-text-secondary); }
 .settings__back:hover { color: var(--color-text-primary); }
 .settings__layout { display: block; }
-.settings__nav { position: sticky; top: 3.5rem; z-index: 40; display: flex; gap: 0.5rem; padding: 0.5rem 0; margin-bottom: 1rem; overflow-x: auto; background: var(--color-surface); scrollbar-width: none; }
+.settings__nav { position: sticky; top: 3.5rem; z-index: var(--z-sticky); display: flex; gap: 0.5rem; padding: 0.5rem 0; margin-bottom: 1rem; overflow-x: auto; background: var(--color-surface); scrollbar-width: none; }
 .settings__nav::-webkit-scrollbar { display: none; }
 .settings__link { flex: none; padding: 0.375rem 0.875rem; font-size: 0.8125rem; color: var(--color-text-secondary); white-space: nowrap; border: 1px solid var(--color-border); border-radius: 999px; }
 .settings__link.is-active { color: var(--color-surface); background: var(--color-text-primary); border-color: var(--color-text-primary); }
 .settings__content { display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
 .settings__group { display: flex; flex-direction: column; gap: 1.25rem; scroll-margin-top: 6rem; }
 .settings__group-title { font-size: 1.0625rem; font-weight: 700; }
+.settings__modal-text { margin: 0; font-size: var(--text-small); line-height: 1.6; color: var(--color-text-secondary); }
 @media (min-width: 768px) {
   .settings__inner { padding: 2rem 1.5rem 5rem; }
 }

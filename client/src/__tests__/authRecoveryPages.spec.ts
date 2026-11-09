@@ -153,19 +153,38 @@ describe("verify email", () => {
     expect(w.text()).toContain("Resend link")
   })
 
-  it("shows the expired state when the token is missing", async () => {
+  it("shows the expired state when the token is missing and prompts for email in AppModal on resend", async () => {
+    api.resendVerification.mockResolvedValue({} as never)
     const w = await mountAt(VerifyEmailView, "/verify-email")
     expect(w.get("h1").text()).toBe("Link expired")
+    await w.get("button").trigger("click")
+    await flushPromises()
+    const dialog = document.body.querySelector('[role="dialog"]')!
+    expect(dialog).not.toBeNull()
+    const input = dialog.querySelector("input")!
+    input.value = "verify@x.co"
+    input.dispatchEvent(new Event("input"))
+    await flushPromises()
+    dialog.querySelector("form")!.dispatchEvent(new Event("submit", { cancelable: true }))
+    await flushPromises()
+    expect(api.resendVerification).toHaveBeenCalledWith("verify@x.co")
   })
 })
 
 describe("check email", () => {
-  it("renders and resends to the known address", async () => {
+  it("renders and resends via AppModal when address is not in store", async () => {
     api.resendVerification.mockResolvedValue({} as never)
     const w = await mountAt(CheckEmailView, "/check-email")
     expect(w.get("h1").text()).toBe("Check Your Email")
-    vi.stubGlobal("prompt", vi.fn().mockReturnValue("me@x.co"))
     await w.get("button").trigger("click")
+    await flushPromises()
+    const dialog = document.body.querySelector('[role="dialog"]')!
+    expect(dialog).not.toBeNull()
+    const input = dialog.querySelector("input")!
+    input.value = "me@x.co"
+    input.dispatchEvent(new Event("input"))
+    await flushPromises()
+    dialog.querySelector("form")!.dispatchEvent(new Event("submit", { cancelable: true }))
     await flushPromises()
     expect(api.resendVerification).toHaveBeenCalledWith("me@x.co")
     expect(w.get("button").text()).toBe("Sent successfully")

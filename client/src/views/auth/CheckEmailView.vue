@@ -19,6 +19,14 @@
       <AuthAlert :message="rateLimited ? t('errors.rateLimited') : ''" @dismiss="rateLimited = false" />
       <RouterLink to="/login" class="auth-link">{{ t("auth.checkEmail.backToLogin") }}</RouterLink>
     </AuthStatus>
+
+    <ResendEmailModal
+      :open="promptOpen"
+      :title="t('auth.checkEmail.resendBtn')"
+      :label="t('auth.checkEmail.promptEmail')"
+      @close="promptOpen = false"
+      @submit="confirmEmail"
+    />
   </AuthShell>
 </template>
 
@@ -31,6 +39,7 @@
   import AuthShell from "@/components/auth/AuthShell.vue"
   import AuthStatus from "@/components/auth/AuthStatus.vue"
   import AppButton from "@/components/ui/AppButton.vue"
+  import ResendEmailModal from "@/components/auth/ResendEmailModal.vue"
   import { useAuthStore } from "@/stores/auth"
   import { authApi } from "@/api/api"
   import { isRateLimited } from "@/utils/rateLimit"
@@ -38,6 +47,7 @@
   const { t } = useI18n()
   const authStore = useAuthStore()
   const email = ref(authStore.user?.email ?? "")
+  const promptOpen = ref(false)
 
   type ResendStatus = "idle" | "sending" | "sent" | "failed"
   const resendStatus = ref<ResendStatus>("idle")
@@ -51,11 +61,16 @@
         : t("auth.checkEmail.resendBtn"),
   )
 
+  function confirmEmail(address: string) {
+    email.value = address
+    promptOpen.value = false
+    void resend()
+  }
+
   async function resend() {
     if (!email.value) {
-      const input = window.prompt(t("auth.checkEmail.promptEmail"))
-      if (!input) return
-      email.value = input
+      promptOpen.value = true
+      return
     }
 
     rateLimited.value = false

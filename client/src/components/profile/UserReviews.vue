@@ -48,10 +48,7 @@
               <option value="private">{{ t("profile.reviews.visibility.private") }}</option>
             </select>
           </label>
-          <span class="ur__month">
-            <input v-model="monthFilter" type="month" class="ur__select" :aria-label="t('profile.reviews.month')" @change="fetchReviews" />
-            <TabIconButton v-if="monthFilter" :label="t('profile.reviews.clearDate')" @click="clearMonth"><X :size="14" aria-hidden="true" /></TabIconButton>
-          </span>
+          <MonthPicker v-model="monthFilter" @change="fetchReviews" />
         </template>
       </TabToolbar>
 
@@ -76,7 +73,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue"
 import { useI18n } from "vue-i18n"
-import { Star, X } from "lucide-vue-next"
+import { Star } from "lucide-vue-next"
 import { reviewApi } from "@/api/api"
 import type { GetUserReviewsParams } from "@/api/endpoints/social"
 import AppButton from "@/components/ui/AppButton.vue"
@@ -84,11 +81,12 @@ import AppErrorState from "@/components/ui/AppErrorState.vue"
 import SkeletonList from "@/components/ui/skeleton/SkeletonList.vue"
 import { useAuthStore } from "@/stores/auth"
 import type { ReviewResponse } from "@/types"
+import { logApiError } from "@/utils/logApiError"
 import DeleteReview from "./components/DeleteReview.vue"
 import EditReview from "./components/EditReview.vue"
+import MonthPicker from "./tabs/MonthPicker.vue"
 import ReviewTabCard from "./tabs/ReviewTabCard.vue"
 import TabEmptyState from "./tabs/TabEmptyState.vue"
-import TabIconButton from "./tabs/TabIconButton.vue"
 import TabToolbar from "./tabs/TabToolbar.vue"
 import { REVIEW_FILTERS, REVIEW_SORTS, REVIEW_SORT_KEYS, summarizeReviews } from "./tabs/reviewList"
 import { useTabList } from "./tabs/useTabList"
@@ -129,11 +127,6 @@ const filters = computed(() => [
 ])
 const sorts = computed(() => REVIEW_SORT_KEYS.map((key) => ({ key, label: t(`profile.tabContent.reviews.sorts.${key}`) })))
 
-function clearMonth() {
-  monthFilter.value = ""
-  void fetchReviews()
-}
-
 function clearAll() {
   list.clear()
   if (serverFiltered.value) {
@@ -168,7 +161,7 @@ async function fetchReviews() {
     const res = await reviewApi.getUserReviews(props.userId, params)
     reviews.value = res.data.reviews ?? []
   } catch (err) {
-    console.error("Fetch reviews failed:", err)
+    logApiError("fetchReviews", err)
     loadError.value = true
   } finally {
     loading.value = false
@@ -189,7 +182,6 @@ onMounted(fetchReviews)
 .ur__item { animation: ur-in var(--motion-base) var(--ease-out-soft) calc(var(--i) * 40ms) both; }
 @keyframes ur-in { from { opacity: 0; transform: translateY(8px); } }
 .ur__select { min-height: 2.25rem; padding: 0 0.75rem; font: inherit; font-size: var(--text-caption); color: var(--color-text-secondary); background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--radius-btn); cursor: pointer; color-scheme: dark; }
-.ur__month { display: inline-flex; align-items: center; }
 .ur__sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .ur__more { display: flex; justify-content: center; padding: 1.5rem 0 0.5rem; }
 @media (prefers-reduced-motion: reduce) { .ur__item { animation: none; } }

@@ -129,7 +129,7 @@ export function sortUnits(units: AchievementUnit[], sort: SortKey, locale: strin
 export function groupByCategory(units: AchievementUnit[]): CategorySummary[] {
   return CATEGORY_ORDER.map((key) => {
     const own = units.filter((u) => u.category === key)
-    const tiers = own.flatMap((u) => u.tiers)
+    const tiers = own.flatMap((u) => (u.matched ? u.tiers.filter((t) => u.matched!.has(t.achievement_id)) : u.tiers))
     return { key, units: own, unlocked: tiers.filter((t) => t.is_unlocked).length, total: tiers.length }
   }).filter((c) => c.units.length > 0)
 }
