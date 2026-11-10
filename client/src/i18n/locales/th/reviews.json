@@ -61,5 +61,18 @@
   },
   "guestPrompt": "เข้าสู่ระบบเพื่อเขียนรีวิว",
   "loadFailed": "โหลดรีวิวไม่สำเร็จ",
-  "ownLoadFailed": "ตรวจสอบรีวิวของคุณสำหรับเรื่องนี้ไม่สำเร็จ"
+  "ownLoadFailed": "ตรวจสอบรีวิวของคุณสำหรับเรื่องนี้ไม่สำเร็จ",
+  "edit": {
+    "writtenOn": "เขียนเมื่อ {date}",
+    "type": {
+      "movie": "ภาพยนตร์",
+      "tv": "ซีรีส์"
+    },
+    "typeYear": "{type} · {year}",
+    "shortcut": "กด {keys} เพื่อบันทึก",
+    "keys": {
+      "mac": "⌘ + Enter",
+      "other": "Ctrl + Enter"
+    }
+  }
 }

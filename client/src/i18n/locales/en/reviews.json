@@ -61,5 +61,18 @@
   },
   "guestPrompt": "Sign in to write a review.",
   "loadFailed": "Could not load reviews.",
-  "ownLoadFailed": "Could not check whether you already reviewed this title."
+  "ownLoadFailed": "Could not check whether you already reviewed this title.",
+  "edit": {
+    "writtenOn": "Written {date}",
+    "type": {
+      "movie": "Movie",
+      "tv": "Series"
+    },
+    "typeYear": "{type} · {year}",
+    "shortcut": "{keys} to save",
+    "keys": {
+      "mac": "⌘ + Enter",
+      "other": "Ctrl + Enter"
+    }
+  }
 }
