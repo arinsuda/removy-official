@@ -23,6 +23,7 @@ import (
 	"github.com/arinsuda/movie-hub/internal/admin_module"
 	"github.com/arinsuda/movie-hub/internal/auth_module"
 	"github.com/arinsuda/movie-hub/internal/bmol_module"
+	"github.com/arinsuda/movie-hub/internal/feed_module"
 	"github.com/arinsuda/movie-hub/internal/library_module"
 	"github.com/arinsuda/movie-hub/internal/link_module"
 	"github.com/arinsuda/movie-hub/internal/list_module"
@@ -281,6 +282,7 @@ func newEnv(t *testing.T) *env {
 	achieve.RegisterRoutes(api, mw.RequireAuth)
 	library_module.RegisterRoutes(protected, db, nil, achieve.Service, nil, nil, privacy_policy.NewUserAccessPolicy(db))
 	admin_module.RegisterRoutes(protected, db, nil, nil, mw.RequireCurrentAdmin(db))
+	feed_module.New(db, nil, nil).RegisterRoutes(protected)
 	return e
 }
 

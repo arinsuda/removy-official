@@ -1,7 +1,8 @@
-import { computed, type Ref } from "vue"
+import { computed, ref, watch, type Ref } from "vue"
 import { useInfiniteQuery, useQuery } from "@tanstack/vue-query"
 import { actorApi } from "@/api/api"
-import { MAX_PAGES, movieBrowse, tvBrowse } from "@/components/browse/browseConfig"
+import type { SearchFilters } from "@/api/endpoints/movie"
+import { MAX_PAGES, SEARCH_MAX_EMPTY_PAGES, movieBrowse, tvBrowse } from "@/components/browse/browseConfig"
 import { sortMedia } from "@/components/browse/browseSort"
 import type { HomeMedia } from "@/components/home/homeMedia"
 import { dedupeMedia, interleave } from "@/components/home/popcornHome"
@@ -12,26 +13,63 @@ export function useSearchResults(state: Ref<SearchState>) {
   const q = computed(() => state.value.q)
   const enabled = computed(() => q.value.length > 0)
 
-  function paged<T>(key: string, fetch: (q: string, page: number) => Promise<PaginatedResult<T>>) {
-    return useInfiniteQuery({
-      queryKey: computed(() => ["search", key, q.value]),
-      initialPageParam: 1,
-      queryFn: ({ pageParam }) => fetch(q.value, pageParam),
-      getNextPageParam: (last, pages) =>
-        pages.length < MAX_PAGES && last.page < Math.min(last.total_pages, 500) ? last.page + 1 : undefined,
-      enabled,
-      staleTime: 60_000,
-    })
+  /** Year and genre are applied by the API, so changing them restarts the lists at page 1. */
+  const filters = computed<SearchFilters>(() => ({ year: state.value.year, genre: state.value.genre }))
+
+  /** Pages at the end of the list that came back empty (genre filtering can empty a whole page). */
+  const trailingEmptyPages = (pages: { results?: unknown[] }[] = []) => {
+    let n = 0
+    for (let i = pages.length - 1; i >= 0 && !(pages[i]!.results ?? []).length; i--) n++
+    return n
   }
 
-  const movies = paged("movie", movieBrowse.fetchSearch)
-  const series = paged("tv", tvBrowse.fetchSearch)
-  const people = paged<PersonSearchResult>("people", async (query, page) => (await actorApi.search(query, page)).data)
+  function paged<T>(
+    key: string,
+    fetch: (q: string, page: number, filters: SearchFilters) => Promise<PaginatedResult<T>>,
+    { filtered = true, active = enabled }: { filtered?: boolean; active?: Ref<boolean> } = {},
+  ) {
+    const query = useInfiniteQuery({
+      queryKey: computed(() => ["search", key, q.value, ...(filtered ? [filters.value.year, filters.value.genre] : [])]),
+      initialPageParam: 1,
+      queryFn: ({ pageParam }) => fetch(q.value, pageParam, filtered ? filters.value : {}),
+      getNextPageParam: (last, pages) =>
+        pages.length < MAX_PAGES && last.page < Math.min(last.total_pages, 500) ? last.page + 1 : undefined,
+      enabled: active,
+      staleTime: 60_000,
+    })
+    // Skip over empty filtered pages instead of stalling, up to a bound.
+    if (filtered) {
+      watch(
+        () => [query.data.value?.pages.length, query.isFetching.value] as const,
+        () => {
+          const empties = trailingEmptyPages(query.data.value?.pages)
+          if (!filters.value.genre || query.isFetching.value || !query.hasNextPage.value) return
+          if (empties > 0 && empties < SEARCH_MAX_EMPTY_PAGES) void query.fetchNextPage()
+        },
+      )
+    }
+    return query
+  }
 
   const genreQuery = (type: "movie" | "tv", fn: () => Promise<Genre[]>) =>
     useQuery({ queryKey: ["browse", type, "genres"], queryFn: fn, staleTime: Infinity })
   const movieGenres = genreQuery("movie", movieBrowse.fetchGenres)
   const tvGenres = genreQuery("tv", tvBrowse.fetchGenres)
+
+  /** A list is skipped when its genre catalog lacks the selected id (ids differ between movies and TV). */
+  const genreFits = (catalog: typeof movieGenres) =>
+    computed(() => {
+      const genre = state.value.genre
+      if (!genre) return true
+      const list = catalog.data.value
+      return list ? list.some((g) => g.id === genre) : !catalog.isLoading.value
+    })
+  const movieFits = genreFits(movieGenres)
+  const tvFits = genreFits(tvGenres)
+
+  const movies = paged("movie", movieBrowse.fetchSearch, { active: computed(() => enabled.value && movieFits.value) })
+  const series = paged("tv", tvBrowse.fetchSearch, { active: computed(() => enabled.value && tvFits.value) })
+  const people = paged<PersonSearchResult>("people", async (query, page) => (await actorApi.search(query, page)).data, { filtered: false })
 
   const flat = <T>(pages: PaginatedResult<T>[] | undefined) => (pages ?? []).flatMap((p) => p.results ?? [])
   const movieItems = computed(() => dedupeMedia(flat<HomeMedia>(movies.data.value?.pages)))
@@ -46,25 +84,34 @@ export function useSearchResults(state: Ref<SearchState>) {
     return interleave(movieItems.value, seriesItems.value)
   })
 
-  const years = computed(() =>
-    [...new Set(pool.value.map((m) => Number(m.date.slice(0, 4))).filter((y) => y > 0))].sort((a, b) => b - a),
+  // Year options are the years seen so far for this query. The lists are already filtered by the
+  // API, so they must not shrink to the selected year; the selected year is always kept.
+  const seenYears = ref<number[]>([])
+  watch(q, () => (seenYears.value = []))
+  watch(
+    pool,
+    (items) => {
+      const next = new Set(seenYears.value)
+      for (const m of items) {
+        const y = Number(m.date.slice(0, 4))
+        if (y > 0) next.add(y)
+      }
+      if (next.size !== seenYears.value.length) seenYears.value = [...next]
+    },
+    { immediate: true },
   )
+  const years = computed(() => [...new Set([...seenYears.value, ...(state.value.year ? [state.value.year] : [])])].sort((a, b) => b - a))
 
-  /** Genres present in the loaded titles, with TMDB names. */
+  /** Every TMDB genre of the active tab (the API filters by id, so options no longer depend on loaded titles). */
   const genres = computed(() => {
+    const { tab } = state.value
+    const source = tab === "movie" ? movieGenres.data.value : tab === "tv" ? tvGenres.data.value : [...(movieGenres.data.value ?? []), ...(tvGenres.data.value ?? [])]
     const names = new Map<number, string>()
-    for (const g of [...(movieGenres.data.value ?? []), ...(tvGenres.data.value ?? [])]) names.set(g.id, g.name)
-    const present = new Set(pool.value.flatMap((m) => m.source.genre_ids ?? []))
-    return [...present].filter((id) => names.has(id)).map((id) => ({ id, name: names.get(id)! })).sort((a, b) => a.name.localeCompare(b.name))
+    for (const g of source ?? []) names.set(g.id, g.name)
+    return [...names].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name))
   })
 
-  const items = computed(() => {
-    const { year, genre, sort } = state.value
-    const filtered = pool.value.filter(
-      (m) => (!year || m.date.startsWith(String(year))) && (!genre || (m.source.genre_ids ?? []).includes(genre)),
-    )
-    return sortMedia(filtered, sort)
-  })
+  const items = computed(() => sortMedia(pool.value, state.value.sort))
 
   const total = (r: { data: Ref<{ pages: { total_results: number }[] } | undefined> }) => r.data.value?.pages[0]?.total_results ?? 0
   const counts = computed(() => ({
@@ -104,5 +151,8 @@ export function useSearchResults(state: Ref<SearchState>) {
     for (const l of lists.value) void l.refetch()
   }
 
-  return { items, peopleItems, years, genres, counts, busy, failed, hasNext, fetchingNext, fetchNext, retry }
+  /** Counts of filtered lists are TMDB's unfiltered totals when a genre is set, so the UI hides them. */
+  const countsApproximate = computed(() => !!state.value.genre)
+
+  return { items, peopleItems, years, genres, counts, countsApproximate, busy, failed, hasNext, fetchingNext, fetchNext, retry }
 }

@@ -3,7 +3,7 @@
     <AppTabs :model-value="state.tab" :tabs="tabs" :label="t('media.search.tabs.label')" :controls="false" @update:model-value="emit('update', { tab: $event })">
       <template #tab="{ tab }">
         {{ tab.label }}
-        <span class="sfb__count">{{ counts[tab.key] }}</span>
+        <span v-if="!(countsApproximate && tab.key !== 'people')" class="sfb__count">{{ counts[tab.key] }}</span>
       </template>
     </AppTabs>
 
@@ -46,6 +46,7 @@ import { SEARCH_TABS, type SearchState, type SearchTab } from "./searchQuery"
 defineProps<{
   state: SearchState
   counts: Record<SearchTab, number>
+  countsApproximate?: boolean
   years: number[]
   genres: { id: number; name: string }[]
 }>()

@@ -2,6 +2,7 @@ import api from "../index";
 import type {
   FeedListResponse,
   FeedQueryParams,
+  FeedScope,
   ActivitySettingsResponse,
   UpdateActivitySettingsRequest,
 } from "@/types/feed";
@@ -40,9 +41,9 @@ export const feedApi = {
     api.patch<ActivitySettingsResponse>("/me/activity-settings", data),
 
   // GET /feed/new-count — นับกิจกรรมใหม่ตั้งแต่ after_id
-  getNewCount: (afterId: number, category?: string) =>
+  getNewCount: (afterId: number, category?: string, scope?: FeedScope) =>
     api.get<{ count: number }>("/feed/new-count", {
-      params: { after_id: afterId, category },
+      params: { after_id: afterId, category, scope },
     }),
 };
 

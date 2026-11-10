@@ -38,7 +38,12 @@
       </div>
     </header>
 
-    <FeedFilters :model-value="feedStore.selectedCategory" @update:model-value="feedStore.setCategory" />
+    <FeedFilters
+      :model-value="feedStore.selectedCategory"
+      :scope="feedStore.selectedScope"
+      @update:model-value="feedStore.setCategory"
+      @update:scope="feedStore.setScope"
+    />
 
     <Transition name="feed-pill">
       <div v-if="feedStore.newItemsCount > 0" class="feed-new">
@@ -56,7 +61,7 @@
       :error="feedStore.error"
       :has-more="feedStore.hasMore"
       :is-empty="feedStore.isEmpty"
-      :filtered="feedStore.selectedCategory !== ''"
+      :filtered="feedStore.selectedCategory !== '' || feedStore.selectedScope !== DEFAULT_FEED_SCOPE"
       :current-user-id="currentUserId"
       @load-more="feedStore.loadMore"
       @retry="feedStore.refresh"
@@ -78,7 +83,7 @@ import { useClickOutside } from "@/composables/useClickOutside"
 import { useAuthStore } from "@/stores/auth"
 import { useFeedStore } from "@/stores/feed"
 import { useUIStore } from "@/stores/ui"
-import type { Visibility } from "@/components/feed/feedConfig"
+import { DEFAULT_FEED_SCOPE, type Visibility } from "@/components/feed/feedConfig"
 
 const { t } = useI18n()
 const feedStore = useFeedStore()

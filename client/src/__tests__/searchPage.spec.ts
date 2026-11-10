@@ -4,6 +4,7 @@ import { QueryClient, VueQueryPlugin } from "@tanstack/vue-query"
 import { createMemoryHistory, createRouter } from "vue-router"
 import SearchResultView from "@/views/SearchResultView.vue"
 import { actorApi, movieApi } from "@/api/api"
+import { SEARCH_MAX_EMPTY_PAGES } from "@/components/browse/browseConfig"
 import { useRealI18n } from "./helpers/realI18n"
 
 vi.mock("@/api/api", () => ({
@@ -75,9 +76,34 @@ describe("SearchResultView", () => {
     expect(w.text()).toContain("Dune Person")
   })
 
-  it("filters by year", async () => {
-    const { w } = await render("/search?q=dune&tab=movie&year=2024")
+  it("sends year and genre to the API instead of filtering loaded pages", async () => {
+    vi.mocked(movieApi.search).mockResolvedValue(page([movie(2, "Dune 2", "2024-03-01")]) as never)
+    const { w, router } = await render("/search?q=dune&tab=movie&year=2024&genre=28")
+    expect(movieApi.search).toHaveBeenLastCalledWith("dune", 1, { year: 2024, genre: 28 })
     expect(w.findAll(".card").map((c) => c.text())).toEqual(["Dune 2|"])
+
+    vi.mocked(movieApi.search).mockClear()
+    await router.push("/search?q=dune&tab=movie&year=2021")
+    await flushPromises()
+    expect(movieApi.search).toHaveBeenLastCalledWith("dune", 1, { year: 2021, genre: null })
+  })
+
+  it("keeps fetching through empty genre-filtered pages, bounded", async () => {
+    const empty = (p: number) => ({ data: { page: p, total_pages: 9, total_results: 180, results: [] } })
+    vi.mocked(movieApi.search).mockImplementation((async (_q: string, p: number) => (p === 3 ? page([movie(5, "Dune Late")]) : empty(p))) as never)
+    const { w } = await render("/search?q=dune&tab=movie&genre=28")
+    await flushPromises()
+    expect(vi.mocked(movieApi.search).mock.calls.map((c) => c[1])).toEqual([1, 2, 3])
+    expect(w.findAll(".card").map((c) => c.text())).toEqual(["Dune Late|"])
+  })
+
+  it("stops after the empty-page bound and does not query a list whose catalog lacks the genre", async () => {
+    vi.mocked(movieApi.search).mockImplementation((async (_q: string, p: number) => ({ data: { page: p, total_pages: 9, total_results: 180, results: [] } })) as never)
+    await render("/search?q=dune&tab=movie&genre=28")
+    await flushPromises()
+    expect(vi.mocked(movieApi.search).mock.calls.length).toBe(SEARCH_MAX_EMPTY_PAGES)
+    // Genre 28 only exists in the movie catalog, so the TV list is never requested.
+    expect(movieApi.searchSeries).not.toHaveBeenCalled()
   })
 
   it("shows the empty state with suggestions", async () => {

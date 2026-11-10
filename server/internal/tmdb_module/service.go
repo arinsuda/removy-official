@@ -3,6 +3,7 @@ package tmdbmodule
 import (
 	"fmt"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -191,17 +192,52 @@ func GetSimilar(tmdbID, page int) (*PaginatedResult[Movie], error) {
 	return &result, nil
 }
 
-func SearchMovies(query string, page int, language string) (*PaginatedResult[Movie], error) {
+// SearchFilters narrows a title search. Zero values mean "no filter".
+//
+// Year is applied by TMDB itself, so paging and totals stay exact. TMDB's search endpoints
+// have no genre parameter, so GenreID is applied to the returned page: a page can come back
+// with fewer than 20 titles (even none) while page < total_pages, and total_results is the
+// unfiltered count (an upper bound). Callers keep paging by total_pages. A scan-ahead that
+// refills short pages was rejected: it would make "page" mean different things per filter
+// and cost several TMDB calls per request. /discover is not used because it cannot take a
+// free-text query.
+type SearchFilters struct {
+	Year    int
+	GenreID int
+}
+
+func (f SearchFilters) apply(params url.Values, yearKey string) {
+	if f.Year > 0 {
+		params.Set(yearKey, strconv.Itoa(f.Year))
+	}
+}
+
+func filterByGenre[T any](results []T, genreID int, genreIDs func(T) []int) []T {
+	if genreID <= 0 {
+		return results
+	}
+	kept := make([]T, 0, len(results))
+	for _, r := range results {
+		if slices.Contains(genreIDs(r), genreID) {
+			kept = append(kept, r)
+		}
+	}
+	return kept
+}
+
+func SearchMovies(query string, page int, language string, filters SearchFilters) (*PaginatedResult[Movie], error) {
 	params := pageParams(page)
 	params.Set("query", query)
 	if language != "" {
 		params.Set("language", language)
 	}
+	filters.apply(params, "primary_release_year")
 
 	var result PaginatedResult[Movie]
 	if err := get("/search/movie", params, &result); err != nil {
 		return nil, fmt.Errorf("SearchMovies(%q): %w", query, err)
 	}
+	result.Results = filterByGenre(result.Results, filters.GenreID, func(m Movie) []int { return m.GenreIDs })
 	return &result, nil
 }
 
@@ -327,17 +363,19 @@ func GetTopRatedSeries(page int) (*PaginatedResult[TVSeries], error) {
 	return &result, nil
 }
 
-func SearchSeries(query string, page int, language string) (*PaginatedResult[TVSeries], error) {
+func SearchSeries(query string, page int, language string, filters SearchFilters) (*PaginatedResult[TVSeries], error) {
 	params := pageParams(page)
 	params.Set("query", query)
 	if language != "" {
 		params.Set("language", language)
 	}
+	filters.apply(params, "first_air_date_year")
 
 	var result PaginatedResult[TVSeries]
 	if err := get("/search/tv", params, &result); err != nil {
 		return nil, fmt.Errorf("SearchSeries(%q): %w", query, err)
 	}
+	result.Results = filterByGenre(result.Results, filters.GenreID, func(s TVSeries) []int { return s.GenreIDs })
 	return &result, nil
 }
 

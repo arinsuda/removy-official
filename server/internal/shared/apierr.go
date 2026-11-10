@@ -30,6 +30,13 @@ const (
 	ErrorCodeFinalAdmin        ErrorCode = "FINAL_ADMIN"
 	ErrorCodeInactiveUserRole  ErrorCode = "INACTIVE_USER_ROLE_CHANGE"
 	ErrorCodeInternal          ErrorCode = "INTERNAL_ERROR"
+	ErrorCodeInvalidID         ErrorCode = "INVALID_ID"
+	ErrorCodeInvalidQuery      ErrorCode = "INVALID_QUERY"
+	ErrorCodeInvalidGenre      ErrorCode = "INVALID_GENRE_FILTER"
+	ErrorCodeInvalidSearch     ErrorCode = "INVALID_SEARCH_FILTER"
+	ErrorCodeInvalidScope      ErrorCode = "INVALID_FEED_SCOPE"
+	ErrorCodeNotFound          ErrorCode = "NOT_FOUND"
+	ErrorCodeUpstream          ErrorCode = "UPSTREAM_ERROR"
 )
 
 type APIError struct {

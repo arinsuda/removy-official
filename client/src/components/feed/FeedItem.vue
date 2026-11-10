@@ -103,7 +103,7 @@ import { getActivityMeta } from "@/utils/feedActivity"
 import { logApiError } from "@/utils/logApiError"
 import { formatRelativeTime } from "@/utils/relativeTime"
 import FeedItemMenu from "./FeedItemMenu.vue"
-import { LIKEABLE_TYPES, type Visibility } from "./feedConfig"
+import { DELETED_USER_ID, LIKEABLE_TYPES, type Visibility } from "./feedConfig"
 
 const props = defineProps<{
   item: FeedItemResponse
@@ -121,7 +121,11 @@ const ui = useUIStore()
 const meta = computed(() => getActivityMeta(props.item.type))
 const knownType = computed(() => (te(`feed.types.${props.item.type}.sentence`) ? props.item.type : "unknown"))
 const actorName = computed(() => props.item.actor.display_name || props.item.actor.username)
-const targetName = computed(() => props.item.target_user?.display_name || props.item.target_user?.username || "")
+const targetName = computed(() => {
+  const target = props.item.target_user
+  if (target && target.id === DELETED_USER_ID) return t("feed.deletedUser")
+  return target?.display_name || target?.username || ""
+})
 const mediaTitle = computed(() => props.item.media?.title || t("feed.untitled"))
 const actorTo = computed(() => ({ name: "user-profile", params: { userId: props.item.actor.id } }))
 const targetTo = computed(() => ({ name: "user-profile", params: { userId: props.item.target_user?.id ?? 0 } }))
@@ -148,9 +152,10 @@ async function measure() {
 onMounted(measure)
 watch(() => props.item.message, measure)
 
-// The feed API does not report whether the viewer already liked a review, so state starts unliked.
+// Initial state comes from the API (`viewer_liked`); toggles are optimistic.
 const likeable = computed(() => LIKEABLE_TYPES.includes(props.item.type) && !!props.item.review_id && !props.canManage)
-const liked = ref(false)
+const liked = ref(props.item.viewer_liked)
+watch(() => props.item.viewer_liked, (v) => (liked.value = v))
 const liking = ref(false)
 async function toggleLike() {
   const reviewId = props.item.review_id

@@ -43,6 +43,8 @@ export interface FeedItemResponse {
   target_user?: FeedActorSummary;
   message: string;
   visibility: "default" | "public" | "followers" | "private";
+  /** Whether the requester already liked the item's review. */
+  viewer_liked: boolean;
   created_at: string;
 }
 
@@ -58,10 +60,14 @@ export interface FeedListResponse {
   pagination: FeedPaginationMeta;
 }
 
+/** GET /feed scope: followed people plus me, followed only, or me only. */
+export type FeedScope = "all" | "following" | "me";
+
 export interface FeedQueryParams {
   page?: number;
   limit?: number;
   category?: string;
+  scope?: FeedScope;
 }
 
 export interface ActivitySettingsResponse {
