@@ -10,13 +10,15 @@ const getBaseURL = () => {
   return cleanUrl.endsWith("/api") ? cleanUrl : `${cleanUrl}/api`;
 };
 
+// Every unsafe /api request must carry it (server CSRF guard). Cross-site forms cannot set it.
+export const CSRF_HEADERS = { "X-Requested-With": "XMLHttpRequest" } as const;
+
 const api = axios.create({
   baseURL: getBaseURL(),
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
-    // Destructive routes (erasure request) require it: a cross-site form cannot set it without a CORS preflight.
-    "X-Requested-With": "XMLHttpRequest",
+    ...CSRF_HEADERS,
   },
 });
 
@@ -96,7 +98,7 @@ api.interceptors.response.use(
         const refreshRes = await axios.post(
           refreshUrl,
           { refresh_token: storedRefresh },
-          { withCredentials: true, timeout: REFRESH_POST_TIMEOUT_MS },
+          { withCredentials: true, timeout: REFRESH_POST_TIMEOUT_MS, headers: CSRF_HEADERS },
         );
 
         // Logout or another account's login happened while the POST was in flight: the

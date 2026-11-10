@@ -253,6 +253,7 @@ func newEnv(t *testing.T) *env {
 	m := mailer.New(e.cfg.Brevo)
 	e.app = fiber.New()
 	api := e.app.Group("/api")
+	router.InstallCSRF(api) // same call as router.Register
 	e.auth = auth_module.RegisterRoutes(api, db, e.cfg, m, nil, nil)
 	e.auth.SetGoogleOAuthProvider(e.google)
 	e.link = link_module.RegisterRoutes(api, db, e.cfg, m, e.auth)
@@ -302,6 +303,7 @@ func (e *env) do(method, path string, body any, token string) (int, map[string]a
 	}
 	req := httptest.NewRequest(method, path, rd)
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(middleware.HeaderRequestedWith, middleware.RequestedWithXHR)
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}

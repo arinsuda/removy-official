@@ -68,6 +68,7 @@ func Register(ctx context.Context, app *fiber.App, db *gorm.DB, cfg *config.Conf
 	app.Get("/health", healthHandler)
 
 	api := app.Group("/api")
+	InstallCSRF(api)
 	api.Get("/share/proxy-image", shareImageProxyHandler(cfg.TrustedProxyHops))
 
 	authSvc := auth_module.RegisterRoutes(api, db, cfg, m, mc, notifSvc)
@@ -115,6 +116,12 @@ func Register(ctx context.Context, app *fiber.App, db *gorm.DB, cfg *config.Conf
 	go account_erasure.NewPurger(db, mc).Run(ctx)
 
 	return notifHub
+}
+
+// InstallCSRF mounts the X-Requested-With guard. Call it before registering any route on api
+// (Fiber runs USE handlers in registration order); the integration env uses it too.
+func InstallCSRF(api fiber.Router) {
+	api.Use(middleware.RequireXHR(middleware.CSRFExemptPrefixes))
 }
 
 func welcomeHandler(c fiber.Ctx) error {

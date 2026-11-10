@@ -30,6 +30,7 @@ describe("isSessionRejected", () => {
   it("logs out only for a rejected session, never for 503 or a network error", () => {
     expect(isSessionRejected({ response: { status: 401 } })).toBe(true)
     expect(isSessionRejected({ response: { status: 403 } })).toBe(true)
+    expect(isSessionRejected({ response: { status: 403, data: { code: "XHR_HEADER_REQUIRED" } } })).toBe(false)
     expect(isSessionRejected({ response: { status: 503 } })).toBe(false)
     expect(isSessionRejected({ response: { status: 500 } })).toBe(false)
     expect(isSessionRejected(new Error("Network Error"))).toBe(false)
