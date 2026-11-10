@@ -132,8 +132,9 @@ const deleteTarget = ref<ReviewResponse | null>(null)
 
 const shownCount = computed(() => total.value)
 const summary = computed(() => ({
-  count: serverSummary.value?.count ?? 0,
-  average: serverSummary.value?.average_rating ?? 0,
+  // Without a server summary (older API) fall back to the loaded list so the cards never contradict it.
+  count: serverSummary.value?.count ?? total.value,
+  average: serverSummary.value?.average_rating ?? summarizeReviews(reviews.value).average,
   // Genres come from the loaded page(s), so they are only representative for the unfiltered list.
   topGenre: filter.value === DEFAULT_FILTER && !search.value ? summarizeReviews(reviews.value).topGenre : null,
 }))
