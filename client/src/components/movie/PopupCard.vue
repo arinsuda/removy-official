@@ -632,10 +632,16 @@ function fmtRuntime(mins: number) {
 }
 .popup__actions {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  /* Wraps instead of squeezing five columns into a narrow popup or sheet. */
+  grid-template-columns: repeat(auto-fit, minmax(4.25rem, 1fr));
   gap: 4px;
 }
 
+@media (pointer: coarse) {
+  .action-btn {
+    min-height: 44px;
+  }
+}
 .action-btn {
   /* --tone drives the hover/active tint of each action */
   --tone: var(--color-text-secondary);

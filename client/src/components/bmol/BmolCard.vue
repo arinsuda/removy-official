@@ -169,6 +169,15 @@ function onMenuFocusOut(e: FocusEvent) {
 }
 .bcard__handle { position: absolute; bottom: 0.375rem; left: 0.375rem; touch-action: none; cursor: grab; }
 .bcard__handle.is-active { color: var(--color-surface); background: var(--color-accent); cursor: grabbing; }
+/* Touch: 44px hit area. touch-action: none stays on the handle only so the page still scrolls. */
+@media (pointer: coarse) {
+  .bcard__handle,
+  .bcard__menu-btn,
+  .bcard--shelf .bcard__handle,
+  .bcard--shelf .bcard__menu-btn { width: 2.75rem; height: 2.75rem; }
+  .bcard__menu-list { top: 3rem; }
+  .bcard__menu-list button { min-height: 2.75rem; }
+}
 .bcard__menu { position: absolute; top: 0.375rem; right: 0.375rem; }
 .bcard__menu-list {
   position: absolute;

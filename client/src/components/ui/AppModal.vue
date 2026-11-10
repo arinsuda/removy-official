@@ -4,6 +4,7 @@
       <div
         v-if="modelValue"
         class="app-modal"
+        :class="{ 'app-modal--sheet': sheet }"
         :style="{ zIndex: `calc(var(--z-modal-base) + ${modalZOffset})` }"
         @mousedown="onBackdropDown"
         @mouseup="onBackdropUp"
@@ -12,7 +13,7 @@
           ref="panel"
           v-bind="$attrs"
           class="app-modal__panel"
-          :class="`app-modal__panel--${size}`"
+          :class="[`app-modal__panel--${size}`, { 'app-modal__panel--sheet': sheet }]"
           :role="role"
           aria-modal="true"
           :aria-label="ariaLabel"
@@ -85,6 +86,8 @@ const props = withDefaults(
     /** CSS selector or element to focus first instead of the first focusable. */
     initialFocus?: string | HTMLElement
     showClose?: boolean
+    /** Anchors the panel to the bottom edge on narrow screens (touch quick-action sheet). */
+    sheet?: boolean
   }>(),
   { size: "md", role: "dialog", closeOnBackdrop: true, closeOnEscape: true, showClose: true },
 )
@@ -227,6 +230,18 @@ function onBackdropUp(event: MouseEvent) {
 
 .app-modal__panel--lg {
   max-width: 760px;
+}
+
+@media (max-width: 639.98px) {
+  .app-modal--sheet {
+    align-items: flex-end;
+  }
+
+  .app-modal__panel--sheet {
+    max-width: none;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
 }
 
 .app-modal__header {

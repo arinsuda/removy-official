@@ -44,12 +44,40 @@
       </div>
     </RouterLink>
 
+    <!-- Quick actions without hover: a real button, so tap and Enter/Space work on every device.
+         Shown on touch always, on hover-capable devices when the card is hovered or focused. -->
+    <button
+      type="button"
+      class="more-btn"
+      :aria-label="t('media.popup.more')"
+      aria-haspopup="dialog"
+      @click="openSheet"
+    >
+      <MoreHorizontal :size="16" aria-hidden="true" />
+    </button>
+
+    <AppModal v-model="sheetOpen" sheet size="sm" :aria-label="t('media.popup.sheetLabel', { title: item.title })">
+      <PopupCard
+        :movie="item.source"
+        :ratings="popup.detailRatings(item)"
+        :ratings-loading="popup.ratingsLoading(item)"
+        :media-type="item.type"
+        :current-trailer="null"
+        :trailer-unavailable="false"
+        :is-iframe-mounted="false"
+        :is-iframe-loaded="false"
+        :show-skeleton="false"
+        :show-fallback="true"
+        :attach-player="noopAttach"
+      />
+    </AppModal>
+
     <Teleport to="body">
       <Transition name="popup">
         <div
-          v-if="popup.openKey.value === popupKey && popup.isDesktop.value"
+          v-if="popup.openKey.value === popupKey && popup.canHover.value"
           class="hover-popup"
-          :style="{ top: `${popup.anchor.value.top}px`, left: `${popup.anchor.value.left}px` }"
+          :style="{ top: `${popup.anchor.value.top}px`, left: `${popup.anchor.value.left}px`, width: popupWidth }"
           @mouseenter="popup.popupEnter()"
           @mouseleave="popup.popupLeave(popupKey)"
         >
@@ -75,11 +103,13 @@
 <script setup lang="ts">
 import { computed, ref, useTemplateRef } from "vue"
 import { useI18n } from "vue-i18n"
+import { MoreHorizontal } from "lucide-vue-next"
+import AppModal from "@/components/ui/AppModal.vue"
 import PopcornScoreBadge from "@/components/movie/PopcornScoreBadge.vue"
 import PopupCard from "@/components/movie/PopupCard.vue"
 import { popcornTier } from "@/components/movie/popcornTier"
 import { highlightParts } from "@/components/search/highlight"
-import { useHomePopup } from "@/composables/useHomePopup"
+import { POPUP_EDGE, POPUP_WIDTH, useHomePopup } from "@/composables/useHomePopup"
 import { detailRoute, posterSrc, posterSrcset, type HomeMedia } from "./homeMedia"
 
 const props = withDefaults(
@@ -101,6 +131,16 @@ const { t } = useI18n()
 const popup = useHomePopup()
 const wrap = useTemplateRef<HTMLElement>("wrap")
 const failed = ref(false)
+const sheetOpen = ref(false)
+/** Fluid: never wider than the viewport minus the edge gutters. */
+const popupWidth = `min(${POPUP_WIDTH}px, calc(100vw - ${2 * POPUP_EDGE}px))`
+const noopAttach = () => {}
+
+function openSheet() {
+  popup.close()
+  popup.prefetch(props.item)
+  sheetOpen.value = true
+}
 
 const titleParts = computed(() => highlightParts(props.item.title, props.highlight))
 const popupKey = computed(() => `${props.rail}:${props.item.key}`)
@@ -227,6 +267,37 @@ const tier = computed(() => {
   border-radius: 2px;
   color: inherit;
 }
+.more-btn {
+  position: absolute;
+  top: 2rem;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  color: var(--color-text-primary);
+  background: color-mix(in srgb, var(--color-surface) 80%, transparent);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 9999px;
+  cursor: pointer;
+}
+/* 44px hit area on touch without growing the visible control. */
+.more-btn::after {
+  content: "";
+  position: absolute;
+  inset: -0.5rem;
+}
+@media (hover: hover) and (pointer: fine) {
+  .more-btn {
+    opacity: 0;
+    transition: opacity var(--motion-fast, 0.25s) var(--ease-out-soft);
+  }
+  .poster-wrap:hover .more-btn,
+  .poster-wrap:focus-within .more-btn {
+    opacity: 1;
+  }
+}
 .poster-title {
   margin: 0;
   overflow: hidden;
@@ -245,7 +316,6 @@ const tier = computed(() => {
 .hover-popup {
   position: fixed;
   z-index: var(--z-popover);
-  width: 320px;
   overflow: hidden;
   background: var(--color-surface-2);
   border: 1px solid var(--color-border-strong);

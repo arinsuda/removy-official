@@ -4,7 +4,7 @@ import type { Video } from "@/types"
 import type { MediaRatings } from "@/types/movie"
 import type { HomeMedia } from "@/components/home/homeMedia"
 import { resolveTrailerCandidates, useTrailerPreview } from "@/composables/useTrailerPreview"
-import { minWidthQuery } from "@/constants/breakpoints"
+import { HOVER_FINE_QUERY } from "@/constants/input"
 
 type TrailerState = ReturnType<typeof useTrailerPreview>
 
@@ -17,7 +17,8 @@ export interface HomePopup {
   /** Key of the card whose popup is open, or null. */
   openKey: Ref<string | null>
   anchor: Ref<PopupAnchor>
-  isDesktop: Ref<boolean>
+  /** Primary input can hover; hover popups are enabled only then. */
+  canHover: Ref<boolean>
   getState(item: HomeMedia): TrailerState
   /** Ratings from the detail endpoint (adds IMDb / Rotten Tomatoes), once fetched. */
   detailRatings(item: HomeMedia): MediaRatings | undefined
@@ -27,6 +28,8 @@ export interface HomePopup {
   show(item: HomeMedia, key: string, el: HTMLElement): void
   /** Keyboard focus; ignored unless the browser reports :focus-visible. */
   focus(item: HomeMedia, key: string, el: HTMLElement): void
+  /** Starts the detail-ratings request without opening the hover popup (used by the touch sheet). */
+  prefetch(item: HomeMedia): void
   /** Pointer or focus left the card. */
   leave(key: string): void
   popupEnter(): void
@@ -37,8 +40,9 @@ export interface HomePopup {
 const POPUP_KEY: InjectionKey<HomePopup> = Symbol("home-popup")
 const SHOW_DELAY = 220
 const LEAVE_DELAY = 80
-const POPUP_WIDTH = 320
-const EDGE = 8
+export const POPUP_WIDTH = 320
+export const POPUP_EDGE = 8
+const EDGE = POPUP_EDGE
 const RATINGS_RETRY_DELAY = 1500
 const RATINGS_MAX_RETRIES = 2
 
@@ -46,7 +50,7 @@ const RATINGS_MAX_RETRIES = 2
 export function provideHomePopup(): HomePopup {
   const openKey = ref<string | null>(null)
   const anchor = ref<PopupAnchor>({ top: 0, left: 0 })
-  const isDesktop = ref(true)
+  const canHover = ref(true)
 
   const states = new Map<string, TrailerState>()
   const videoCache = new Map<string, Video[]>()
@@ -62,8 +66,8 @@ export function provideHomePopup(): HomePopup {
   let media: MediaQueryList | null = null
 
   const syncViewport = () => {
-    isDesktop.value = media?.matches ?? true
-    if (!isDesktop.value) close()
+    canHover.value = media?.matches ?? true
+    if (!canHover.value) close()
   }
 
   function getState(item: HomeMedia): TrailerState {
@@ -140,8 +144,9 @@ export function provideHomePopup(): HomePopup {
 
   function place(el: HTMLElement) {
     const rect = el.getBoundingClientRect()
-    const maxLeft = Math.max(EDGE, window.innerWidth - POPUP_WIDTH - EDGE)
-    const left = rect.left + rect.width / 2 - POPUP_WIDTH / 2
+    const width = Math.min(POPUP_WIDTH, window.innerWidth - 2 * EDGE)
+    const maxLeft = Math.max(EDGE, window.innerWidth - width - EDGE)
+    const left = rect.left + rect.width / 2 - width / 2
     anchor.value = {
       top: Math.max(EDGE, rect.top - 8),
       left: Math.min(Math.max(EDGE, left), maxLeft),
@@ -155,7 +160,7 @@ export function provideHomePopup(): HomePopup {
   }
 
   function show(item: HomeMedia, key: string, el: HTMLElement) {
-    if (!isDesktop.value) return
+    if (!canHover.value) return
     clearTimers()
     insidePopup = false
     hoveredKey = item.key
@@ -179,7 +184,7 @@ export function provideHomePopup(): HomePopup {
   }
 
   function leave(key: string) {
-    if (!isDesktop.value) return
+    if (!canHover.value) return
     if (showTimer) clearTimeout(showTimer)
     leaveTimer = setTimeout(() => {
       if (!insidePopup) closeIf(key)
@@ -207,7 +212,7 @@ export function provideHomePopup(): HomePopup {
   }
 
   onMounted(() => {
-    media = window.matchMedia(minWidthQuery("md"))
+    media = window.matchMedia(HOVER_FINE_QUERY)
     syncViewport()
     media.addEventListener("change", syncViewport)
     document.addEventListener("keydown", onKeydown)
@@ -228,10 +233,11 @@ export function provideHomePopup(): HomePopup {
   const api: HomePopup = {
     openKey,
     anchor,
-    isDesktop,
+    canHover,
     getState,
     detailRatings: (item) => ratingsCache.get(item.key),
     ratingsLoading: (item) => ratingsLoading.has(item.key),
+    prefetch: (item) => void loadRatings(item),
     show,
     focus,
     leave,
