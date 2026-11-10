@@ -604,6 +604,16 @@ func (r *gormRepository) UpdateUserStatus(adminID, targetUserID uint, isActive b
 	return nil
 }
 
+type userOwnedTable struct{ table, column string }
+
+// softDeletedUserContent is hidden (deleted_at) when an admin deletes a user.
+var softDeletedUserContent = []userOwnedTable{
+	{"reviews", "user_id"},
+	{"activity_events", "actor_id"},
+	{"media_watch_logs", "user_id"},
+	{"library_items", "user_id"},
+}
+
 func (r *gormRepository) DeleteUser(adminID, targetUserID uint, reason *string) error {
 	if adminID == targetUserID {
 		return ErrSelfDeletion
@@ -657,10 +667,16 @@ func (r *gormRepository) DeleteUser(adminID, targetUserID uint, reason *string) 
 		}
 		out.SessionsRevoked = true
 
-		_ = tx.Table("reviews").Where("user_id = ? AND deleted_at IS NULL", targetUserID).Update("deleted_at", now).Error
-		_ = tx.Table("activity_events").Where("actor_id = ? AND deleted_at IS NULL", targetUserID).Update("deleted_at", now).Error
-		_ = tx.Table("media_watch_logs").Where("user_id = ? AND deleted_at IS NULL", targetUserID).Update("deleted_at", now).Error
-		_ = tx.Table("library_items").Where("user_id = ? AND deleted_at IS NULL", targetUserID).Update("deleted_at", now).Error
+		for _, c := range softDeletedUserContent {
+			if err := tx.Table(c.table).Where(c.column+" = ? AND deleted_at IS NULL", targetUserID).Update("deleted_at", now).Error; err != nil {
+				return fmt.Errorf("soft-delete %s of user %d: %w", c.table, targetUserID, err)
+			}
+		}
+		// Release external identities and pending credentials so the same Google/PLANZI
+		// account can sign up again. Self-delete (deactivation) never gets here.
+		if err := identity_policy.ReleaseExternalIdentities(tx, targetUserID); err != nil {
+			return fmt.Errorf("release identities of user %d: %w", targetUserID, err)
+		}
 
 		metaMap := map[string]any{
 			"target_username": target.Username,
