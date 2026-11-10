@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest"
 // Ratchet: hard-coded colors and legacy --c-* variables may only go down.
 // When a count drops, LOWER the baseline below so the gain is locked in.
 // Convert colors to design tokens when you edit a file; never add new ones.
-const BASELINE = { hex: 39, rgb: 36, legacyVars: 11 }
+const BASELINE = { hex: 21, rgb: 23, legacyVars: 0 }
 
 const SRC = join(import.meta.dirname, "..")
 

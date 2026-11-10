@@ -19,6 +19,7 @@
         </div>
         <ShareTierBadge :tier="tier" />
       </div>
+      <!-- hardcode-ok: brand wordmark -->
       <span class="sc-wordmark sticker__brand"><span class="sc-wordmark__pop">POP</span><span>CORN</span></span>
     </div>
   </article>
@@ -56,7 +57,7 @@ const display = computed(() => {
 .sticker {
   display: flex; flex-direction: column; align-items: stretch; gap: 36px; width: 840px; padding: 56px;
   border-radius: 80px; background: var(--sc-bg); border: 6px solid var(--sc-line);
-  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.35); /* hardcode-ok: share PNG template must render identically */
 }
 .sticker__media { display: flex; align-items: flex-end; gap: 40px; }
 .sticker__poster { flex: none; width: 220px; height: 330px; border-radius: 28px; }

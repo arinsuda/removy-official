@@ -39,6 +39,9 @@ export const ZERO_DIRS = [
   "components/social",
   "components/common",
   "components/ui",
+  "components/profile",
+  "components/share",
+  "utils",
 ]
 
 /** Single files (not whole directories) that must stay at zero as well. */

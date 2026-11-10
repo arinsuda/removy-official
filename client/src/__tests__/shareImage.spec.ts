@@ -25,6 +25,7 @@ const i18n = createI18n({
         copyLink: "Copy Link",
         sharedFrom: "Shared from POPCORN",
         reviewedOn: "Reviewed on POPCORN",
+        reviewedOnLabel: "REVIEWED ON",
         movie: "Movie",
         tvSeries: "TV Series",
         downloadSuccess: "Image downloaded",

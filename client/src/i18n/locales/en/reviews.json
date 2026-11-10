@@ -31,7 +31,8 @@
     "notRated": "NR",
     "loginRequired": "Sign in to write a review",
     "submitFailed": "Could not post your review. Please try again.",
-    "updateFailed": "Could not update your review. Please try again."
+    "updateFailed": "Could not update your review. Please try again.",
+    "deleteFailed": "Could not delete your review. Please try again."
   },
   "composer": {
     "title": "Write a review",
@@ -41,7 +42,8 @@
     "placeholder": {
       "movie": "What did you think of this movie?",
       "tv": "What did you think of this series?"
-    }
+    },
+    "visibilityLabel": "Visibility"
   },
   "own": {
     "title": "Your review",
@@ -59,5 +61,18 @@
   },
   "guestPrompt": "Sign in to write a review.",
   "loadFailed": "Could not load reviews.",
-  "ownLoadFailed": "Could not check whether you already reviewed this title."
+  "ownLoadFailed": "Could not check whether you already reviewed this title.",
+  "edit": {
+    "writtenOn": "Written {date}",
+    "type": {
+      "movie": "Movie",
+      "tv": "Series"
+    },
+    "typeYear": "{type} · {year}",
+    "shortcut": "{keys} to save",
+    "keys": {
+      "mac": "⌘ + Enter",
+      "other": "Ctrl + Enter"
+    }
+  }
 }
