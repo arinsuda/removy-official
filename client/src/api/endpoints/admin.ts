@@ -6,6 +6,7 @@ import type {
   AdminReviewPaginatedResponse,
   AdminAuditLogPaginatedResponse,
   UserFilterQuery,
+  EraseUserBody,
   ReviewFilterQuery,
   AuditLogFilterQuery,
 } from "@/types"
@@ -28,6 +29,9 @@ export const adminApi = {
 
   deleteUser: (userId: number, reason?: string) =>
     api.delete(`/admin/users/${userId}`, { data: { reason } }),
+
+  eraseUser: (userId: number, body: EraseUserBody) =>
+    api.post(`/admin/users/${userId}/erasure`, body),
 
   listReviews: (params: ReviewFilterQuery) =>
     api.get<AdminReviewPaginatedResponse>("/admin/reviews", { params }),

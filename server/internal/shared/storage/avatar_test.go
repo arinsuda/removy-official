@@ -3,6 +3,7 @@ package storage
 import (
 	"bytes"
 	"errors"
+	"strings"
 	"testing"
 )
 
@@ -42,5 +43,23 @@ func TestDetectAvatarType(t *testing.T) {
 				t.Fatal("reader not rewound")
 			}
 		})
+	}
+}
+
+func TestAvatarPrefixesCoverEveryKeyFormatWithoutCrossMatching(t *testing.T) {
+	keys := []string{AvatarKey(1, "abc", ".png"), GoogleAvatarKey(1, 1700000000, ".jpg")}
+	for _, k := range keys {
+		matched := false
+		for _, p := range AvatarPrefixes(1) {
+			matched = matched || strings.HasPrefix(k, p)
+		}
+		if !matched {
+			t.Errorf("%s not covered by AvatarPrefixes(1)", k)
+		}
+		for _, p := range AvatarPrefixes(12) {
+			if strings.HasPrefix(k, p) {
+				t.Errorf("%s matched prefix %s of another user", k, p)
+			}
+		}
 	}
 }

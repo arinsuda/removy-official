@@ -1,6 +1,9 @@
 package admin_module
 
-import "gorm.io/datatypes"
+import (
+	"github.com/arinsuda/movie-hub/internal/account_erasure"
+	"gorm.io/datatypes"
+)
 
 type GrowthStatus string
 
@@ -44,6 +47,7 @@ type AdminUserRow struct {
 	Role        string  `json:"role"`
 	IsActive    bool    `json:"is_active"`
 	CreatedAt   string  `json:"created_at"`
+	DeletedAt   *string `json:"deleted_at"`
 	ReviewCount int     `json:"review_count"`
 }
 
@@ -88,9 +92,31 @@ type DeleteUserRequest struct {
 	Reason *string `json:"reason"`
 }
 
+// Storage cleanup states recorded in the USER_ERASED audit meta under auditCleanupKey.
+const (
+	auditCleanupKey = "storage_cleanup"
+	CleanupPending  = "pending"
+	CleanupDone     = "done"
+)
+
+// ErasureResult is what the repository hands the service after the commit.
+type ErasureResult struct {
+	account_erasure.Result
+	AuditID uint
+}
+
+// EraseUserRequest confirms a permanent erasure by typing the username exactly.
+type EraseUserRequest struct {
+	ConfirmUsername string  `json:"confirm_username"`
+	Reason          *string `json:"reason"`
+}
+
 type DeleteReviewRequest struct {
 	Reason *string `json:"reason"`
 }
+
+// UserStatusDeleted lists soft-deleted users (the first step before erasure).
+const UserStatusDeleted = "deleted"
 
 type UserFilter struct {
 	Page      int    `query:"page"`

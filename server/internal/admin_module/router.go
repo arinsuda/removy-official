@@ -20,6 +20,7 @@ func RegisterRoutes(router fiber.Router, db *gorm.DB, hub *notification_module.H
 	admin.Patch("/users/:userId/role", h.UpdateUserRole)
 	admin.Patch("/users/:userId/status", h.UpdateUserStatus)
 	admin.Delete("/users/:userId", h.DeleteUser)
+	admin.Post("/users/:userId/erasure", h.EraseUser)
 	admin.Get("/reviews", h.ListReviews)
 	admin.Delete("/reviews/:reviewId", h.DeleteReview)
 	admin.Get("/audit-logs", h.ListAuditLogs)

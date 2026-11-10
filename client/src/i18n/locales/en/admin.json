@@ -69,7 +69,11 @@
     "you": "You",
     "emptyTitle": "No users found",
     "emptyDesc": "No account matches this search.",
-    "roleInactiveHint": "Reactivate this account to change its role"
+    "roleInactiveHint": "Reactivate this account to change its role",
+    "statusDeleted": "Deleted",
+    "actionErase": "Erase permanently",
+    "deletedOn": "Deleted {date}",
+    "badgeDeleted": "Deleted"
   },
   "reviews": {
     "title": "Review Management",
@@ -137,7 +141,8 @@
       "USER_REACTIVATED": "Account reactivated",
       "USER_ROLE_CHANGED": "Role changed",
       "USER_DELETED": "Account deleted",
-      "REVIEW_DELETED": "Review deleted"
+      "REVIEW_DELETED": "Review deleted",
+      "USER_ERASED": "Account erased permanently"
     }
   },
   "nav": {
@@ -199,7 +204,17 @@
     "roleUpdated": "Updated the role of {'@'}{username}",
     "deactivated": "Deactivated {'@'}{username}",
     "reactivated": "Reactivated {'@'}{username}",
-    "deleted": "Deleted {'@'}{username}"
+    "deleted": "Deleted {'@'}{username}",
+    "eraseTitle": "Erase this account permanently?",
+    "eraseDesc": "{username} is already deleted. Erasing removes the account for good: reviews, comments, likes, lists, follows, notifications and linked sign-ins are all removed, and the email and username become free to register again. Audit log entries stay, without the username or email.",
+    "eraseWarning": "This cannot be undone.",
+    "eraseConfirmLabel": "Type {username} to confirm",
+    "eraseConfirmHint": "Type the username exactly as shown, including capitals.",
+    "eraseConfirm": "Erase permanently",
+    "eraseReasonLabel": "Reason (optional)",
+    "eraseReasonNote": "Saved in the audit log.",
+    "erased": "Permanently erased {'@'}{username}",
+    "reasonHint": "Don't enter personal data such as names, emails or contact details."
   },
   "reviewModal": {
     "title": "Delete this review?",
@@ -218,6 +233,9 @@
     "invalidInput": "Some of the information entered isn't valid.",
     "notFound": "That item no longer exists. The list will refresh.",
     "forbidden": "You don't have permission to do that.",
-    "generic": "Something went wrong. Please try again."
+    "generic": "Something went wrong. Please try again.",
+    "selfErase": "You can't erase your own account.",
+    "notRemoved": "Delete this account first. Only deleted accounts can be erased.",
+    "confirmMismatch": "The username you typed doesn't match."
   }
 }

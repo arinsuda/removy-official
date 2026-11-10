@@ -35,6 +35,7 @@ export interface AdminUserRow {
   role: string
   is_active: boolean
   created_at: string
+  deleted_at: string | null
   review_count: number
 }
 
@@ -65,12 +66,19 @@ export interface AdminAuditLogRow {
   created_at: string
 }
 
+export type UserStatusFilter = "all" | "active" | "inactive" | "deleted"
+
+export interface EraseUserBody {
+  confirm_username: string
+  reason?: string
+}
+
 export interface UserFilterQuery {
   page?: number
   limit?: number
   search?: string
   role?: string
-  status?: string
+  status?: UserStatusFilter
   sort_by?: string
   sort_order?: "asc" | "desc"
 }

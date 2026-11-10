@@ -8,6 +8,7 @@ import type {
   AdminReviewRow,
   AdminAuditLogRow,
   UserFilterQuery,
+  EraseUserBody,
   ReviewFilterQuery,
   AuditLogFilterQuery,
 } from "@/types"
@@ -107,6 +108,10 @@ export const useAdminStore = defineStore("admin", () => {
     await adminApi.deleteUser(userId, reason)
   }
 
+  async function eraseUser(userId: number, body: EraseUserBody) {
+    await adminApi.eraseUser(userId, body)
+  }
+
   async function fetchReviews(params: ReviewFilterQuery = {}) {
     isLoadingReviews.value = true
     try {
@@ -172,6 +177,7 @@ export const useAdminStore = defineStore("admin", () => {
     updateUserRole,
     updateUserStatus,
     deleteUser,
+    eraseUser,
     fetchReviews,
     deleteReview,
     fetchAuditLogs,

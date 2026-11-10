@@ -737,7 +737,7 @@ func (s *Service) importGoogleAvatar(ctx context.Context, pictureURL string, use
 		ext = ".webp"
 	}
 
-	objectKey := fmt.Sprintf("avatars/google_%d_%d%s", userID, time.Now().Unix(), ext)
+	objectKey := storage.GoogleAvatarKey(userID, time.Now().Unix(), ext)
 	if _, err := s.minio.UploadBuffer(ctx, objectKey, bytes.NewReader(buf.Bytes()), int64(buf.Len()), contentType); err == nil {
 		s.db.Model(&user_module.User{}).Where("id = ?", userID).Update("avatar_url", objectKey)
 	}

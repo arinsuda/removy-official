@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/arinsuda/movie-hub/internal/account_erasure"
 	"github.com/arinsuda/movie-hub/internal/identity_policy"
 	tmdbmodule "github.com/arinsuda/movie-hub/internal/tmdb_module"
 	"github.com/arinsuda/movie-hub/internal/user_module"
@@ -23,6 +24,9 @@ var (
 	ErrFinalAdminProtection   = errors.New("cannot demote or deactivate final active admin")
 	ErrInactiveUserRoleChange = errors.New("cannot change role of inactive user")
 	ErrUserAlreadyInStatus    = errors.New("user is already in requested status")
+	ErrSelfErasure            = errors.New("cannot erase your own account")
+	ErrUserNotRemoved         = errors.New("user must be deleted before erasure")
+	ErrConfirmationMismatch   = errors.New("confirmation does not match the username")
 )
 
 type Repository interface {
@@ -34,6 +38,10 @@ type Repository interface {
 	UpdateUserRole(adminID, targetUserID uint, newRoleName string, reason *string) error
 	UpdateUserStatus(adminID, targetUserID uint, isActive bool, reason *string) error
 	DeleteUser(adminID, targetUserID uint, reason *string) error
+	// EraseUser hard-deletes a soft-deleted user. The returned Outcome must be Published after commit.
+	EraseUser(adminID, targetUserID uint, confirmUsername string, reason *string) (ErasureResult, identity_policy.Outcome, error)
+	// SetErasureCleanup records on the USER_ERASED audit row whether storage cleanup finished.
+	SetErasureCleanup(auditID uint, status string) error
 	DeleteReview(adminID, reviewID uint, reason *string) error
 }
 
@@ -201,11 +209,17 @@ func (r *gormRepository) ListUsers(filter UserFilter) ([]AdminUserRow, int64, er
 			roles.role_name AS role,
 			users.is_active,
 			users.created_at,
+			users.deleted_at,
 			COALESCE(s.review_count, 0) AS review_count
 		`).
 		Joins("JOIN roles ON roles.id = users.role_id").
 		Joins("LEFT JOIN user_stats s ON s.user_id = users.id").
-		Where("users.deleted_at IS NULL")
+		Unscoped()
+	if filter.Status == UserStatusDeleted {
+		query = query.Where("users.deleted_at IS NOT NULL")
+	} else {
+		query = query.Where("users.deleted_at IS NULL")
+	}
 
 	if filter.Search != "" {
 		s := "%" + filter.Search + "%"
@@ -241,6 +255,7 @@ func (r *gormRepository) ListUsers(filter UserFilter) ([]AdminUserRow, int64, er
 		Role        string
 		IsActive    bool
 		CreatedAt   time.Time
+		DeletedAt   *time.Time
 		ReviewCount int
 	}
 
@@ -265,6 +280,10 @@ func (r *gormRepository) ListUsers(filter UserFilter) ([]AdminUserRow, int64, er
 			IsActive:    r.IsActive,
 			CreatedAt:   r.CreatedAt.Format(time.RFC3339),
 			ReviewCount: r.ReviewCount,
+		}
+		if r.DeletedAt != nil {
+			d := r.DeletedAt.Format(time.RFC3339)
+			result[i].DeletedAt = &d
 		}
 	}
 
@@ -741,4 +760,88 @@ func (r *gormRepository) DeleteReview(adminID, reviewID uint, reason *string) er
 		}
 		return tx.Create(&auditLog).Error
 	})
+}
+
+// EraseUser is the second step after DeleteUser: the row is soft-deleted, an admin confirms by
+// username, and everything goes (see account_erasure). It takes the admin guard first like every
+// admin-removing transaction.
+func (r *gormRepository) EraseUser(adminID, targetUserID uint, confirmUsername string, reason *string) (ErasureResult, identity_policy.Outcome, error) {
+	var res ErasureResult
+	var out identity_policy.Outcome
+	if adminID == targetUserID {
+		return res, out, ErrSelfErasure
+	}
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		if err := identity_policy.LockAdminGuard(tx); err != nil {
+			return err
+		}
+		var target struct {
+			ID        uint
+			Username  string
+			IsActive  bool
+			RoleName  string
+			DeletedAt *time.Time
+		}
+		// Raw SQL so soft-deleted rows are visible.
+		err := tx.Raw(`SELECT u.id, u.username, u.is_active, u.deleted_at, roles.role_name
+			FROM users u JOIN roles ON roles.id = u.role_id
+			WHERE u.id = ? FOR UPDATE OF u`, targetUserID).Scan(&target).Error
+		if err != nil {
+			return err
+		}
+		if target.ID == 0 {
+			return ErrUserNotFound
+		}
+		if target.DeletedAt == nil {
+			return ErrUserNotRemoved
+		}
+		if target.Username != confirmUsername {
+			return ErrConfirmationMismatch
+		}
+		if target.RoleName == string(user_module.RoleAdmin) && target.IsActive {
+			// Unreachable through the API (a soft delete clears is_active), kept so a row in
+			// an odd state can never remove the last admin.
+			n, err := identity_policy.CountActiveAdmins(tx, string(user_module.RoleAdmin))
+			if err != nil {
+				return err
+			}
+			if n == 0 {
+				return ErrFinalAdminProtection
+			}
+		}
+
+		res.Result, err = account_erasure.Erase(tx, targetUserID)
+		if err != nil {
+			return err
+		}
+		out.SessionsRevoked = true
+
+		// Prior state only: no username, no email.
+		metaJS, _ := json.Marshal(map[string]any{
+			"target_role":       target.RoleName,
+			"target_was_active": target.IsActive,
+			"target_deleted_at": target.DeletedAt.UTC().Format(time.RFC3339),
+			auditCleanupKey:     CleanupPending,
+		})
+		audit := AdminAuditLog{
+			AdminID:    &adminID,
+			Action:     ActionUserErased,
+			TargetType: "user",
+			TargetID:   targetUserID,
+			Reason:     reason,
+			MetaData:   datatypes.JSON(metaJS),
+			CreatedAt:  time.Now().UTC(),
+		}
+		if err := tx.Create(&audit).Error; err != nil {
+			return err
+		}
+		res.AuditID = audit.ID
+		return nil
+	})
+	return res, out, err
+}
+
+func (r *gormRepository) SetErasureCleanup(auditID uint, status string) error {
+	return r.db.Exec(`UPDATE admin_audit_logs SET meta_data = jsonb_set(COALESCE(meta_data, '{}'::jsonb), ARRAY[?], to_jsonb(?::text))
+		WHERE id = ? AND action = ?`, auditCleanupKey, status, auditID, string(ActionUserErased)).Error
 }

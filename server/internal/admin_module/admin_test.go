@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/arinsuda/movie-hub/config"
+	"github.com/arinsuda/movie-hub/internal/identity_policy"
 	"github.com/arinsuda/movie-hub/internal/shared"
 	"github.com/arinsuda/movie-hub/middleware"
 	"github.com/gofiber/fiber/v3"
@@ -26,6 +27,7 @@ type mockRepository struct {
 	updateStatusFunc func(adminID, targetUserID uint, isActive bool, reason *string) error
 	deleteUserFunc   func(adminID, targetUserID uint, reason *string) error
 	deleteReviewFunc func(adminID, reviewID uint, reason *string) error
+	eraseUserFunc    func(adminID, targetUserID uint) error
 }
 
 func (m *mockRepository) GetOverviewStats(onlineUsers int) (*OverviewStats, error) {
@@ -84,6 +86,15 @@ func (m *mockRepository) DeleteUser(adminID, targetUserID uint, reason *string) 
 	return nil
 }
 
+func (m *mockRepository) EraseUser(adminID, targetUserID uint, _ string, _ *string) (ErasureResult, identity_policy.Outcome, error) {
+	if m.eraseUserFunc != nil {
+		return ErasureResult{}, identity_policy.Outcome{}, m.eraseUserFunc(adminID, targetUserID)
+	}
+	return ErasureResult{}, identity_policy.Outcome{}, nil
+}
+
+func (m *mockRepository) SetErasureCleanup(uint, string) error { return nil }
+
 func (m *mockRepository) DeleteReview(adminID, reviewID uint, reason *string) error {
 	if m.deleteReviewFunc != nil {
 		return m.deleteReviewFunc(adminID, reviewID, reason)
@@ -111,6 +122,7 @@ func setupTestApp(repo Repository) *fiber.App {
 	app.Patch("/api/admin/users/:userId/role", mockAuth(1, "admin"), h.UpdateUserRole)
 	app.Patch("/api/admin/users/:userId/status", mockAuth(1, "admin"), h.UpdateUserStatus)
 	app.Delete("/api/admin/users/:userId", mockAuth(1, "admin"), h.DeleteUser)
+	app.Post("/api/admin/users/:userId/erasure", mockAuth(1, "admin"), h.EraseUser)
 	app.Get("/api/admin/reviews", mockAuth(1, "admin"), h.ListReviews)
 	app.Delete("/api/admin/reviews/:reviewId", mockAuth(1, "admin"), h.DeleteReview)
 	app.Get("/api/admin/audit-logs", mockAuth(1, "admin"), h.ListAuditLogs)
@@ -600,4 +612,38 @@ func TestConcurrentOnlineUserRaceCondition(t *testing.T) {
 	}
 
 	wg.Wait()
+}
+
+func TestEraseUserErrorMapping(t *testing.T) {
+	cases := []struct {
+		err    error
+		status int
+		code   shared.ErrorCode
+	}{
+		{ErrSelfErasure, http.StatusForbidden, shared.ErrorCodeSelfErasure},
+		{ErrUserNotFound, http.StatusNotFound, shared.ErrorCodeUserNotFound},
+		{ErrUserNotRemoved, http.StatusConflict, shared.ErrorCodeUserNotRemoved},
+		{ErrConfirmationMismatch, http.StatusBadRequest, shared.ErrorCodeConfirmMismatch},
+		{ErrFinalAdminProtection, http.StatusConflict, shared.ErrorCodeFinalAdmin},
+		{nil, http.StatusNoContent, ""},
+	}
+	for _, tc := range cases {
+		app := setupTestApp(&mockRepository{eraseUserFunc: func(_, _ uint) error { return tc.err }})
+		req := httptest.NewRequest(http.MethodPost, "/api/admin/users/2/erasure", strings.NewReader(`{"confirm_username":"x"}`))
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := app.Test(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp.StatusCode != tc.status {
+			t.Errorf("%v: status %d, want %d", tc.err, resp.StatusCode, tc.status)
+		}
+		if tc.code != "" {
+			var body shared.APIError
+			_ = json.NewDecoder(resp.Body).Decode(&body)
+			if body.Code != tc.code {
+				t.Errorf("%v: code %q, want %q", tc.err, body.Code, tc.code)
+			}
+		}
+	}
 }

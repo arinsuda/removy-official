@@ -120,6 +120,29 @@ func (h *Handler) DeleteUser(c fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusNoContent)
 }
 
+func (h *Handler) EraseUser(c fiber.Ctx) error {
+	claims := mw.GetClaims(c)
+	if claims == nil || claims.UserID == 0 {
+		return shared.WriteAPIError(c, fiber.StatusUnauthorized, shared.ErrorCodeUnauthorized, "unauthorized")
+	}
+
+	targetUserID, err := parseIDParam(c, "userId")
+	if err != nil {
+		return badRequest(c, "invalid user id")
+	}
+
+	var req EraseUserRequest
+	if err := c.Bind().JSON(&req); err != nil {
+		return badRequest(c, "invalid request body")
+	}
+
+	if err := h.svc.EraseUser(claims.UserID, targetUserID, req); err != nil {
+		return handleError(c, err)
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
 func (h *Handler) ListReviews(c fiber.Ctx) error {
 	var filter ReviewFilter
 	if err := c.Bind().Query(&filter); err != nil {
@@ -185,6 +208,12 @@ func handleError(c fiber.Ctx, err error) error {
 		return shared.WriteAPIError(c, fiber.StatusBadRequest, shared.ErrorCodeSelfDeactivation, "cannot deactivate your own account")
 	case errors.Is(err, ErrSelfDeletion):
 		return shared.WriteAPIError(c, fiber.StatusBadRequest, shared.ErrorCodeSelfDeletion, "cannot delete your own account")
+	case errors.Is(err, ErrSelfErasure):
+		return shared.WriteAPIError(c, fiber.StatusForbidden, shared.ErrorCodeSelfErasure, "cannot erase your own account")
+	case errors.Is(err, ErrUserNotRemoved):
+		return shared.WriteAPIError(c, fiber.StatusConflict, shared.ErrorCodeUserNotRemoved, "user must be deleted before erasure")
+	case errors.Is(err, ErrConfirmationMismatch):
+		return shared.WriteAPIError(c, fiber.StatusBadRequest, shared.ErrorCodeConfirmMismatch, "confirmation does not match the username")
 	case errors.Is(err, ErrUserAlreadyInStatus):
 		return shared.WriteAPIError(c, fiber.StatusBadRequest, shared.ErrorCodeAlreadyInStatus, "user is already in requested status")
 	case errors.Is(err, ErrFinalAdminProtection):

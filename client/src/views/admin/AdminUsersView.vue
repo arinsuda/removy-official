@@ -44,7 +44,11 @@
           </AdminBadge>
         </td>
         <td>
-          <AdminBadge :tone="u.is_active ? 'success' : 'danger'">
+          <div v-if="u.deleted_at" class="status-cell">
+            <AdminBadge tone="danger">{{ t("admin.users.badgeDeleted") }}</AdminBadge>
+            <span class="cell-muted">{{ t("admin.users.deletedOn", { date: formatDate(u.deleted_at) }) }}</span>
+          </div>
+          <AdminBadge v-else :tone="u.is_active ? 'success' : 'danger'">
             {{ u.is_active ? t("admin.users.statusActive") : t("admin.users.statusInactive") }}
           </AdminBadge>
         </td>
@@ -54,7 +58,7 @@
           <AdminRowMenu
             :label="t('admin.table.rowActions', { name: `@${u.username}` })"
             :items="menuItems(u)"
-            @select="(key) => startAction(u, key)"
+            @select="(key) => (key === 'erase' ? startErase(u) : startAction(u, key))"
           />
         </td>
       </tr>
@@ -77,9 +81,17 @@
       :icon="modal.icon"
       :confirm-text="modal.confirm"
       :reason-placeholder="t('admin.userModal.reasonNote')"
+      :reason-hint="t('admin.userModal.reasonHint')"
       :loading="confirmModal.loading"
       @confirm="onConfirmAction"
       @cancel="confirmModal.show = false"
+    />
+
+    <AdminEraseUserModal
+      v-model="eraseModal.show"
+      :user="eraseModal.user"
+      @erased="onErased"
+      @stale="fetchData(adminStore.usersPage)"
     />
   </AdminPage>
 </template>
@@ -87,9 +99,10 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch, type Component } from "vue"
 import { useI18n } from "vue-i18n"
-import { Shield, ShieldOff, Trash2, UserCheck, UserX } from "lucide-vue-next"
+import { Flame, Shield, ShieldOff, Trash2, UserCheck, UserX } from "lucide-vue-next"
 import AdminBadge from "@/components/admin/AdminBadge.vue"
 import AdminConfirmModal from "@/components/admin/AdminConfirmModal.vue"
+import AdminEraseUserModal from "@/components/admin/AdminEraseUserModal.vue"
 import AdminFilters from "@/components/admin/AdminFilters.vue"
 import AdminPage from "@/components/admin/AdminPage.vue"
 import AdminPageHeader from "@/components/admin/AdminPageHeader.vue"
@@ -102,7 +115,7 @@ import AppAvatar from "@/components/ui/AppAvatar.vue"
 import { useToast } from "@/composables/useToast"
 import { useAdminStore } from "@/stores/admin"
 import { useAuthStore } from "@/stores/auth"
-import type { AdminUserRow } from "@/types"
+import type { AdminUserRow, UserStatusFilter } from "@/types"
 import { adminErrorKey } from "@/utils/adminError"
 
 type ActionType = "role" | "status" | "delete"
@@ -115,7 +128,7 @@ const users = computed(() => adminStore.users)
 
 const search = ref("")
 const roleFilter = ref("all")
-const statusFilter = ref("all")
+const statusFilter = ref<UserStatusFilter>("all")
 const sortBy = ref("created_at")
 const sortOrder = ref<"asc" | "desc">("desc")
 const loadError = ref(false)
@@ -139,6 +152,7 @@ const statusOptions = computed(() => [
   { value: "all", label: t("admin.users.statusAll") },
   { value: "active", label: t("admin.users.statusActive") },
   { value: "inactive", label: t("admin.users.statusInactive") },
+  { value: "deleted", label: t("admin.users.statusDeleted") },
 ])
 const isFiltered = computed(() => !!search.value.trim() || roleFilter.value !== "all" || statusFilter.value !== "all")
 
@@ -182,6 +196,8 @@ function clearFilters() {
 }
 
 function menuItems(u: AdminUserRow): RowMenuItem[] {
+  // A deleted account only has the second step left; every other action would 404.
+  if (u.deleted_at) return [{ key: "erase", label: t("admin.users.actionErase"), icon: Flame, tone: "danger" }]
   return [
     {
       key: "role",
@@ -207,6 +223,17 @@ const confirmModal = ref<{ show: boolean; type: ActionType; user: AdminUserRow |
 
 function startAction(user: AdminUserRow, key: string) {
   confirmModal.value = { show: true, type: key as ActionType, user, loading: false }
+}
+
+const eraseModal = ref<{ show: boolean; user: AdminUserRow | null }>({ show: false, user: null })
+
+function startErase(user: AdminUserRow) {
+  eraseModal.value = { show: true, user }
+}
+
+function onErased(user: AdminUserRow) {
+  toast.success(t("admin.userModal.erased", { username: user.username }))
+  fetchData(adminStore.usersPage)
 }
 
 const modal = computed<{
@@ -320,6 +347,13 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 0.375rem;
   font-weight: 600;
+}
+
+.status-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
 }
 
 .user-handle,
