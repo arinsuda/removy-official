@@ -249,7 +249,7 @@ function handleCopyLink() {
 .share-sheet__secondary { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
 
 /* Bottom sheet below 768px. */
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
   .app-modal:has(> .share-sheet) { align-items: flex-end; padding: 0; }
   .share-sheet {
     max-width: none;

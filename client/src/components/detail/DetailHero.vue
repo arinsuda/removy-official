@@ -79,7 +79,7 @@ const meta = computed(() => {
 
 <style scoped>
 .hero { position: relative; }
-.hero__backdrop { position: absolute; inset: 0 0 auto; height: 56vh; overflow: hidden; }
+.hero__backdrop { position: absolute; inset: 0 0 auto; height: 56svh; overflow: hidden; }
 .hero__img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; animation: hero-in var(--motion-wave) var(--ease-out-soft) both; }
 .hero__scrim {
   position: absolute;
@@ -90,7 +90,7 @@ const meta = computed(() => {
 }
 .hero__inner { position: relative; max-width: 1200px; margin: 0 auto; padding: 4.5rem 1rem 0; }
 .hero__back { position: absolute; top: 4rem; left: 0.5rem; }
-.hero__row { display: flex; align-items: flex-end; gap: 1rem; margin-top: calc(56vh - 7rem - 4.5rem - 1rem); }
+.hero__row { display: flex; align-items: flex-end; gap: 1rem; margin-top: calc(56svh - 7rem - 4.5rem - 1rem); }
 .hero__poster { flex: none; width: 112px; aspect-ratio: 2 / 3; overflow: hidden; background: var(--color-surface-2); border: 1px solid var(--color-border-strong); border-radius: var(--radius-card); box-shadow: 0 12px 32px color-mix(in srgb, black 55%, transparent); animation: hero-rise var(--motion-wave) var(--ease-out-soft) both; }
 .hero__poster img { width: 100%; height: 100%; object-fit: cover; }
 .hero__poster-empty { display: grid; width: 100%; height: 100%; place-items: center; color: var(--color-text-muted); }
@@ -112,7 +112,7 @@ const meta = computed(() => {
 @media (min-width: 640px) {
   .hero__inner { padding-inline: 1.5rem; }
   .hero__poster { width: 140px; }
-  .hero__row { gap: 1.5rem; margin-top: calc(56vh - 10rem - 4.5rem - 1rem); }
+  .hero__row { gap: 1.5rem; margin-top: calc(56svh - 10rem - 4.5rem - 1rem); }
   .hero__title { font-size: var(--text-page); }
   .hero__tagline { display: block; }
 }

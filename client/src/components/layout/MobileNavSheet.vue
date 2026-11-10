@@ -169,6 +169,9 @@ onBeforeUnmount(() => {
   flex-direction: column;
   width: min(22rem, 100%);
   height: 100%;
+  padding-top: env(safe-area-inset-top);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
   background: var(--color-surface-2);
   border-left: 1px solid var(--color-border-strong);
   box-shadow: var(--shadow-sheet);

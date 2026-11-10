@@ -42,7 +42,7 @@ import SkeletonRegion from "./SkeletonRegion.vue"
   gap: 8px;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 767.98px) {
   .skeleton-detail {
     grid-template-columns: minmax(0, 1fr);
     gap: 1.5rem;

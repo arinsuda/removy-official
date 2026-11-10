@@ -300,7 +300,7 @@ onBeforeUnmount(() => document.removeEventListener("pointerdown", onPointerDown)
 }
 
 /* Mobile: the open box becomes a bar over the header; the panel is a full-width sheet under it. */
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
   .hs--open {
     position: absolute;
     inset: 0;
@@ -337,7 +337,7 @@ onBeforeUnmount(() => document.removeEventListener("pointerdown", onPointerDown)
     border-radius: 0 0 14px 14px;
   }
 }
-@media (max-width: 576px) {
+@media (max-width: 639.98px) {
   .hs {
     --hs-header: 56px;
   }

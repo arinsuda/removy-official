@@ -162,7 +162,7 @@ const { t } = useI18n()
 }
 
 /* On phones the row actions stay reachable while the other columns scroll sideways. */
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
   .admin-table__table :deep(th.is-end),
   .admin-table__table :deep(td.is-end) {
     position: sticky;

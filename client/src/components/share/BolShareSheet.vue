@@ -198,7 +198,7 @@ async function handleDownload() {
 }
 .bol-sheet__ratio { margin-left: auto; color: var(--color-text-muted); font-size: 12px; }
 .bol-sheet__actions { display: flex; flex-direction: column; gap: 8px; width: 100%; }
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
   .app-modal:has(> .bol-sheet) { align-items: flex-end; padding: 0; }
   .bol-sheet { max-width: none; max-height: 94dvh; border-bottom: 0; border-radius: 20px 20px 0 0; padding-bottom: env(safe-area-inset-bottom); }
 }

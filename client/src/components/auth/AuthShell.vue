@@ -207,7 +207,7 @@ defineExpose({ shake, playExit })
   }
 }
 
-@media (min-width: 900px) {
+@media (min-width: 1024px) {
   .auth-page {
     grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
     grid-template-rows: minmax(0, 1fr);

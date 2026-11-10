@@ -44,10 +44,10 @@
   .toast-container {
     /* Teleported to body: inside the fixed navbar it could never rise above a modal. */
     position: fixed;
-    top: 76px;
-    right: 16px;
+    top: calc(76px + env(safe-area-inset-top));
+    right: max(16px, env(safe-area-inset-right));
     width: 320px;
-    max-width: calc(100vw - 32px);
+    max-width: calc(100vw - 32px - env(safe-area-inset-right));
     z-index: var(--z-toast);
     display: flex;
     flex-direction: column;

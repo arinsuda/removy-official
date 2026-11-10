@@ -5,6 +5,14 @@ const SRC = join(import.meta.dirname, "..", "..")
 const LETTER = /[A-Za-z฀-๿]/
 const MARK = "hardcode-ok"
 
+// Mirrors src/constants/breakpoints.ts (breakpoints.spec.ts keeps that file and main.css in sync).
+const BREAKPOINT_PX = [480, 640, 768, 1024, 1280]
+const MAX_EPSILON = 0.02
+const MEDIA_WIDTH = /\b(min|max)-width:\s*(\d+(?:\.\d+)?)px/g
+const TAILWIND_ARBITRARY = /\b(min|max)-\[(\d+(?:\.\d+)?)px\]:/g
+const PLAIN_VH = /(?<![\w.-])\d+(?:\.\d+)?vh\b/
+const DYNAMIC_VH = /\d(?:dvh|svh)\b/
+
 const LINE_RULES: { name: string; re: RegExp }[] = [
   { name: "color", re: /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?)\(/ },
   // Values 0-10 are local stacking inside one component; anything above must use the --z-* scale.
@@ -61,9 +69,32 @@ function templateOf(source: string): string {
   return start === -1 || end === -1 ? "" : source.slice(start + "<template>".length, end)
 }
 
+/** Responsive-foundation rules: breakpoint tokens only, dynamic viewport units instead of plain `vh`. */
+export function scanLayout(source: string): string[] {
+  const lines = stripExempt(source).split("\n")
+  const found: string[] = []
+  lines.forEach((line, i) => {
+    if (line.includes("@media")) {
+      for (const m of line.matchAll(MEDIA_WIDTH)) {
+        const px = Number(m[2])
+        const ok = BREAKPOINT_PX.some((bp) => (m[1] === "min" ? px === bp : Math.abs(px - (bp - MAX_EPSILON)) < 1e-6))
+        if (!ok) found.push(`breakpoint @${i + 1}: ${line.trim()}`)
+      }
+    }
+    for (const m of line.matchAll(TAILWIND_ARBITRARY)) {
+      if (!BREAKPOINT_PX.includes(Number(m[2]))) found.push(`breakpoint @${i + 1}: ${m[0]}`)
+    }
+    // A plain `vh` is allowed only as the fallback written right before a dvh/svh declaration.
+    if (PLAIN_VH.test(line) && !DYNAMIC_VH.test(line) && !DYNAMIC_VH.test(lines[i + 1] ?? "")) {
+      found.push(`viewport-unit @${i + 1}: ${line.trim()}`)
+    }
+  })
+  return found
+}
+
 export function scanSource(source: string, isVue: boolean): string[] {
   const text = stripExempt(source)
-  const found: string[] = []
+  const found: string[] = scanLayout(source)
   text.split("\n").forEach((line, i) => {
     for (const rule of LINE_RULES) if (rule.re.test(line)) found.push(`${rule.name} @${i + 1}: ${line.trim()}`)
   })
@@ -80,6 +111,20 @@ export function scanSource(source: string, isVue: boolean): string[] {
     if (LETTER.test(m[1]!)) found.push(`text: ${m[1]!.trim()}`)
   }
   return found
+}
+
+/** Every vue/ts/css file under src (stylesheets included), for the layout rules only. */
+export function scanLayoutTree(): string[] {
+  const all = (dir: string, out: string[] = []): string[] => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, e.name)
+      if (e.isDirectory()) {
+        if (e.name !== "__tests__") all(full, out)
+      } else if (/\.(vue|ts|css)$/.test(e.name)) out.push(full)
+    }
+    return out
+  }
+  return all(SRC).flatMap((f) => scanLayout(readFileSync(f, "utf8")).map((v) => `${relative(SRC, f)} ${v}`))
 }
 
 export function scanDir(dir: string): string[] {

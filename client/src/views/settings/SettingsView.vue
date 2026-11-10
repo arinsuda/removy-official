@@ -143,7 +143,7 @@ onBeforeRouteLeave(() => {
 </script>
 
 <style scoped>
-.settings { min-height: 100vh; color: var(--color-text-primary); background: var(--color-surface); }
+.settings { min-height: 100vh; min-height: 100dvh; color: var(--color-text-primary); background: var(--color-surface); }
 .settings__inner { max-width: 75rem; margin: 0 auto; padding: 1.5rem 1rem 5rem; }
 .settings__head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.5rem; margin-bottom: 1rem; }
 .settings__title { font-size: 1.5rem; font-weight: 700; }

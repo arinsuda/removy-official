@@ -17,7 +17,7 @@ import AppButton from "@/components/ui/AppButton.vue"
   align-items: center;
   justify-content: center;
   gap: 16px;
-  min-height: 100vh;
+  min-height: 100vh; min-height: 100dvh;
   padding: 24px 16px;
   text-align: center;
   color: var(--color-text-primary);

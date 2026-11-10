@@ -272,7 +272,7 @@ watch(displayId, (_id, prev) => {
 <style scoped>
 .detail {
   position: relative;
-  min-height: 100vh;
+  min-height: 100vh; min-height: 100dvh;
   padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
   color: var(--color-text-primary);
   background: var(--color-surface);
@@ -308,7 +308,7 @@ watch(displayId, (_id, prev) => {
 @media (min-width: 1024px) {
   .detail__body { display: grid; grid-template-columns: minmax(0, 1fr) 320px; align-items: start; gap: 2rem 2.5rem; }
   .detail__main { display: flex; flex-direction: column; grid-column: 1; grid-row: 1; gap: 2rem; min-width: 0; }
-  .detail__aside { display: flex; flex-direction: column; grid-column: 2; grid-row: 1; gap: 1rem; position: sticky; top: 5rem; max-height: calc(100vh - 6rem); overflow-y: auto; scrollbar-width: thin; }
+  .detail__aside { display: flex; flex-direction: column; grid-column: 2; grid-row: 1; gap: 1rem; position: sticky; top: 5rem; max-height: calc(100vh - 6rem); max-height: calc(100dvh - 6rem); overflow-y: auto; scrollbar-width: thin; }
   .detail__similar { margin-inline: 0; }
 }
 </style>

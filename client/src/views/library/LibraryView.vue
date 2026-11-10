@@ -130,7 +130,7 @@ void ADD_LIST_TYPE
 </script>
 
 <style scoped>
-.lib { width: 100%; min-height: 100vh; color: var(--color-text-primary); background: var(--color-surface); }
+.lib { width: 100%; min-height: 100vh; min-height: 100dvh; color: var(--color-text-primary); background: var(--color-surface); }
 .lib__layout { display: flex; flex-direction: column; gap: 1.25rem; max-width: 75rem; margin: 0 auto; padding: 0 1rem 5rem; }
 .lib__tabs { overflow-x: auto; scrollbar-width: none; padding-bottom: 0.25rem; }
 .lib__tabs::-webkit-scrollbar { display: none; }

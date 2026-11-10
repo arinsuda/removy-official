@@ -142,7 +142,7 @@ const ticks = computed(() => [scaleMax.value, Math.round(scaleMax.value / 2), 0]
   color: var(--color-text-muted);
 }
 
-@media (max-width: 639px) {
+@media (max-width: 639.98px) {
   /* Thin out labels on phones: every second column keeps its label. */
   .bar-chart__col:nth-child(even) .bar-chart__label {
     visibility: hidden;

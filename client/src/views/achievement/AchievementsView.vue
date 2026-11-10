@@ -68,7 +68,7 @@ const sorts = computed(() => SORT_KEYS.map((key) => ({ key, label: t(`achievemen
 </script>
 
 <style scoped>
-.av { width: 100%; min-height: 100vh; color: var(--color-text-primary); background: var(--color-surface); }
+.av { width: 100%; min-height: 100vh; min-height: 100dvh; color: var(--color-text-primary); background: var(--color-surface); }
 .av > :not(.av__layout) { max-width: 75rem; margin-inline: auto; padding-inline: 1rem; }
 .av__layout { display: flex; flex-direction: column; gap: 1.25rem; max-width: 75rem; margin: 0 auto; padding: 0 1rem 5rem; }
 .av__tools { display: flex; flex-direction: column; gap: 0.75rem; }

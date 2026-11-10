@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
-import { scanDir, scanSource } from "./helpers/hardcodeScan"
+import { scanDir, scanLayout, scanLayoutTree, scanSource } from "./helpers/hardcodeScan"
 
 /**
  * Zero-hardcode guard. Every directory listed here must stay free of color literals,
@@ -104,6 +104,34 @@ describe("scanner", () => {
     expect(kinds(`throw new Error("useX requires a provider")`)).toEqual([])
     expect(kinds(`// hardcode-ok: endonym\nconst label = "ไทย"`)).toEqual([])
   })
+})
+
+describe("layout scanner", () => {
+  const kinds = (src: string) => scanLayout(src).map((v) => v.split(" ")[0])
+  it("flags off-scale breakpoints", () => {
+    expect(kinds("@media (max-width: 767px) {")).toEqual(["breakpoint"])
+    expect(kinds("@media (min-width: 900px) {")).toEqual(["breakpoint"])
+    expect(kinds("@media (min-width: 767.98px) {")).toEqual(["breakpoint"])
+    expect(kinds('<p class="min-[360px]:flex">')).toEqual(["breakpoint"])
+  })
+  it("accepts token breakpoints and their .98 max variants", () => {
+    expect(kinds("@media (min-width: 768px) and (hover: hover) {")).toEqual([])
+    expect(kinds("@media (max-width: 767.98px) {")).toEqual([])
+    expect(kinds("@media (max-width: 1279.98px) {")).toEqual([])
+    expect(kinds("@media (prefers-reduced-motion: reduce) {")).toEqual([])
+  })
+  it("flags plain vh unless it is a fallback for dvh/svh", () => {
+    expect(kinds("a { min-height: 100vh; }")).toEqual(["viewport-unit"])
+    expect(kinds("a { height: 56vh }")).toEqual(["viewport-unit"])
+    expect(kinds("a { min-height: 100vh;\n min-height: 100dvh; }")).toEqual([])
+    expect(kinds("a { min-height: 100vh; min-height: 100dvh; }")).toEqual([])
+    expect(kinds("a { height: 56svh }")).toEqual([])
+    expect(kinds("/* hardcode-ok: print */\na { height: 100vh }")).toEqual([])
+  })
+})
+
+it("whole source tree follows the layout rules", () => {
+  expect(scanLayoutTree()).toEqual([])
 })
 
 describe.each(ZERO_DIRS)("no hardcode in %s", (dir) => {

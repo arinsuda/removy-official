@@ -109,7 +109,9 @@ Tokens live in `client/src/assets/styles/main.css` (`@theme static`); use them a
 - Convert on edit: when you touch a file, convert its hard-coded colors. Never run a codemod over the repo.
 - `--c-*` legacy variables are gone (baseline 0); don't reintroduce them.
 - `designTokens.spec.ts` is a ratchet: it fails if `.vue` hex/rgb counts or `--c-` definitions grow. Lower its baseline when counts drop.
-- Breakpoints for new CSS: 480/640/768/1024/1280, mobile-first (`min-width`).
+- Breakpoints: `xs 480 / sm 640 / md 768 / lg 1024 / xl 1280`, mobile-first (`min-width`). Defined once as `--breakpoint-*` in `main.css` (Tailwind `xs:`..`xl:` utilities) and `src/constants/breakpoints.ts` (JS: `minWidthQuery`, `isAtLeast`); the two are kept in sync by `breakpoints.spec.ts`. Never write other px values in `@media` or `min-[Npx]:`. Where inverting to `min-width` is risky, `max-width` is allowed only as token minus 0.02px (`767.98px`).
+- Viewport height: never plain `100vh`/`NNvh`. Use `100dvh` (write a `100vh` line right before it as the old-browser fallback) or `svh` for stable proportions. Enforced by `scanLayout` in `noHardcode.spec.ts` over the whole `src` tree.
+- Safe areas: `index.html` uses `viewport-fit=cover`, so fixed/sticky edges (bottom bars, sheets, drawers, toasts, header sides) add `env(safe-area-inset-*)`, e.g. `padding-bottom: calc(0.5rem + env(safe-area-inset-bottom))` or `max(1rem, env(...))`. `body` already insets left/right.
 - Input focus ring is global (`motion.css`); add `data-focus-custom` to opt out when a control draws its own.
 
 ## Hard rules (invariants)

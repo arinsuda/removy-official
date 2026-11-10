@@ -200,7 +200,7 @@ function onBackdropUp(event: MouseEvent) {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   background: color-mix(in srgb, black 72%, transparent);
   backdrop-filter: blur(6px);
 }
@@ -209,7 +209,7 @@ function onBackdropUp(event: MouseEvent) {
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-height: calc(100dvh - 32px);
+  max-height: calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   background: var(--color-surface-2);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-card);

@@ -240,7 +240,7 @@ onBeforeUnmount(() => {
 .am-trigger--open .am-chevron {
   transform: rotate(180deg);
 }
-@media (max-width: 1023px) {
+@media (max-width: 1023.98px) {
   .am-trigger {
     padding-right: 0.25rem;
   }
@@ -256,7 +256,7 @@ onBeforeUnmount(() => {
   right: 0;
   width: 18.5rem;
   max-width: calc(100vw - 1rem);
-  max-height: calc(100vh - 5rem);
+  max-height: calc(100vh - 5rem); max-height: calc(100dvh - 5rem);
   overflow-y: auto;
   padding: 0.5rem;
   border: 1px solid var(--color-border-strong);

@@ -91,6 +91,7 @@ import LanguageToggle from "./LanguageToggle.vue"
 import AccountMenu from "./AccountMenu.vue"
 import MobileNavSheet from "./MobileNavSheet.vue"
 import { formatBadge } from "./navItems"
+import { isAtLeast } from "@/constants/breakpoints"
 
 const { t } = useI18n()
 const resetSession = useSessionReset()
@@ -152,7 +153,7 @@ function handleEnterAdmin() {
 
 // Close the mobile sheet when the viewport grows back to desktop.
 function onResize() {
-  if (window.innerWidth >= 768 && mobileMenuOpen.value) mobileMenuOpen.value = false
+  if (isAtLeast("md") && mobileMenuOpen.value) mobileMenuOpen.value = false
 }
 
 onMounted(() => {
@@ -177,7 +178,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 2rem;
   height: 3.5rem;
-  padding: 0 1rem;
+  padding: 0 max(1rem, env(safe-area-inset-right)) 0 max(1rem, env(safe-area-inset-left));
   border-bottom: 1px solid transparent;
   transition: background var(--motion-base), backdrop-filter var(--motion-base), border-color var(--motion-base);
 }
@@ -324,12 +325,12 @@ onUnmounted(() => {
 @media (min-width: 1024px) {
   .hdr {
     gap: 2rem;
-    padding: 0 2rem;
+    padding: 0 max(2rem, env(safe-area-inset-right)) 0 max(2rem, env(safe-area-inset-left));
   }
 }
-@media (min-width: 1440px) {
+@media (min-width: 1280px) {
   .hdr {
-    padding: 0 3rem;
+    padding: 0 max(3rem, env(safe-area-inset-right)) 0 max(3rem, env(safe-area-inset-left));
   }
 }
 @media (prefers-reduced-motion: reduce) {
