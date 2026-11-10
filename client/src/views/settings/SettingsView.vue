@@ -153,6 +153,7 @@ onBeforeRouteLeave(() => {
 .settings__nav { position: sticky; top: 3.5rem; z-index: var(--z-sticky); display: flex; gap: 0.5rem; padding: 0.5rem 0; margin-bottom: 1rem; overflow-x: auto; background: var(--color-surface); scrollbar-width: none; }
 .settings__nav::-webkit-scrollbar { display: none; }
 .settings__link { flex: none; padding: 0.375rem 0.875rem; font-size: 0.8125rem; color: var(--color-text-secondary); white-space: nowrap; border: 1px solid var(--color-border); border-radius: 999px; }
+@media (pointer: coarse) { .settings__link { display: inline-flex; align-items: center; min-height: 2.75rem; } }
 .settings__link.is-active { color: var(--color-surface); background: var(--color-text-primary); border-color: var(--color-text-primary); }
 .settings__content { display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
 .settings__group { display: flex; flex-direction: column; gap: 1.25rem; scroll-margin-top: 6rem; }
@@ -161,10 +162,14 @@ onBeforeRouteLeave(() => {
 @media (min-width: 768px) {
   .settings__inner { padding: 2rem 1.5rem 5rem; }
 }
-@media (min-width: 1024px) {
-  .settings__layout { display: grid; grid-template-columns: 13rem minmax(0, 40rem); gap: 2rem; }
-  .settings__nav { top: 5rem; flex-direction: column; align-self: start; padding: 0; margin: 0; overflow: visible; background: none; }
-  .settings__link { padding: 0.5rem 0.75rem; border: 0; border-radius: var(--radius-btn); }
+/* md: narrow side nav; lg: wider nav and gap */
+@media (min-width: 768px) {
+  .settings__layout { display: grid; grid-template-columns: 10.5rem minmax(0, 40rem); gap: 1.5rem; }
+  .settings__nav { top: 5rem; flex-direction: column; align-self: start; gap: 0.25rem; padding: 0; margin: 0; overflow: visible; background: none; }
+  .settings__link { padding: 0.5rem 0.75rem; white-space: normal; border: 0; border-radius: var(--radius-btn); }
   .settings__link:hover { color: var(--color-text-primary); }
+}
+@media (min-width: 1024px) {
+  .settings__layout { grid-template-columns: 13rem minmax(0, 40rem); gap: 2rem; }
 }
 </style>

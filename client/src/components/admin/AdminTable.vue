@@ -15,7 +15,7 @@
               v-for="c in columns"
               :key="c.key"
               scope="col"
-              :class="{ 'is-end': c.align === 'end' }"
+              :class="{ 'is-end': c.align === 'end', 'is-lg-up': c.lgUp }"
               :aria-sort="c.sortable && sortBy === c.key ? (sortOrder === 'asc' ? 'ascending' : 'descending') : undefined"
             >
               <button
@@ -70,6 +70,8 @@ export interface AdminColumn {
   label: string
   sortable?: boolean
   align?: "end"
+  /** Hide the column below lg; the view must show its value elsewhere in the row. */
+  lgUp?: boolean
 }
 
 withDefaults(
@@ -164,6 +166,10 @@ const { t } = useI18n()
 
 /* Below lg the row actions stay reachable while the other columns scroll sideways. */
 @media (max-width: 1023.98px) {
+  .admin-table__table :deep(.is-lg-up) {
+    display: none;
+  }
+
   .admin-table__table :deep(th.is-end),
   .admin-table__table :deep(td.is-end) {
     position: sticky;

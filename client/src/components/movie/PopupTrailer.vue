@@ -2,7 +2,7 @@
   <div class="trailer-popup__overlay" @click.self="$emit('close')">
     <div class="trailer-popup__container">
       <button
-        class="trailer-popup__close-btn"
+        class="trailer-popup__close-btn touch-target"
         @click="$emit('close')"
         :title="$t('media.trailer.close')"
         :aria-label="$t('media.trailer.close')"

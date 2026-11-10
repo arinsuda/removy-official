@@ -15,7 +15,7 @@
             <RouterLink to="/" class="mns-logo" @click="close">
               <img src="/popcorn-icon-192.png" alt="" width="28" height="28" /><span>POP</span><span class="mns-logo-brand">CORN</span> <!-- hardcode-ok: brand name -->
             </RouterLink>
-            <button type="button" class="mns-close" :aria-label="t('navigation.header.closeMenu')" @click="close">
+            <button type="button" class="mns-close" data-touch-ok :aria-label="t('navigation.header.closeMenu')" @click="close">
               <X :size="20" aria-hidden="true" />
             </button>
           </div>

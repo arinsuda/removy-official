@@ -8,7 +8,7 @@
       <button
         type="button"
         role="switch"
-        class="switch"
+        class="switch touch-target"
         :class="{ 'is-on': settings[opt.key] }"
         :aria-checked="settings[opt.key]"
         :aria-labelledby="`${uid}-${opt.key}`"

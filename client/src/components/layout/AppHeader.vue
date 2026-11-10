@@ -49,7 +49,7 @@
 
       <button
         type="button"
-        class="hdr-icon hdr-burger"
+        class="hdr-icon hdr-burger" data-touch-ok
         :aria-label="t('navigation.header.openMenu')"
         :title="t('navigation.header.openMenu')"
         aria-haspopup="dialog"

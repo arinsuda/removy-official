@@ -3,7 +3,7 @@
     <div v-if="message" class="auth-alert" role="alert">
       <IconAlertCircle :size="16" class="auth-alert__icon" aria-hidden="true" />
       <span class="auth-alert__text">{{ message }}</span>
-      <button class="auth-alert__close" type="button" :aria-label="t('auth.common.dismiss')" @click="emit('dismiss')">
+      <button class="auth-alert__close touch-target" type="button" :aria-label="t('auth.common.dismiss')" @click="emit('dismiss')">
         <IconX :size="14" />
       </button>
     </div>

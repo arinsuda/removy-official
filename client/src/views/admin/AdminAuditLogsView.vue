@@ -294,9 +294,13 @@ onMounted(() => fetchData(1))
 
 .entry__meta dl {
   display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 0.25rem 0.75rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.125rem 0.75rem;
   margin: 0.5rem 0 0;
+}
+
+.entry__meta dd + dt {
+  margin-top: 0.5rem;
 }
 
 .entry__meta dt {
@@ -306,5 +310,15 @@ onMounted(() => fetchData(1))
 .entry__meta dd {
   margin: 0;
   overflow-wrap: anywhere;
+}
+
+@media (min-width: 640px) {
+  .entry__meta dl {
+    grid-template-columns: max-content minmax(0, 1fr);
+  }
+
+  .entry__meta dd + dt {
+    margin-top: 0;
+  }
 }
 </style>

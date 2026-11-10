@@ -8,7 +8,7 @@
       <button
         type="button"
         role="switch"
-        class="switch"
+        class="switch touch-target"
         :class="{ 'is-on': model }"
         :aria-checked="model"
         :aria-labelledby="labelId"
