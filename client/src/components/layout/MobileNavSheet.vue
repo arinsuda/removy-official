@@ -169,6 +169,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   width: min(22rem, 100%);
   height: 100%;
+  max-height: 100dvh;
   padding-top: env(safe-area-inset-top);
   padding-right: env(safe-area-inset-right);
   padding-bottom: env(safe-area-inset-bottom);
@@ -217,7 +218,9 @@ onBeforeUnmount(() => {
 }
 .mns-body {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 1rem;
   display: flex;
   flex-direction: column;

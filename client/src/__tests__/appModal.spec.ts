@@ -6,6 +6,7 @@ import { flushPromises, mount, type VueWrapper } from "@vue/test-utils"
 import AppModal from "@/components/ui/AppModal.vue"
 import { focusablesIn } from "@/composables/useDialogFocus"
 import { useRealI18n } from "./helpers/realI18n"
+import { clickAfterRender } from "./helpers/waitForEnabled"
 
 const i18n = useRealI18n()
 const wrappers: VueWrapper[] = []
@@ -320,10 +321,10 @@ describe("AppModal", () => {
     await nextTick()
     await flushPromises()
     const closeBtn = document.body.querySelector<HTMLButtonElement>(".app-modal__header button")!
-    closeBtn.click()
+    clickAfterRender(closeBtn)
     expect(wrapper.emitted("close")).toHaveLength(1)
     await wrapper.setProps({ modelValue: false })
-    closeBtn.click()
+    clickAfterRender(closeBtn)
     expect(wrapper.emitted("close")).toHaveLength(1)
   })
 
@@ -380,7 +381,7 @@ describe("AppModal", () => {
     const wrapper = mountModal()
     await nextTick()
     await flushPromises()
-    document.body.querySelector<HTMLButtonElement>(".app-modal__header button")!.click()
+    clickAfterRender(document.body.querySelector<HTMLButtonElement>(".app-modal__header button")!)
     expect(wrapper.emitted("close")![0]).toEqual(["close-button"])
     await wrapper.setProps({ dismissDisabled: true })
     expect(document.body.querySelector<HTMLButtonElement>(".app-modal__header button")!.disabled).toBe(true)

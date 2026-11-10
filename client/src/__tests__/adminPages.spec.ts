@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { flushPromises, mount, type VueWrapper } from "@vue/test-utils"
 import { createPinia, setActivePinia } from "pinia"
 import { createMemoryHistory, createRouter } from "vue-router"
+import { BREAKPOINTS } from "@/constants/breakpoints"
 import AdminLayout from "@/layouts/AdminLayout.vue"
 import AdminDashboardView from "@/views/admin/AdminDashboardView.vue"
 import AdminUsersView from "@/views/admin/AdminUsersView.vue"
@@ -113,6 +114,36 @@ describe("AdminLayout", () => {
     expect(w.get(".admin-topbar__menu").attributes("aria-expanded")).toBe("true")
     await w.get("aside").trigger("keydown", { key: "Escape" })
     expect(w.get(".admin-topbar__menu").attributes("aria-expanded")).toBe("false")
+  })
+
+  it("drawer: moves focus in, traps Tab, closes on Escape and returns focus to the menu button", async () => {
+    const w = await mountView(AdminLayout)
+    const menu = w.get(".admin-topbar__menu")
+    ;(menu.element as HTMLElement).focus()
+    await menu.trigger("click")
+    await flushPromises()
+    const aside = w.get("aside")
+    expect(aside.classes()).toContain("is-open")
+    expect(aside.element.contains(document.activeElement)).toBe(true)
+    expect(document.body.style.overflow).toBe("hidden")
+    expect(w.get("main").attributes("inert")).toBeDefined()
+
+    await aside.trigger("keydown", { key: "Escape" })
+    await flushPromises()
+    expect(aside.classes()).not.toContain("is-open")
+    expect(document.body.style.overflow).not.toBe("hidden")
+    expect(document.activeElement).toBe(menu.element)
+  })
+
+  it("drawer: closes when the viewport reaches lg", async () => {
+    const original = window.innerWidth
+    const w = await mountView(AdminLayout)
+    await w.get(".admin-topbar__menu").trigger("click")
+    window.innerWidth = BREAKPOINTS.lg
+    window.dispatchEvent(new Event("resize"))
+    await flushPromises()
+    expect(w.get(".admin-topbar__menu").attributes("aria-expanded")).toBe("false")
+    window.innerWidth = original
   })
 
   it("collapses the sidebar and remembers it", async () => {

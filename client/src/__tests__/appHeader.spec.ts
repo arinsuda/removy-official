@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import { BREAKPOINTS } from "../constants/breakpoints"
 import { flushPromises, mount, type VueWrapper } from "@vue/test-utils"
 import { createPinia, setActivePinia } from "pinia"
 import { createMemoryHistory, createRouter } from "vue-router"
@@ -137,6 +138,28 @@ describe("AppHeader", () => {
     await router.push("/")
     w = mount(AppHeader, { global: { plugins: [i18n, router] }, attachTo: document.body })
   }
+
+  it("opens the nav sheet from the burger and closes it once the viewport reaches lg", async () => {
+    const original = window.innerWidth
+    await mountHeader()
+    const burger = w.get(".hdr-burger")
+    expect(burger.attributes("aria-expanded")).toBe("false")
+    await burger.trigger("click")
+    await flushPromises()
+    expect(burger.attributes("aria-expanded")).toBe("true")
+
+    window.innerWidth = BREAKPOINTS.lg - 1
+    window.dispatchEvent(new Event("resize"))
+    await flushPromises()
+    expect(burger.attributes("aria-expanded")).toBe("true")
+
+    window.innerWidth = BREAKPOINTS.lg
+    window.dispatchEvent(new Event("resize"))
+    await flushPromises()
+    expect(burger.attributes("aria-expanded")).toBe("false")
+    expect(document.querySelector("[role='dialog']")).toBeNull()
+    window.innerWidth = original
+  })
 
   it("renders login and sign up for guests, without an account menu", async () => {
     await mountHeader()

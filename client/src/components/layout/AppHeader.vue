@@ -151,9 +151,9 @@ function handleEnterAdmin() {
   router.push("/admin")
 }
 
-// Close the mobile sheet when the viewport grows back to desktop.
+// Close the nav sheet once the inline nav takes over (lg and up).
 function onResize() {
-  if (isAtLeast("md") && mobileMenuOpen.value) mobileMenuOpen.value = false
+  if (isAtLeast("lg") && mobileMenuOpen.value) mobileMenuOpen.value = false
 }
 
 onMounted(() => {
@@ -295,17 +295,12 @@ onUnmounted(() => {
   transform: translateY(-6px);
 }
 
+/* md-lg: tablet bar keeps search, bell and account; the burger opens the nav sheet. */
 @media (min-width: 768px) {
   .hdr {
     height: 4rem;
     padding: 0 1.5rem;
     gap: 1.25rem;
-  }
-  .hdr-nav {
-    display: flex;
-  }
-  .hdr-lang {
-    display: inline-flex;
   }
   .hdr-account {
     display: block;
@@ -314,18 +309,21 @@ onUnmounted(() => {
   .hdr-guest {
     display: flex;
   }
-  .hdr-icon {
-    width: 2.5rem;
-    height: 2.5rem;
-  }
-  .hdr-burger {
-    display: none;
-  }
 }
+/* lg and up: inline nav + language toggle replace the burger. */
 @media (min-width: 1024px) {
   .hdr {
     gap: 2rem;
     padding: 0 max(2rem, env(safe-area-inset-right)) 0 max(2rem, env(safe-area-inset-left));
+  }
+  .hdr-nav {
+    display: flex;
+  }
+  .hdr-lang {
+    display: inline-flex;
+  }
+  .hdr-burger {
+    display: none;
   }
 }
 @media (min-width: 1280px) {

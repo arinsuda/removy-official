@@ -9,6 +9,7 @@ import LibraryView from "@/views/library/LibraryView.vue"
 import { ADD_SEARCH_DEBOUNCE_MS } from "@/views/library/config"
 import { averageRating, collagePosters, ratingBuckets, reviewMonthDiff, topGenres, toEntries } from "@/views/library/libraryStats"
 import { useRealI18n } from "./helpers/realI18n"
+import { clickAfterRender, waitAfterDebounce, waitForEnabled } from "./helpers/waitForEnabled"
 
 const m = vi.hoisted(() => ({
   profile: vi.fn(),
@@ -204,14 +205,14 @@ describe("lists", () => {
     await flushPromises()
     const input = document.body.querySelector<HTMLInputElement>('input[type="search"].las__input')!
     input.value = "found"
-    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] })
     input.dispatchEvent(new Event("input"))
-    await vi.advanceTimersByTimeAsync(ADD_SEARCH_DEBOUNCE_MS)
-    vi.useRealTimers()
-    await flushPromises()
-    document.body.querySelector<HTMLButtonElement>('[data-action="add"]')!.click()
-    await flushPromises()
-    expect(m.addItem).toHaveBeenCalledWith({ media_id: 99, media_type: "movie", list_type: "watchlist" })
+    // Assert on outcomes (result rendered, request sent) instead of racing fake timers.
+    const addButton = await waitForEnabled('[data-action="add"]', ADD_SEARCH_DEBOUNCE_MS)
+    clickAfterRender(addButton)
+    await vi.waitFor(
+      () => expect(m.addItem).toHaveBeenCalledWith({ media_id: 99, media_type: "movie", list_type: "watchlist" }),
+      waitAfterDebounce(ADD_SEARCH_DEBOUNCE_MS),
+    )
   })
 
   it("shows the empty state of a list with no titles", async () => {
