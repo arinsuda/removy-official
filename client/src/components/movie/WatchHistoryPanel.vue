@@ -6,7 +6,7 @@
         <div class="panel" role="dialog" aria-modal="true" :aria-label="t('watchLog.watchHistory')">
           <div class="panel-header">
             <h2 class="panel-title">{{ t('watchLog.watchHistory') }}</h2>
-            <button class="panel-close" :aria-label="t('common.close')" @click="$emit('close')">
+            <button class="panel-close touch-target" :aria-label="t('common.close')" @click="$emit('close')">
               <X class="icon" />
             </button>
           </div>
@@ -27,7 +27,7 @@
                     {{ getVisibilityText(log.visibility) }}
                   </div>
                 </div>
-                <button class="btn-delete" :aria-label="t('watchLog.deleteWatch')" :title="t('watchLog.deleteWatch')" @click="handleDelete(log.id)">
+                <button class="btn-delete touch-target" :aria-label="t('watchLog.deleteWatch')" :title="t('watchLog.deleteWatch')" @click="handleDelete(log.id)">
                   <Trash2 class="icon" />
                 </button>
               </div>

@@ -18,7 +18,7 @@
       <span v-if="!notification.is_read" class="noti__dot" aria-hidden="true" />
     </button>
 
-    <button type="button" class="noti__remove" :aria-label="t('notifications.remove')" @click="emit('remove', notification)">
+    <button type="button" class="noti__remove touch-target" :aria-label="t('notifications.remove')" @click="emit('remove', notification)">
       <X :size="14" aria-hidden="true" />
     </button>
 

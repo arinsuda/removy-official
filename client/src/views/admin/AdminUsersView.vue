@@ -24,7 +24,7 @@
       @clear="clearFilters"
     >
       <tr v-for="u in users" :key="u.id">
-        <td class="cell-id">#{{ u.id }}</td>
+        <td class="cell-id is-lg-up">#{{ u.id }}</td>
         <td>
           <div class="user-cell">
             <AppAvatar :src="u.avatar_url" :name="u.display_name || u.username" size="sm" decorative />
@@ -33,7 +33,7 @@
                 {{ u.display_name || u.username }}
                 <AdminBadge v-if="u.id === authStore.user?.id" tone="info">{{ t("admin.users.you") }}</AdminBadge>
               </span>
-              <span class="user-handle">@{{ u.username }}</span>
+              <span class="user-handle">@{{ u.username }}<span class="inline-id"> · #{{ u.id }}</span></span>
             </div>
           </div>
         </td>
@@ -138,7 +138,7 @@ const sortOrder = ref<"asc" | "desc">("desc")
 const loadError = ref(false)
 
 const columns = computed<AdminColumn[]>(() => [
-  { key: "id", label: t("admin.users.colId") },
+  { key: "id", label: t("admin.users.colId"), lgUp: true },
   { key: "username", label: t("admin.users.colUser"), sortable: true },
   { key: "email", label: t("admin.users.colEmail"), sortable: true },
   { key: "role", label: t("admin.users.colRole") },
@@ -373,5 +373,16 @@ onBeforeUnmount(() => {
 
 .cell-id {
   color: var(--color-text-muted);
+}
+
+.inline-id {
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+@media (min-width: 1024px) {
+  .inline-id {
+    display: none;
+  }
 }
 </style>

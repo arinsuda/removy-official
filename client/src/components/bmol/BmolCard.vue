@@ -15,7 +15,7 @@
       <template v-if="editing && !pending">
         <button
           type="button"
-          class="bcard__handle"
+          class="bcard__handle" data-touch-ok
           :class="{ 'is-active': grabbed }"
           :aria-label="t('library.bmol.drag.handle', { title })"
           :aria-pressed="grabbed"
@@ -31,7 +31,7 @@
         <div class="bcard__menu" @focusout="onMenuFocusOut">
           <button
             type="button"
-            class="bcard__menu-btn"
+            class="bcard__menu-btn" data-touch-ok
             aria-haspopup="menu"
             :aria-expanded="menuOpen"
             :aria-label="t('library.bmol.card.actions', { title })"

@@ -2,9 +2,10 @@
   <SettingsCard id="profile" :title="t('settings.profile.title')" :description="t('settings.profile.desc')">
     <AvatarPicker :src="user.avatar_url" :preview="avatarPreview" :name="user.display_name || user.username" @pick="emit('avatar', $event)" />
 
-    <AppInput v-model="displayName" :label="t('settings.profile.displayName')" :maxlength="DISPLAY_NAME_MAX" :hint="`${len(displayName)} / ${DISPLAY_NAME_MAX}`" :placeholder="user.username" />
-
-    <AppInput :model-value="`@${user.username}`" :label="t('settings.profile.username')" :hint="t('settings.profile.usernameHint')" disabled />
+    <div class="row">
+      <AppInput v-model="displayName" :label="t('settings.profile.displayName')" :maxlength="DISPLAY_NAME_MAX" :hint="`${len(displayName)} / ${DISPLAY_NAME_MAX}`" :placeholder="user.username" />
+      <AppInput :model-value="`@${user.username}`" :label="t('settings.profile.username')" :hint="t('settings.profile.usernameHint')" disabled />
+    </div>
 
     <div class="field">
       <label class="field__label" :for="bioId">{{ t("settings.profile.bio") }}</label>
@@ -54,6 +55,8 @@ const len = (s: string) => Array.from(s).length
 </script>
 
 <style scoped>
+.row { display: grid; gap: 1rem; }
+@media (min-width: 640px) { .row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .field { display: flex; flex-direction: column; gap: 0.375rem; min-width: 0; padding: 0; border: 0; }
 .field__label { font-size: 0.8125rem; font-weight: 600; color: var(--color-text-secondary); }
 .field__input, .field__area { width: 100%; padding: 0.5rem 0.75rem; color: var(--color-text-primary); background: var(--color-surface-3); border: 1px solid var(--color-border); border-radius: var(--radius-btn); }

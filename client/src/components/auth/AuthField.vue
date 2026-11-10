@@ -16,7 +16,7 @@
       <button
         v-if="isPassword"
         type="button"
-        class="field__toggle"
+        class="field__toggle touch-target"
         :aria-label="revealed ? t('auth.common.hidePassword') : t('auth.common.showPassword')"
         :aria-pressed="revealed"
         @click="revealed = !revealed"

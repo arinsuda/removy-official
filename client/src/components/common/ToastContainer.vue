@@ -19,8 +19,8 @@
           <div class="toast-message">{{ toast.message }}</div>
         </div>
 
-        <button class="toast-close-btn" @click="removeToast(toast.id)">
-          <X :size="14" />
+        <button type="button" class="toast-close-btn touch-target" :aria-label="$t('common.close')" @click="removeToast(toast.id)">
+          <X :size="14" aria-hidden="true" />
         </button>
       </div>
     </TransitionGroup>

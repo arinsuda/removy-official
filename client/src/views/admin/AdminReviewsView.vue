@@ -24,10 +24,10 @@
       @clear="clearFilters"
     >
       <tr v-for="r in reviews" :key="r.id">
-        <td class="cell-id">#{{ r.id }}</td>
+        <td class="cell-id is-lg-up">#{{ r.id }}</td>
         <td>
           <div class="author-cell">
-            <span class="author-name">@{{ r.username }}</span>
+            <span class="author-name">@{{ r.username }}<span class="inline-id"> · #{{ r.id }}</span></span>
             <AdminBadge :tone="r.is_public ? 'info' : 'neutral'">
               <Globe v-if="r.is_public" :size="12" aria-hidden="true" />
               <Lock v-else :size="12" aria-hidden="true" />
@@ -184,7 +184,7 @@ const deleteModal = ref<{ show: boolean; review: AdminReviewRow | null; loading:
 })
 
 const columns = computed<AdminColumn[]>(() => [
-  { key: "id", label: t("admin.reviews.colId") },
+  { key: "id", label: t("admin.reviews.colId"), lgUp: true },
   { key: "author", label: t("admin.reviews.colAuthor") },
   { key: "media", label: t("admin.reviews.colType") },
   { key: "rating", label: t("admin.reviews.colRating"), sortable: true },
@@ -457,5 +457,16 @@ onBeforeUnmount(() => {
   justify-content: flex-end;
   gap: 0.5rem;
   width: 100%;
+}
+
+.inline-id {
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+@media (min-width: 1024px) {
+  .inline-id {
+    display: none;
+  }
 }
 </style>
