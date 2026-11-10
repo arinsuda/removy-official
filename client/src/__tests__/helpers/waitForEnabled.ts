@@ -17,3 +17,20 @@ export function waitForEnabled<T extends HTMLElement = HTMLButtonElement>(select
     return el
   }, waitAfterDebounce(debounceMs))
 }
+
+/**
+ * Click an element that Vue just rendered.
+ *
+ * Vue's event invoker drops any event whose `_vts` (Date.now() when the first listener saw it)
+ * is <= the ms the listener was attached (runtime-dom `createInvoker`). AppButton has a
+ * `@click.capture` listener that stamps `_vts` before the bubble handler runs, so a click in the
+ * same millisecond as the render is silently swallowed. Real users never click that fast; a test
+ * that clicks right after `waitFor` does. Let the clock tick past the render before clicking.
+ */
+export function clickAfterRender(el: HTMLElement): void {
+  const rendered = Date.now()
+  while (Date.now() <= rendered) {
+    // spin < 1ms: no timer, so nothing else can interleave
+  }
+  el.click()
+}

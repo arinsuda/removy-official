@@ -9,7 +9,7 @@ import LibraryView from "@/views/library/LibraryView.vue"
 import { ADD_SEARCH_DEBOUNCE_MS } from "@/views/library/config"
 import { averageRating, collagePosters, ratingBuckets, reviewMonthDiff, topGenres, toEntries } from "@/views/library/libraryStats"
 import { useRealI18n } from "./helpers/realI18n"
-import { waitAfterDebounce, waitForEnabled } from "./helpers/waitForEnabled"
+import { clickAfterRender, waitAfterDebounce, waitForEnabled } from "./helpers/waitForEnabled"
 
 const m = vi.hoisted(() => ({
   profile: vi.fn(),
@@ -208,7 +208,7 @@ describe("lists", () => {
     input.dispatchEvent(new Event("input"))
     // Assert on outcomes (result rendered, request sent) instead of racing fake timers.
     const addButton = await waitForEnabled('[data-action="add"]', ADD_SEARCH_DEBOUNCE_MS)
-    addButton.click()
+    clickAfterRender(addButton)
     await vi.waitFor(
       () => expect(m.addItem).toHaveBeenCalledWith({ media_id: 99, media_type: "movie", list_type: "watchlist" }),
       waitAfterDebounce(ADD_SEARCH_DEBOUNCE_MS),
