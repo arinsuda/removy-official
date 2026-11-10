@@ -304,6 +304,11 @@ watch(displayId, (_id, prev) => {
 }
 @media (min-width: 768px) {
   .detail { padding-bottom: 3rem; }
+  /* Tablet: two-column grid; paired cards sit side by side, everything else spans the row. */
+  .detail__body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; }
+  :where(.detail__aside, .detail__main) > * { grid-column: 1 / -1; }
+  .detail__meter, .detail__activity, .detail__distribution, .detail__facts { grid-column: auto; }
+  .detail__meter:not(:has(~ .detail__activity)) { grid-column: 1 / -1; }
 }
 @media (min-width: 1024px) {
   .detail__body { display: grid; grid-template-columns: minmax(0, 1fr) 320px; align-items: start; gap: 2rem 2.5rem; }
