@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onBeforeUnmount, useId } from "vue";
+import { ref, computed, watch, nextTick, onBeforeUnmount, onMounted, useId } from "vue";
 import { useI18n } from "vue-i18n";
 import { Globe, Users, Lock, ChevronDown } from "lucide-vue-next";
-import { useClickOutside } from "@/composables/useClickOutside";
 import type { Visibility } from "@/types";
 
 const props = withDefaults(
@@ -32,19 +31,32 @@ const menuId = `visibility-menu-${useId()}`;
 const MENU_WIDTH = 256;
 const MENU_FALLBACK_HEIGHT = 200;
 const EDGE = 8;
+/** Gap (px) between the trigger and the menu. */
+const MENU_OFFSET = 4;
 const alignLeft = ref(false);
 const openUp = ref(false);
+const menuStyle = ref<Record<string, string>>({});
 
-// Keep the menu inside the viewport: align to the side with room, flip up near the bottom.
+// The menu is teleported to <body> so scrolling parents (e.g. a modal body) can't clip it.
+// Position it from the trigger's viewport rect: align to the side with room, flip up near the bottom.
 function updatePlacement() {
   const trigger = selectorRef.value;
   if (!trigger) return;
   const rect = trigger.getBoundingClientRect();
-  const width = Math.min(MENU_WIDTH, window.innerWidth - 2 * 16);
+  const width = Math.min(MENU_WIDTH, window.innerWidth - 2 * EDGE);
   alignLeft.value = rect.right < width + EDGE;
   const height = menuRef.value?.offsetHeight || MENU_FALLBACK_HEIGHT;
   const below = window.innerHeight - rect.bottom;
   openUp.value = below < height + EDGE && rect.top > below;
+  menuStyle.value = {
+    width: `${width}px`,
+    ...(alignLeft.value
+      ? { left: `${Math.max(EDGE, rect.left)}px` }
+      : { right: `${Math.max(EDGE, window.innerWidth - rect.right)}px` }),
+    ...(openUp.value
+      ? { bottom: `${window.innerHeight - rect.top + MENU_OFFSET}px` }
+      : { top: `${rect.bottom + MENU_OFFSET}px` }),
+  };
 }
 
 watch(isOpen, async (open) => {
@@ -65,9 +77,14 @@ function stopTracking() {
 }
 onBeforeUnmount(stopTracking);
 
-useClickOutside(selectorRef, () => {
+// The menu lives outside selectorRef (teleported), so clicks inside it must not count as outside.
+function onDocumentClick(e: MouseEvent) {
+  const target = e.target as Node;
+  if (selectorRef.value?.contains(target) || menuRef.value?.contains(target)) return;
   isOpen.value = false;
-});
+}
+onMounted(() => document.addEventListener("click", onDocumentClick, true));
+onBeforeUnmount(() => document.removeEventListener("click", onDocumentClick, true));
 
 const options = computed(() => [
   {
@@ -175,6 +192,7 @@ const sizeClasses = computed(() => {
       <ChevronDown class="ml-1 h-4 w-4 opacity-50" />
     </button>
 
+    <Teleport to="body">
     <Transition
       enter-active-class="transition duration-100 ease-out"
       enter-from-class="transform scale-95 opacity-0"
@@ -187,10 +205,9 @@ const sizeClasses = computed(() => {
         v-if="isOpen"
         :id="menuId"
         ref="menuRef"
+        :style="menuStyle"
         :class="[
-          'vis-menu absolute w-64 max-w-[calc(100vw-2rem)] rounded-md border border-border-strong bg-surface-2 shadow-lg focus:outline-none',
-          alignLeft ? 'left-0' : 'right-0',
-          openUp ? 'bottom-full mb-1' : 'top-full mt-1',
+          'vis-menu fixed rounded-md border border-border-strong bg-surface-2 shadow-lg focus:outline-none',
           alignLeft ? (openUp ? 'origin-bottom-left' : 'origin-top-left') : (openUp ? 'origin-bottom-right' : 'origin-top-right'),
         ]"
         role="listbox"
@@ -218,6 +235,7 @@ const sizeClasses = computed(() => {
         </div>
       </div>
     </Transition>
+    </Teleport>
   </div>
 </template>
 
