@@ -206,6 +206,8 @@
     "released": "Released"
   },
   "popup": {
+    "more": "More actions",
+    "sheetLabel": "Quick actions for {title}",
     "noTrailer": "No trailer",
     "views": "Views",
     "reviews": "Reviews",
