@@ -9,7 +9,6 @@ import (
 	"math/big"
 	"mime/multipart"
 	"net/url"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -32,6 +31,18 @@ type Service struct {
 	passwordResetMailer PasswordResetMailer
 	policy              privacy_policy.UserAccessPolicy
 	reissuer            SessionReissuer
+	frontendBaseURL     string
+}
+
+// SetFrontendBaseURL sets the SPA origin used in mailed links (config.FrontendBaseURL).
+func (s *Service) SetFrontendBaseURL(u string) { s.frontendBaseURL = u }
+
+// resetLink builds the mailed reset URL; secrets travel in the fragment.
+func (s *Service) resetLink(rawToken string, userID uint) string {
+	return fragment.URL(s.frontendBaseURL, ResetPasswordPath, url.Values{
+		"token": {rawToken},
+		"uid":   {strconv.FormatUint(uint64(userID), 10)},
+	})
 }
 
 // SetSessionReissuer wires the session issuer used to keep the caller signed in after a password change.
@@ -471,10 +482,7 @@ func (s *Service) ForgotPassword(email string) error {
 		return err
 	}
 
-	resetURL := fragment.URL(getEnv(frontendBaseURLEnv, defaultFrontendBaseURL), ResetPasswordPath, url.Values{
-		"token": {rawToken},
-		"uid":   {strconv.FormatUint(uint64(user.ID), 10)},
-	})
+	resetURL := s.resetLink(rawToken, user.ID)
 
 	if err := s.passwordResetMailer.SendResetLink(user.Email, resetURL); err != nil {
 		_ = s.repo.DeletePasswordResetToken(user.ID)
@@ -582,18 +590,7 @@ func isValidEmail(email string) bool {
 const (
 	// ResetPasswordPath is the SPA route of the mailed reset link (secrets go in its fragment).
 	ResetPasswordPath = "/reset-password"
-	// frontendBaseURLEnv names the env var holding the SPA origin used in reset links.
-	frontendBaseURLEnv = "FRONTEND_BASE_URL"
-	// defaultFrontendBaseURL is the local-dev SPA origin.
-	defaultFrontendBaseURL = "http://localhost:3000"
 )
-
-func getEnv(key, fallback string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return fallback
-}
 
 func (s *Service) fetchLevel(userID uint) int {
 	if s.statsSvc == nil {

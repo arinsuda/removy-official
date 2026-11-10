@@ -10,6 +10,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/arinsuda/movie-hub/internal/shared/apierr"
 	"github.com/arinsuda/movie-hub/internal/shared/storage"
 	mw "github.com/arinsuda/movie-hub/middleware"
 	"github.com/gofiber/fiber/v3"
@@ -89,7 +90,7 @@ func (h *Handler) RequestEmailChange(c fiber.Ctx) error {
 
 	var req RequestEmailChangeRequest
 	if err := c.Bind().JSON(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"code": codeInvalidBody, "error": msgInvalidBody})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"code": apierr.ErrorCodeInvalidBody, "error": msgInvalidBody})
 	}
 
 	if strings.TrimSpace(req.NewEmail) == "" {
@@ -118,7 +119,7 @@ func (h *Handler) DeleteUser(c fiber.Ctx) error {
 	var req DeleteAccountRequest
 	if len(c.Body()) > 0 {
 		if err := c.Bind().JSON(&req); err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"code": codeInvalidBody, "error": msgInvalidBody})
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"code": apierr.ErrorCodeInvalidBody, "error": msgInvalidBody})
 		}
 	}
 
@@ -139,7 +140,7 @@ func (h *Handler) UpdateFavoriteGenres(c fiber.Ctx) error {
 
 	var req UpdateFavoriteGenresRequest
 	if err := c.Bind().JSON(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"code": codeInvalidBody, "error": msgInvalidBody})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"code": apierr.ErrorCodeInvalidBody, "error": msgInvalidBody})
 	}
 
 	profile, err := h.svc.UpdateFavoriteGenres(targetID, claims.UserID, req.FavoriteGenres)
@@ -160,7 +161,7 @@ func (h *Handler) VerifyEmailChange(c fiber.Ctx) error {
 
 	var req VerifyEmailChangeRequest
 	if err := c.Bind().JSON(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"code": codeInvalidBody, "error": msgInvalidBody})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"code": apierr.ErrorCodeInvalidBody, "error": msgInvalidBody})
 	}
 
 	if req.OTP == "" || req.NewEmailOTP == "" {
@@ -185,7 +186,7 @@ func (h *Handler) ChangePassword(c fiber.Ctx) error {
 
 	var req ChangePasswordRequest
 	if err := c.Bind().JSON(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"code": codeInvalidBody, "error": msgInvalidBody})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"code": apierr.ErrorCodeInvalidBody, "error": msgInvalidBody})
 	}
 	if req.OldPassword == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "old_password is required"})
@@ -226,7 +227,7 @@ func handlePasswordError(c fiber.Ctx, err error) error {
 	case errors.Is(err, ErrSessionStale):
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
 	case errors.Is(err, ErrPasswordNotSet):
-		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": err.Error(), "code": "PASSWORD_NOT_SET"})
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": err.Error(), "code": apierr.ErrorCodePasswordNotSet})
 	default:
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -377,15 +378,7 @@ func parseUserID(c fiber.Ctx) (uint, error) {
 	return uint(id), nil
 }
 
-// codeFinalAdmin is the machine-readable code of ErrFinalAdmin (shared cannot be imported here: cycle).
-const (
-	codeFinalAdmin      = "FINAL_ADMIN"
-	codeWrongPassword   = "WRONG_PASSWORD"
-	codeConfirmMismatch = "CONFIRM_MISMATCH"
-	codeInvalidBody     = "INVALID_BODY"
-
-	msgInvalidBody = "invalid request body"
-)
+const msgInvalidBody = "invalid request body"
 
 func handleError(c fiber.Ctx, err error) error {
 	switch {
@@ -396,11 +389,11 @@ func handleError(c fiber.Ctx, err error) error {
 	case errors.Is(err, ErrSessionStale):
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
 	case errors.Is(err, ErrWrongPassword):
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"code": codeWrongPassword, "error": ErrWrongPassword.Error()})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"code": apierr.ErrorCodeWrongPassword, "error": ErrWrongPassword.Error()})
 	case errors.Is(err, ErrConfirmMismatch):
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"code": codeConfirmMismatch, "error": ErrConfirmMismatch.Error()})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"code": apierr.ErrorCodeConfirmUsername, "error": ErrConfirmMismatch.Error()})
 	case errors.Is(err, ErrFinalAdmin):
-		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"code": codeFinalAdmin, "error": ErrFinalAdmin.Error()})
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"code": apierr.ErrorCodeFinalAdmin, "error": ErrFinalAdmin.Error()})
 	default:
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal server error"})
 	}

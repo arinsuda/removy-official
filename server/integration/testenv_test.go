@@ -247,6 +247,7 @@ func newEnv(t *testing.T) *env {
 
 	e.cfg.Brevo = config.BrevoConfig{APIKey: "test", SenderEmail: "noreply@popcorn.test", SenderName: "POPCORN", Enabled: true}
 	e.cfg.Google = config.GoogleConfig{Enabled: true, ClientID: "cid", ClientSecret: "cs", RedirectURL: "http://app.test/cb"}
+	e.cfg.FrontendBaseURL = config.DefaultFrontendBaseURL
 	e.cfg.Link = config.LinkConfig{Secrets: []string{"link-secret"}, RemoteAPIURL: e.remote.srv.URL, RemoteWebURL: "http://planzi.test", SelfPlatform: "popcorn"}
 
 	m := mailer.New(e.cfg.Brevo)
@@ -275,6 +276,7 @@ func newEnv(t *testing.T) *env {
 		user_module.NewBrevoPasswordResetMailer(e.cfg.Brevo), privacy_policy.NewUserAccessPolicy(db), e.cfg.Brevo)
 	e.auth.SetUserService(e.users)
 	e.users.SetSessionReissuer(e.auth)
+	e.users.SetFrontendBaseURL(e.cfg.FrontendBaseURL)
 	bmol_module.RegisterRoutes(protected, db, privacy_policy.NewUserAccessPolicy(db))
 	list_module.RegisterRoutes(protected, db, privacy_policy.NewUserAccessPolicy(db))
 	user_stats_module.RegisterRoutes(protected, db, privacy_policy.NewUserAccessPolicy(db))
