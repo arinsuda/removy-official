@@ -27,5 +27,17 @@ export default defineConfig({
   // @ts-expect-error vitest `test` key is not in vite's UserConfig type here
   test: {
     environment: 'happy-dom',
+    setupFiles: ['./src/__tests__/setup/noNetwork.ts'],
+    // No script/CSS/iframe loading: nothing in a test may fetch from the happy-dom origin.
+    environmentOptions: {
+      happyDOM: {
+        settings: {
+          disableJavaScriptFileLoading: true,
+          disableCSSFileLoading: true,
+          disableIframePageLoading: true,
+          handleDisabledFileLoadingAsSuccess: true,
+        },
+      },
+    },
   },
 })

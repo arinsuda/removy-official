@@ -78,6 +78,7 @@ beforeEach(() => {
   m.searchSeries.mockResolvedValue({ data: { results: [] } })
 })
 afterEach(() => {
+  vi.useRealTimers()
   wrappers.splice(0).forEach((w) => w.unmount())
   document.body.innerHTML = ""
   vi.clearAllMocks()
@@ -203,8 +204,10 @@ describe("lists", () => {
     await flushPromises()
     const input = document.body.querySelector<HTMLInputElement>('input[type="search"].las__input')!
     input.value = "found"
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] })
     input.dispatchEvent(new Event("input"))
-    await new Promise((r) => setTimeout(r, ADD_SEARCH_DEBOUNCE_MS + 50))
+    await vi.advanceTimersByTimeAsync(ADD_SEARCH_DEBOUNCE_MS)
+    vi.useRealTimers()
     await flushPromises()
     document.body.querySelector<HTMLButtonElement>('[data-action="add"]')!.click()
     await flushPromises()

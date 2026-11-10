@@ -140,6 +140,11 @@ Changing any of these affects stored data, live sessions, or other systems:
 - Repo/folder `removy-official`, Go module `github.com/arinsuda/movie-hub`, DB `moviehub`, containers `moviereview_*`.
 - Legacy fallback only: `LEGACY_LOCALE_STORAGE_KEY` (`removy-locale`) is still read. PLANZI still accepts `removy` as an input alias for `popcorn`.
 
+## Testing rules (client)
+- Tests are hermetic: no real network, no wall-clock sleeps. `src/__tests__/setup/noNetwork.ts` (vite `test.setupFiles`) blocks axios (global default adapter), `fetch` and `XMLHttpRequest`; an unmocked request throws `[no-network] ... METHOD URL` and the test fails in `afterEach` even if app code swallowed the error. happy-dom script/CSS/iframe loading is disabled.
+- Mock at the right level: `vi.mock("@/api/endpoints/<x>")` (or `@/api/api`), set `api.defaults.adapter` for interceptor tests, or `vi.spyOn(globalThis, "fetch")`. For a failure path, mock a deliberate rejection.
+- Wait deterministically: `flushPromises`, `nextTick`, `vi.waitFor(() => expect(...))`, or `vi.useFakeTimers` + `advanceTimersByTimeAsync` for debounces. Never `setTimeout` sleeps; don't raise `testTimeout`.
+
 ## Gotchas
 - `OMDB_API_KEY` (optional): enables IMDb and Rotten Tomatoes ratings on movie/TV detail. Never log it; tests must stub the OMDb HTTP client.
 - `DEV_MAIL_LOG=true` prints emails (verify link, reset link, link code, email-change OTP) to the server stdout instead of sending. It activates only if every `CORS_ALLOWED_ORIGIN` entry, `APP_BASE_URL` and `FRONTEND_BASE_URL` are loopback; otherwise boot logs a WARN and it stays off. Keep it the only place codes/links are printed.

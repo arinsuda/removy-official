@@ -13,6 +13,7 @@ vi.mock("@/api/api", () => ({
   userApi: m,
   authApi: { getGoogleStatus: vi.fn().mockResolvedValue({ data: { enabled: true, google_connected: false, can_disconnect: false } }) },
 }))
+vi.mock("@/api/endpoints/feed", () => ({ feedApi: { getSettings: vi.fn().mockResolvedValue({ data: {} }), updateSettings: vi.fn() } }))
 vi.mock("@/api/endpoints/link", () => ({ linkApi: { status: vi.fn().mockResolvedValue({ data: { links: [] } }), unlink: vi.fn() } }))
 
 const i18n = useRealI18n()
