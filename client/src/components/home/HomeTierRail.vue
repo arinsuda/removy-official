@@ -61,14 +61,15 @@ watch(
 
 <style scoped>
 .tier-divider.tier-divider {
-  flex: 0 0 112px;
+  flex: 0 0 auto;
+  width: 5.5rem;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   align-self: stretch;
   gap: 8px;
-  padding: 0 12px;
+  padding: 0 8px;
   border-left: 1px dashed var(--color-border-strong);
   color: var(--color-text-muted);
   font-size: var(--text-caption);
@@ -85,7 +86,20 @@ watch(
   overflow-x: auto;
   scrollbar-width: none;
 }
+/* Tabs never shrink (Thai would break per character); the side-by-side row waits for lg. */
+.tier-toolbar :deep(.app-tabs__tab) {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
 @media (min-width: 768px) {
+  .tier-divider.tier-divider {
+    width: 7rem;
+  }
+  .tier-toolbar :deep(.genre-chips) {
+    justify-content: flex-start;
+  }
+}
+@media (min-width: 1024px) {
   .tier-toolbar {
     flex-direction: row;
     align-items: center;

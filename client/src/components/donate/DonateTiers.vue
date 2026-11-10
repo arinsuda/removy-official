@@ -108,7 +108,19 @@ const { t, locale } = useI18n()
 }
 @media (min-width: 640px) {
   .tiers__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  /* An odd last tier spans the row instead of leaving a hole. */
+  .tier:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+}
+@media (min-width: 1024px) {
+  .tiers__grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .tier:last-child:nth-child(odd) {
+    grid-column: auto;
   }
 }
 @media (prefers-reduced-motion: reduce) {

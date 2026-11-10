@@ -87,6 +87,7 @@ function onKeydown(e: KeyboardEvent) {
   border: 1px solid var(--color-border);
   padding: 6px 14px;
   border-radius: 20px;
+  white-space: nowrap;
   cursor: pointer;
   transition: color 0.2s, border-color 0.2s, background-color 0.2s;
 }
