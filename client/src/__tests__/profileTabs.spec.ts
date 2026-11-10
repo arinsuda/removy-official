@@ -180,6 +180,17 @@ describe("UserReviews", () => {
     expect(chips).toEqual(expect.arrayContaining([expect.stringContaining("7"), expect.stringContaining("4"), expect.stringContaining("2"), expect.stringContaining("5")]))
   })
 
+  it("falls back to the visible reviews when the API returns no summary", async () => {
+    const data = (await m.reviews()).data
+    m.reviews.mockResolvedValueOnce({ data: { reviews: data.reviews, pagination: data.pagination } })
+    const w = mountTab(UserReviews, 2)
+    await flushPromises()
+    const text = w.find(".ur__summary").text()
+    expect(text).toContain("2")
+    expect(text).toContain("3.3")
+    expect(text).not.toContain("0.0")
+  })
+
   it("sends filter and sort as request params and resets to page 1", async () => {
     const w = mountTab(UserReviews, 2)
     await flushPromises()
