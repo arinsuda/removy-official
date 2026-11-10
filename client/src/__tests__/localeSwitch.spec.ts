@@ -2,14 +2,14 @@
  * @vitest-environment happy-dom
  */
 
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach} from "vitest";
 import { i18n, getSavedLocale, setLocale, useLocale, formatRelativeTime } from "../i18n";
 import { LOCALE_STORAGE_KEY } from "../i18n/types";
 
 describe("Locale Management and Switcher", () => {
   beforeEach(() => {
     localStorage.clear();
-    (i18n.global.locale as any).value = "th";
+    (i18n.global.locale as unknown as { value: string }).value = "th";
     document.documentElement.removeAttribute("lang");
   });
 

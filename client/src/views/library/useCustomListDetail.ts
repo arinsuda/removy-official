@@ -1,4 +1,4 @@
-import { computed, ref, toValue, watch, type MaybeRefOrGetter } from "vue"
+import { ref, toValue, watch, type MaybeRefOrGetter } from "vue"
 import { listApi } from "@/api/endpoints/list"
 import { httpStatus } from "@/components/lists/listErrors"
 import type { ListItem, ListSummary } from "@/types"

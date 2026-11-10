@@ -18,6 +18,16 @@ export default [
   ...pluginVue.configs['flat/essential'],
   ...createConfig({ extends: ['recommended'] }),
 
+  {
+    name: 'app/unused-vars-underscore',
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', destructuredArrayIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_', ignoreRestSiblings: true },
+      ],
+    },
+  },
+
   ...pluginOxlint.buildFromOxlintConfigFile('.oxlintrc.json'),
 
   skipFormatting,

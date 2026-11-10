@@ -22,7 +22,7 @@
         <span class="ah__spot-icon"><component :is="getAchievementIcon(latest.achievement.action_type)" :size="22" :stroke-width="1.7" aria-hidden="true" /></span>
         <span class="ah__spot-text">
           <span class="ah__spot-label">{{ t("achievements.hero.latest") }}</span>
-          <span class="ah__spot-name">{{ latest.achievement.name }}</span>
+          <span class="ah__spot-name">{{ achName(latest.achievement) }}</span>
           <span v-if="latest.unlocked_at" class="ah__spot-meta">{{ formatDate(latest.unlocked_at) }}</span>
         </span>
       </button>
@@ -30,7 +30,7 @@
         <span class="ah__spot-icon ah__spot-icon--muted"><component :is="getAchievementIcon(next.achievement.action_type)" :size="22" :stroke-width="1.7" aria-hidden="true" /></span>
         <span class="ah__spot-text">
           <span class="ah__spot-label">{{ t("achievements.hero.next") }}</span>
-          <span class="ah__spot-name">{{ next.achievement.name }}</span>
+          <span class="ah__spot-name">{{ achName(next.achievement) }}</span>
           <span class="ah__spot-bar" aria-hidden="true"><span :style="{ width: `${progressOf(next)}%` }" /></span>
           <span class="ah__spot-meta">{{ t("achievements.progress", { current: n(Math.min(next.current_count, next.achievement.target_count)), target: n(next.achievement.target_count) }) }}</span>
         </span>
@@ -40,6 +40,7 @@
 </template>
 
 <script setup lang="ts">
+import { useAchievementText } from "./text"
 import { computed } from "vue"
 import { useI18n } from "vue-i18n"
 import { RouterLink } from "vue-router"
@@ -63,6 +64,7 @@ const props = defineProps<{
 const emit = defineEmits<{ open: [achievement: UserAchievement] }>()
 
 const { t, n, locale } = useI18n()
+const { name: achName } = useAchievementText()
 const displayName = computed(() => props.profile?.display_name || props.profile?.username || "")
 const formatDate = (iso: string) => new Intl.DateTimeFormat(locale.value, { dateStyle: "medium" }).format(new Date(iso))
 </script>

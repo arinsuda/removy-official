@@ -1,6 +1,7 @@
 <template>
   <Teleport to="body">
     <Transition name="slide">
+      <!-- eslint-disable-next-line vue/require-toggle-inside-transition -- parent mounts the panel with v-if -->
       <div class="panel-backdrop" @click.self="$emit('close')">
         <div class="panel" role="dialog" aria-modal="true" :aria-label="t('watchLog.watchHistory')">
           <div class="panel-header">

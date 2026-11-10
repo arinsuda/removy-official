@@ -5,17 +5,12 @@ import type {
   UpdateReviewRequest,
   CommentResponse,
   CreateCommentRequest,
-  LibraryItemResponse,
-  AddItemRequest,
-  MediaStatusResponse,
   PaginatedResponse,
   FollowStatsResponse,
   FollowRelationshipStatus,
   FollowActionResponse,
   FollowUserSummary,
   FeedItemResponse,
-  MediaType,
-  ListType,
 } from "@/types"
 
 export type ReviewVisibilityFilter = "all" | "public" | "private"

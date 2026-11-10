@@ -28,7 +28,7 @@
       </ul>
     </template>
 
-    <AppModal :model-value="!!selected" size="sm" :title="selected?.achievement.name" @close="selected = null">
+    <AppModal :model-value="!!selected" size="sm" :title="selected ? achName(selected.achievement) : undefined" @close="selected = null">
       <div v-if="selected" class="ua__detail">
         <span class="ua__detail-icon" :class="{ 'is-on': selected.is_unlocked }">
           <component :is="getAchievementIcon(selected.achievement.action_type)" :size="34" :stroke-width="1.6" aria-hidden="true" />
@@ -49,7 +49,7 @@
           v-if="isOwner && selected?.is_unlocked"
           variant="primary"
           data-test="achievement-share-btn"
-          :aria-label="t('achievements.share.action', { name: selected.achievement.name })"
+          :aria-label="t('achievements.share.action', { name: achName(selected.achievement) })"
           @click="openShare(selected)"
         >
           <Share2 :size="15" aria-hidden="true" />{{ t("achievements.share.button") }}
@@ -92,7 +92,7 @@ import { countUnlocked, filterAchievements, progressOf, type AchievementFilter }
 const props = defineProps<{ userId: number }>()
 
 const { t, locale } = useI18n()
-const { description } = useAchievementText()
+const { description, name: achName } = useAchievementText()
 const auth = useAuthStore()
 const isOwner = computed(() => !!auth.user && auth.user.id === props.userId)
 const FILTERS: AchievementFilter[] = ["all", "unlocked", "locked"]

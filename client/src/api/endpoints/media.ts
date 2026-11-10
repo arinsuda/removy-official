@@ -1,4 +1,4 @@
-import type { LikesResponse, MediaStatsResponse, MediaSummary } from "@/types"
+import type { LikesResponse, MediaStatsResponse } from "@/types"
 import api from "../index"
 
 export const mediaApi = {

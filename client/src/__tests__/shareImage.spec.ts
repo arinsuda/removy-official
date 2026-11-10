@@ -4,7 +4,6 @@ import { createPinia, setActivePinia } from "pinia"
 import { createI18n } from "vue-i18n"
 import { useShareImage } from "@/composables/useShareImage"
 import ReviewShareTemplate from "@/components/share/ReviewShareTemplate.vue"
-import ShareImageModal from "@/components/share/ShareImageModal.vue"
 import type { ShareMediaContext, ShareReviewContext } from "@/types/share"
 
 // Mock html-to-image

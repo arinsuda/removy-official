@@ -31,7 +31,7 @@ import { useTemplateRef } from "vue"
 import { useI18n } from "vue-i18n"
 import AppButton from "@/components/ui/AppButton.vue"
 import VisibilitySelector from "@/components/common/VisibilitySelector.vue"
-import StarRatingInput from "@/components/movie/Starratinginput.vue"
+import StarRatingInput from "@/components/movie/StarRatingInput.vue"
 import { useReviewForm } from "@/composables/useReviewForm"
 import type { ReviewResponse } from "@/types/review"
 

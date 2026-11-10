@@ -62,7 +62,7 @@
       url.searchParams.set("enablejsapi", "1")
 
       return url.toString()
-    } catch (e) {
+    } catch {
       // กรณีที่ส่งมาเป็น string ธรรมดา (fallback เผื่อไว้)
       return props.trailerUrl
         .replace(/[?&]mute=1/, "")

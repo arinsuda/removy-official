@@ -1,4 +1,4 @@
-import type { Visibility, MediaType } from "./common";
+import type { Visibility } from "./common";
 import type { MediaSummary } from "./movie";
 
 export interface WatchLogResponse {

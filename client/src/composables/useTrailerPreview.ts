@@ -93,9 +93,15 @@ export function resolveTrailer(
   return resolveTrailerCandidates(videos)[0] ?? null
 }
 
+/** Minimal shape of the YouTube player events we read. */
+interface YtEvent {
+  target?: { getIframe?: () => HTMLIFrameElement | undefined }
+  data?: number
+}
+
 declare global {
   interface Window {
-    YT: any
+    YT: any // eslint-disable-line @typescript-eslint/no-explicit-any -- YouTube IFrame API has no bundled types
     onYouTubeIframeAPIReady?: () => void
   }
 }
@@ -137,7 +143,7 @@ export function useTrailerPreview(options: Options = {}) {
   const trailerUnavailable = ref(false)
 
   let timer: ReturnType<typeof setTimeout> | null = null
-  let ytPlayer: any = null
+  let ytPlayer: any = null // eslint-disable-line @typescript-eslint/no-explicit-any -- YouTube IFrame API has no bundled types
 
   const currentTrailer = computed<ResolvedTrailer | null>(
     () => trailerCandidates.value[candidateIndex.value] ?? null,
@@ -210,7 +216,7 @@ export function useTrailerPreview(options: Options = {}) {
           fs: 0,
         },
         events: {
-          onReady: (e: any) => {
+          onReady: (e: YtEvent) => {
             const iframe = e.target?.getIframe?.()
             if (iframe) {
               iframe.style.position = "absolute"
@@ -221,7 +227,7 @@ export function useTrailerPreview(options: Options = {}) {
             }
             onIframeLoad()
           },
-          onError: (e: any) => {
+          onError: (e: YtEvent) => {
             onPlayerError(e?.data)
           },
         },

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { mount } from "@vue/test-utils"
-import StarRatingInput from "@/components/movie/Starratinginput.vue"
+import StarRatingInput from "@/components/movie/StarRatingInput.vue"
 import { useRealI18n } from "./helpers/realI18n"
 
 const i18n = useRealI18n()

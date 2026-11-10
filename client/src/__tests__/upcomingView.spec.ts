@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { flushPromises, mount } from "@vue/test-utils"
 import { QueryClient, VueQueryPlugin } from "@tanstack/vue-query"
 import { createMemoryHistory, createRouter } from "vue-router"
-import Upcoming from "@/views/movie/Upcoming.vue"
+import Upcoming from "@/views/movie/UpcomingView.vue"
 import { movieApi } from "@/api/api"
 import { i18n } from "@/i18n"
 

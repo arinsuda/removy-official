@@ -206,9 +206,9 @@ export function useShareImage() {
         toast.success(t("share.downloadSuccess"))
         return
       }
-    } catch (err: any) {
+    } catch (err) {
       // User dismissed native share sheet — handle gracefully
-      if (err?.name === "AbortError") return
+      if ((err as { name?: string })?.name === "AbortError") return
     }
 
     // Fallback standard browser download (Desktop PC / fallback)

@@ -24,7 +24,7 @@ export default defineConfig({
       },
     },
   },
-  // @ts-ignore
+  // @ts-expect-error vitest `test` key is not in vite's UserConfig type here
   test: {
     environment: 'happy-dom',
   },

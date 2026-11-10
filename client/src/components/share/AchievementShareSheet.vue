@@ -68,6 +68,7 @@
 </template>
 
 <script setup lang="ts">
+import { useAchievementText } from "@/components/achievement/text"
 import { computed, onBeforeUnmount, ref, useTemplateRef, watch } from "vue"
 import { useI18n } from "vue-i18n"
 import { Download, Share2 } from "lucide-vue-next"
@@ -109,6 +110,7 @@ const props = withDefaults(
 const emit = defineEmits<{ "update:modelValue": [value: boolean] }>()
 
 const { t } = useI18n()
+const { name: achName } = useAchievementText()
 const share = useShareImage()
 const isExporting = share.isExporting
 const open = computed({ get: () => props.modelValue, set: (v) => emit("update:modelValue", v) })
@@ -188,7 +190,7 @@ onBeforeUnmount(() => {
 
 async function exportCard(): Promise<{ blob: Blob; filename: string } | null> {
   const node = card.value?.$el
-  const name = props.achievement?.achievement.name ?? FALLBACK_FILENAME
+  const name = props.achievement ? achName(props.achievement.achievement) : FALLBACK_FILENAME
   if (!node) return null
   const blob = await share.renderPng(node, { width: def.value.width, height: def.value.height })
   return blob ? { blob, filename: share.sanitizeFilename(name, `POPCORN_${active.value}`) } : null
@@ -196,7 +198,7 @@ async function exportCard(): Promise<{ blob: Blob; filename: string } | null> {
 
 async function handleShare() {
   const out = await exportCard()
-  const name = props.achievement?.achievement.name ?? ""
+  const name = props.achievement ? achName(props.achievement.achievement) : ""
   if (out) await share.shareImageFile(out.blob, out.filename, t("achievements.share.caption", { name }))
 }
 

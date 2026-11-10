@@ -1,10 +1,10 @@
 <template>
-  <button type="button" class="ab" :class="{ 'ab--on': achievement.is_unlocked, 'ab--shine': shine }" :aria-label="`${achievement.achievement.name}. ${status}`" @click="emit('open', achievement)">
+  <button type="button" class="ab" :class="{ 'ab--on': achievement.is_unlocked, 'ab--shine': shine }" :aria-label="`${achName(achievement.achievement)}. ${status}`" @click="emit('open', achievement)">
     <span class="ab__icon">
       <component :is="getAchievementIcon(achievement.achievement.action_type)" :size="26" :stroke-width="1.7" aria-hidden="true" />
       <Lock v-if="!achievement.is_unlocked" :size="12" class="ab__lock" aria-hidden="true" />
     </span>
-    <span class="ab__name">{{ achievement.achievement.name }}</span>
+    <span class="ab__name">{{ achName(achievement.achievement) }}</span>
     <span v-if="achievement.is_unlocked" class="ab__sub">{{ status }}</span>
     <template v-else>
       <span class="ab__bar" role="progressbar" :aria-valuenow="pct" aria-valuemin="0" aria-valuemax="100" :aria-label="t('profile.tabContent.achievements.progressLabel')">
@@ -16,6 +16,7 @@
 </template>
 
 <script setup lang="ts">
+import { useAchievementText } from "./text"
 import { computed } from "vue"
 import { useI18n } from "vue-i18n"
 import { Lock } from "lucide-vue-next"
@@ -27,6 +28,7 @@ const props = defineProps<{ achievement: UserAchievement; shine?: boolean }>()
 const emit = defineEmits<{ open: [achievement: UserAchievement] }>()
 
 const { t, locale } = useI18n()
+const { name: achName } = useAchievementText()
 const pct = computed(() => progressOf(props.achievement))
 const status = computed(() => {
   const a = props.achievement

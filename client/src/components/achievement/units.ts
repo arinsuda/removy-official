@@ -86,6 +86,8 @@ export interface UnitQuery {
   search: string
   /** Text shown for a requirement, so search matches what the user reads. */
   describe?: (a: UserAchievement) => string
+  /** Display name (translated); falls back to the server name. */
+  name?: (a: UserAchievement) => string
 }
 
 /** Status of a single tier; a locked tier counts as in progress once it has any progress. */
@@ -93,10 +95,10 @@ export function tierStatus(a: UserAchievement): UnitStatus {
   return a.is_unlocked ? "unlocked" : progressOf(a) > 0 ? "progress" : "locked"
 }
 
-function matchesSearch(a: UserAchievement, search: string, describe?: UnitQuery["describe"]): boolean {
+function matchesSearch(a: UserAchievement, search: string, describe?: UnitQuery["describe"], name?: UnitQuery["name"]): boolean {
   const needle = search.trim().toLowerCase()
   if (!needle) return true
-  return a.achievement.name.toLowerCase().includes(needle) || (describe?.(a) ?? a.achievement.description).toLowerCase().includes(needle)
+  return (name?.(a) ?? a.achievement.name).toLowerCase().includes(needle) || (describe?.(a) ?? a.achievement.description).toLowerCase().includes(needle)
 }
 
 /** Keeps units with at least one tier matching status and search; `matched` lists those tiers. */
@@ -104,7 +106,7 @@ export function filterUnits(units: AchievementUnit[], q: UnitQuery): Achievement
   const out: AchievementUnit[] = []
   for (const u of units) {
     if (q.category !== "all" && u.category !== q.category) continue
-    const hits = u.tiers.filter((t) => (q.status === "all" || tierStatus(t) === q.status) && matchesSearch(t, q.search, q.describe))
+    const hits = u.tiers.filter((t) => (q.status === "all" || tierStatus(t) === q.status) && matchesSearch(t, q.search, q.describe, q.name))
     if (hits.length > 0) out.push({ ...u, matched: new Set(hits.map((t) => t.achievement_id)) })
   }
   return out
@@ -115,8 +117,8 @@ export function matchedCount(units: AchievementUnit[]): number {
   return units.reduce((sum, u) => sum + (u.matched?.size ?? u.tiers.length), 0)
 }
 
-export function sortUnits(units: AchievementUnit[], sort: SortKey, locale: string): AchievementUnit[] {
-  const byName = (a: AchievementUnit, b: AchievementUnit) => a.current.achievement.name.localeCompare(b.current.achievement.name, locale)
+export function sortUnits(units: AchievementUnit[], sort: SortKey, locale: string, name: (a: UserAchievement) => string = (a) => a.achievement.name): AchievementUnit[] {
+  const byName = (a: AchievementUnit, b: AchievementUnit) => name(a.current).localeCompare(name(b.current), locale)
   const cmp: Record<SortKey, (a: AchievementUnit, b: AchievementUnit) => number> = {
     recent: (a, b) => b.lastUnlockedAt - a.lastUnlockedAt || b.pct - a.pct || byName(a, b),
     progress: (a, b) => Number(a.status === "unlocked") - Number(b.status === "unlocked") || b.pct - a.pct || byName(a, b),

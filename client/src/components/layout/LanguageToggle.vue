@@ -38,6 +38,7 @@ const { t } = useI18n()
 const { locale, isSwitchingLocale, toggleLocale } = useLocale()
 
 const OPTIONS = [
+  // hardcode-ok: a language is always named in its own language (endonym)
   { code: "th", label: "ไทย" },
   { code: "en", label: "English" },
 ] as const

@@ -53,7 +53,7 @@ export interface NotificationListResponse {
   pagination: NotificationPaginationMeta
 }
 
-export interface SocketNotificationNewPayload extends AppNotification {}
+export type SocketNotificationNewPayload = AppNotification
 export interface SocketNotificationReadPayload {
   ids: number[]
 }

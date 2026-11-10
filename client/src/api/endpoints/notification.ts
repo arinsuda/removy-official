@@ -1,5 +1,4 @@
 import type {
-  AppNotification,
   NotificationListResponse,
 } from "@/types/notification"
 import api from "../index"

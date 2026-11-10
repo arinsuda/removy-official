@@ -6,7 +6,6 @@ import PopupCard from "../components/movie/PopupCard.vue"
 import PopcornRatingIcon from "../components/movie/PopcornRatingIcon.vue"
 import PopcornScoreBadge from "../components/movie/PopcornScoreBadge.vue"
 import { mediaApi } from "../api/endpoints/media"
-import { libraryApi } from "../api/endpoints/library"
 
 // Mock dependencies
 vi.mock("@/stores/auth", () => ({

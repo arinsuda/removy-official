@@ -10,6 +10,14 @@ import { scanDir, scanSource } from "./helpers/hardcodeScan"
  * `// hardcode-ok: <reason>` (or put `<!-- hardcode-ok -->` on it), or place the marker on the line above.
  */
 export const ZERO_DIRS = [
+  // Whole source tree (2026-11-10): every top-level area is at zero, so new files are covered too.
+  "components",
+  "views",
+  "layouts",
+  "composables",
+  "stores",
+  "api",
+  "router",
   "views/library",
   "views/achievement",
   "components/achievement",
@@ -82,6 +90,19 @@ describe("scanner", () => {
 .b { color: var(--color-brand) }
 </style>`
     expect(scanSource(ok, true)).toEqual([])
+  })
+
+  it("flags user-facing copy written in script code", () => {
+    const kinds = (src: string, vue = false) => scanSource(src, vue).map((v) => v.split(" ")[0])
+    expect(kinds(`toast.success('Signed out')`)).toEqual(["script-text"])
+    expect(kinds(`ui.addToast("Saved", "success")`)).toEqual(["script-text"])
+    expect(kinds(`const msg = "บันทึกแล้ว"`)).toEqual(["script-text"])
+    expect(kinds(`<script setup lang="ts">\nconst e = "โหลดไม่สำเร็จ"\n</script>`, true)).toEqual(["script-text"])
+    // i18n calls, logs, comments and dev-only errors are fine
+    expect(kinds(`toast.success(t("auth.signedOut"))`)).toEqual([])
+    expect(kinds(`// ภาษาไทยในคอมเมนต์\nconsole.error("load failed", err)`)).toEqual([])
+    expect(kinds(`throw new Error("useX requires a provider")`)).toEqual([])
+    expect(kinds(`// hardcode-ok: endonym\nconst label = "ไทย"`)).toEqual([])
   })
 })
 

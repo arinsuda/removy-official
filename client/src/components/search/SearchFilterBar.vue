@@ -43,7 +43,7 @@ import AppButton from "@/components/ui/AppButton.vue"
 import AppTabs from "@/components/ui/AppTabs.vue"
 import { SEARCH_TABS, type SearchState, type SearchTab } from "./searchQuery"
 
-const props = defineProps<{
+defineProps<{
   state: SearchState
   counts: Record<SearchTab, number>
   years: number[]

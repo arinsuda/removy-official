@@ -30,10 +30,10 @@ let isRefreshing = false;
 
 let failedQueue: {
   resolve: (value?: unknown) => void;
-  reject: (error?: any) => void;
+  reject: (error?: unknown) => void;
 }[] = [];
 
-function processQueue(error: any = null) {
+function processQueue(error: unknown = null) {
   failedQueue.forEach((promise) => {
     if (error) {
       promise.reject(error);

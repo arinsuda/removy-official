@@ -238,7 +238,7 @@ describe("UserAchievements", () => {
     await w.findAll(".ab")[0]!.trigger("click")
     await flushPromises()
     const dialogText = document.body.querySelector('[role="dialog"]')?.textContent ?? ""
-    expect(dialogText).toContain("Ten")
+    expect(dialogText).toContain(i18n.global.t("achievements.names.review_count_10"))
     expect(dialogText).toContain("Write 10 reviews")
   })
 
