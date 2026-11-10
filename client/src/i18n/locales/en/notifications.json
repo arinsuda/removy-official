@@ -35,11 +35,6 @@
     "category": "No notifications in this category",
     "description": "New follows, likes and releases will show up here."
   },
-  "messages": {
-    "followed_you": "{name} started following you",
-    "follow_requested": "{name} requested to follow you",
-    "follow_accepted": "{name} accepted your follow request"
-  },
   "actions": {
     "accept": "Accept",
     "decline": "Decline",
@@ -67,9 +62,26 @@
     "follow_requested": "New follow request",
     "follow_accepted": "Follow request accepted"
   },
+  "someone": "Someone",
+  "untitled": "a title",
   "types": {
-    "like": "{username} liked your review for {mediaTitle}",
-    "comment": "{username} commented on your review for {mediaTitle}",
-    "follow": "{username} started following you"
+    "welcome": "Welcome to POPCORN! Start building your movie watching portfolio.",
+    "followed_you": "{name} started following you",
+    "follow_requested": "{name} requested to follow you",
+    "follow_accepted": "{name} accepted your follow request",
+    "following_reviewed": "{name} reviewed \"{title}\"",
+    "review_liked": "{name} liked your review of \"{title}\"",
+    "following_liked_review": "{name} liked a review of \"{title}\"",
+    "review_marked_helpful": "{name} marked your review of \"{title}\" as helpful",
+    "following_marked_helpful": "{name} marked a review of \"{title}\" as helpful",
+    "review_commented": "{name} commented on your review of \"{title}\"",
+    "following_commented": "{name} commented on a review of \"{title}\"",
+    "following_added_watched": "{name} marked \"{title}\" as watched",
+    "following_added_watchlist": "{name} added \"{title}\" to their watchlist",
+    "following_liked_media": "{name} liked \"{title}\"",
+    "movie_now_playing": "\"{title}\" is now playing, time to watch!",
+    "achievement_unlocked": "Achievement unlocked: {name} (+{exp} EXP)",
+    "email_verified": "Your email has been verified",
+    "password_changed": "Your password was changed. If this wasn't you, please contact support immediately."
   }
 }

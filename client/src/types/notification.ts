@@ -27,11 +27,24 @@ export interface NotificationActor {
   avatar_url?: string | null
 }
 
+/** Language-neutral payload; the client builds the text from type + params. */
+export interface NotificationParams {
+  media_id?: number
+  media_type?: string
+  media_title?: string
+  action_type?: string
+  target_count?: number
+  exp?: number
+  name?: string
+}
+
 export interface AppNotification {
   id: number
   type: NotificationType
   category: NotificationCategory
+  /** Empty on new rows; only legacy rows carry server-written text. */
   message: string
+  params?: NotificationParams | null
   is_read: boolean
   read_at?: string | null
   actor?: NotificationActor | null
@@ -66,17 +79,23 @@ export function notificationTitleKey(type: NotificationType): string {
   return `notifications.titles.${type}`
 }
 
-/**
- * In-app route for a notification, or null when the target has no page.
- * Reviews have no standalone page, so review notifications are not links.
- */
+const MEDIA_ROUTE: Record<string, string> = { movie: "movies", tv: "tv" }
+
+/** In-app route for a notification, or null when the target has no page. */
 export function getNotificationActionUrl(n: AppNotification): string | null {
   if (!n.target_ref || n.target_id == null) return null
   switch (n.target_ref) {
     case "user":
       return `/users/${n.target_id}`
     case "movie":
-      return `/movies/${n.target_id}`
+    case "tv":
+      return `/${MEDIA_ROUTE[n.target_ref]}/${n.target_id}`
+    case "review": {
+      // Reviews have no page of their own; open the title they belong to.
+      const { media_id, media_type } = n.params ?? {}
+      const base = media_type ? MEDIA_ROUTE[media_type] : undefined
+      return base && media_id ? `/${base}/${media_id}` : null
+    }
     default:
       return null
   }

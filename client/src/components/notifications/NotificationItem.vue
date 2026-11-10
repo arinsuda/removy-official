@@ -47,7 +47,8 @@ import { useUIStore } from "@/stores/ui"
 import { notificationTitleKey, type AppNotification } from "@/types/notification"
 import { logApiError } from "@/utils/logApiError"
 import { formatRelativeTime } from "@/utils/relativeTime"
-import { actorName, hasLocalizedMessage, notificationIcon } from "./notificationMeta"
+import { formatNotification } from "@/utils/notificationText"
+import { notificationIcon } from "./notificationMeta"
 
 const props = defineProps<{
   notification: AppNotification
@@ -64,7 +65,7 @@ const emit = defineEmits<{
   responded: [notification: AppNotification]
 }>()
 
-const { t, te, locale } = useI18n()
+const { t, te, n, locale } = useI18n()
 const auth = useAuthStore()
 const ui = useUIStore()
 
@@ -72,11 +73,7 @@ const title = computed(() => {
   const key = notificationTitleKey(props.notification.type)
   return te(key) ? t(key) : t("notifications.title")
 })
-const message = computed(() =>
-  hasLocalizedMessage(props.notification)
-    ? t(`notifications.messages.${props.notification.type}`, { name: actorName(props.notification) })
-    : props.notification.message,
-)
+const message = computed(() => formatNotification(props.notification, { t, te, n }))
 const relativeTime = computed(() => formatRelativeTime(props.notification.created_at, locale.value))
 
 const isRequest = computed(() => props.notification.type === "follow_requested" && !!props.notification.actor)

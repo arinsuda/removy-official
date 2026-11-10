@@ -128,16 +128,13 @@ func (s *Service) CreateReview(ctx context.Context, userID uint, req CreateRevie
 	}
 
 	if vis == "public" && s.notifSvc != nil {
-		if actor, err := s.getUserSummary(userID); err == nil {
-			title, _ := fetchMediaSummary(req.MediaID, req.MediaType)
-			_ = s.notifSvc.PushFollowingReviewed(
-				ctx,
-				userID,
-				actor.Username,
-				review.ID,
-				title,
-			)
-		}
+		title, _ := fetchMediaSummary(req.MediaID, req.MediaType)
+		_ = s.notifSvc.PushFollowingReviewed(
+			ctx,
+			userID,
+			review.ID,
+			notification_module.MediaRef{ID: uint(req.MediaID), Type: req.MediaType, Title: title},
+		)
 	}
 
 	if (vis == "public" || vis == "followers") && s.feedSvc != nil {
@@ -415,11 +412,10 @@ func (s *Service) LikeReview(ctx context.Context, reviewID, requesterID uint) er
 	s.createAchievementFeedActivities(ctx, review.UserID, unlocked)
 
 	if s.notifSvc != nil {
-		if actor, err := s.getUserSummary(requesterID); err == nil {
-			title, _ := fetchMediaSummary(review.MediaID, review.MediaType)
-			_ = s.notifSvc.PushReviewLiked(ctx, review.UserID, requesterID, reviewID, actor.Username, title)
-			_ = s.notifSvc.PushFollowingLikedReview(ctx, requesterID, actor.Username, reviewID, title)
-		}
+		title, _ := fetchMediaSummary(review.MediaID, review.MediaType)
+		media := notification_module.MediaRef{ID: uint(review.MediaID), Type: review.MediaType, Title: title}
+		_ = s.notifSvc.PushReviewLiked(ctx, review.UserID, requesterID, reviewID, media)
+		_ = s.notifSvc.PushFollowingLikedReview(ctx, requesterID, reviewID, media)
 	}
 
 	if (review.Visibility == "public" || review.IsPublic) && s.feedSvc != nil {
@@ -477,11 +473,10 @@ func (s *Service) MarkHelpful(ctx context.Context, reviewID, requesterID uint) e
 	s.createAchievementFeedActivities(ctx, review.UserID, unlocked)
 
 	if s.notifSvc != nil {
-		if actor, err := s.getUserSummary(requesterID); err == nil {
-			title, _ := fetchMediaSummary(review.MediaID, review.MediaType)
-			_ = s.notifSvc.PushReviewMarkedHelpful(ctx, review.UserID, requesterID, reviewID, actor.Username, title)
-			_ = s.notifSvc.PushFollowingMarkedHelpful(ctx, requesterID, actor.Username, reviewID, title)
-		}
+		title, _ := fetchMediaSummary(review.MediaID, review.MediaType)
+		media := notification_module.MediaRef{ID: uint(review.MediaID), Type: review.MediaType, Title: title}
+		_ = s.notifSvc.PushReviewMarkedHelpful(ctx, review.UserID, requesterID, reviewID, media)
+		_ = s.notifSvc.PushFollowingMarkedHelpful(ctx, requesterID, reviewID, media)
 	}
 
 	return nil
@@ -509,11 +504,10 @@ func (s *Service) CreateComment(ctx context.Context, reviewID, requesterID uint,
 	}
 
 	if s.notifSvc != nil {
-		if actor, err := s.getUserSummary(requesterID); err == nil {
-			title, _ := fetchMediaSummary(review.MediaID, review.MediaType)
-			_ = s.notifSvc.PushReviewCommented(ctx, review.UserID, requesterID, reviewID, actor.Username, title)
-			_ = s.notifSvc.PushFollowingCommented(ctx, requesterID, actor.Username, reviewID, title)
-		}
+		title, _ := fetchMediaSummary(review.MediaID, review.MediaType)
+		media := notification_module.MediaRef{ID: uint(review.MediaID), Type: review.MediaType, Title: title}
+		_ = s.notifSvc.PushReviewCommented(ctx, review.UserID, requesterID, reviewID, media)
+		_ = s.notifSvc.PushFollowingCommented(ctx, requesterID, reviewID, media)
 	}
 
 	if (review.Visibility == "public" || review.IsPublic) && s.feedSvc != nil {
@@ -593,12 +587,6 @@ func (s *Service) createAchievementFeedActivities(ctx context.Context, userID ui
 			Message:       u.Name,
 		})
 	}
-}
-
-func (s *Service) getUserSummary(userID uint) (*users.User, error) {
-	var u users.User
-	err := s.db.First(&u, userID).Error
-	return &u, err
 }
 
 func validateReviewRequest(req CreateReviewRequest) error {

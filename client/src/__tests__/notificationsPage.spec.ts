@@ -10,6 +10,7 @@ import NotificationDropdown from "@/components/notifications/NotificationDropdow
 import NotificationItem from "@/components/notifications/NotificationItem.vue"
 import { i18n } from "@/i18n"
 import { useAuthStore } from "@/stores/auth"
+import { useUIStore } from "@/stores/ui"
 import { useNotificationStore } from "@/stores/notification"
 import type { AppNotification } from "@/types/notification"
 import { useRealI18n } from "./helpers/realI18n"
@@ -23,6 +24,15 @@ vi.mock("@/api/endpoints/notification", () => ({
     deleteNotification: vi.fn().mockResolvedValue({}),
     clearAll: vi.fn(),
   },
+}))
+const socketHandlers = vi.hoisted(() => ({}) as Record<string, (payload: unknown) => void>)
+vi.mock("@/composables/useSocket", () => ({
+  useSocket: () => ({
+    connect: vi.fn(),
+    resume: vi.fn(),
+    isConnected: { value: true },
+    on: (event: string, handler: (payload: unknown) => void) => void (socketHandlers[event] = handler),
+  }),
 }))
 vi.mock("@/api/api", () => ({ followApi: { acceptRequest: vi.fn(), rejectRequest: vi.fn() } }))
 
@@ -219,5 +229,21 @@ describe("NotificationDropdown", () => {
     setActivePinia(pinia)
     const w = mount(NotificationDropdown, { global: { plugins: [pinia, makeRouter(), i18n] } })
     expect(w.text()).toContain("No notifications at this time")
+  })
+})
+
+describe("notification toast", () => {
+  it("builds the toast text from type + params, not from the message", () => {
+    const store = useNotificationStore()
+    store.bindSocket()
+    socketHandlers["notification:new"]!(
+      noti({
+        type: "following_liked_media",
+        message: "",
+        actor: { id: 3, username: "kenji", display_name: "Kenji" },
+        params: { media_id: 1, media_type: "movie", media_title: "Dune" },
+      }),
+    )
+    expect(useUIStore().toasts.at(-1)?.message).toContain('Kenji liked "Dune"')
   })
 })

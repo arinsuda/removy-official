@@ -12,7 +12,6 @@ import (
 	"github.com/arinsuda/movie-hub/internal/privacy_policy"
 	shared "github.com/arinsuda/movie-hub/internal/shared"
 	tmdbmodule "github.com/arinsuda/movie-hub/internal/tmdb_module"
-	users "github.com/arinsuda/movie-hub/internal/user_module"
 	stats "github.com/arinsuda/movie-hub/internal/user_stats_module"
 	"gorm.io/gorm"
 )
@@ -93,16 +92,12 @@ func (s *Service) AddItem(ctx context.Context, userID uint, req AddItemRequest) 
 		s.trackLibraryTotal(ctx, userID)
 
 		if s.notifSvc != nil {
-			if actor, err := s.getUserSummary(userID); err == nil {
-				title, _ := s.fetchTitle(req.MediaID, req.MediaType)
-				_ = s.notifSvc.PushFollowingAddedWatched(
-					ctx,
-					userID,
-					actor.Username,
-					uint(req.MediaID),
-					title,
-				)
-			}
+			title, _ := s.fetchTitle(req.MediaID, req.MediaType)
+			_ = s.notifSvc.PushFollowingAddedWatched(
+				ctx,
+				userID,
+				notification_module.MediaRef{ID: uint(req.MediaID), Type: string(req.MediaType), Title: title},
+			)
 		}
 
 		if s.feedSvc != nil {
@@ -124,16 +119,12 @@ func (s *Service) AddItem(ctx context.Context, userID uint, req AddItemRequest) 
 		s.trackLibraryTotal(ctx, userID)
 
 		if s.notifSvc != nil {
-			if actor, err := s.getUserSummary(userID); err == nil {
-				title, _ := s.fetchTitle(req.MediaID, req.MediaType)
-				_ = s.notifSvc.PushFollowingAddedWatchlist(
-					ctx,
-					userID,
-					actor.Username,
-					uint(req.MediaID),
-					title,
-				)
-			}
+			title, _ := s.fetchTitle(req.MediaID, req.MediaType)
+			_ = s.notifSvc.PushFollowingAddedWatchlist(
+				ctx,
+				userID,
+				notification_module.MediaRef{ID: uint(req.MediaID), Type: string(req.MediaType), Title: title},
+			)
 		}
 
 		if s.feedSvc != nil {
@@ -289,12 +280,6 @@ func (s *Service) createAchievementFeedActivities(ctx context.Context, userID ui
 			Message:       u.Name,
 		})
 	}
-}
-
-func (s *Service) getUserSummary(userID uint) (*users.User, error) {
-	var u users.User
-	err := s.db.First(&u, userID).Error
-	return &u, err
 }
 
 func (s *Service) fetchTitle(mediaID int, mediaType movie_module.MediaType) (string, error) {

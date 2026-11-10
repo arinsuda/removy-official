@@ -195,7 +195,7 @@ func (s *Service) finishLogin(user *user_module.User, userAgent, ip string) (*To
 	}
 
 	if isFirst, err := s.repo.MarkFirstLoginIfNeeded(user.ID); err == nil && isFirst && s.notifSvc != nil {
-		_ = s.notifSvc.PushWelcome(context.Background(), user.ID, user.Username)
+		_ = s.notifSvc.PushWelcome(context.Background(), user.ID)
 	}
 
 	return pair, user, nil
