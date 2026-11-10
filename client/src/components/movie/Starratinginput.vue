@@ -4,11 +4,11 @@
     :class="{ 'star-rating--readonly': readonly }"
     :role="readonly ? 'img' : 'slider'"
     :tabindex="readonly ? undefined : 0"
-    :aria-label="ariaLabel"
+    :aria-label="label"
     :aria-valuemin="readonly ? undefined : STEP"
     :aria-valuemax="readonly ? undefined : max"
     :aria-valuenow="readonly ? undefined : modelValue"
-    :aria-valuetext="`${modelValue} / ${max}`"
+    :aria-valuetext="t('reviews.composer.ratingValue', { value: n(modelValue), max: n(max) })"
     @keydown="onKeydown"
   >
     <div
@@ -74,6 +74,7 @@
 
 <script setup lang="ts">
   import { computed, getCurrentInstance, ref } from "vue"
+  import { useI18n } from "vue-i18n"
 
   const STAR_PATH =
     "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
@@ -87,8 +88,12 @@
       size?: number
       ariaLabel?: string
     }>(),
-    { max: 5, readonly: false, showLabel: true, size: 22, ariaLabel: "Rating" },
+    { max: 5, readonly: false, showLabel: true, size: 22, ariaLabel: undefined },
   )
+
+  const { t, n } = useI18n()
+  /** Callers may pass their own label; otherwise the generic translated one is used. */
+  const label = computed(() => props.ariaLabel ?? t("reviews.composer.ratingLabel"))
 
   const emit = defineEmits<{
     (e: "update:modelValue", value: number): void
