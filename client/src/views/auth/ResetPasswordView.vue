@@ -73,7 +73,7 @@
   const shellRef = ref<InstanceType<typeof AuthShell> | null>(null)
 
   // Read before any navigation can copy the secrets into route.fullPath / history.state.
-  const secrets = consumeUrlSecrets([URL_SECRET_KEYS.token, URL_SECRET_KEYS.uid], { legacyQuery: true })
+  const secrets = consumeUrlSecrets([URL_SECRET_KEYS.token, URL_SECRET_KEYS.uid])
   void router.replace({ query: {}, hash: "" })
   const token = secrets[URL_SECRET_KEYS.token]
   const userId = secrets[URL_SECRET_KEYS.uid] ? Number(secrets[URL_SECRET_KEYS.uid]) : undefined

@@ -121,17 +121,13 @@ describe("reset password", () => {
     expect(w.get("h1").text()).toBe("Password updated")
   })
 
-  it("still accepts the legacy query link and strips the secrets", async () => {
-    api.resetPassword.mockResolvedValue({} as never)
-    const w = await mountAt(ResetPasswordView, "/reset-password", "/reset-password?token=T&uid=7")
-    expect(window.location.href).not.toContain("token=")
-    expect(w.vm.$route.fullPath).not.toContain("T&")
-    const [a, b] = w.findAll("input")
-    await a!.setValue("Passw0rdOK")
-    await b!.setValue("Passw0rdOK")
-    await w.get("form").trigger("submit")
-    await flushPromises()
-    expect(api.resetPassword).toHaveBeenCalledWith(expect.objectContaining({ token: "T", user_id: 7 }))
+  it("ignores a ?token= query link, strips it and shows the expired state", async () => {
+    const w = await mountAt(ResetPasswordView, "/reset-password", "/reset-password?token=LEGACY&uid=7")
+    expect(w.get("h1").text()).toBe("Link expired")
+    expect(window.location.href).not.toContain("LEGACY")
+    expect(w.vm.$route.fullPath).not.toContain("LEGACY")
+    expect(window.history.state?.current ?? "").not.toContain("LEGACY")
+    expect(api.resetPassword).not.toHaveBeenCalled()
   })
 
   it("strips token and uid from the URL and route without calling the API", async () => {
@@ -182,14 +178,14 @@ describe("verify email", () => {
     expect(window.history.state?.back ?? "").not.toContain("SECRETTOKEN")
   })
 
-  it("still accepts the legacy query link", async () => {
-    api.verifyEmail.mockResolvedValue({ data: { password_reset_required: false } } as never)
+  it("ignores a ?token= query link, strips it and shows the invalid state", async () => {
     const w = await mountAt(VerifyEmailView, "/verify-email", "/verify-email?token=LEGACY")
+    expect(w.find("input").exists()).toBe(false)
+    expect(w.get("h1").text()).toBe("Link expired")
     expect(window.location.href).not.toContain("LEGACY")
-    await w.get("input").setValue("pw")
-    await w.get("form").trigger("submit")
-    await flushPromises()
-    expect(api.verifyEmail).toHaveBeenCalledWith("LEGACY", { password: "pw" })
+    expect(w.vm.$route.fullPath).not.toContain("LEGACY")
+    expect(window.history.state?.current ?? "").not.toContain("LEGACY")
+    expect(api.verifyEmail).not.toHaveBeenCalled()
   })
 
   it("keeps the form and token after a wrong password", async () => {

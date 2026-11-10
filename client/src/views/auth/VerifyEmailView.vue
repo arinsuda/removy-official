@@ -125,7 +125,7 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
   )
 
   // Read in setup, before any navigation can copy the token into route.fullPath / history.state.
-  const secrets = consumeUrlSecrets([URL_SECRET_KEYS.token], { legacyQuery: true })
+  const secrets = consumeUrlSecrets([URL_SECRET_KEYS.token])
   token.value = secrets[URL_SECRET_KEYS.token] ?? ""
   void router.replace({ query: {}, hash: "" })
 
