@@ -88,6 +88,7 @@ func Register(app *fiber.App, db *gorm.DB, cfg *config.Config, m *mailer.Mailer)
 	userSvc := user_module.RegisterRoutes(protected, db, mc, statsSvc, authSvc, passwordResetMailer, policy, cfg.Brevo)
 	authSvc.SetUserService(userSvc)
 	userSvc.SetSessionReissuer(authSvc)
+	userSvc.SetFrontendBaseURL(cfg.FrontendBaseURL)
 
 	achieveModule.RegisterRoutes(api, mw.RequireAuth)
 	feedModule.RegisterRoutes(protected)

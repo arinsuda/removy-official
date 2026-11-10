@@ -11,19 +11,24 @@ import (
 	"time"
 )
 
+// DefaultFrontendBaseURL is the local-dev SPA origin.
+const DefaultFrontendBaseURL = "http://localhost:3000"
+
 type Config struct {
 	Port       string
 	AppBaseURL string
-	CORS       CORSConfig
-	DB         DBConfig
-	TMDB       TMDBConfig
-	OMDb       OMDbConfig
-	JWT        JWTConfig
-	Brevo      BrevoConfig
-	Cookie     CookieConfig
-	MinIO      MinIOConfig
-	Google     GoogleConfig
-	Link       LinkConfig
+	// FrontendBaseURL is the SPA origin used in mailed links (FRONTEND_BASE_URL).
+	FrontendBaseURL string
+	CORS            CORSConfig
+	DB              DBConfig
+	TMDB            TMDBConfig
+	OMDb            OMDbConfig
+	JWT             JWTConfig
+	Brevo           BrevoConfig
+	Cookie          CookieConfig
+	MinIO           MinIOConfig
+	Google          GoogleConfig
+	Link            LinkConfig
 
 	// TrustedProxyHops is how many proxies append to X-Forwarded-For (Render = 1).
 	TrustedProxyHops int
@@ -120,11 +125,12 @@ func Load() (*Config, error) {
 	}
 
 	devMailLog := false
+	frontendBaseURL := getEnv("FRONTEND_BASE_URL", DefaultFrontendBaseURL)
 	if getEnv("DEV_MAIL_LOG", "") == "true" {
 		// Secure cookies mean HTTPS, i.e. a deployed environment: never print mail there.
 		if getEnv("COOKIE_SECURE", "false") == "true" {
 			log.Printf("WARN DEV_MAIL_LOG ignored: COOKIE_SECURE=true")
-		} else if DevMailLogAllowed(allowedOrigins, getEnv("APP_BASE_URL", "http://localhost:3000"), getEnv("FRONTEND_BASE_URL", "http://localhost:3000")) {
+		} else if DevMailLogAllowed(allowedOrigins, getEnv("APP_BASE_URL", "http://localhost:3000"), frontendBaseURL) {
 			devMailLog = true
 			log.Printf("DEV_MAIL_LOG active — emails are printed, not sent")
 		} else {
@@ -141,6 +147,7 @@ func Load() (*Config, error) {
 		TrustedProxyHops: trustedProxyHops,
 		Port:             getEnv("PORT", "8080"),
 		AppBaseURL:       getEnv("APP_BASE_URL", "http://localhost:3000"),
+		FrontendBaseURL:  frontendBaseURL,
 		CORS: CORSConfig{
 			AllowedOrigins: allowedOrigins,
 		},

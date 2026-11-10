@@ -11,6 +11,7 @@ import (
 
 	"github.com/arinsuda/movie-hub/config"
 	"github.com/arinsuda/movie-hub/internal/identity_policy"
+	"github.com/arinsuda/movie-hub/internal/shared/apierr"
 	"github.com/arinsuda/movie-hub/internal/user_module"
 	"github.com/gofiber/fiber/v3"
 )
@@ -154,7 +155,7 @@ func (h *Handler) VerifyEmail(c fiber.Ctx) error {
 		case errors.Is(err, ErrInvalidToken):
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid or expired token"})
 		case errors.Is(err, ErrVerifyWrongPassword):
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"code": "WRONG_PASSWORD", "error": "wrong password"})
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"code": apierr.ErrorCodeWrongPassword, "error": "wrong password"})
 		case errors.Is(err, ErrPasswordChoiceRequired):
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"code": "PASSWORD_OR_SKIP_REQUIRED", "error": "enter your password or choose to skip"})
 		case errors.Is(err, ErrVerifyAttemptsExceeded):
