@@ -20,6 +20,16 @@ const (
 	ErrorCodeItemNotFound      ErrorCode = "ITEM_NOT_FOUND"
 	ErrorCodeOrderMismatch     ErrorCode = "ORDER_MISMATCH"
 	ErrorCodeForbidden         ErrorCode = "FORBIDDEN"
+	ErrorCodeUnauthorized      ErrorCode = "UNAUTHORIZED"
+	ErrorCodeUserNotFound      ErrorCode = "USER_NOT_FOUND"
+	ErrorCodeReviewNotFound    ErrorCode = "REVIEW_NOT_FOUND"
+	ErrorCodeInvalidRole       ErrorCode = "INVALID_ROLE"
+	ErrorCodeSelfDeactivation  ErrorCode = "SELF_DEACTIVATION"
+	ErrorCodeSelfDeletion      ErrorCode = "SELF_DELETION"
+	ErrorCodeAlreadyInStatus   ErrorCode = "ALREADY_IN_STATUS"
+	ErrorCodeFinalAdmin        ErrorCode = "FINAL_ADMIN"
+	ErrorCodeInactiveUserRole  ErrorCode = "INACTIVE_USER_ROLE_CHANGE"
+	ErrorCodeInternal          ErrorCode = "INTERNAL_ERROR"
 )
 
 type APIError struct {

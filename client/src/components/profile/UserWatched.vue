@@ -74,7 +74,8 @@
 import { computed, onMounted, ref } from "vue"
 import { useI18n } from "vue-i18n"
 import { Eye } from "lucide-vue-next"
-import { libraryApi, reviewApi } from "@/api/api"
+import { libraryApi } from "@/api/api"
+import { fetchAllUserReviews } from "@/utils/fetchAllUserReviews"
 import { watchLogApi } from "@/api/endpoints/watchLog"
 import type { HomeMedia } from "@/components/home/homeMedia"
 import ConfirmModal from "@/components/profile/components/ConfirmModal.vue"
@@ -170,8 +171,7 @@ function onWatchLogged() {
 async function loadRatings(): Promise<Map<string, number>> {
   const out = new Map<string, number>()
   try {
-    const res = await reviewApi.getUserReviews(props.userId)
-    for (const r of res.data.reviews ?? []) out.set(`${r.media.media_type}-${r.media.id}`, r.rating)
+    for (const r of await fetchAllUserReviews(props.userId)) out.set(`${r.media.media_type}-${r.media.id}`, r.rating)
   } catch {
     // Ratings are optional.
   }

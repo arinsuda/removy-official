@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { ENTRY_SORTS, summaryToHomeMedia, type ProfileEntry } from "@/components/profile/tabs/profileMedia"
-import { REVIEW_FILTERS, REVIEW_SORTS, summarizeReviews } from "@/components/profile/tabs/reviewList"
+import { REVIEW_FILTERS, summarizeReviews } from "@/components/profile/tabs/reviewList"
 import { dedupeWatched, groupByMonth, inYear, yearsOf, type WatchedEntry } from "@/components/profile/tabs/watched"
 import { countUnlocked, filterAchievements, progressOf, sortAchievements } from "@/components/achievement/achievements"
 import type { ReviewResponse } from "@/types"
@@ -52,12 +52,6 @@ describe("review list helpers", () => {
     expect(rs.filter(REVIEW_FILTERS.high!).map((r) => r.id)).toEqual([1, 3])
     expect(rs.filter(REVIEW_FILTERS.low!).map((r) => r.id)).toEqual([2])
     expect(rs.filter(REVIEW_FILTERS.withText!).map((r) => r.id)).toEqual([1, 3])
-  })
-
-  it("sorts newest and highest", () => {
-    expect([...rs].sort(REVIEW_SORTS.newest!).map((r) => r.id)[0]).toBe(3)
-    expect([...rs].sort(REVIEW_SORTS.highest!).map((r) => r.id)).toEqual([1, 3, 2])
-    expect([...rs].sort(REVIEW_SORTS.lowest!).map((r) => r.id)[0]).toBe(2)
   })
 
   it("summarizes count, average and top genre", () => {

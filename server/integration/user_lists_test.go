@@ -188,12 +188,13 @@ func TestListItemsDuplicateCoverAndDelete(t *testing.T) {
 	if code, out := f.e.do("DELETE", fmt.Sprintf("%s/items/%d", base, itemID), nil, f.ownerTok); code != 404 || out["code"] != "ITEM_NOT_FOUND" {
 		t.Fatalf("remove twice: %d %v", code, out)
 	}
-	// contains_media reflects membership for the item picker.
-	f.addItem(id, 27205)
+	// contains_media and item_id reflect membership for the item picker.
+	_, addedOut := f.addItem(id, 27205)
+	addedItemID := addedOut["item"].(map[string]any)["id"]
 	_, out = f.e.do("GET", "/api/lists?media_type=movie&media_id=27205", nil, f.ownerTok)
 	lists, _ := out["lists"].([]any)
-	if len(lists) != 1 || lists[0].(map[string]any)["contains_media"] != true {
-		t.Fatalf("contains_media: %v", out)
+	if len(lists) != 1 || lists[0].(map[string]any)["contains_media"] != true || lists[0].(map[string]any)["item_id"] != addedItemID {
+		t.Fatalf("contains_media/item_id: %v", out)
 	}
 
 	if code, _ := f.e.do("DELETE", base, nil, f.ownerTok); code != 204 {

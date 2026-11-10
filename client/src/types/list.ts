@@ -16,6 +16,8 @@ export interface ListSummary {
   collage_posters: string[]
   /** Only present when the list was requested with media_type and media_id. */
   contains_media?: boolean
+  /** Item id of the queried title in this list, when contains_media is true. */
+  item_id?: number
   created_at: string
   updated_at: string
 }

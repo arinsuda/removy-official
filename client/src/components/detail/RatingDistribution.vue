@@ -33,11 +33,12 @@
 <script setup lang="ts">
 import { computed, useId } from "vue"
 import { useI18n } from "vue-i18n"
-import type { ReviewResponse } from "@/types/review"
-import { ratingDistribution } from "./ratingDistribution"
+import type { RatingBucket, ReviewResponse } from "@/types/review"
+import { ratingDistribution, ratingDistributionFromBuckets } from "./ratingDistribution"
 
 const props = defineProps<{
-  reviews: Pick<ReviewResponse, "rating" | "visibility">[]
+  reviews?: Pick<ReviewResponse, "rating" | "visibility">[]
+  distribution?: RatingBucket[]
   title?: string
   includeAll?: boolean
   /** Reviews that exist in total; when more than are loaded the chart says so. */
@@ -45,9 +46,19 @@ const props = defineProps<{
 }>()
 const { t } = useI18n()
 const titleId = useId()
-const result = computed(() => ratingDistribution(props.reviews, { includeAll: props.includeAll }))
+const result = computed(() =>
+  props.distribution
+    ? ratingDistributionFromBuckets(props.distribution)
+    : ratingDistribution(props.reviews ?? [], { includeAll: props.includeAll }),
+)
 /** Only some pages are loaded, so the bars cover part of the reviews. */
-const partial = computed(() => !props.includeAll && props.totalCount !== undefined && props.reviews.length < props.totalCount)
+const partial = computed(
+  () =>
+    !props.distribution &&
+    !props.includeAll &&
+    props.totalCount !== undefined &&
+    (props.reviews?.length ?? 0) < props.totalCount,
+)
 /** Highest rating first. */
 const rows = computed(() => [...result.value.buckets].reverse())
 </script>

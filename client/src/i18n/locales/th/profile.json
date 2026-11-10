@@ -138,6 +138,7 @@
   "reviews": {
     "titleOwn": "รีวิวของฉัน",
     "titleOther": "รีวิว",
+    "searchPlaceholder": "ค้นหาในข้อความรีวิว",
     "filterVisibility": "กรองตามการมองเห็น",
     "filterDate": "กรองตามวันที่",
     "clearDate": "ล้างตัวกรองวันที่",

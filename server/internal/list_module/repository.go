@@ -184,11 +184,11 @@ type summaryData struct {
 	counts   map[uint]int
 	covers   map[uint]UserListItem // by list id
 	collages map[uint][]UserListItem
-	contains map[uint]bool
+	contains map[uint]uint // list id -> item id
 }
 
 func (r *repository) summaryData(lists []UserList, mediaType string, mediaID int) (*summaryData, error) {
-	d := &summaryData{counts: map[uint]int{}, covers: map[uint]UserListItem{}, collages: map[uint][]UserListItem{}, contains: map[uint]bool{}}
+	d := &summaryData{counts: map[uint]int{}, covers: map[uint]UserListItem{}, collages: map[uint][]UserListItem{}, contains: map[uint]uint{}}
 	if len(lists) == 0 {
 		return d, nil
 	}
@@ -236,14 +236,18 @@ func (r *repository) summaryData(lists []UserList, mediaType string, mediaID int
 	}
 
 	if mediaID > 0 && mediaType != "" {
-		var hit []uint
+		var hits []struct {
+			ListID uint
+			ID     uint
+		}
 		if err := r.db.Model(&UserListItem{}).
+			Select("list_id, id").
 			Where("list_id IN ? AND media_type = ? AND media_id = ?", ids, mediaType, mediaID).
-			Pluck("list_id", &hit).Error; err != nil {
+			Scan(&hits).Error; err != nil {
 			return nil, err
 		}
-		for _, id := range hit {
-			d.contains[id] = true
+		for _, h := range hits {
+			d.contains[h.ListID] = h.ID
 		}
 	}
 	return d, nil

@@ -1,18 +1,15 @@
 import type { ReviewResponse } from "@/types"
 
-const time = (r: ReviewResponse) => new Date(r.created_at).getTime() || 0
+/** Rating chip thresholds; must equal HighRatingMin / LowRatingMax in server review_module/dto.go. */
+export const HIGH_RATING_MIN = 4
+export const LOW_RATING_MAX = 2.5
+/** Delay before a typed search is sent to the server. */
+export const REVIEW_SEARCH_DEBOUNCE_MS = 350
 
 export const REVIEW_FILTERS: Record<string, (r: ReviewResponse) => boolean> = {
-  high: (r) => r.rating >= 4,
-  low: (r) => r.rating <= 2.5,
+  high: (r) => r.rating >= HIGH_RATING_MIN,
+  low: (r) => r.rating <= LOW_RATING_MAX,
   withText: (r) => r.body.trim() !== "",
-}
-
-export const REVIEW_SORTS: Record<string, (a: ReviewResponse, b: ReviewResponse) => number> = {
-  newest: (a, b) => time(b) - time(a),
-  oldest: (a, b) => time(a) - time(b),
-  highest: (a, b) => b.rating - a.rating || time(b) - time(a),
-  lowest: (a, b) => a.rating - b.rating || time(b) - time(a),
 }
 
 export const REVIEW_SORT_KEYS = ["newest", "oldest", "highest", "lowest"] as const

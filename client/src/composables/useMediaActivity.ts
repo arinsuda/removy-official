@@ -4,10 +4,12 @@ import { isAxiosError } from "axios"
 import { useRoute, useRouter } from "vue-router"
 import { libraryApi } from "@/api/endpoints/library"
 import { mediaApi } from "@/api/endpoints/media"
+import { reviewApi } from "@/api/endpoints/social"
 import { watchLogApi } from "@/api/endpoints/watchLog"
 import { useAuthStore } from "@/stores/auth"
 import { useToast } from "@/composables/useToast"
 import type { MediaStats } from "@/types/movie"
+import type { RatingBucket } from "@/types/review"
 import type { WatchSummaryResponse } from "@/types/watchLog"
 
 type MediaKind = "movie" | "tv"
@@ -27,6 +29,7 @@ export function useMediaActivity(type: MediaKind, idRef: Ref<number>) {
   const toast = useToast()
 
   const stats = ref<MediaStats | null>(null)
+  const ratingDistribution = ref<RatingBucket[]>([])
   const itemIds = ref<Record<ListKind, number | null>>({ watchlist: null, watched: null })
   const watchSummary = ref<WatchSummaryResponse | null>(null)
   const pending = ref(new Set<PendingAction>())
@@ -37,6 +40,7 @@ export function useMediaActivity(type: MediaKind, idRef: Ref<number>) {
 
   function reset() {
     stats.value = null
+    ratingDistribution.value = []
     itemIds.value = { watchlist: null, watched: null }
     watchSummary.value = null
     pending.value = new Set()
@@ -49,6 +53,16 @@ export function useMediaActivity(type: MediaKind, idRef: Ref<number>) {
       stats.value = res.data.stats
     } catch (err) {
       console.error("load media stats failed:", err)
+    }
+  }
+
+  async function loadRating(id: number) {
+    try {
+      const res = await reviewApi.getMediaRating?.(type, id)
+      if (id !== idRef.value) return
+      ratingDistribution.value = res?.data?.rating?.distribution ?? []
+    } catch {
+      // Distribution is supplemental; keep empty on failure.
     }
   }
 
@@ -82,6 +96,7 @@ export function useMediaActivity(type: MediaKind, idRef: Ref<number>) {
     const id = idRef.value
     reset()
     if (!id) return
+    void loadRating(id)
     await Promise.all([loadStats(id), loadLists(id), loadWatchSummary(id)])
   }
 
@@ -183,6 +198,7 @@ export function useMediaActivity(type: MediaKind, idRef: Ref<number>) {
 
   return {
     stats,
+    ratingDistribution,
     watchSummary,
     isLiked,
     isWatchlisted,
@@ -193,6 +209,10 @@ export function useMediaActivity(type: MediaKind, idRef: Ref<number>) {
     toggleWatchlist,
     markLogged,
     reload: load,
-    refreshStats: () => (idRef.value ? loadStats(idRef.value) : Promise.resolve()),
+    refreshStats: () => {
+      if (!idRef.value) return Promise.resolve()
+      void loadRating(idRef.value)
+      return loadStats(idRef.value)
+    },
   }
 }

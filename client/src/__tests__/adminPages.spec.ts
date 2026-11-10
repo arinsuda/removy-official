@@ -194,7 +194,9 @@ describe("AdminUsersView", () => {
 
   it("maps the final-admin protection error to a localized toast", async () => {
     api.listUsers.mockResolvedValue(page([user({ role: "admin" })]))
-    api.updateUserRole.mockRejectedValue({ response: { status: 409, data: { error: "cannot demote or deactivate final active admin" } } })
+    api.updateUserRole.mockRejectedValue({
+      response: { status: 409, data: { code: "FINAL_ADMIN", error: "cannot demote or deactivate final active admin" } },
+    })
     await mountView(AdminUsersView)
     menuTrigger("Actions for @jane").click()
     await flushPromises()

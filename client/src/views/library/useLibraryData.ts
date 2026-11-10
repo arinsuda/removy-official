@@ -1,6 +1,7 @@
 import { ref, watch, type Ref } from "vue"
 import { isAxiosError } from "axios"
-import { libraryApi, reviewApi, userApi } from "@/api/api"
+import { libraryApi, userApi } from "@/api/api"
+import { fetchAllUserReviews } from "@/utils/fetchAllUserReviews"
 import { mediaApi } from "@/api/endpoints/media"
 import { summaryToHomeMedia } from "@/components/profile/tabs/profileMedia"
 import type { ReviewResponse } from "@/types"
@@ -29,7 +30,7 @@ export function useLibraryData(userId: Ref<number>) {
       libraryApi.getVisibleUserLibrary(id, { list_type: "watchlist" }),
       libraryApi.getVisibleUserLibrary(id, { list_type: "watched" }),
       mediaApi.getLikeByUserId(id),
-      reviewApi.getUserReviews(id),
+      fetchAllUserReviews(id),
     ])
     if (id !== userId.value) return
     if (p.status === "fulfilled") profile.value = p.value.data.user
@@ -39,7 +40,7 @@ export function useLibraryData(userId: Ref<number>) {
     if (lk.status === "fulfilled") {
       likes.value = lk.value.data.likes.map((l) => ({ id: l.media.id, summary: l.media, media: summaryToHomeMedia(l.media), at: l.created_at }))
     }
-    if (rv.status === "fulfilled") reviews.value = rv.value.data.reviews ?? []
+    if (rv.status === "fulfilled") reviews.value = rv.value
     const lists = [wl, wd, lk, rv]
     locked.value = lists.some((r) => r.status === "rejected" && isAxiosError(r.reason) && r.reason.response?.status === 403)
     listsFailed.value = lists.some((r) => r.status === "rejected")

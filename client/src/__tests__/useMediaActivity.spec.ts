@@ -19,6 +19,7 @@ const m = vi.hoisted(() => ({
 }))
 vi.mock("@/api/endpoints/media", () => ({ mediaApi: { getMediaStats: m.getMediaStats, likeMedia: m.likeMedia, unlikeMedia: m.unlikeMedia } }))
 vi.mock("@/api/endpoints/library", () => ({ libraryApi: { getOwnMediaStatus: m.getOwnMediaStatus, addItem: m.addItem, removeItem: m.removeItem } }))
+vi.mock("@/api/endpoints/social", () => ({ reviewApi: { getMediaRating: vi.fn().mockResolvedValue({ data: { rating: { distribution: [] } } }) } }))
 vi.mock("@/api/endpoints/watchLog", () => ({ watchLogApi: { getMyWatchLogs: m.getMyWatchLogs } }))
 
 const stats = { media_id: 1, media_type: "movie", like_count: 3, view_count: 0, review_count: 0, watchlist_count: 2, average_rating: 0, has_rating: false, liked_at: null, watchlisted_at: null }

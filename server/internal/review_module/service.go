@@ -156,23 +156,38 @@ func (s *Service) CreateReview(ctx context.Context, userID uint, req CreateRevie
 	return toReviewResponse(inserted, false, false, s.minio), nil
 }
 
-func (s *Service) GetUserReviews(ctx context.Context, userID, requesterID uint, filter ReviewFilter) ([]ReviewResponse, error) {
+func (s *Service) GetUserReviews(ctx context.Context, userID, requesterID uint, filter ReviewFilter) ([]ReviewResponse, Pagination, UserReviewsSummary, error) {
+	filter.Page = clampPage(filter.Page)
+	if filter.PageSize < 1 {
+		filter.PageSize = DefaultMediaReviewsPageSize
+	}
+	if filter.PageSize > MaxMediaReviewsPageSize {
+		filter.PageSize = MaxMediaReviewsPageSize
+	}
+	pg := Pagination{Page: filter.Page, PageSize: filter.PageSize}
+
 	canView, err := s.policy.CanViewProfileSection(ctx, requesterID, userID, privacy_policy.SectionReviews)
 	if err != nil {
-		return nil, err
+		return nil, pg, UserReviewsSummary{}, err
 	}
 	if !canView {
-		return nil, ErrForbidden
+		return nil, pg, UserReviewsSummary{}, ErrForbidden
 	}
 
 	if userID != requesterID {
 		filter.Visibility = "public"
 	}
 
-	reviews, err := s.repo.FindReviewsByUser(userID, filter)
+	reviews, total, err := s.repo.FindReviewsByUser(userID, filter, (filter.Page-1)*filter.PageSize, filter.PageSize)
 	if err != nil {
-		return nil, err
+		return nil, pg, UserReviewsSummary{}, err
 	}
+	summaryRow, err := s.repo.SummarizeReviewsByUser(userID, filter)
+	if err != nil {
+		return nil, pg, UserReviewsSummary{}, err
+	}
+	pg.Total = total
+	pg.HasMore = int64(filter.Page*filter.PageSize) < total
 
 	ids := make([]uint, len(reviews))
 	for i, r := range reviews {
@@ -186,15 +201,26 @@ func (s *Service) GetUserReviews(ctx context.Context, userID, requesterID uint, 
 	for i, r := range reviews {
 		responses[i] = *toReviewResponse(&r, likedMap[r.ID], helpfulMap[r.ID], s.minio)
 	}
-	return responses, nil
+	return responses, pg, buildUserReviewsSummary(summaryRow), nil
+}
+
+// buildUserReviewsSummary turns the grouped aggregate row into the API summary (average to one decimal).
+func buildUserReviewsSummary(row userReviewSummaryRow) UserReviewsSummary {
+	avg := float32(0)
+	if row.Count > 0 {
+		avg = float32(math.Round(row.RatingSum/float64(row.Count)*10) / 10)
+	}
+	return UserReviewsSummary{
+		Count:         row.Count,
+		AverageRating: avg,
+		FilterCounts:  ReviewFilterCounts{All: row.Count, High: row.High, Low: row.Low, WithText: row.WithText},
+	}
 }
 
 // GetMediaReviews returns one page of a title's reviews. page and pageSize are normalised
 // (page >= 1, pageSize defaults to DefaultMediaReviewsPageSize and is capped at MaxMediaReviewsPageSize).
 func (s *Service) GetMediaReviews(ctx context.Context, mediaID int, mediaType string, requesterID uint, page, pageSize int) ([]ReviewResponse, Pagination, error) {
-	if page < 1 {
-		page = 1
-	}
+	page = clampPage(page)
 	if pageSize < 1 {
 		pageSize = DefaultMediaReviewsPageSize
 	}
@@ -303,6 +329,44 @@ func (s *Service) DeleteReview(ctx context.Context, reviewID, requesterID uint) 
 	return nil
 }
 
+var ratingSteps = [10]float32{0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0}
+
+func buildRatingResponse(mediaID int, mediaType string, rows []RatingBucket) *RatingResponse {
+	dist := make([]RatingBucket, len(ratingSteps))
+	for i, step := range ratingSteps {
+		dist[i] = RatingBucket{Rating: step, Count: 0}
+	}
+
+	totalCount := 0
+	weightedSum := 0.0
+	for _, r := range rows {
+		if r.Count <= 0 {
+			continue
+		}
+		idx := int(math.Round(float64(r.Rating)*2)) - 1
+		if idx >= 0 && idx < len(dist) {
+			dist[idx].Count += r.Count
+			totalCount += r.Count
+			weightedSum += float64(dist[idx].Rating) * float64(r.Count)
+		}
+	}
+
+	hasRating := totalCount > 0
+	avg := float32(0)
+	if hasRating {
+		avg = float32(math.Round((weightedSum/float64(totalCount))*10) / 10)
+	}
+
+	return &RatingResponse{
+		MediaID:       mediaID,
+		MediaType:     mediaType,
+		AverageRating: avg,
+		ReviewCount:   totalCount,
+		HasRating:     hasRating,
+		Distribution:  dist,
+	}
+}
+
 func (s *Service) GetMediaRating(mediaID int, mediaType string) (*RatingResponse, error) {
 	if mediaType != "movie" && mediaType != "tv" {
 		return nil, ErrInvalidMediaType
@@ -311,7 +375,7 @@ func (s *Service) GetMediaRating(mediaID int, mediaType string) (*RatingResponse
 		return nil, ErrInvalidMediaID
 	}
 
-	stats, err := s.repo.GetMediaRating(context.Background(), shared.MediaIdentity{
+	rows, err := s.repo.GetMediaRatingBuckets(context.Background(), shared.MediaIdentity{
 		ID:   mediaID,
 		Type: shared.MediaType(mediaType),
 	})
@@ -319,19 +383,7 @@ func (s *Service) GetMediaRating(mediaID int, mediaType string) (*RatingResponse
 		return nil, err
 	}
 
-	hasRating := stats.Count > 0
-	avg := float32(0)
-	if hasRating && stats.Average != nil {
-		avg = float32(math.Round(*stats.Average*10) / 10)
-	}
-
-	return &RatingResponse{
-		MediaID:       mediaID,
-		MediaType:     mediaType,
-		AverageRating: avg,
-		ReviewCount:   stats.Count,
-		HasRating:     hasRating,
-	}, nil
+	return buildRatingResponse(mediaID, mediaType, rows), nil
 }
 
 func (s *Service) LikeReview(ctx context.Context, reviewID, requesterID uint) error {
@@ -670,4 +722,15 @@ func toCommentResponse(c *ReviewComment) *CommentResponse {
 		CreatedAt: c.CreatedAt,
 		UpdatedAt: c.UpdatedAt,
 	}
+}
+
+// clampPage keeps page within [1, MaxReviewsPage] so (page-1)*pageSize cannot overflow.
+func clampPage(page int) int {
+	if page < 1 {
+		return 1
+	}
+	if page > MaxReviewsPage {
+		return MaxReviewsPage
+	}
+	return page
 }
