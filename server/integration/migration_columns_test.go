@@ -7,6 +7,7 @@ import (
 
 	"github.com/arinsuda/movie-hub/database"
 	"github.com/arinsuda/movie-hub/internal/auth_module"
+	"github.com/arinsuda/movie-hub/internal/notification_module"
 	"github.com/arinsuda/movie-hub/internal/user_module"
 	"gorm.io/gorm"
 )
@@ -17,6 +18,7 @@ var securityColumns = map[string][]string{
 	"password_reset_tokens": {"email"},
 	"link_pending":          {"code_email"},
 	"email_change_requests": {"new_otp_hash"},
+	"notifications":         {"params"},
 }
 
 func TestSecurityColumnsMigrated(t *testing.T) {
@@ -40,7 +42,7 @@ func TestSecurityColumnsMigrated(t *testing.T) {
 func TestAutoMigrateDoesNotAddSecurityColumns(t *testing.T) {
 	db := newBareDB(t)
 	if err := db.AutoMigrate(&user_module.Role{}, &user_module.User{}, &user_module.EmailVerification{},
-		&user_module.PasswordResetToken{}, &user_module.EmailChangeRequest{}); err != nil {
+		&user_module.PasswordResetToken{}, &user_module.EmailChangeRequest{}, &notification_module.Notification{}); err != nil {
 		t.Fatal(err)
 	}
 	for table, cols := range securityColumns {
@@ -57,7 +59,7 @@ func TestAutoMigrateDoesNotAddSecurityColumns(t *testing.T) {
 
 // legacyVersions are the migrations that add the new columns/indexes; forgetting them and
 // dropping the columns turns a freshly migrated database back into the pre-release one.
-var legacyVersions = []string{"20261107_account_security_columns", "20261108_email_verification_attempts", "20261109_email_verification_token_hash"}
+var legacyVersions = []string{"20261107_account_security_columns", "20261108_email_verification_attempts", "20261109_email_verification_token_hash", "20261110_notification_params"}
 
 // makeLegacy restores the schema the old binary left behind: the new columns are gone and
 // their migrations are unrecorded, so the next Migrate really runs them.
@@ -69,6 +71,7 @@ func makeLegacy(t *testing.T, db *gorm.DB) {
 		`ALTER TABLE password_reset_tokens DROP COLUMN email`,
 		`ALTER TABLE link_pending DROP COLUMN code_email`,
 		`ALTER TABLE email_change_requests DROP COLUMN new_otp_hash`,
+		`ALTER TABLE notifications DROP COLUMN params`,
 	} {
 		if err := db.Exec(q).Error; err != nil {
 			t.Fatalf("%s: %v", q, err)
@@ -98,8 +101,21 @@ func TestLegacyRowsSurviveAdditiveMigration(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	if err := db.Exec(`INSERT INTO notifications (created_at, updated_at, user_id, type, category, message, is_read)
+		VALUES (now(), now(), ?, 'welcome', 'system', 'legacy text', false)`, uid).Error; err != nil {
+		t.Fatal(err)
+	}
+
 	if err := database.Migrate(db, testConfig()); err != nil {
 		t.Fatalf("migrate over legacy rows: %v", err)
+	}
+
+	if !db.Migrator().HasColumn("notifications", "params") {
+		t.Fatal("notifications.params missing after migrate")
+	}
+	var legacyNotif notification_module.Notification
+	if err := db.Where("user_id = ?", uid).First(&legacyNotif).Error; err != nil || legacyNotif.Params != nil || legacyNotif.Message != "legacy text" {
+		t.Fatalf("legacy notification: err=%v params=%v msg=%q", err, legacyNotif.Params, legacyNotif.Message)
 	}
 
 	var u user_module.User

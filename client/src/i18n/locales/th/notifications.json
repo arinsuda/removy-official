@@ -35,11 +35,6 @@
     "category": "ยังไม่มีการแจ้งเตือนในหมวดนี้",
     "description": "การติดตาม ถูกใจ และหนังเข้าฉายใหม่ ๆ จะแสดงที่นี่"
   },
-  "messages": {
-    "followed_you": "{name} เริ่มติดตามคุณ",
-    "follow_requested": "{name} ขอติดตามคุณ",
-    "follow_accepted": "{name} ยอมรับคำขอติดตามของคุณ"
-  },
   "actions": {
     "accept": "ยอมรับ",
     "decline": "ปฏิเสธ",
@@ -67,9 +62,26 @@
     "follow_requested": "คำขอติดตามใหม่",
     "follow_accepted": "ยอมรับคำขอติดตามแล้ว"
   },
+  "someone": "ใครบางคน",
+  "untitled": "เรื่องนี้",
   "types": {
-    "like": "{username} ถูกใจรีวิวของคุณในเรื่อง {mediaTitle}",
-    "comment": "{username} แสดงความคิดเห็นในรีวิวของคุณในเรื่อง {mediaTitle}",
-    "follow": "{username} เริ่มติดตามคุณ"
+    "welcome": "ยินดีต้อนรับสู่ POPCORN! เริ่มสร้างพอร์ตโฟลิโอการดูภาพยนตร์ของคุณได้เลย",
+    "followed_you": "{name} เริ่มติดตามคุณ",
+    "follow_requested": "{name} ขอติดตามคุณ",
+    "follow_accepted": "{name} ยอมรับคำขอติดตามของคุณ",
+    "following_reviewed": "{name} รีวิว \"{title}\"",
+    "review_liked": "{name} ถูกใจรีวิว \"{title}\" ของคุณ",
+    "following_liked_review": "{name} ถูกใจรีวิว \"{title}\"",
+    "review_marked_helpful": "{name} โหวตว่ารีวิว \"{title}\" ของคุณมีประโยชน์",
+    "following_marked_helpful": "{name} โหวตว่ารีวิว \"{title}\" มีประโยชน์",
+    "review_commented": "{name} แสดงความคิดเห็นในรีวิว \"{title}\" ของคุณ",
+    "following_commented": "{name} แสดงความคิดเห็นในรีวิว \"{title}\"",
+    "following_added_watched": "{name} ทำเครื่องหมายว่าดู \"{title}\" แล้ว",
+    "following_added_watchlist": "{name} เพิ่ม \"{title}\" ในวอทช์ลิสต์",
+    "following_liked_media": "{name} ถูกใจ \"{title}\"",
+    "movie_now_playing": "\"{title}\" เข้าฉายแล้ว ไปดูกันเลย!",
+    "achievement_unlocked": "ปลดล็อกความสำเร็จ: {name} (+{exp} EXP)",
+    "email_verified": "ยืนยันอีเมลของคุณแล้ว",
+    "password_changed": "รหัสผ่านของคุณถูกเปลี่ยนแล้ว หากไม่ใช่คุณ โปรดติดต่อฝ่ายสนับสนุนทันที"
   }
 }

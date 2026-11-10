@@ -41,6 +41,7 @@ type NotificationResponse struct {
 	Type      NotificationType     `json:"type"`
 	Category  NotificationCategory `json:"category"` // NEW
 	Message   string               `json:"message"`
+	Params    *NotificationParams  `json:"params,omitempty"`
 	IsRead    bool                 `json:"is_read"`
 	ReadAt    *time.Time           `json:"read_at,omitempty"`
 	Actor     *ActorSummary        `json:"actor,omitempty"`

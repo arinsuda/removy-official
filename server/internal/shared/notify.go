@@ -32,7 +32,12 @@ func TrackAndNotify(
 			Name: u.Achievement.Name,
 		})
 		if notifSvc != nil {
-			_ = notifSvc.PushAchievementUnlocked(ctx, userID, u.Achievement.ID, u.Achievement.Name, u.ExpGained)
+			_ = notifSvc.PushAchievementUnlocked(ctx, userID, notification_module.AchievementRef{
+				ID:          u.Achievement.ID,
+				ActionType:  u.Achievement.ActionType,
+				TargetCount: u.Achievement.TargetCount,
+				Name:        u.Achievement.Name,
+			}, u.ExpGained)
 		}
 	}
 	return result

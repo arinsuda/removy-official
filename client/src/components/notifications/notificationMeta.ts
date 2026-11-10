@@ -10,15 +10,12 @@ import {
   UserCheck,
   UserPlus,
 } from "lucide-vue-next"
-import type { AppNotification, NotificationType } from "@/types/notification"
+import type { NotificationType } from "@/types/notification"
 
 export const DROPDOWN_LIMIT = 5
 
 /** How long a just-arrived notification keeps its highlight, in ms. */
 export const FRESH_HIGHLIGHT_MS = 2400
-
-/** Types whose message is built from the actor name so it follows the UI language. */
-const LOCALIZED_MESSAGE_TYPES: NotificationType[] = ["followed_you", "follow_requested", "follow_accepted"]
 
 const ICONS: Partial<Record<NotificationType, Component>> = {
   followed_you: UserPlus,
@@ -39,10 +36,3 @@ export function notificationIcon(type: NotificationType): Component {
   return ICONS[type] ?? Bell
 }
 
-export function hasLocalizedMessage(n: AppNotification): boolean {
-  return LOCALIZED_MESSAGE_TYPES.includes(n.type) && !!n.actor
-}
-
-export function actorName(n: AppNotification): string {
-  return n.actor?.display_name || n.actor?.username || ""
-}

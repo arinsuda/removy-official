@@ -19,9 +19,10 @@ import (
 
 // engine.io polling client, just enough to open a socket.io connection with a token.
 type pollingSocket struct {
-	t    *testing.T
-	base string
-	sid  string
+	t     *testing.T
+	base  string
+	sid   string
+	token string
 }
 
 var reSID = regexp.MustCompile(`"sid":"([^"]+)"`)
@@ -45,9 +46,33 @@ func (e *env) openSocket(t *testing.T, base, token string) *pollingSocket {
 	if m == nil {
 		t.Fatalf("no engine.io open packet: %s", open)
 	}
-	ps := &pollingSocket{t: t, base: base, sid: m[1]}
+	ps := &pollingSocket{t: t, base: base, sid: m[1], token: token}
 	do("POST", "/socket.io/?EIO=4&transport=polling&sid="+ps.sid, "40") // connect to the default namespace
 	return ps
+}
+
+// waitEvent long-polls until a socket.io event packet `42["<name>",<json>]` arrives and returns its JSON.
+func (ps *pollingSocket) waitEvent(name string) []byte {
+	ps.t.Helper()
+	prefix := `42["` + name + `",`
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		req, _ := http.NewRequest("GET", ps.base+"/socket.io/?EIO=4&transport=polling&sid="+ps.sid, nil)
+		req.AddCookie(&http.Cookie{Name: "access_token", Value: ps.token})
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			ps.t.Fatal(err)
+		}
+		raw, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		for _, pkt := range strings.Split(string(raw), "\x1e") {
+			if strings.HasPrefix(pkt, prefix) && strings.HasSuffix(pkt, "]") {
+				return []byte(strings.TrimSuffix(strings.TrimPrefix(pkt, prefix), "]"))
+			}
+		}
+	}
+	ps.t.Fatalf("no %s event received", name)
+	return nil
 }
 
 func waitCount(t *testing.T, hub *notification_module.Hub, want int) bool {

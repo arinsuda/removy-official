@@ -3,7 +3,6 @@ package notification_module
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/arinsuda/movie-hub/internal/privacy_policy"
 	user_module "github.com/arinsuda/movie-hub/internal/user_module"
@@ -29,13 +28,8 @@ func NewService(db *gorm.DB, userProvider UserProvider, hub *Hub) *Service {
 	}
 }
 
-func (s *Service) PushWelcome(ctx context.Context, userID uint, username string) error {
-	n := Notification{
-		UserID:  userID,
-		Type:    NotifWelcome,
-		Message: fmt.Sprintf("ยินดีต้อนรับสู่ POPCORN, %s! เริ่มสร้าง Portfolio สำหรับการดูภาพยนต์ ของคุณได้เลย", username),
-	}
-	return s.createAndEmit(ctx, []Notification{n})
+func (s *Service) PushWelcome(ctx context.Context, userID uint) error {
+	return s.createAndEmit(ctx, []Notification{{UserID: userID, Type: NotifWelcome}})
 }
 
 func (s *Service) ListNotifications(ctx context.Context, userID uint, q ListNotificationsQuery) (*NotificationListResponse, error) {
@@ -121,52 +115,39 @@ func (s *Service) createAndEmit(ctx context.Context, ns []Notification) error {
 	return nil
 }
 
-func (s *Service) PushFollowedYou(ctx context.Context, targetUserID, actorID uint, actorUsername string) error {
+func (s *Service) pushUserEvent(ctx context.Context, t NotificationType, targetUserID, actorID uint) error {
 	n := Notification{
 		UserID:    targetUserID,
 		ActorID:   &actorID,
-		Type:      NotifFollowedYou,
+		Type:      t,
 		TargetID:  &actorID,
 		TargetRef: ptr("user"),
-		Message:   fmt.Sprintf("%s started following you", actorUsername),
 	}
 	return s.createAndEmit(ctx, []Notification{n})
 }
 
-func (s *Service) PushFollowRequested(ctx context.Context, targetUserID, actorID uint, actorUsername string) error {
-	n := Notification{
-		UserID:    targetUserID,
-		ActorID:   &actorID,
-		Type:      NotifFollowRequested,
-		TargetID:  &actorID,
-		TargetRef: ptr("user"),
-		Message:   fmt.Sprintf("%s requested to follow you", actorUsername),
-	}
-	return s.createAndEmit(ctx, []Notification{n})
+func (s *Service) PushFollowedYou(ctx context.Context, targetUserID, actorID uint) error {
+	return s.pushUserEvent(ctx, NotifFollowedYou, targetUserID, actorID)
 }
 
-func (s *Service) PushFollowAccepted(ctx context.Context, targetUserID, actorID uint, actorUsername string) error {
-	n := Notification{
-		UserID:    targetUserID,
-		ActorID:   &actorID,
-		Type:      NotifFollowAccepted,
-		TargetID:  &actorID,
-		TargetRef: ptr("user"),
-		Message:   fmt.Sprintf("%s accepted your follow request", actorUsername),
-	}
-	return s.createAndEmit(ctx, []Notification{n})
+func (s *Service) PushFollowRequested(ctx context.Context, targetUserID, actorID uint) error {
+	return s.pushUserEvent(ctx, NotifFollowRequested, targetUserID, actorID)
 }
 
-func (s *Service) PushMovieNowPlaying(ctx context.Context, userIDs []uint, movieID uint, movieTitle string) error {
+func (s *Service) PushFollowAccepted(ctx context.Context, targetUserID, actorID uint) error {
+	return s.pushUserEvent(ctx, NotifFollowAccepted, targetUserID, actorID)
+}
+
+func (s *Service) PushMovieNowPlaying(ctx context.Context, userIDs []uint, media MediaRef) error {
 	ns := make([]Notification, 0, len(userIDs))
 	for _, uid := range userIDs {
 		ns = append(ns, Notification{
 			UserID:    uid,
 			ActorID:   nil,
 			Type:      NotifMovieNowPlaying,
-			TargetID:  &movieID,
-			TargetRef: ptr("movie"),
-			Message:   fmt.Sprintf(`"%s" is now playing — time to watch!`, movieTitle),
+			TargetID:  &media.ID,
+			TargetRef: ptr(media.Type),
+			Params:    media.params(),
 		})
 	}
 	return s.createAndEmit(ctx, ns)
@@ -178,7 +159,7 @@ func (s *Service) PushFollowingActivity(
 	notifType NotificationType,
 	targetID *uint,
 	targetRef *string,
-	message string,
+	params *NotificationParams,
 ) error {
 	// Map notification type to the corresponding feed activity type to check privacy settings.
 	var activityType privacy_policy.ActivityType
@@ -248,40 +229,48 @@ func (s *Service) PushFollowingActivity(
 			Type:      notifType,
 			TargetID:  targetID,
 			TargetRef: targetRef,
-			Message:   message,
+			Params:    params,
 		})
 	}
 	return s.createAndEmit(ctx, ns)
 }
 
-func (s *Service) PushFollowingReviewed(ctx context.Context, actorID uint, actorUsername string, reviewID uint, movieTitle string) error {
-	ref := "review"
-	msg := fmt.Sprintf("%s reviewed %q", actorUsername, movieTitle)
-	return s.PushFollowingActivity(ctx, actorID, NotifFollowingReviewed, &reviewID, &ref, msg)
+// pushFollowingMedia fans a media activity out to followers; the target is the media.
+func (s *Service) pushFollowingMedia(ctx context.Context, t NotificationType, actorID uint, media MediaRef) error {
+	return s.PushFollowingActivity(ctx, actorID, t, &media.ID, ptr(media.Type), media.params())
 }
 
-func (s *Service) PushFollowingLikedReview(ctx context.Context, actorID uint, actorUsername string, reviewID uint, movieTitle string) error {
-	ref := "review"
-	msg := fmt.Sprintf("%s liked a review of %q", actorUsername, movieTitle)
-	return s.PushFollowingActivity(ctx, actorID, NotifFollowingLikedReview, &reviewID, &ref, msg)
+// pushFollowingReview fans a review activity out to followers; the target is the review.
+func (s *Service) pushFollowingReview(ctx context.Context, t NotificationType, actorID, reviewID uint, media MediaRef) error {
+	return s.PushFollowingActivity(ctx, actorID, t, &reviewID, ptr("review"), media.params())
 }
 
-func (s *Service) PushFollowingAddedWatchlist(ctx context.Context, actorID uint, actorUsername string, movieID uint, movieTitle string) error {
-	ref := "movie"
-	msg := fmt.Sprintf("%s added %q to their watchlist", actorUsername, movieTitle)
-	return s.PushFollowingActivity(ctx, actorID, NotifFollowingAddedWatchlist, &movieID, &ref, msg)
+func (s *Service) PushFollowingReviewed(ctx context.Context, actorID, reviewID uint, media MediaRef) error {
+	return s.pushFollowingReview(ctx, NotifFollowingReviewed, actorID, reviewID, media)
 }
 
-func (s *Service) PushFollowingAddedWatched(ctx context.Context, actorID uint, actorUsername string, movieID uint, movieTitle string) error {
-	ref := "movie"
-	msg := fmt.Sprintf("%s marked %q as watched", actorUsername, movieTitle)
-	return s.PushFollowingActivity(ctx, actorID, NotifFollowingAddedWatched, &movieID, &ref, msg)
+func (s *Service) PushFollowingLikedReview(ctx context.Context, actorID, reviewID uint, media MediaRef) error {
+	return s.pushFollowingReview(ctx, NotifFollowingLikedReview, actorID, reviewID, media)
 }
 
-func (s *Service) PushFollowingLikedMedia(ctx context.Context, actorID uint, actorUsername string, movieID uint, movieTitle string) error {
-	ref := "movie"
-	msg := fmt.Sprintf("%s liked %q", actorUsername, movieTitle)
-	return s.PushFollowingActivity(ctx, actorID, NotifFollowingLikedMedia, &movieID, &ref, msg)
+func (s *Service) PushFollowingMarkedHelpful(ctx context.Context, actorID, reviewID uint, media MediaRef) error {
+	return s.pushFollowingReview(ctx, NotifFollowingMarkedHelpful, actorID, reviewID, media)
+}
+
+func (s *Service) PushFollowingCommented(ctx context.Context, actorID, reviewID uint, media MediaRef) error {
+	return s.pushFollowingReview(ctx, NotifFollowingCommented, actorID, reviewID, media)
+}
+
+func (s *Service) PushFollowingAddedWatchlist(ctx context.Context, actorID uint, media MediaRef) error {
+	return s.pushFollowingMedia(ctx, NotifFollowingAddedWatchlist, actorID, media)
+}
+
+func (s *Service) PushFollowingAddedWatched(ctx context.Context, actorID uint, media MediaRef) error {
+	return s.pushFollowingMedia(ctx, NotifFollowingAddedWatched, actorID, media)
+}
+
+func (s *Service) PushFollowingLikedMedia(ctx context.Context, actorID uint, media MediaRef) error {
+	return s.pushFollowingMedia(ctx, NotifFollowingLikedMedia, actorID, media)
 }
 
 func (s *Service) toResponse(n Notification) NotificationResponse {
@@ -290,6 +279,7 @@ func (s *Service) toResponse(n Notification) NotificationResponse {
 		Type:      n.Type,
 		Category:  n.Category,
 		Message:   n.Message,
+		Params:    n.Params,
 		IsRead:    n.IsRead,
 		ReadAt:    n.ReadAt,
 		TargetID:  n.TargetID,
@@ -313,76 +303,44 @@ func (s *Service) toResponse(n Notification) NotificationResponse {
 
 func ptr[T any](v T) *T { return &v }
 
-func (s *Service) PushReviewLiked(ctx context.Context, reviewOwnerID, actorID, reviewID uint, actorUsername, movieTitle string) error {
+// pushReviewOwner notifies a review's owner about someone else's action on it.
+func (s *Service) pushReviewOwner(ctx context.Context, t NotificationType, reviewOwnerID, actorID, reviewID uint, media MediaRef) error {
 	if reviewOwnerID == actorID {
 		return nil
 	}
-	ref := "review"
 	n := Notification{
-		UserID: reviewOwnerID, ActorID: &actorID, Type: NotifReviewLiked,
-		TargetID: &reviewID, TargetRef: &ref,
-		Message: fmt.Sprintf("%s liked your review of %q", actorUsername, movieTitle),
+		UserID: reviewOwnerID, ActorID: &actorID, Type: t,
+		TargetID: &reviewID, TargetRef: ptr("review"),
+		Params: media.params(),
 	}
 	return s.createAndEmit(ctx, []Notification{n})
 }
 
-func (s *Service) PushReviewMarkedHelpful(ctx context.Context, reviewOwnerID, actorID, reviewID uint, actorUsername, movieTitle string) error {
-	if reviewOwnerID == actorID {
-		return nil
-	}
-	ref := "review"
-	n := Notification{
-		UserID: reviewOwnerID, ActorID: &actorID, Type: NotifReviewMarkedHelpful,
-		TargetID: &reviewID, TargetRef: &ref,
-		Message: fmt.Sprintf("%s marked your review of %q as helpful", actorUsername, movieTitle),
-	}
-	return s.createAndEmit(ctx, []Notification{n})
+func (s *Service) PushReviewLiked(ctx context.Context, reviewOwnerID, actorID, reviewID uint, media MediaRef) error {
+	return s.pushReviewOwner(ctx, NotifReviewLiked, reviewOwnerID, actorID, reviewID, media)
 }
 
-func (s *Service) PushReviewCommented(ctx context.Context, reviewOwnerID, actorID, reviewID uint, actorUsername, movieTitle string) error {
-	if reviewOwnerID == actorID {
-		return nil
-	}
-	ref := "review"
-	n := Notification{
-		UserID: reviewOwnerID, ActorID: &actorID, Type: NotifReviewCommented,
-		TargetID: &reviewID, TargetRef: &ref,
-		Message: fmt.Sprintf("%s commented on your review of %q", actorUsername, movieTitle),
-	}
-	return s.createAndEmit(ctx, []Notification{n})
+func (s *Service) PushReviewMarkedHelpful(ctx context.Context, reviewOwnerID, actorID, reviewID uint, media MediaRef) error {
+	return s.pushReviewOwner(ctx, NotifReviewMarkedHelpful, reviewOwnerID, actorID, reviewID, media)
 }
 
-func (s *Service) PushFollowingMarkedHelpful(ctx context.Context, actorID uint, actorUsername string, reviewID uint, movieTitle string) error {
-	ref := "review"
-	msg := fmt.Sprintf("%s marked a review of %q as helpful", actorUsername, movieTitle)
-	return s.PushFollowingActivity(ctx, actorID, NotifFollowingMarkedHelpful, &reviewID, &ref, msg)
+func (s *Service) PushReviewCommented(ctx context.Context, reviewOwnerID, actorID, reviewID uint, media MediaRef) error {
+	return s.pushReviewOwner(ctx, NotifReviewCommented, reviewOwnerID, actorID, reviewID, media)
 }
 
-func (s *Service) PushFollowingCommented(ctx context.Context, actorID uint, actorUsername string, reviewID uint, movieTitle string) error {
-	ref := "review"
-	msg := fmt.Sprintf("%s commented on a review of %q", actorUsername, movieTitle)
-	return s.PushFollowingActivity(ctx, actorID, NotifFollowingCommented, &reviewID, &ref, msg)
-}
-
-func (s *Service) PushAchievementUnlocked(ctx context.Context, userID, achievementID uint, achievementName string, expGained int) error {
-	ref := "achievement"
+func (s *Service) PushAchievementUnlocked(ctx context.Context, userID uint, a AchievementRef, exp int) error {
 	n := Notification{
 		UserID: userID, Type: NotifAchievementUnlocked,
-		TargetID: &achievementID, TargetRef: &ref,
-		Message: fmt.Sprintf("Achievement unlocked: %s (+%d EXP)", achievementName, expGained),
+		TargetID: &a.ID, TargetRef: ptr("achievement"),
+		Params: &NotificationParams{ActionType: a.ActionType, TargetCount: a.TargetCount, Exp: exp, Name: a.Name},
 	}
 	return s.createAndEmit(ctx, []Notification{n})
 }
 
 func (s *Service) PushEmailVerified(ctx context.Context, userID uint) error {
-	n := Notification{UserID: userID, Type: NotifEmailVerified, Message: "Your email has been verified"}
-	return s.createAndEmit(ctx, []Notification{n})
+	return s.createAndEmit(ctx, []Notification{{UserID: userID, Type: NotifEmailVerified}})
 }
 
 func (s *Service) PushPasswordChanged(ctx context.Context, userID uint) error {
-	n := Notification{
-		UserID: userID, Type: NotifPasswordChanged,
-		Message: "Your password was changed. If this wasn't you, please contact support immediately.",
-	}
-	return s.createAndEmit(ctx, []Notification{n})
+	return s.createAndEmit(ctx, []Notification{{UserID: userID, Type: NotifPasswordChanged}})
 }

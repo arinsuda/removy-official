@@ -79,7 +79,10 @@ type Notification struct {
 	Category  NotificationCategory `gorm:"type:varchar(20);not null;index"`
 	TargetID  *uint
 	TargetRef *string `gorm:"type:varchar(50)"`
-	Message   string  `gorm:"type:text;not null"`
-	IsRead    bool    `gorm:"default:false;index"`
-	ReadAt    *time.Time
+	// Message is empty on new rows (clients build text from Type + Params); kept for legacy rows.
+	Message string `gorm:"type:text;not null"`
+	// -:migration keeps AutoMigrate from adding it; migration 20261110_notification_params does.
+	Params *NotificationParams `gorm:"-:migration;type:jsonb;column:params"`
+	IsRead bool                `gorm:"default:false;index"`
+	ReadAt *time.Time
 }

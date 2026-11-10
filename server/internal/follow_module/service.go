@@ -7,7 +7,6 @@ import (
 	"github.com/arinsuda/movie-hub/internal/feed_module"
 	notification_module "github.com/arinsuda/movie-hub/internal/notification_module"
 	"github.com/arinsuda/movie-hub/internal/shared"
-	users "github.com/arinsuda/movie-hub/internal/user_module"
 	"gorm.io/gorm"
 )
 
@@ -176,39 +175,21 @@ func (s *Service) notifyNewFollower(ctx context.Context, followerID, followeeID 
 	if s.notifSvc == nil {
 		return
 	}
-	actor, err := s.getUserSummary(followerID)
-	if err != nil {
-		return
-	}
-	_ = s.notifSvc.PushFollowedYou(ctx, followeeID, followerID, actor.Username)
+	_ = s.notifSvc.PushFollowedYou(ctx, followeeID, followerID)
 }
 
 func (s *Service) notifyFollowRequested(ctx context.Context, followerID, followeeID uint) {
 	if s.notifSvc == nil {
 		return
 	}
-	actor, err := s.getUserSummary(followerID)
-	if err != nil {
-		return
-	}
-	_ = s.notifSvc.PushFollowRequested(ctx, followeeID, followerID, actor.Username)
+	_ = s.notifSvc.PushFollowRequested(ctx, followeeID, followerID)
 }
 
 func (s *Service) notifyFollowAccepted(ctx context.Context, accepterID, followerID uint) {
 	if s.notifSvc == nil {
 		return
 	}
-	actor, err := s.getUserSummary(accepterID)
-	if err != nil {
-		return
-	}
-	_ = s.notifSvc.PushFollowAccepted(ctx, followerID, accepterID, actor.Username)
-}
-
-func (s *Service) getUserSummary(userID uint) (*users.User, error) {
-	var u users.User
-	err := s.db.First(&u, userID).Error
-	return &u, err
+	_ = s.notifSvc.PushFollowAccepted(ctx, followerID, accepterID)
 }
 
 func (s *Service) GetFollowStats(ctx context.Context, requesterID, targetID uint) (*FollowStatsResponse, error) {

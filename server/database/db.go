@@ -466,6 +466,12 @@ func runSQLMigrations(db *gorm.DB, cfg *config.Config) error {
 		return err
 	}
 
+	if err := runSchemaMigrationTx(db, "20261110_notification_params", cfg.DB.MigrationLockTimeoutMs, cfg.DB.MigrationStatementTimeoutMs, func(tx *gorm.DB) error {
+		return tx.Exec("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS params jsonb").Error
+	}); err != nil {
+		return err
+	}
+
 	log.Println("SQL migrations completed")
 	return nil
 }

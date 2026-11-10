@@ -5,6 +5,7 @@ import { useSocket } from "@/composables/useSocket"
 import { i18n } from "@/i18n"
 import { useUIStore } from "@/stores/ui"
 import { logApiError } from "@/utils/logApiError"
+import { formatNotification } from "@/utils/notificationText"
 import {
   notificationTitleKey,
   type AppNotification,
@@ -242,7 +243,7 @@ export const useNotificationStore = defineStore("notification", () => {
           title: i18n.global.te(notificationTitleKey(payload.type))
             ? i18n.global.t(notificationTitleKey(payload.type))
             : i18n.global.t("notifications.title"),
-          message: payload.message,
+          message: formatNotification(payload, i18n.global),
         }),
         "info",
       )
