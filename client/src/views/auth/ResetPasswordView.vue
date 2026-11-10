@@ -55,7 +55,7 @@
 
 <script setup lang="ts">
   import { ref, computed } from "vue"
-  import { useRoute } from "vue-router"
+  import { useRouter } from "vue-router"
   import { useI18n } from "vue-i18n"
   import { Lock as IconLock, ShieldOff as IconShieldOff, ShieldCheck as IconShieldCheck } from "lucide-vue-next"
   import AuthAlert from "@/components/auth/AuthAlert.vue"
@@ -66,13 +66,17 @@
   import AppButton from "@/components/ui/AppButton.vue"
   import { authApi } from "@/api/api"
   import { asApiError } from "@/utils/apiError"
+  import { consumeUrlSecrets, URL_SECRET_KEYS } from "@/utils/urlSecrets"
 
-  const route = useRoute()
+  const router = useRouter()
   const { t } = useI18n()
   const shellRef = ref<InstanceType<typeof AuthShell> | null>(null)
 
-  const token = route.query.token as string | undefined
-  const userId = route.query.uid ? Number(route.query.uid) : undefined
+  // Read before any navigation can copy the secrets into route.fullPath / history.state.
+  const secrets = consumeUrlSecrets([URL_SECRET_KEYS.token, URL_SECRET_KEYS.uid], { legacyQuery: true })
+  void router.replace({ query: {}, hash: "" })
+  const token = secrets[URL_SECRET_KEYS.token]
+  const userId = secrets[URL_SECRET_KEYS.uid] ? Number(secrets[URL_SECRET_KEYS.uid]) : undefined
 
   const tokenError = ref(!token || !userId || isNaN(userId as number))
   const success = ref(false)

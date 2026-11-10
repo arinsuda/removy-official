@@ -132,6 +132,7 @@ func (m *Mailer) send(toEmail, username, subject, htmlBody string) error {
 }
 
 func buildVerifyEmailBody(username, verifyURL string) string {
+	safeURL := html.EscapeString(verifyURL)
 	return fmt.Sprintf(`
 <!DOCTYPE html>
 <html>
@@ -224,5 +225,5 @@ func buildVerifyEmailBody(username, verifyURL string) string {
     </tr>
   </table>
 </body>
-</html>`, username, verifyURL, verifyURL, verifyURL)
+</html>`, html.EscapeString(username), safeURL, safeURL, safeURL)
 }

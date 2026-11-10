@@ -290,6 +290,19 @@ describe("Session Bootstrap and Authorization", () => {
     })
   })
 
+  describe("URL fragment secrets", () => {
+    it("initialize() leaves #token= intact for the verify/reset pages", async () => {
+      const authStore = useAuthStore()
+      window.history.replaceState(null, "", "/auth/verify-email#token=KEEPME&access_token=a&refresh_token=r")
+      vi.mocked(authApi.refreshToken).mockRejectedValue({ response: { status: 401 } })
+      await authStore.initialize()
+      const params = new URLSearchParams(window.location.hash.slice(1))
+      expect(params.get("token")).toBe("KEEPME")
+      expect(params.has("access_token")).toBe(false)
+      window.history.replaceState(null, "", "/")
+    })
+  })
+
   describe("Deduplication & Staleness Protection", () => {
     it("concurrent initialization sends one request", async () => {
       const authStore = useAuthStore()

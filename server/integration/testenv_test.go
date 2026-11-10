@@ -129,8 +129,8 @@ func (m *mailbox) count() int {
 }
 
 var (
-	reVerifyToken = regexp.MustCompile(`verify-email\?token=([0-9a-f]{64})`)
-	reResetToken  = regexp.MustCompile(`reset-password\?token=([0-9a-f]{64})`)
+	reVerifyToken = regexp.MustCompile(`verify-email#token=([0-9a-f]{64})`)
+	reResetToken  = regexp.MustCompile(`reset-password#token=([0-9a-f]{64})`)
 	reCode        = regexp.MustCompile(`>\s*(\d{6})\s*<`)
 )
 

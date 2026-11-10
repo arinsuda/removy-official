@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"html"
 	"io"
 	"log"
 	"net/http"
@@ -97,6 +98,7 @@ func (m *brevoPasswordResetMailer) SendResetLink(toEmail, resetURL string) error
 }
 
 func buildResetPasswordEmailBody(resetURL string) string {
+	safeURL := html.EscapeString(resetURL)
 	return fmt.Sprintf(`
 <!DOCTYPE html>
 <html>
@@ -185,5 +187,5 @@ func buildResetPasswordEmailBody(resetURL string) string {
     </tr>
   </table>
 </body>
-</html>`, resetURL, resetURL, resetURL)
+</html>`, safeURL, safeURL, safeURL)
 }
