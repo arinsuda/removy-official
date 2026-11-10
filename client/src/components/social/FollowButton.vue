@@ -14,12 +14,14 @@
 
 <script setup lang="ts">
   import { computed, ref } from "vue"
+  import { useI18n } from "vue-i18n"
   import { useFollowActions, useFollowStatus } from "@/composables/useFollow"
 
   const props = defineProps<{
     userId: number
   }>()
 
+  const { t } = useI18n()
   const status = useFollowStatus(props.userId)
   const { follow, unfollow } = useFollowActions(props.userId)
 
@@ -39,12 +41,12 @@
 
   const label = computed(() => {
     if (relationship.value === "following") {
-      return isHovering.value ? "เลิกติดตาม" : "กำลังติดตาม"
+      return isHovering.value ? t("profile.follow.unfollow") : t("profile.follow.following")
     }
     if (relationship.value === "pending") {
-      return isHovering.value ? "ยกเลิกคำขอ" : "ขอติดตามแล้ว"
+      return isHovering.value ? t("profile.follow.cancelRequest") : t("profile.follow.requested")
     }
-    return "ติดตาม"
+    return t("profile.follow.follow")
   })
 
   const iconClass = computed(() => {
@@ -88,32 +90,28 @@
   }
 
   .follow-btn.is-none {
-    background: var(--red, var(--color-brand));
-    color: #fff;
+    background: var(--color-brand);
+    color: var(--color-on-brand);
   }
   .follow-btn.is-none:hover:not(.is-loading) {
     background: var(--color-brand-hover);
   }
 
   .follow-btn.is-following {
-    background: rgba(255, 255, 255, 0.06);
-    color: #fff;
-    border-color: rgba(255, 255, 255, 0.15);
+    background: var(--color-border);
+    color: var(--color-text-primary);
+    border-color: var(--color-border-strong);
   }
-  .follow-btn.is-following:hover:not(.is-loading) {
-    background: rgba(245, 67, 44, 0.12);
-    border-color: rgba(245, 67, 44, 0.35);
+  .follow-btn.is-following:hover:not(.is-loading),
+  .follow-btn.is-pending:hover:not(.is-loading) {
+    background: color-mix(in srgb, var(--color-brand) 12%, transparent);
+    border-color: color-mix(in srgb, var(--color-brand) 35%, transparent);
     color: var(--color-brand);
   }
 
   .follow-btn.is-pending {
-    background: rgba(245, 197, 24, 0.1);
-    color: #f5c518;
-    border-color: rgba(245, 197, 24, 0.25);
-  }
-  .follow-btn.is-pending:hover:not(.is-loading) {
-    background: rgba(245, 67, 44, 0.12);
-    border-color: rgba(245, 67, 44, 0.35);
-    color: var(--color-brand);
+    background: color-mix(in srgb, var(--color-rating) 10%, transparent);
+    color: var(--color-rating);
+    border-color: color-mix(in srgb, var(--color-rating) 25%, transparent);
   }
 </style>

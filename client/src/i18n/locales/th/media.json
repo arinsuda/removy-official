@@ -194,10 +194,49 @@
       "stale": "ป๊อปเหี่ยว",
       "fresh": "ป๊อปสด",
       "hot": "ป๊อปร้อน"
+    },
+    "sources": {
+      "tmdb": "TMDB",
+      "imdb": "IMDb",
+      "rottenTomatoes": "Rotten Tomatoes"
     }
   },
   "release": {
     "upcoming": "เข้าฉาย {date}",
     "released": "ฉายแล้ว"
+  },
+  "popup": {
+    "noTrailer": "ไม่มีตัวอย่าง",
+    "views": "ยอดเข้าชม",
+    "reviews": "รีวิว",
+    "unknownTitle": "ไม่ทราบชื่อ",
+    "watchedOnTitle": "ดูแล้ว (คลิกเพื่อยกเลิก)",
+    "watchedOffTitle": "ทำเครื่องหมายว่าดูแล้ว",
+    "watched": "ดูแล้ว",
+    "notWatched": "ยังไม่ดู",
+    "likedOnTitle": "ถูกใจแล้ว (คลิกเพื่อยกเลิก)",
+    "likedOffTitle": "เพิ่มในรายการที่ชอบ",
+    "liked": "ถูกใจแล้ว",
+    "like": "ถูกใจ",
+    "watchlistOnTitle": "อยู่ใน Watchlist แล้ว (คลิกเพื่อยกเลิก)",
+    "watchlistOffTitle": "เพิ่มเข้า Watchlist",
+    "inWatchlist": "รอดูแล้ว",
+    "watchlist": "รอดู",
+    "toast": {
+      "loginRequired": "กรุณาเข้าสู่ระบบก่อนใช้งาน",
+      "loginRequiredTitle": "แจ้งเตือน",
+      "removedWatched": "ลบออกจากรายการดูแล้ว",
+      "markedWatched": "มาร์กสถานะว่าดูแล้วเรียบร้อย",
+      "removedLike": "ลบออกจากรายการที่ชอบแล้ว",
+      "addedLike": "เพิ่มไปยังรายการที่ชอบเรียบร้อย",
+      "removedWatchlist": "ลบออกจาก Watchlist แล้ว",
+      "addedWatchlist": "เพิ่มเข้า Watchlist สำเร็จ",
+      "saveFailed": "บันทึกข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
+      "genericError": "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง"
+    }
+  },
+  "trailer": {
+    "close": "ปิดตัวอย่าง",
+    "unavailable": "ขออภัย ไม่พบตัวอย่างภาพยนตร์เรื่องนี้"
   }
 }

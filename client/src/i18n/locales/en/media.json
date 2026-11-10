@@ -194,10 +194,49 @@
       "stale": "Stale",
       "fresh": "Fresh Pop",
       "hot": "Hot Pop"
+    },
+    "sources": {
+      "tmdb": "TMDB",
+      "imdb": "IMDb",
+      "rottenTomatoes": "Rotten Tomatoes"
     }
   },
   "release": {
     "upcoming": "Coming {date}",
     "released": "Released"
+  },
+  "popup": {
+    "noTrailer": "No trailer",
+    "views": "Views",
+    "reviews": "Reviews",
+    "unknownTitle": "Unknown title",
+    "watchedOnTitle": "Watched (click to undo)",
+    "watchedOffTitle": "Mark as watched",
+    "watched": "Watched",
+    "notWatched": "Not watched",
+    "likedOnTitle": "Liked (click to undo)",
+    "likedOffTitle": "Add to favorites",
+    "liked": "Liked",
+    "like": "Like",
+    "watchlistOnTitle": "In Watchlist (click to remove)",
+    "watchlistOffTitle": "Add to Watchlist",
+    "inWatchlist": "Queued",
+    "watchlist": "Watchlist",
+    "toast": {
+      "loginRequired": "Please sign in first",
+      "loginRequiredTitle": "Notice",
+      "removedWatched": "Removed from watched",
+      "markedWatched": "Marked as watched",
+      "removedLike": "Removed from favorites",
+      "addedLike": "Added to favorites",
+      "removedWatchlist": "Removed from Watchlist",
+      "addedWatchlist": "Added to Watchlist",
+      "saveFailed": "Could not save. Please try again.",
+      "genericError": "Something went wrong. Please try again."
+    }
+  },
+  "trailer": {
+    "close": "Close trailer",
+    "unavailable": "Sorry, no trailer is available for this title"
   }
 }

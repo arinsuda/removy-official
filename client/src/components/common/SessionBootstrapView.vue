@@ -2,7 +2,7 @@
   <div class="session-bootstrap-container">
     <div class="session-bootstrap-card">
       <div class="brand-logo">
-        <img src="/popcorn-full-512.png" alt="POPCORN" style="display:block;width:140px;margin:0 auto" />
+        <img src="/popcorn-full-512.png" :alt="$t('common.brand')" style="display:block;width:140px;margin:0 auto" />
       </div>
 
       <!-- Loading State -->
@@ -80,8 +80,8 @@ import LoadingBar from "@/components/ui/LoadingBar.vue"
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #0a0a0a;
-    color: #ffffff;
+    background: var(--color-surface);
+    color: var(--color-text-primary);
     font-family: var(--font-sans);
     padding: 1.5rem;
   }
@@ -104,7 +104,7 @@ import LoadingBar from "@/components/ui/LoadingBar.vue"
   }
 
   .brand-movie {
-    color: #ffffff;
+    color: var(--color-text-primary);
   }
 
   .brand-hub {
@@ -120,7 +120,7 @@ import LoadingBar from "@/components/ui/LoadingBar.vue"
 
   .bootstrap-text {
     font-size: 1rem;
-    color: #a3a3a3;
+    color: var(--color-text-secondary);
     margin: 0;
   }
 
@@ -141,12 +141,12 @@ import LoadingBar from "@/components/ui/LoadingBar.vue"
     font-size: 1.25rem;
     font-weight: 600;
     margin: 0;
-    color: #ffffff;
+    color: var(--color-text-primary);
   }
 
   .error-detail {
     font-size: 0.875rem;
-    color: #a3a3a3;
+    color: var(--color-text-secondary);
     margin: 0;
     line-height: 1.5;
   }
@@ -155,7 +155,7 @@ import LoadingBar from "@/components/ui/LoadingBar.vue"
     margin-top: 0.5rem;
     padding: 0.625rem 1.75rem;
     background-color: var(--color-brand);
-    color: #ffffff;
+    color: var(--color-on-brand);
     border: none;
     border-radius: 6px;
     font-size: 0.9375rem;

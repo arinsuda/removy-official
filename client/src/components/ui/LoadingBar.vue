@@ -9,7 +9,7 @@
   width: 140px;
   height: 3px;
   overflow: hidden;
-  background: rgb(255 255 255 / 10%);
+  background: var(--color-border);
   border-radius: 99px;
 }
 

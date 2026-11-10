@@ -23,7 +23,7 @@
         <button
           type="button"
           class="mp__nav"
-          :disabled="year <= MIN_YEAR"
+          :disabled="year <= floorYear"
           :aria-label="t('common.previous')"
           @click="year--"
         >
@@ -75,6 +75,9 @@ const MIN_YEAR = 1970
 const VIEWPORT_EDGE = 8
 const MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const
 
+const props = withDefaults(defineProps<{ minYear?: number }>(), {
+  minYear: MIN_YEAR,
+})
 const model = defineModel<string>({ default: "" })
 const emit = defineEmits<{ change: [value: string] }>()
 
@@ -88,6 +91,7 @@ const open = ref(false)
 const now = new Date()
 const currentYear = now.getFullYear()
 const currentMonth = now.getMonth() + 1
+const floorYear = computed(() => Math.min(props.minYear || MIN_YEAR, currentYear))
 const year = ref(currentYear)
 
 const displayLabel = computed(() => {

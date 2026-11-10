@@ -5,6 +5,9 @@ import { QueryClient, VueQueryPlugin } from "@tanstack/vue-query"
 import { createMemoryHistory, createRouter } from "vue-router"
 import { useAuthStore } from "@/stores/auth"
 import AchievementsView from "@/views/achievement/AchievementsView.vue"
+import AchievementSquareCard from "@/components/share/cards/AchievementSquareCard.vue"
+import AchievementStoryCard from "@/components/share/cards/AchievementStoryCard.vue"
+import AchievementShareSheet from "@/components/share/AchievementShareSheet.vue"
 import { categoryOf, ctaFor } from "@/components/achievement/config"
 import { buildUnits, countByStatus, filterUnits, groupByCategory, latestUnlock, matchedCount, nextUp, sortUnits, summarize } from "@/components/achievement/units"
 import type { UserAchievement } from "@/types/achievement"
@@ -247,5 +250,117 @@ describe("AchievementsView", () => {
     w = mountView(1)
     await flushPromises()
     expect(w.text()).toContain("User not found")
+  })
+
+  it("shows the share button only for the owner on an unlocked achievement", async () => {
+    const owner = mountView(1)
+    await flushPromises()
+    // Click unlocked single badge "Binger"
+    await owner.find(".ab").trigger("click")
+    await flushPromises()
+    expect(document.body.querySelector('[data-test="achievement-share-btn"]')).not.toBeNull()
+    owner.unmount()
+    document.body.innerHTML = ""
+
+    // Owner clicks locked/in-progress family card ("Critic II")
+    const ownerLocked = mountView(1)
+    await flushPromises()
+    await ownerLocked.find(".af__main").trigger("click")
+    await flushPromises()
+    expect(document.body.querySelector('[data-test="achievement-share-btn"]')).toBeNull()
+    ownerLocked.unmount()
+    document.body.innerHTML = ""
+
+    // Visitor clicks unlocked single badge "Binger"
+    const visitor = mountView(2)
+    await flushPromises()
+    await visitor.find(".ab").trigger("click")
+    await flushPromises()
+    expect(document.body.querySelector('[data-test="achievement-share-btn"]')).toBeNull()
+  })
+})
+
+describe("Achievement share cards", () => {
+  afterEach(() => {
+    wrappers.splice(0).forEach((w) => w.unmount())
+    document.body.innerHTML = ""
+    vi.restoreAllMocks()
+  })
+
+  it("renders localized requirement text, multi-tier badge, formatted date, and rejects raw avatar URLs", () => {
+    i18n.global.locale.value = "en"
+    const items = sample()
+    const criticI = items[0]!
+    const familyTiers = items.slice(0, 3)
+
+    for (const Card of [AchievementSquareCard, AchievementStoryCard]) {
+      const w = mount(Card, {
+        props: {
+          achievement: criticI,
+          tiers: familyTiers,
+          username: "arin",
+          avatarUrl: "https://cdn.example.com/raw-avatar.png",
+          theme: "crimson",
+        },
+        global: { plugins: [i18n] },
+      })
+      wrappers.push(w)
+      expect(w.text()).toContain("Critic I")
+      expect(w.text()).toContain("Write your first review")
+      expect(w.text()).not.toContain("Critic I description")
+      expect(w.text()).toContain("Tier I")
+      expect(w.text()).toContain("Mar")
+      expect(w.text()).toContain("@arin")
+      expect(w.findAll("img")).toHaveLength(0)
+      expect(w.html()).not.toContain("https://cdn.example.com/raw-avatar.png")
+    }
+  })
+
+  it("renders proxied data URLs for avatars and switches description locale to Thai", () => {
+    i18n.global.locale.value = "th"
+    const binger = sample()[3]!
+    const dataUrl = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+    const w = mount(AchievementSquareCard, {
+      props: {
+        achievement: binger,
+        tiers: [binger],
+        username: "arin",
+        avatarUrl: dataUrl,
+        theme: "gold",
+      },
+      global: { plugins: [i18n] },
+    })
+    wrappers.push(w)
+    expect(w.text()).toContain("ดูหนังหรือซีรีส์ครบ 10 เรื่อง")
+    expect(w.text()).not.toContain("Binger description")
+    expect(w.find("img").attributes("src")).toBe(dataUrl)
+  })
+
+  it("inlines the user avatar as a data URL without the TMDB-only proxy", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(new Blob(["img"], { type: "image/png" }), { status: 200 }),
+    )
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const binger = sample()[3]!
+    const w = mount(AchievementShareSheet, {
+      props: {
+        modelValue: true,
+        achievement: binger,
+        tiers: [binger],
+        username: "arin",
+        avatarUrl: "/uploads/avatars/arin.png",
+      },
+      global: { plugins: [i18n, pinia] },
+      attachTo: document.body,
+    })
+    wrappers.push(w)
+    await flushPromises()
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
+    const calledUrl = String(fetchSpy.mock.calls[0]![0])
+    expect(calledUrl).toBe(`${window.location.origin}/uploads/avatars/arin.png`)
+    expect(calledUrl).not.toContain("/share/proxy-image")
   })
 })

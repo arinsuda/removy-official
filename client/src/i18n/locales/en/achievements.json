@@ -56,6 +56,17 @@
     "tiers": "Tiers",
     "tip": "Keep going, you are on your way."
   },
+  "share": {
+    "title": "Share achievement",
+    "button": "Share",
+    "action": "Share {name}",
+    "badge": "Achievement unlocked",
+    "caption": "I unlocked \"{name}\" on POPCORN",
+    "templates": {
+      "story": "Story",
+      "square": "Square"
+    }
+  },
   "cta": {
     "browse": "Find something to watch",
     "profile": "Complete your profile",

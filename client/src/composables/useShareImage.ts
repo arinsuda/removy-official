@@ -5,11 +5,23 @@ import { useI18n } from "vue-i18n"
 import type { MediaType } from "@/types/common"
 
 /** Build API base URL matching the same logic as @/api/index.ts */
-function getApiBaseUrl(): string {
+export function getApiBaseUrl(): string {
   const envUrl = import.meta.env.VITE_API_BASE_URL
   if (!envUrl) return "/api"
   const cleanUrl = (envUrl as string).replace(/\/+$/, "")
   return cleanUrl.endsWith("/api") ? cleanUrl : `${cleanUrl}/api`
+}
+
+/**
+ * Turn an avatar/asset path stored by the API (e.g. "/uploads/a.png") into an absolute URL
+ * on the API origin. Absolute http(s) and data/blob URLs are returned unchanged.
+ */
+export function resolveApiAssetUrl(raw: string | null | undefined): string {
+  const value = raw?.trim() ?? ""
+  if (!value || /^(https?:|data:|blob:)/.test(value)) return value
+  const apiBase = getApiBaseUrl()
+  const origin = apiBase.startsWith("http") ? new URL(apiBase).origin : window.location.origin
+  return `${origin}${value.startsWith("/") ? "" : "/"}${value}`
 }
 
 export function isTmdbImageUrl(url: string): boolean {

@@ -45,9 +45,27 @@
         <p v-if="selected.achievement.exp_reward" class="ua__detail-xp">{{ t("profile.tabContent.achievements.xp", { n: selected.achievement.exp_reward }) }}</p>
       </div>
       <template #footer>
+        <AppButton
+          v-if="isOwner && selected?.is_unlocked"
+          variant="primary"
+          data-test="achievement-share-btn"
+          :aria-label="t('achievements.share.action', { name: selected.achievement.name })"
+          @click="openShare(selected)"
+        >
+          <Share2 :size="15" aria-hidden="true" />{{ t("achievements.share.button") }}
+        </AppButton>
         <AppButton variant="outline" @click="selected = null">{{ t("profile.tabContent.achievements.close") }}</AppButton>
       </template>
     </AppModal>
+
+    <AchievementShareSheet
+      v-if="isOwner"
+      v-model="shareOpen"
+      :achievement="shareTarget"
+      :tiers="shareTiers"
+      :username="auth.user?.username"
+      :avatar-url="auth.user?.avatar_url"
+    />
   </div>
 </template>
 
@@ -55,16 +73,19 @@
 import { computed, onMounted, ref } from "vue"
 import { useI18n } from "vue-i18n"
 import { RouterLink } from "vue-router"
-import { Trophy } from "lucide-vue-next"
+import { Share2, Trophy } from "lucide-vue-next"
 import AppButton from "@/components/ui/AppButton.vue"
 import AppEmptyState from "@/components/ui/AppEmptyState.vue"
 import AppErrorState from "@/components/ui/AppErrorState.vue"
 import AppModal from "@/components/ui/AppModal.vue"
 import SkeletonGrid from "@/components/ui/skeleton/SkeletonGrid.vue"
+import AchievementShareSheet from "@/components/share/AchievementShareSheet.vue"
+import { useAuthStore } from "@/stores/auth"
 import type { UserAchievement } from "@/types/achievement"
 import { getAchievementIcon } from "@/utils/achievementIcons"
 import AchievementBadge from "@/components/achievement/AchievementBadge.vue"
 import { useAchievementText } from "@/components/achievement/text"
+import { buildUnits } from "@/components/achievement/units"
 import { useUserAchievements } from "@/components/achievement/useUserAchievements"
 import { countUnlocked, filterAchievements, progressOf, type AchievementFilter } from "@/components/achievement/achievements"
 
@@ -72,15 +93,28 @@ const props = defineProps<{ userId: number }>()
 
 const { t, locale } = useI18n()
 const { description } = useAchievementText()
+const auth = useAuthStore()
+const isOwner = computed(() => !!auth.user && auth.user.id === props.userId)
 const FILTERS: AchievementFilter[] = ["all", "unlocked", "locked"]
 
 const { all, loading, failed, load } = useUserAchievements(() => props.userId)
 const filter = ref<AchievementFilter>("all")
 const selected = ref<UserAchievement | null>(null)
+const shareTarget = ref<UserAchievement | null>(null)
+const shareOpen = ref(false)
 
+const units = computed(() => buildUnits(all.value))
+const shareTiers = computed(
+  () => units.value.find((u) => u.tiers.some((tier) => tier.achievement_id === shareTarget.value?.achievement_id))?.tiers ?? [],
+)
 const unlocked = computed(() => countUnlocked(all.value))
 const shown = computed(() => filterAchievements(all.value, filter.value))
 const formatDate = (iso: string) => new Intl.DateTimeFormat(locale.value, { dateStyle: "long" }).format(new Date(iso))
+
+function openShare(a: UserAchievement) {
+  shareTarget.value = a
+  shareOpen.value = true
+}
 
 onMounted(load)
 </script>

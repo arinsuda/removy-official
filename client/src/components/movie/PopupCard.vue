@@ -33,7 +33,7 @@
 
       <div v-if="trailerUnavailable" class="popup__no-trailer">
         <VolumeX :size="12" />
-        <span>No trailer</span>
+        <span>{{ t('media.popup.noTrailer') }}</span>
       </div>
 
       <div v-if="isIframeMounted && currentTrailer" class="popup__badge">
@@ -77,15 +77,15 @@
       <button
         class="action-btn action-btn--watched"
         :class="{ 'action-btn--active': isWatched }"
-        :title="isWatched ? 'ดูแล้ว (คลิกเพื่อยกเลิก)' : 'ทำเครื่องหมายว่าดูแล้ว'"
+        :title="isWatched ? t('media.popup.watchedOnTitle') : t('media.popup.watchedOffTitle')"
         @click.stop="handleWatchedToggle"
       >
         <CheckCircle2 :size="15" :fill="isWatched ? 'currentColor' : 'none'" />
-        <span>{{ isWatched ? 'ดูแล้ว' : 'ยังไม่ดู' }}</span>
+        <span>{{ isWatched ? t('media.popup.watched') : t('media.popup.notWatched') }}</span>
       </button>
 
       <!-- 2. Views Count Indicator -->
-      <div class="action-btn action-btn--views" title="ยอดเข้าชม">
+      <div class="action-btn action-btn--views" :title="t('media.popup.views')">
         <Eye :size="15" />
         <span>{{ fmtCount(stats.view_count) }}</span>
       </div>
@@ -98,7 +98,7 @@
           query: { action: 'review' },
         }"
         class="action-btn action-btn--review"
-        title="รีวิว"
+        :title="t('media.popup.reviews')"
       >
         <PenLine :size="15" />
         <span>{{ fmtCount(stats.review_count) }}</span>
@@ -108,23 +108,23 @@
       <button
         class="action-btn action-btn--favorite"
         :class="{ 'action-btn--active': isLiked }"
-        :title="isLiked ? 'ถูกใจแล้ว (คลิกเพื่อยกเลิก)' : 'เพิ่มในรายการที่ชอบ'"
+        :title="isLiked ? t('media.popup.likedOnTitle') : t('media.popup.likedOffTitle')"
         @click.stop="handleLikeToggle"
       >
         <Heart :size="15" :fill="isLiked ? 'currentColor' : 'none'" />
-        <span>{{ isLiked ? 'ถูกใจแล้ว' : 'ถูกใจ' }}</span>
+        <span>{{ isLiked ? t('media.popup.liked') : t('media.popup.like') }}</span>
       </button>
 
       <!-- 5. Watchlist Button -->
       <button
         class="action-btn action-btn--watchlist"
         :class="{ 'action-btn--active': isInWatchlist }"
-        :title="isInWatchlist ? 'อยู่ใน Watchlist แล้ว (คลิกเพื่อยกเลิก)' : 'เพิ่มเข้า Watchlist'"
+        :title="isInWatchlist ? t('media.popup.watchlistOnTitle') : t('media.popup.watchlistOffTitle')"
         @click.stop="handleWatchlistToggle"
       >
         <BookmarkCheck v-if="isInWatchlist" :size="15" fill="currentColor" />
         <BookmarkPlus v-else :size="15" fill="none" />
-        <span>{{ isInWatchlist ? 'รอดูแล้ว' : 'รอดู' }}</span>
+        <span>{{ isInWatchlist ? t('media.popup.inWatchlist') : t('media.popup.watchlist') }}</span>
       </button>
     </div>
   </div>
@@ -132,6 +132,8 @@
 
 <script setup lang="ts">
 import SkeletonBlock from "@/components/ui/skeleton/SkeletonBlock.vue"
+import { useI18n } from "vue-i18n"
+import { logApiError } from "@/utils/logApiError"
 import {
   computed,
   ref,
@@ -176,6 +178,7 @@ const props = defineProps<{
   mediaType?: "movie" | "tv";
 }>();
 
+const { t, n } = useI18n();
 const authStore = useAuthStore();
 const currentUserId = computed(() => authStore.user?.id ?? null);
 
@@ -188,14 +191,16 @@ const detailRouteName = computed(() =>
 );
 
 // ─── Derived display fields (รองรับทั้ง Movie และ TVSeries) ───────────────
-const displayTitle = computed(() => {
-  const m = props.movie as any;
-  return m.title ?? m.name ?? "ไม่ทราบชื่อ";
-});
+// Movie and TVSeries name the same fields differently; read both shapes without `any`.
+type MediaShape = Partial<{ title: string; name: string; release_date: string; first_air_date: string; runtime: number; episode_run_time: number[] }>;
+const media = computed(() => props.movie as MediaShape);
+type Counts = Partial<{ view_count: number; like_count: number; review_count: number; watchlist_count: number; liked_at: string | null; watched_at: string | null }>;
+type StatsShape = Counts & { stats?: Counts | null };
+
+const displayTitle = computed(() => media.value.title ?? media.value.name ?? t("media.popup.unknownTitle"));
 
 const displayReleaseDate = computed(() => {
-  const m = props.movie as any;
-  return m.release_date ?? m.first_air_date ?? "";
+  return media.value.release_date ?? media.value.first_air_date ?? "";
 });
 
 const releaseYear = computed(() =>
@@ -203,7 +208,7 @@ const releaseYear = computed(() =>
 );
 
 const displayRuntime = computed(() => {
-  const m = props.movie as any;
+  const m = media.value;
   if (typeof m.runtime === "number") return m.runtime;
   if (Array.isArray(m.episode_run_time) && m.episode_run_time.length) {
     return m.episode_run_time[0];
@@ -250,8 +255,8 @@ const watchedItemId = ref<number | null>(null);
 
 // Populate stats and like status from props reactively
 watch(
-  () => props.movie,
-  (newMovie: any) => {
+  () => props.movie as (Movie | TVSeries) & StatsShape,
+  (newMovie) => {
     if (newMovie) {
       const s = newMovie.stats;
       stats.value = {
@@ -276,7 +281,7 @@ onMounted(async () => {
       mt.value,
     );
     const watchlistInfo = resLibrary.data?.in_lists?.find(
-      (item: any) => item.list_type === "watchlist",
+      (item) => item.list_type === "watchlist",
     );
 
     if (watchlistInfo) {
@@ -285,7 +290,7 @@ onMounted(async () => {
     }
 
     const watchedInfo = resLibrary.data?.in_lists?.find(
-      (item: any) => item.list_type === "watched",
+      (item) => item.list_type === "watched",
     );
 
     if (watchedInfo) {
@@ -293,14 +298,14 @@ onMounted(async () => {
       watchedItemId.value = watchedInfo.item_id;
     }
   } catch (err) {
-    console.error("ไม่สามารถโหลดสถานะไลบรารีจากระบบหลังบ้านได้:", err);
+    logApiError("Failed to load library status", err);
   }
 });
 
 // ─── Watched Toggle ───────────────────────────────────────────────────────
 async function handleWatchedToggle() {
   if (!currentUserId.value) {
-    window.$toast?.warning("กรุณาเข้าสู่ระบบก่อนใช้งาน", "แจ้งเตือน");
+    window.$toast?.warning(t("media.popup.toast.loginRequired"), t("media.popup.toast.loginRequiredTitle"));
     return;
   }
 
@@ -310,7 +315,7 @@ async function handleWatchedToggle() {
       stats.value.view_count = Math.max(0, stats.value.view_count - 1);
       isWatched.value = false;
       watchedItemId.value = null;
-      window.$toast?.info(`ลบออกจากรายการดูแล้ว`, displayTitle.value);
+      window.$toast?.info(t("media.popup.toast.removedWatched"), displayTitle.value);
     } else {
       const res = await libraryApi.addItem({
         media_id: props.movie.id,
@@ -326,16 +331,13 @@ async function handleWatchedToggle() {
       stats.value.view_count++;
       isWatched.value = true;
       window.$toast?.success(
-        `มาร์กสถานะว่าดูแล้วเรียบร้อย! ✔️`,
+        t("media.popup.toast.markedWatched"),
         displayTitle.value,
       );
     }
   } catch (err) {
-    console.error("Watched Error:", err);
-    window.$toast?.error(
-      "บันทึกข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
-      "POPCORN HUB",
-    );
+    logApiError("Watched toggle failed", err);
+    window.$toast?.error(t("media.popup.toast.saveFailed"), t("common.brand"));
   }
 }
 
@@ -346,25 +348,26 @@ async function handleLikeToggle() {
       await mediaApi.unlikeMedia(mt.value, props.movie.id);
       stats.value.like_count = Math.max(0, stats.value.like_count - 1);
       isLiked.value = false;
-      window.$toast?.info(`ลบออกจากรายการที่ชอบแล้ว`, displayTitle.value);
+      window.$toast?.info(t("media.popup.toast.removedLike"), displayTitle.value);
     } else {
       await mediaApi.likeMedia(mt.value, props.movie.id);
       stats.value.like_count++;
       isLiked.value = true;
       window.$toast?.success(
-        `เพิ่มไปยังรายการที่ชอบเรียบร้อย!`,
+        t("media.popup.toast.addedLike"),
         displayTitle.value,
       );
     }
   } catch (err) {
-    window.$toast?.error("เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง", "POPCORN HUB");
+    logApiError("Like toggle failed", err);
+    window.$toast?.error(t("media.popup.toast.genericError"), t("common.brand"));
   }
 }
 
 // ─── Watchlist Toggle ─────────────────────────────────────────────────────
 async function handleWatchlistToggle() {
   if (!currentUserId.value) {
-    window.$toast?.warning("กรุณาเข้าสู่ระบบก่อนใช้งาน", "แจ้งเตือน");
+    window.$toast?.warning(t("media.popup.toast.loginRequired"), t("media.popup.toast.loginRequiredTitle"));
     return;
   }
 
@@ -377,7 +380,7 @@ async function handleWatchlistToggle() {
       );
       isInWatchlist.value = false;
       watchlistItemId.value = null;
-      window.$toast?.info(`ลบออกจาก Watchlist แล้ว`, displayTitle.value);
+      window.$toast?.info(t("media.popup.toast.removedWatchlist"), displayTitle.value);
     } else {
       const res = await libraryApi.addItem({
         media_id: props.movie.id,
@@ -392,16 +395,13 @@ async function handleWatchlistToggle() {
       stats.value.watchlist_count++;
       isInWatchlist.value = true;
       window.$toast?.success(
-        `เพิ่มเข้า Watchlist สำเร็จ! 🍿`,
+        t("media.popup.toast.addedWatchlist"),
         displayTitle.value,
       );
     }
   } catch (err) {
-    console.error("Watchlist Error:", err);
-    window.$toast?.error(
-      "บันทึกข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
-      "POPCORN HUB",
-    );
+    logApiError("Watchlist toggle failed", err);
+    window.$toast?.error(t("media.popup.toast.saveFailed"), t("common.brand"));
   }
 }
 
@@ -418,16 +418,16 @@ function truncate(str: string, len: number) {
   return str.length > len ? str.slice(0, len) + "…" : str;
 }
 
-function fmtCount(n: number) {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
-  if (n >= 1_000) return (n / 1_000).toFixed(0) + "K";
-  return String(n);
+function fmtCount(count: number) {
+  return n(count, "compact");
 }
 
 function fmtRuntime(mins: number) {
   const h = Math.floor(mins / 60);
   const m = mins % 60;
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  return h > 0
+    ? t("media.detail.meta.runtimeHours", { h, m })
+    : t("media.detail.meta.runtimeMinutes", { minutes: m });
 }
 </script>
 
@@ -444,7 +444,7 @@ function fmtRuntime(mins: number) {
   cursor: pointer;
   font-size: 0.59rem;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--color-text-primary);
   transition:
     filter 0.15s,
     transform 0.12s,
@@ -455,14 +455,14 @@ function fmtRuntime(mins: number) {
   transform: translateY(-1px);
 }
 .action-btn--active {
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.4);
+  box-shadow: inset 0 0 0 2px var(--color-border-strong);
   filter: saturate(1.4) brightness(1.1);
 }
 
 .popup__media {
   position: relative;
   aspect-ratio: 16 / 9;
-  background: #080808;
+  background: var(--color-surface);
   overflow: hidden;
 }
 .popup__backdrop {
@@ -479,10 +479,10 @@ function fmtRuntime(mins: number) {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #111 0%, #1c1c1c 100%);
+  background: linear-gradient(135deg, var(--color-surface) 0%, var(--color-surface-2) 100%);
 }
 .popup__no-media-icon {
-  color: #2a2a2a;
+  color: var(--color-surface-3);
 }
 .popup__iframe {
   position: absolute;
@@ -503,7 +503,7 @@ function fmtRuntime(mins: number) {
   left: 0;
   right: 0;
   height: 55%;
-  background: linear-gradient(to bottom, transparent, #1c1c1c);
+  background: linear-gradient(to bottom, transparent, var(--color-surface-2));
   pointer-events: none;
 }
 .popup__no-trailer {
@@ -514,7 +514,7 @@ function fmtRuntime(mins: number) {
   align-items: center;
   gap: 4px;
   font-size: 0.62rem;
-  color: #444;
+  color: var(--color-text-muted);
   z-index: 2;
 }
 .popup__badge {
@@ -528,9 +528,9 @@ function fmtRuntime(mins: number) {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.5);
-  background: rgba(0, 0, 0, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  color: var(--color-text-secondary);
+  background: var(--color-scrim);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   padding: 3px 6px;
   backdrop-filter: blur(6px);
@@ -567,7 +567,7 @@ function fmtRuntime(mins: number) {
 .popup__skeleton {
   position: absolute;
   inset: 0;
-  background: #101010;
+  background: var(--color-surface);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -577,7 +577,7 @@ function fmtRuntime(mins: number) {
 }
 .popup__info {
   padding: 0.85rem;
-  background: rgba(18, 18, 22, 0.95);
+  background: color-mix(in srgb, var(--color-surface-2) 95%, transparent);
   backdrop-filter: blur(12px);
 }
 .popup__title-row {
@@ -592,13 +592,13 @@ function fmtRuntime(mins: number) {
   text-decoration: none;
 }
 .popup__title-link:hover .popup__title {
-  color: #ffffff;
+  color: var(--color-text-primary);
 }
 .popup__title {
   flex: 1;
   font-size: 0.88rem;
   font-weight: 700;
-  color: #f1f5f9;
+  color: var(--color-text-primary);
   margin: 0;
   line-height: 1.3;
   overflow: hidden;
@@ -619,15 +619,15 @@ function fmtRuntime(mins: number) {
 .popup__chip {
   font-size: 0.6rem;
   font-weight: 600;
-  color: #cbd5e1;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  color: var(--color-text-secondary);
+  background: var(--color-border);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   padding: 2px 6px;
 }
 .popup__overview {
   font-size: 0.7rem;
-  color: #94a3b8;
+  color: var(--color-text-secondary);
   line-height: 1.6;
   margin: 0 0 0.75rem;
 }
@@ -638,6 +638,8 @@ function fmtRuntime(mins: number) {
 }
 
 .action-btn {
+  /* --tone drives the hover/active tint of each action */
+  --tone: var(--color-text-secondary);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -658,28 +660,44 @@ function fmtRuntime(mins: number) {
   transform: translateY(-2px);
 }
 
+.action-btn--watched,
+.action-btn--favorite,
+.action-btn--watchlist {
+  background: var(--color-border);
+  border-color: var(--color-border-strong);
+  color: var(--color-text-secondary);
+}
+.action-btn--watched:hover,
+.action-btn--favorite:hover,
+.action-btn--watchlist:hover {
+  background: color-mix(in srgb, var(--tone) 18%, transparent);
+  border-color: color-mix(in srgb, var(--tone) 45%, transparent);
+  color: var(--tone);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--tone) 20%, transparent);
+}
+.action-btn--watched.action-btn--active,
+.action-btn--favorite.action-btn--active,
+.action-btn--watchlist.action-btn--active {
+  background: color-mix(in srgb, var(--tone) 28%, transparent);
+  border-color: color-mix(in srgb, var(--tone) 85%, transparent);
+  color: var(--tone);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--tone) 45%, transparent);
+}
 .action-btn--watched {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
-  color: #94a3b8;
+  --tone: var(--color-info);
 }
-.action-btn--watched:hover {
-  background: rgba(6, 182, 212, 0.18);
-  border-color: rgba(6, 182, 212, 0.45);
-  color: #22d3ee;
-  box-shadow: 0 4px 12px rgba(6, 182, 212, 0.2);
+.action-btn--favorite {
+  --tone: var(--color-danger);
 }
-.action-btn--watched.action-btn--active {
-  background: rgba(6, 182, 212, 0.28);
-  border-color: rgba(6, 182, 212, 0.85);
-  color: #67e8f9;
-  box-shadow: 0 0 12px rgba(6, 182, 212, 0.45);
+.action-btn--watchlist {
+  --tone: var(--color-warning);
 }
 
 .action-btn--views {
-  background: rgba(99, 102, 241, 0.12);
-  border-color: rgba(99, 102, 241, 0.22);
-  color: #818cf8;
+  --tone: var(--color-info);
+  background: color-mix(in srgb, var(--tone) 12%, transparent);
+  border-color: color-mix(in srgb, var(--tone) 22%, transparent);
+  color: var(--tone);
   cursor: default;
 }
 .action-btn--views:hover {
@@ -687,49 +705,14 @@ function fmtRuntime(mins: number) {
 }
 
 .action-btn--review {
-  background: rgba(16, 185, 129, 0.12);
-  border-color: rgba(16, 185, 129, 0.25);
-  color: #34d399;
+  --tone: var(--color-success);
+  background: color-mix(in srgb, var(--tone) 12%, transparent);
+  border-color: color-mix(in srgb, var(--tone) 25%, transparent);
+  color: var(--tone);
 }
 .action-btn--review:hover {
-  background: rgba(16, 185, 129, 0.22);
-  border-color: rgba(16, 185, 129, 0.45);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
-}
-
-.action-btn--favorite {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
-  color: #94a3b8;
-}
-.action-btn--favorite:hover {
-  background: rgba(244, 63, 94, 0.18);
-  border-color: rgba(244, 63, 94, 0.45);
-  color: #fb7185;
-  box-shadow: 0 4px 12px rgba(244, 63, 94, 0.2);
-}
-.action-btn--favorite.action-btn--active {
-  background: rgba(244, 63, 94, 0.28);
-  border-color: rgba(244, 63, 94, 0.85);
-  color: #fecdd3;
-  box-shadow: 0 0 12px rgba(244, 63, 94, 0.45);
-}
-
-.action-btn--watchlist {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
-  color: #94a3b8;
-}
-.action-btn--watchlist:hover {
-  background: rgba(245, 158, 11, 0.18);
-  border-color: rgba(245, 158, 11, 0.45);
-  color: #fbbf24;
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
-}
-.action-btn--watchlist.action-btn--active {
-  background: rgba(245, 158, 11, 0.28);
-  border-color: rgba(245, 158, 11, 0.85);
-  color: #fef3c7;
-  box-shadow: 0 0 12px rgba(245, 158, 11, 0.45);
+  background: color-mix(in srgb, var(--tone) 22%, transparent);
+  border-color: color-mix(in srgb, var(--tone) 45%, transparent);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--tone) 25%, transparent);
 }
 </style>

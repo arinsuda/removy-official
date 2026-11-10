@@ -190,6 +190,26 @@ describe("UserReviews", () => {
     expect(m.reviews).toHaveBeenLastCalledWith(1, {})
   })
 
+  it("disables the previous-year button when the shown year equals minYear", async () => {
+    const year = new Date().getFullYear()
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useAuthStore().user = { id: 2 } as never
+    const w = mount(UserReviews, {
+      props: { userId: 1, createdAt: `${year - 1}-05-10T00:00:00Z` },
+      global: { plugins: [i18n, pinia, router] },
+      attachTo: document.body,
+    })
+    wrappers.push(w)
+    await flushPromises()
+    await w.find(".mp__btn").trigger("click")
+    const prev = w.find(`button[aria-label="${i18n.global.t("common.previous")}"]`)
+    expect(prev.attributes("disabled")).toBeUndefined()
+    await prev.trigger("click")
+    expect(w.find(".mp__year").text()).toBe(String(year - 1))
+    expect(prev.attributes("disabled")).toBeDefined()
+  })
+
   it("shows the visitor empty state without a call to action", async () => {
     m.reviews.mockResolvedValue({ data: { reviews: [] } })
     const w = mountTab(UserReviews, 2)
@@ -220,5 +240,27 @@ describe("UserAchievements", () => {
     const dialogText = document.body.querySelector('[role="dialog"]')?.textContent ?? ""
     expect(dialogText).toContain("Ten")
     expect(dialogText).toContain("Write 10 reviews")
+  })
+
+  it("shows the share button only for the owner on an unlocked achievement", async () => {
+    const owner = mountTab(UserAchievements, 1)
+    await flushPromises()
+    await owner.findAll(".ab")[0]!.trigger("click")
+    await flushPromises()
+    expect(document.body.querySelector('[data-test="achievement-share-btn"]')).not.toBeNull()
+    owner.unmount()
+
+    const ownerLocked = mountTab(UserAchievements, 1)
+    await flushPromises()
+    await ownerLocked.findAll(".ab")[1]!.trigger("click")
+    await flushPromises()
+    expect(document.body.querySelector('[data-test="achievement-share-btn"]')).toBeNull()
+    ownerLocked.unmount()
+
+    const visitor = mountTab(UserAchievements, 2)
+    await flushPromises()
+    await visitor.findAll(".ab")[0]!.trigger("click")
+    await flushPromises()
+    expect(document.body.querySelector('[data-test="achievement-share-btn"]')).toBeNull()
   })
 })

@@ -147,7 +147,12 @@ const components: Record<TabKey, Component> = {
 }
 const listTypes: Partial<Record<TabKey, ListType>> = { watchlist: "watchlist", likes: "likes", watched: "watched" }
 const activeComponent = computed(() => components[activeTab.value])
-const activeProps = computed(() => ({ userId: userId.value, listType: listTypes[activeTab.value] }))
+const activeProps = computed(() => ({
+  userId: userId.value,
+  listType: listTypes[activeTab.value],
+  // Only the reviews tab declares createdAt; other tabs would leak it as a DOM attribute.
+  ...(activeTab.value === "reviews" ? { createdAt: user.value?.created_at } : {}),
+}))
 
 const listOpen = ref(false)
 const listTab = ref<"followers" | "following">("followers")
