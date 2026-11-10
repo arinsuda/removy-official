@@ -59,8 +59,8 @@ func (s *MovieService) GetUpcoming(ctx context.Context, withGenres string, page 
 	return s.enrichMovies(ctx, res)
 }
 
-func (s *MovieService) SearchMovies(ctx context.Context, query string, page int, language string) (*tmdb.PaginatedResult[MovieDTO], error) {
-	res, err := tmdb.SearchMovies(query, page, language)
+func (s *MovieService) SearchMovies(ctx context.Context, query string, page int, language string, filters tmdb.SearchFilters) (*tmdb.PaginatedResult[MovieDTO], error) {
+	res, err := tmdb.SearchMovies(query, page, language, filters)
 	if err != nil {
 		return nil, err
 	}
@@ -201,8 +201,8 @@ func (s *MovieService) DiscoverSeries(ctx context.Context, genres, tab string, p
 	return s.enrichSeries(ctx, res)
 }
 
-func (s *MovieService) SearchSeries(ctx context.Context, query string, page int, language string) (*tmdb.PaginatedResult[TVSeriesDTO], error) {
-	res, err := tmdb.SearchSeries(query, page, language)
+func (s *MovieService) SearchSeries(ctx context.Context, query string, page int, language string, filters tmdb.SearchFilters) (*tmdb.PaginatedResult[TVSeriesDTO], error) {
+	res, err := tmdb.SearchSeries(query, page, language, filters)
 	if err != nil {
 		return nil, err
 	}

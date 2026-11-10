@@ -40,6 +40,7 @@ const item = (over: Partial<FeedItemResponse> = {}): FeedItemResponse => ({
   review_id: 55,
   message: "A slow-burn masterpiece.",
   visibility: "default",
+  viewer_liked: false,
   created_at: new Date().toISOString(),
   ...over,
 })
@@ -96,6 +97,11 @@ describe("FeedItem", () => {
     await like().trigger("click")
     await flushPromises()
     expect(like().attributes("aria-pressed")).toBe("false")
+  })
+
+  it("starts liked when the API says the viewer already liked the review", () => {
+    const w = mountItem(item({ viewer_liked: true }))
+    expect(w.find(".feed-item__like").attributes("aria-pressed")).toBe("true")
   })
 
   it("hides the like button on your own activity and shows owner actions instead", async () => {
@@ -157,9 +163,49 @@ describe("FeedList", () => {
 describe("FeedFilters", () => {
   it("lists the server categories and emits the chosen one", async () => {
     const w = mount(FeedFilters, { props: { modelValue: "" }, global: { plugins: [i18n] } })
-    const tabs = w.findAll('[role="tab"]')
+    const tabs = w.findAll('[role="tablist"]')[1]!.findAll('[role="tab"]')
     expect(tabs.map((t) => t.text())).toEqual(["All", "Reviews", "Lists", "Social"])
     await tabs[1]!.trigger("click")
     expect(w.emitted("update:modelValue")?.[0]).toEqual(["reviews"])
+  })
+
+  it("offers the scope control and emits the chosen scope", async () => {
+    const w = mount(FeedFilters, { props: { modelValue: "" }, global: { plugins: [i18n] } })
+    const tabs = w.findAll('[role="tablist"]')[0]!.findAll('[role="tab"]')
+    expect(tabs.map((t) => t.text())).toEqual(["Everyone", "Following", "Me"])
+    await tabs[2]!.trigger("click")
+    expect(w.emitted("update:scope")?.[0]).toEqual(["me"])
+  })
+})
+
+describe("feed store scope", () => {
+  it("sends the scope, resets to page 1 and omits the default", async () => {
+    const { feedApi } = await import("@/api/endpoints/feed")
+    const { useFeedStore } = await import("@/stores/feed")
+    const spy = vi.spyOn(feedApi, "getFeed").mockResolvedValue({ data: { items: [], pagination: { page: 1, limit: 20, total: 0, total_pages: 0 } } } as never)
+    const store = useFeedStore()
+    await store.setScope("me")
+    expect(spy).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, scope: "me" }))
+    await store.setScope("all")
+    expect(spy.mock.calls.at(-1)![0].scope).toBeUndefined()
+  })
+})
+
+describe("feed store races", () => {
+  it("drops a stale response after the scope changed", async () => {
+    const { feedApi } = await import("@/api/endpoints/feed")
+    const { useFeedStore } = await import("@/stores/feed")
+    const page = (id: number) => ({ data: { items: [item({ id })], pagination: { page: 1, limit: 20, total: 1, total_pages: 1 } } }) as never
+    let releaseSlow: (v: never) => void = () => {}
+    vi.spyOn(feedApi, "getFeed")
+      .mockImplementationOnce(() => new Promise((r) => (releaseSlow = r as never)))
+      .mockResolvedValueOnce(page(2))
+    const store = useFeedStore()
+    const slow = store.setScope("following")
+    await store.setScope("me")
+    releaseSlow(page(1))
+    await slow
+    expect(store.items.map((i) => i.id)).toEqual([2])
+    expect(store.loading).toBe(false)
   })
 })

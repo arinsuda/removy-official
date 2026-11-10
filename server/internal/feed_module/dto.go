@@ -21,10 +21,40 @@ type ActivityPayload struct {
 	Message string
 }
 
+// Feed scopes accepted by GET /feed (?scope=). Empty means FeedScopeAll.
+const (
+	FeedScopeAll       = "all"       // people the viewer follows, plus the viewer's own activity
+	FeedScopeFollowing = "following" // only accepted follows
+	FeedScopeMe        = "me"        // only the viewer's own activity
+)
+
+// Feed categories accepted by GET /feed (?category=). Empty means every type.
+const (
+	FeedCategoryReviews = "reviews"
+	FeedCategoryLists   = "lists"
+	FeedCategorySocial  = "social"
+)
+
+// DeletedUserUsername marks a follow target that no longer exists; clients localize the label.
+const DeletedUserUsername = "deleted_user"
+
+// ParseFeedScope normalizes the scope query value and rejects unknown ones.
+func ParseFeedScope(raw string) (string, error) {
+	switch raw {
+	case "", FeedScopeAll:
+		return FeedScopeAll, nil
+	case FeedScopeFollowing, FeedScopeMe:
+		return raw, nil
+	default:
+		return "", ErrInvalidScope
+	}
+}
+
 type PaginationQuery struct {
 	Page     int    `query:"page"`
 	Limit    int    `query:"limit"`
 	Category string `query:"category"`
+	Scope    string `query:"scope"`
 }
 
 func (p *PaginationQuery) Normalize() {
@@ -82,6 +112,9 @@ type FeedItemResponse struct {
 	Message string `json:"message"`
 
 	Visibility privacy_policy.ActivityVisibility `json:"visibility"`
+
+	// ViewerLiked reports whether the requester already liked the item's review (the like button's target).
+	ViewerLiked bool `json:"viewer_liked"`
 
 	CreatedAt time.Time `json:"created_at"`
 }

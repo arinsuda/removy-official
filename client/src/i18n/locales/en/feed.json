@@ -6,6 +6,13 @@
     "open": "Feed settings",
     "manage": "Open activity settings"
   },
+  "deletedUser": "Deleted user",
+  "scopes": {
+    "label": "Whose activity",
+    "all": "Everyone",
+    "following": "Following",
+    "me": "Me"
+  },
   "filters": {
     "label": "Filter feed",
     "all": "All",

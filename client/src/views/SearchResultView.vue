@@ -7,7 +7,7 @@
         <span v-else>{{ t("media.search.promptTitle") }}</span>
       </h1>
       <p class="search-head__count" role="status" aria-live="polite">
-        <template v-if="state.q && !data.busy.value && !data.failed.value">
+        <template v-if="state.q && !data.busy.value && !data.failed.value && !(data.countsApproximate.value && state.tab !== 'people')">
           {{ t("media.search.count", { n: data.counts.value[state.tab].toLocaleString(locale) }, data.counts.value[state.tab]) }}
         </template>
       </p>
@@ -16,7 +16,7 @@
     <AppEmptyState v-if="!state.q" :icon="Search" :title="t('media.search.promptTitle')" :description="t('media.search.promptHint')" />
 
     <template v-else>
-      <SearchFilterBar :state="state" :counts="data.counts.value" :years="data.years.value" :genres="data.genres.value" @update="update" />
+      <SearchFilterBar :state="state" :counts="data.counts.value" :counts-approximate="data.countsApproximate.value" :years="data.years.value" :genres="data.genres.value" @update="update" />
       <SearchResults
         :state="state"
         :items="data.items.value"

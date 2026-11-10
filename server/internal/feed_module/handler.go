@@ -5,9 +5,12 @@ import (
 	"strconv"
 
 	"github.com/arinsuda/movie-hub/internal/privacy_policy"
+	"github.com/arinsuda/movie-hub/internal/shared"
 	mw "github.com/arinsuda/movie-hub/middleware"
 	"github.com/gofiber/fiber/v3"
 )
+
+const errInvalidScopeMsg = "scope must be all, following or me"
 
 type handler struct {
 	svc Service
@@ -47,7 +50,7 @@ func (h *handler) GetNewCount(c fiber.Ctx) error {
 
 	category := c.Query("category")
 
-	count, err := h.svc.CountNewFeedItems(c.Context(), claims.UserID, uint(afterID), category)
+	count, err := h.svc.CountNewFeedItems(c.Context(), claims.UserID, uint(afterID), category, c.Query("scope"))
 	if err != nil {
 		return handleErr(c, err)
 	}
@@ -159,6 +162,8 @@ func handleErr(c fiber.Ctx, err error) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "activity not found"})
 	case errors.Is(err, ErrForbidden) || errors.Is(err, privacy_policy.ErrForbidden):
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "forbidden"})
+	case errors.Is(err, ErrInvalidScope):
+		return shared.WriteAPIError(c, fiber.StatusBadRequest, shared.ErrorCodeInvalidScope, errInvalidScopeMsg)
 	case errors.Is(err, ErrUserNotFound):
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "user not found"})
 	default:

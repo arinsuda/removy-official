@@ -15,6 +15,14 @@ import type {
   WatchProviders,
 } from "@/types"
 
+/** Optional server-side filters of GET /movies/search and /tv/search (null or 0 = off). */
+export interface SearchFilters {
+  year?: number | null
+  genre?: number | null
+}
+
+const searchFilterParams = ({ year, genre }: SearchFilters) => ({ year: year || undefined, genre: genre || undefined })
+
 export const movieApi = {
   // Movies
   getPopular: (page = 1, with_genres?: string | number) =>
@@ -37,8 +45,8 @@ export const movieApi = {
       params: { page, with_genres },
     }),
 
-  search: (q: string, page = 1) =>
-    api.get<PaginatedResult<Movie>>("/movies/search", { params: { q, page } }),
+  search: (q: string, page = 1, filters: SearchFilters = {}) =>
+    api.get<PaginatedResult<Movie>>("/movies/search", { params: { q, page, ...searchFilterParams(filters) } }),
 
   getGenres: () => api.get<{ genres: Genre[] }>("/movies/genres"),
 
@@ -88,8 +96,8 @@ export const movieApi = {
       params: { page, with_genres },
     }),
 
-  searchSeries: (q: string, page = 1) =>
-    api.get<PaginatedResult<TVSeries>>("/tv/search", { params: { q, page } }),
+  searchSeries: (q: string, page = 1, filters: SearchFilters = {}) =>
+    api.get<PaginatedResult<TVSeries>>("/tv/search", { params: { q, page, ...searchFilterParams(filters) } }),
 
   getSeriesGenres: () => api.get<{ genres: Genre[] }>("/tv/genres"),
 

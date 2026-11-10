@@ -20,7 +20,7 @@ type Service interface {
 	DeleteActivity(ctx context.Context, activityID, requesterID uint) error
 	GetSettings(ctx context.Context, userID uint) (*ActivitySettingsResponse, error)
 	UpdateSettings(ctx context.Context, userID uint, req UpdateActivitySettingsRequest) (*ActivitySettingsResponse, error)
-	CountNewFeedItems(ctx context.Context, userID uint, afterActivityID uint, category string) (int64, error)
+	CountNewFeedItems(ctx context.Context, userID uint, afterActivityID uint, category, scope string) (int64, error)
 	IsActivityEnabled(ctx context.Context, userID uint, activityType ActivityType) (bool, error)
 
 	DeleteReviewActivity(ctx context.Context, actorID uint, reviewID uint) error
@@ -81,11 +81,16 @@ func (s *service) CreateActivity(ctx context.Context, actorID uint, activityType
 
 func (s *service) GetFeed(ctx context.Context, userID uint, pq PaginationQuery) (*FeedListResponse, error) {
 	pq.Normalize()
+	scope, err := ParseFeedScope(pq.Scope)
+	if err != nil {
+		return nil, err
+	}
+	pq.Scope = scope
 	rows, total, err := s.repo.FindFeed(ctx, userID, pq)
 	if err != nil {
 		return nil, err
 	}
-	return s.withRatings(ctx, toFeedListResponse(rows, pq, total, s.minio))
+	return s.finishList(ctx, userID, toFeedListResponse(rows, pq, total, s.minio))
 }
 
 func (s *service) GetUserActivities(ctx context.Context, targetUserID, requesterID uint, pq PaginationQuery) (*FeedListResponse, error) {
@@ -94,7 +99,7 @@ func (s *service) GetUserActivities(ctx context.Context, targetUserID, requester
 	if err != nil {
 		return nil, err
 	}
-	return s.withRatings(ctx, toFeedListResponse(rows, pq, total, s.minio))
+	return s.finishList(ctx, requesterID, toFeedListResponse(rows, pq, total, s.minio))
 }
 
 func (s *service) UpdateActivityVisibility(ctx context.Context, activityID, requesterID uint, visibility privacy_policy.ActivityVisibility) error {
@@ -194,8 +199,12 @@ func (s *service) UpdateSettings(ctx context.Context, userID uint, req UpdateAct
 	return s.GetSettings(ctx, userID)
 }
 
-func (s *service) CountNewFeedItems(ctx context.Context, userID uint, afterActivityID uint, category string) (int64, error) {
-	return s.repo.CountNewFeedItems(ctx, userID, afterActivityID, category)
+func (s *service) CountNewFeedItems(ctx context.Context, userID uint, afterActivityID uint, category, scope string) (int64, error) {
+	scope, err := ParseFeedScope(scope)
+	if err != nil {
+		return 0, err
+	}
+	return s.repo.CountNewFeedItems(ctx, userID, afterActivityID, category, scope)
 }
 
 func (s *service) broadcastRefresh(ctx context.Context, actorID uint) {
@@ -301,14 +310,7 @@ func toFeedItemResponse(row feedRow, minio *storage.MinIOClient) FeedItemRespons
 		}
 	} else if row.Type == ActivityUserFollowed {
 		// Target user was physically or soft deleted
-		deletedUsername := "deleted_user"
-		deletedDisplayName := "ผู้ใช้ที่ถูกลบ"
-		item.TargetUser = &ActorSummary{
-			ID:          0,
-			Username:    deletedUsername,
-			DisplayName: &deletedDisplayName,
-			AvatarURL:   nil,
-		}
+		item.TargetUser = &ActorSummary{Username: DeletedUserUsername}
 	}
 
 	if row.MediaID != nil && row.MediaType != nil {
@@ -366,4 +368,32 @@ func (s *service) withRatings(ctx context.Context, list *FeedListResponse) (*Fee
 		return nil, err
 	}
 	return list, nil
+}
+
+// finishList attaches ratings and the viewer's like state (one query each, no per-item lookups).
+func (s *service) finishList(ctx context.Context, viewerID uint, list *FeedListResponse) (*FeedListResponse, error) {
+	list, err := s.withRatings(ctx, list)
+	if err != nil {
+		return nil, err
+	}
+	return list, s.attachViewerLikes(ctx, viewerID, list)
+}
+
+func (s *service) attachViewerLikes(ctx context.Context, viewerID uint, list *FeedListResponse) error {
+	var reviewIDs []uint
+	for _, it := range list.Items {
+		if it.ReviewID != nil {
+			reviewIDs = append(reviewIDs, *it.ReviewID)
+		}
+	}
+	liked, err := s.repo.LikedReviewIDs(ctx, viewerID, reviewIDs)
+	if err != nil {
+		return err
+	}
+	for i := range list.Items {
+		if id := list.Items[i].ReviewID; id != nil {
+			list.Items[i].ViewerLiked = liked[*id]
+		}
+	}
+	return nil
 }

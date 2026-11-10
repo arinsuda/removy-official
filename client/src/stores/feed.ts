@@ -3,8 +3,10 @@ import { ref, computed } from "vue";
 import { feedApi } from "@/api/endpoints/feed";
 import { useSocket } from "@/composables/useSocket";
 import { logApiError } from "@/utils/logApiError";
+import { DEFAULT_FEED_SCOPE } from "@/components/feed/feedConfig";
 import type {
   FeedItemResponse,
+  FeedScope,
   FeedPaginationMeta,
   ActivitySettingsResponse,
   UpdateActivitySettingsRequest,
@@ -26,6 +28,7 @@ export const useFeedStore = defineStore("feed", () => {
   const loadingMore = ref(false);
   const error = ref<string | null>(null);
   const selectedCategory = ref<string>("");
+  const selectedScope = ref<FeedScope>(DEFAULT_FEED_SCOPE);
 
   const settings = ref<ActivitySettingsResponse | null>(null);
   const settingsLoading = ref(false);
@@ -45,11 +48,14 @@ export const useFeedStore = defineStore("feed", () => {
   });
 
 
+  // "all" is the server default, so it is left off the request.
+  const scopeParam = () => (selectedScope.value === DEFAULT_FEED_SCOPE ? undefined : selectedScope.value);
+
   async function checkNewItems() {
     const topId = topActivityId.value;
     if (!topId) return;
     try {
-      const res = await feedApi.getNewCount(topId, selectedCategory.value || undefined);
+      const res = await feedApi.getNewCount(topId, selectedCategory.value || undefined, scopeParam());
       newItemsCount.value = res.data.count;
     } catch (err) {
       logApiError("checkNewItems failed:", err);
@@ -101,11 +107,17 @@ export const useFeedStore = defineStore("feed", () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  async function fetchFeed(page = 1) {
-    if (loading.value || loadingMore.value) return;
+  // Each request takes a sequence number; a response that is no longer the latest is dropped, so a
+  // slow reply for an old category or scope can never overwrite the list the user switched to.
+  let requestSeq = 0;
+
+  async function fetchFeed(page = 1, force = false) {
+    if (!force && (loading.value || loadingMore.value)) return;
+    const seq = ++requestSeq;
 
     const limit = pagination.value.limit;
     if (page === 1) {
+      loadingMore.value = false;
       loading.value = true;
       newItemsCount.value = 0;
     } else {
@@ -118,7 +130,9 @@ export const useFeedStore = defineStore("feed", () => {
         page,
         limit,
         category: selectedCategory.value || undefined,
+        scope: scopeParam(),
       });
+      if (seq !== requestSeq) return;
       const next = res.data.items ?? [];
       items.value = page === 1 ? next : [...items.value, ...next];
       pagination.value = {
@@ -126,11 +140,14 @@ export const useFeedStore = defineStore("feed", () => {
         ...res.data.pagination,
       };
     } catch (err) {
+      if (seq !== requestSeq) return;
       logApiError("fetchFeed failed:", err);
       error.value = "load_failed";
     } finally {
-      loading.value = false;
-      loadingMore.value = false;
+      if (seq === requestSeq) {
+        loading.value = false;
+        loadingMore.value = false;
+      }
     }
   }
 
@@ -138,7 +155,14 @@ export const useFeedStore = defineStore("feed", () => {
     selectedCategory.value = cat;
     items.value = [];
     pagination.value = { ...DEFAULT_PAGINATION };
-    await fetchFeed(1);
+    await fetchFeed(1, true);
+  }
+
+  async function setScope(scope: FeedScope) {
+    selectedScope.value = scope;
+    items.value = [];
+    pagination.value = { ...DEFAULT_PAGINATION };
+    await fetchFeed(1, true);
   }
 
   async function loadMore() {
@@ -245,6 +269,7 @@ export const useFeedStore = defineStore("feed", () => {
     settingsLoading,
     settingsError,
     selectedCategory,
+    selectedScope,
 
     fetchFeed,
     loadMore,
@@ -258,6 +283,7 @@ export const useFeedStore = defineStore("feed", () => {
     unbindSocket,
     showNewItems,
     setCategory,
+    setScope,
   };
 });
 

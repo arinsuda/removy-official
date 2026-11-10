@@ -14,6 +14,7 @@ var (
 	ErrActivityNotFound = errors.New("activity not found")
 	ErrForbidden        = errors.New("forbidden")
 	ErrUserNotFound     = errors.New("user not found")
+	ErrInvalidScope     = errors.New("invalid scope")
 )
 
 type repository struct {
@@ -165,38 +166,62 @@ const feedSelectColumns = `
 	ae.message, ae.visibility, ae.created_at
 `
 
+// followedVisibleSQL is the privacy predicate for other people's activity: an accepted follow,
+// a visible event, the actor's preference, and the event's own visibility.
+var followedVisibleSQL = `
+	(uf.status = 'accepted' AND ae.is_visible = true)
+	AND (
+		` + activityEnabledSQL + `
+	)
+	AND (
+		(u.is_private = false OR uf.status = 'accepted')
+		AND (
+			ae.visibility = 'public'
+			OR (ae.visibility = 'followers' AND uf.status = 'accepted')
+			OR (ae.visibility = 'default' AND (u.is_private = false OR uf.status = 'accepted'))
+		)
+	)
+`
+
+// followedIDsSQL selects the people the viewer follows (accepted only).
+const followedIDsSQL = `SELECT followee_id FROM user_follows WHERE follower_id = ? AND status = 'accepted'`
+
+// applyFeedScope narrows a feed query to the requested scope. The actor_id IN (...) pre-filter lets
+// the planner start from the viewer's follows instead of scanning every event; other people's rows
+// still pass followedVisibleSQL, so a non-followed actor never leaks under any scope. The viewer's
+// own rows are shown unfiltered, like the profile activity list.
+func applyFeedScope(db *gorm.DB, scope string, userID uint) *gorm.DB {
+	switch scope {
+	case FeedScopeMe:
+		return db.Where("ae.actor_id = ?", userID)
+	case FeedScopeFollowing:
+		return db.Where("ae.actor_id IN ("+followedIDsSQL+")", userID).Where("ae.actor_id <> ?", userID).Where(followedVisibleSQL)
+	default:
+		return db.Where("ae.actor_id IN ("+followedIDsSQL+" UNION SELECT ?)", userID, userID).
+			Where("(ae.actor_id = ? OR (ae.actor_id <> ? AND ("+followedVisibleSQL+")))", userID, userID)
+	}
+}
+
+func applyFeedCategory(db *gorm.DB, category string) *gorm.DB {
+	switch category {
+	case FeedCategoryReviews:
+		return db.Where("ae.type = ?", ActivityReviewCreated)
+	case FeedCategoryLists:
+		return db.Where("ae.type IN ?", []ActivityType{ActivityWatchlistAdded, ActivityWatchedAdded})
+	case FeedCategorySocial:
+		return db.Where("ae.type IN ?", []ActivityType{ActivityUserFollowed, ActivityAchievementUnlocked, ActivityReviewLiked, ActivityReviewCommented, ActivityMediaLiked})
+	}
+	return db
+}
+
 func (r *repository) FindFeed(ctx context.Context, userID uint, pq PaginationQuery) ([]feedRow, int64, error) {
 	buildQuery := func() *gorm.DB {
 		db := r.db.WithContext(ctx).Table("activity_events ae").
 			Joins("JOIN users u ON u.id = ae.actor_id AND u.is_active = true").
 			Joins("LEFT JOIN user_follows uf ON uf.followee_id = ae.actor_id AND uf.follower_id = ?", userID).
 			Joins("LEFT JOIN activity_privacy_settings aps ON aps.user_id = ae.actor_id AND aps.activity_type = ae.type").
-			Where("ae.deleted_at IS NULL").
-			Where("ae.actor_id <> ?", userID).
-			Where(`
-				(uf.status = 'accepted' AND ae.is_visible = true)
-				AND (
-					` + activityEnabledSQL + `
-				)
-				AND (
-					(u.is_private = false OR uf.status = 'accepted')
-					AND (
-						ae.visibility = 'public' 
-						OR (ae.visibility = 'followers' AND uf.status = 'accepted')
-						OR (ae.visibility = 'default' AND (u.is_private = false OR uf.status = 'accepted'))
-					)
-				)
-			`)
-
-		if pq.Category == "reviews" {
-			db = db.Where("ae.type = 'review_created'")
-		} else if pq.Category == "lists" {
-			db = db.Where("ae.type IN ('watchlist_added', 'watched_added')")
-		} else if pq.Category == "social" {
-			db = db.Where("ae.type IN ('user_followed', 'achievement_unlocked', 'review_liked', 'review_commented', 'media_liked')")
-		}
-
-		return db
+			Where("ae.deleted_at IS NULL")
+		return applyFeedCategory(applyFeedScope(db, pq.Scope, userID), pq.Category)
 	}
 
 	var total int64
@@ -280,40 +305,37 @@ func (r *repository) UpsertSetting(ctx context.Context, userID uint, t ActivityT
 		FirstOrCreate(&setting).Error
 }
 
-func (r *repository) CountNewFeedItems(ctx context.Context, userID uint, afterActivityID uint, category string) (int64, error) {
+// CountNewFeedItems counts items newer than the activity afterActivityID, ordered by
+// (created_at, id): CreateOrRestore re-stamps created_at but keeps the id, so id alone is not a
+// safe cursor. The viewer's own rows are never counted, so acting yourself raises no "new" pill.
+func (r *repository) CountNewFeedItems(ctx context.Context, userID uint, afterActivityID uint, category, scope string) (int64, error) {
 	var count int64
 	db := r.db.WithContext(ctx).Table("activity_events ae").
 		Joins("JOIN users u ON u.id = ae.actor_id AND u.is_active = true").
 		Joins("LEFT JOIN user_follows uf ON uf.followee_id = ae.actor_id AND uf.follower_id = ?", userID).
 		Joins("LEFT JOIN activity_privacy_settings aps ON aps.user_id = ae.actor_id AND aps.activity_type = ae.type").
 		Where("ae.deleted_at IS NULL").
-		Where("ae.id > ?", afterActivityID).
 		Where("ae.actor_id <> ?", userID).
-		Where(`
-			(uf.status = 'accepted' AND ae.is_visible = true)
-			AND (
-				` + activityEnabledSQL + `
-			)
-			AND (
-				(u.is_private = false OR uf.status = 'accepted')
-				AND (
-					ae.visibility = 'public' 
-					OR (ae.visibility = 'followers' AND uf.status = 'accepted')
-					OR (ae.visibility = 'default' AND (u.is_private = false OR uf.status = 'accepted'))
-				)
-			)
-		`)
+		Where("(ae.created_at, ae.id) > (SELECT cursor.created_at, cursor.id FROM activity_events cursor WHERE cursor.id = ?)", afterActivityID)
 
-	if category == "reviews" {
-		db = db.Where("ae.type = 'review_created'")
-	} else if category == "lists" {
-		db = db.Where("ae.type IN ('watchlist_added', 'watched_added')")
-	} else if category == "social" {
-		db = db.Where("ae.type IN ('user_followed', 'achievement_unlocked', 'review_liked', 'review_commented', 'media_liked')")
-	}
-
-	err := db.Count(&count).Error
+	err := applyFeedCategory(applyFeedScope(db, scope, userID), category).Count(&count).Error
 	return count, err
+}
+
+// LikedReviewIDs returns which of reviewIDs the user has liked, in one query.
+func (r *repository) LikedReviewIDs(ctx context.Context, userID uint, reviewIDs []uint) (map[uint]bool, error) {
+	liked := make(map[uint]bool)
+	if userID == 0 || len(reviewIDs) == 0 {
+		return liked, nil
+	}
+	var ids []uint
+	err := r.db.WithContext(ctx).Table("review_likes").
+		Where("user_id = ? AND review_id IN ?", userID, reviewIDs).
+		Pluck("review_id", &ids).Error
+	for _, id := range ids {
+		liked[id] = true
+	}
+	return liked, err
 }
 
 // activityEnabledSQL is the preference-or-default predicate shared by the feed queries.

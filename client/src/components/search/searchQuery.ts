@@ -1,6 +1,10 @@
 import type { LocationQuery, LocationQueryRaw } from "vue-router"
 import { BROWSE_SORTS, type BrowseSort } from "@/components/browse/browseSort"
 
+/** Year range accepted by the search API (mirrors server searchYearMin/Max). */
+export const SEARCH_YEAR_MIN = 1870
+export const SEARCH_YEAR_MAX = 2200
+
 export const SEARCH_TABS = ["all", "movie", "tv", "people"] as const
 export type SearchTab = (typeof SEARCH_TABS)[number]
 
@@ -33,7 +37,7 @@ export function parseSearchQuery(query: LocationQuery): SearchState {
     q: first(query.q).trim(),
     tab: oneOf(first(query.tab), SEARCH_TABS, DEFAULT_SEARCH_STATE.tab),
     sort: oneOf(first(query.sort), BROWSE_SORTS, DEFAULT_SEARCH_STATE.sort),
-    year: year && year >= 1870 && year <= 2200 ? year : null,
+    year: year && year >= SEARCH_YEAR_MIN && year <= SEARCH_YEAR_MAX ? year : null,
     genre: positiveInt(first(query.genre)),
   }
 }
