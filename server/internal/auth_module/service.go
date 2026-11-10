@@ -6,6 +6,7 @@ import (
 	"crypto/subtle"
 	"errors"
 	"fmt"
+	"github.com/arinsuda/movie-hub/internal/shared"
 
 	"io"
 	"log"
@@ -358,6 +359,11 @@ func (s *Service) HandleGoogleCallback(ctx context.Context, code, stateStr, cook
 			var identity user_module.UserIdentity
 			err := txDB.Where("provider = ? AND provider_subject = ?", user_module.ProviderGoogle, claims.Subject).First(&identity).Error
 
+			err = s.findLiveGoogleIdentity(txDB, claims.Subject, &identity, err)
+			if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+				return err
+			}
+
 			if err == nil {
 				// 1. Existing Google Identity
 				var u user_module.User
@@ -435,6 +441,9 @@ func (s *Service) HandleGoogleCallback(ctx context.Context, code, stateStr, cook
 					}
 
 					if err := txDB.Create(newUser).Error; err != nil {
+						if shared.IsPgUniqueViolation(err) {
+							return ErrGoogleIdentityAlreadyConnected // concurrent signup won the race
+						}
 						return fmt.Errorf("failed to create new user: %w", err)
 					}
 
@@ -445,6 +454,9 @@ func (s *Service) HandleGoogleCallback(ctx context.Context, code, stateStr, cook
 						ProviderEmail:   claims.Email,
 					}
 					if err := txDB.Create(newIdentity).Error; err != nil {
+						if shared.IsPgUniqueViolation(err) {
+							return ErrGoogleIdentityAlreadyConnected
+						}
 						return fmt.Errorf("failed to create identity: %w", err)
 					}
 
@@ -477,6 +489,10 @@ func (s *Service) HandleGoogleCallback(ctx context.Context, code, stateStr, cook
 
 			var identity user_module.UserIdentity
 			err := txDB.Where("provider = ? AND provider_subject = ?", user_module.ProviderGoogle, claims.Subject).First(&identity).Error
+			err = s.findLiveGoogleIdentity(txDB, claims.Subject, &identity, err)
+			if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+				return err
+			}
 			if err == nil {
 				if identity.UserID != tx.UserID {
 					return ErrGoogleIdentityAlreadyConnected
@@ -499,6 +515,9 @@ func (s *Service) HandleGoogleCallback(ctx context.Context, code, stateStr, cook
 					ProviderEmail:   claims.Email,
 				}
 				if err := txDB.Create(newIdentity).Error; err != nil {
+					if shared.IsPgUniqueViolation(err) {
+						return ErrGoogleIdentityAlreadyConnected
+					}
 					return fmt.Errorf("failed to link google identity: %w", err)
 				}
 				var u user_module.User
@@ -532,6 +551,40 @@ func (s *Service) HandleGoogleCallback(ctx context.Context, code, stateStr, cook
 	}
 
 	return tokenPair, sessionUser, tx.ReturnURL, nil
+}
+
+// maxStaleIdentityReads bounds the re-read loop when concurrent requests release the same stale row.
+const maxStaleIdentityReads = 3
+
+// findLiveGoogleIdentity continues a lookup of a Google identity (firstErr is its
+// First() result). A row owned by a soft-deleted user is stale: admin delete normally
+// releases it, so drop it and report gorm.ErrRecordNotFound (a first-time Google user).
+// A merely deactivated (self-deleted) owner keeps the row. If another request already
+// removed the stale row (0 rows affected), re-read instead of assuming.
+func (s *Service) findLiveGoogleIdentity(txDB *gorm.DB, subject string, identity *user_module.UserIdentity, firstErr error) error {
+	err := firstErr
+	for i := 0; i < maxStaleIdentityReads; i++ {
+		if err != nil {
+			return err
+		}
+		var removed int64
+		if err := txDB.Unscoped().Model(&user_module.User{}).Where("id = ? AND deleted_at IS NOT NULL", identity.UserID).Count(&removed).Error; err != nil {
+			return err
+		}
+		if removed == 0 {
+			return nil
+		}
+		res := txDB.Exec("DELETE FROM user_identities WHERE id = ?", identity.ID)
+		if res.Error != nil {
+			return fmt.Errorf("release stale google identity: %w", res.Error)
+		}
+		if res.RowsAffected > 0 {
+			return gorm.ErrRecordNotFound
+		}
+		*identity = user_module.UserIdentity{}
+		err = txDB.Where("provider = ? AND provider_subject = ?", user_module.ProviderGoogle, subject).First(identity).Error
+	}
+	return ErrGoogleIdentityAlreadyConnected
 }
 
 // isProvenByGoogle reports whether Google asserts ownership of email.

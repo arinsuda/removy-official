@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/arinsuda/movie-hub/internal/identity_policy"
 	"log"
 	"os"
 	"strings"
@@ -468,6 +469,18 @@ func runSQLMigrations(db *gorm.DB, cfg *config.Config) error {
 
 	if err := runSchemaMigrationTx(db, "20261110_notification_params", cfg.DB.MigrationLockTimeoutMs, cfg.DB.MigrationStatementTimeoutMs, func(tx *gorm.DB) error {
 		return tx.Exec("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS params jsonb").Error
+	}); err != nil {
+		return err
+	}
+
+	if err := runSchemaMigrationTx(db, "20261111_release_removed_user_links", cfg.DB.MigrationLockTimeoutMs, cfg.DB.MigrationStatementTimeoutMs, func(tx *gorm.DB) error {
+		// Backfill: admin-deleted users used to keep their external identities and links.
+		for _, t := range identity_policy.ReleasedTables() {
+			if err := tx.Exec("DELETE FROM " + t[0] + " WHERE " + t[1] + " IN (SELECT id FROM users WHERE deleted_at IS NOT NULL)").Error; err != nil {
+				return err
+			}
+		}
+		return nil
 	}); err != nil {
 		return err
 	}

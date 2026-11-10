@@ -169,6 +169,23 @@ func RevokeSessionScope(tx *gorm.DB, userID uint) error {
 	return deleteAll(tx, userID, resetScopeTables)
 }
 
+// ReleaseExternalIdentities removes everything that ties the user to the outside world or
+// to a live session: sessions and mail tokens (RevokeSessionScope's tables), Google
+// identities, PLANZI links and pending email changes. Admin delete uses it so the same
+// external accounts can sign up again; self-delete (deactivation) must not.
+func ReleaseExternalIdentities(tx *gorm.DB, userID uint) error {
+	return deleteAll(tx, userID, wipeTables)
+}
+
+// ReleasedTables lists (table, user column) pairs ReleaseExternalIdentities clears, for the backfill migration.
+func ReleasedTables() [][2]string {
+	out := make([][2]string, 0, len(wipeTables))
+	for _, t := range wipeTables {
+		out = append(out, [2]string{t.table, t.column})
+	}
+	return out
+}
+
 func deleteAll(tx *gorm.DB, userID uint, tables []userScoped) error {
 	for _, t := range tables {
 		if err := tx.Exec(`DELETE FROM `+t.table+` WHERE `+t.column+` = ?`, userID).Error; err != nil {
