@@ -43,7 +43,8 @@
       "movie": "What did you think of this movie?",
       "tv": "What did you think of this series?"
     },
-    "visibilityLabel": "Visibility"
+    "visibilityLabel": "Visibility",
+    "ratingValue": "{value} out of {max}"
   },
   "own": {
     "title": "Your review",
