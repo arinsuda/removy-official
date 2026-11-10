@@ -1,5 +1,5 @@
 <template>
-  <AppModal v-model="open" size="md" :title="t('library.add.title')">
+  <AppModal v-model="open" size="md" :title="modalTitle">
     <label class="las__label" :for="searchId">{{ t("library.add.searchLabel") }}</label>
     <div class="las__input-wrap">
       <Search :size="16" aria-hidden="true" />
@@ -33,6 +33,8 @@ import { computed, onBeforeUnmount, ref, useId, watch } from "vue"
 import { useI18n } from "vue-i18n"
 import { Check, Film, Plus, Search } from "lucide-vue-next"
 import { libraryApi, movieApi } from "@/api/api"
+import { listApi } from "@/api/endpoints/list"
+import { listErrorKey } from "@/components/lists/listErrors"
 import AppButton from "@/components/ui/AppButton.vue"
 import AppModal from "@/components/ui/AppModal.vue"
 import SkeletonList from "@/components/ui/skeleton/SkeletonList.vue"
@@ -51,13 +53,16 @@ interface Result {
   year: string
 }
 
-const props = defineProps<{ modelValue: boolean; savedKeys: Set<string> }>()
+const props = defineProps<{ modelValue: boolean; savedKeys: Set<string>; listId?: number; listName?: string }>()
 const emit = defineEmits<{ "update:modelValue": [value: boolean]; added: [] }>()
 
 const { t } = useI18n()
 const ui = useUIStore()
 const searchId = useId()
 const open = computed({ get: () => props.modelValue, set: (v) => emit("update:modelValue", v) })
+const modalTitle = computed(() =>
+  props.listId ? t("library.customLists.detail.addTitle", { name: props.listName ?? "" }) : t("library.add.title"),
+)
 
 const query = ref("")
 const results = ref<Result[]>([])
@@ -117,12 +122,19 @@ watch(
 async function add(r: Result) {
   busyKey.value = r.key
   try {
-    await libraryApi.addItem({ media_id: r.id, media_type: r.type, list_type: ADD_LIST_TYPE })
-    justAdded.value = new Set(justAdded.value).add(r.key)
-    ui.toastSuccess(t("library.add.toastAdded", { title: r.title }))
-    emit("added")
-  } catch {
-    ui.toastError(t("library.add.toastFailed", { title: r.title }))
+    if (props.listId) {
+      await listApi.addItem(props.listId, { media_id: r.id, media_type: r.type })
+      justAdded.value = new Set(justAdded.value).add(r.key)
+      ui.toastSuccess(t("library.customLists.detail.toastAdded", { title: r.title, name: props.listName ?? "" }))
+      emit("added")
+    } else {
+      await libraryApi.addItem({ media_id: r.id, media_type: r.type, list_type: ADD_LIST_TYPE })
+      justAdded.value = new Set(justAdded.value).add(r.key)
+      ui.toastSuccess(t("library.add.toastAdded", { title: r.title }))
+      emit("added")
+    }
+  } catch (err) {
+    ui.toastError(props.listId ? t(listErrorKey(err)) : t("library.add.toastFailed", { title: r.title }))
   } finally {
     busyKey.value = null
   }

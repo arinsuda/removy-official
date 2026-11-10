@@ -3,6 +3,7 @@ package review_module
 import (
 	"errors"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/arinsuda/movie-hub/internal/shared"
@@ -59,11 +60,11 @@ func (h *Handler) GetUserReviews(c fiber.Ctx) error {
 		return badRequest(c, err.Error())
 	}
 
-	reviews, err := h.svc.GetUserReviews(c.Context(), userID, claims.UserID, filter)
+	reviews, pagination, summary, err := h.svc.GetUserReviews(c.Context(), userID, claims.UserID, filter)
 	if err != nil {
 		return handleError(c, err)
 	}
-	return c.JSON(fiber.Map{"reviews": reviews})
+	return c.JSON(fiber.Map{"reviews": reviews, "pagination": pagination, "summary": summary})
 }
 
 func (h *Handler) GetMediaReviews(c fiber.Ctx) error {
@@ -315,7 +316,16 @@ func (h *Handler) UnmarkHelpful(c fiber.Ctx) error {
 // parseReviewFilter อ่าน query params ของ GET /users/:userId/reviews
 // แล้วแปลงเป็น ReviewFilter สำหรับใช้ query ใน repository
 func parseReviewFilter(c fiber.Ctx) (ReviewFilter, error) {
-	filter := ReviewFilter{Visibility: "all"}
+	page, _ := strconv.Atoi(c.Query("page"))
+	pageSize, _ := strconv.Atoi(c.Query("page_size"))
+
+	filter := ReviewFilter{
+		Visibility:   "all",
+		Sort:         ReviewSortNewest,
+		RatingFilter: ReviewRatingFilterAll,
+		Page:         page,
+		PageSize:     pageSize,
+	}
 
 	if v := c.Query("visibility"); v != "" {
 		switch v {
@@ -325,6 +335,30 @@ func parseReviewFilter(c fiber.Ctx) (ReviewFilter, error) {
 			return filter, errors.New("visibility must be 'all', 'public', or 'private'")
 		}
 	}
+
+	if s := c.Query("sort"); s != "" {
+		switch s {
+		case ReviewSortNewest, ReviewSortOldest, ReviewSortHighest, ReviewSortLowest:
+			filter.Sort = s
+		default:
+			return filter, errors.New("invalid sort")
+		}
+	}
+
+	if rf := c.Query("filter"); rf != "" {
+		switch rf {
+		case ReviewRatingFilterAll, ReviewRatingFilterHigh, ReviewRatingFilterLow, ReviewRatingFilterWithText:
+			filter.RatingFilter = rf
+		default:
+			return filter, errors.New("invalid filter")
+		}
+	}
+
+	search := strings.TrimSpace(c.Query("search"))
+	if runes := []rune(search); len(runes) > MaxReviewSearchLength {
+		search = string(runes[:MaxReviewSearchLength])
+	}
+	filter.Search = search
 
 	// year (+month ถ้ามี) มีความสำคัญกว่า date_from/date_to แบบ manual
 	if yearStr := c.Query("year"); yearStr != "" {

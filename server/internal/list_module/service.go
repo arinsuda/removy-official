@@ -281,8 +281,11 @@ func (s *Service) summarizeAll(lists []UserList, mediaType string, mediaID int) 
 			}
 		}
 		if mediaID > 0 && mediaType != "" {
-			has := data.contains[l.ID]
+			itemID, has := data.contains[l.ID]
 			sum.ContainsMedia = &has
+			if has {
+				sum.ItemID = &itemID
+			}
 		}
 		out[i] = sum
 	}

@@ -9,6 +9,7 @@ import UserLikes from "@/components/profile/UserLikes.vue"
 import UserReviews from "@/components/profile/UserReviews.vue"
 import UserWatched from "@/components/profile/UserWatched.vue"
 import UserWatchlist from "@/components/profile/UserWatchlist.vue"
+import { REVIEW_SEARCH_DEBOUNCE_MS } from "@/components/profile/tabs/reviewList"
 import { useRealI18n } from "./helpers/realI18n"
 
 const m = vi.hoisted(() => ({
@@ -46,6 +47,8 @@ beforeEach(async () => {
   m.reviews.mockResolvedValue({
     data: {
       reviews: [1, 2].map((id) => ({ id, rating: id === 1 ? 4.5 : 2, body: `Body ${id}`, visibility: "public", like_count: 1, comment_count: 0, helpful_count: 0, is_liked: false, is_helpful_voted: false, created_at: "2025-01-01T00:00:00Z", updated_at: "2025-01-01T00:00:00Z", media: { ...media(id), genres: [{ id: 1, name: "Drama" }] } })),
+      pagination: { page: 1, page_size: 20, total: 2, has_more: false },
+      summary: { count: 7, average_rating: 3.3, filter_counts: { all: 7, high: 4, low: 2, withText: 5 } },
     },
   })
   m.achievements.mockResolvedValue({
@@ -166,14 +169,44 @@ describe("UserWatched", () => {
 })
 
 describe("UserReviews", () => {
-  it("summarizes and filters critical reviews", async () => {
+  it("takes the summary strip and chip counts from the server summary", async () => {
     const w = mountTab(UserReviews, 2)
     await flushPromises()
+    expect(w.find(".ur__summary").text()).toContain("7")
     expect(w.find(".ur__summary").text()).toContain("3.3")
     expect(w.find(".ur__summary").text()).toContain("Drama")
     expect(w.findAll("article")).toHaveLength(2)
+    const chips = w.findAll(".tb__chip").map((c) => c.text())
+    expect(chips).toEqual(expect.arrayContaining([expect.stringContaining("7"), expect.stringContaining("4"), expect.stringContaining("2"), expect.stringContaining("5")]))
+  })
+
+  it("sends filter and sort as request params and resets to page 1", async () => {
+    const w = mountTab(UserReviews, 2)
+    await flushPromises()
     await w.findAll(".tb__chip").find((c) => c.text().startsWith("Critical"))!.trigger("click")
-    expect(w.findAll("article")).toHaveLength(1)
+    await flushPromises()
+    expect(m.reviews).toHaveBeenLastCalledWith(1, { filter: "low" })
+    await w.find(".tb__select").setValue("highest")
+    await flushPromises()
+    expect(m.reviews).toHaveBeenLastCalledWith(1, { sort: "highest", filter: "low" })
+  })
+
+  it("debounces the search and sends it to the server", async () => {
+    vi.useFakeTimers()
+    try {
+      const w = mountTab(UserReviews, 2)
+      await flushPromises()
+      const calls = m.reviews.mock.calls.length
+      await w.find("input[type=search]").setValue("  great ")
+      expect(m.reviews).toHaveBeenCalledTimes(calls)
+      await vi.advanceTimersByTimeAsync(REVIEW_SEARCH_DEBOUNCE_MS)
+      await flushPromises()
+      expect(m.reviews).toHaveBeenCalledTimes(calls + 1)
+      expect(m.reviews).toHaveBeenLastCalledWith(1, { search: "great" })
+      expect(w.find("input[type=search]").attributes("placeholder")).toBe(i18n.global.t("profile.reviews.searchPlaceholder"))
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it("picks and clears a month filter via the designed month picker", async () => {
@@ -216,6 +249,48 @@ describe("UserReviews", () => {
     await flushPromises()
     expect(w.text()).toContain("No reviews yet")
     expect(w.find("a.app-btn").exists()).toBe(false)
+  })
+
+  it("loads the next server page when Load more is clicked", async () => {
+    const makeReview = (id: number) => ({
+      id,
+      rating: 4,
+      body: `Body ${id}`,
+      visibility: "public",
+      like_count: 0,
+      comment_count: 0,
+      helpful_count: 0,
+      is_liked: false,
+      is_helpful_voted: false,
+      created_at: "2025-01-01T00:00:00Z",
+      updated_at: "2025-01-01T00:00:00Z",
+      media: { ...media(id), genres: [{ id: 1, name: "Drama" }] },
+    })
+    m.reviews
+      .mockResolvedValueOnce({
+        data: {
+          reviews: [makeReview(1), makeReview(2)],
+          pagination: { page: 1, page_size: 20, total: 3, has_more: true },
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          reviews: [makeReview(3)],
+          pagination: { page: 2, page_size: 20, total: 3, has_more: false },
+        },
+      })
+
+    const w = mountTab(UserReviews, 2)
+    await flushPromises()
+    expect(w.findAll("article")).toHaveLength(2)
+    const loadMoreBtn = w.find(".ur__more button")
+    expect(loadMoreBtn.exists()).toBe(true)
+
+    await loadMoreBtn.trigger("click")
+    await flushPromises()
+    expect(m.reviews).toHaveBeenLastCalledWith(1, { page: 2 })
+    expect(w.findAll("article")).toHaveLength(3)
+    expect(w.find(".ur__more").exists()).toBe(false)
   })
 })
 

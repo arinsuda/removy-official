@@ -42,14 +42,21 @@ type ReviewResponse struct {
 
 // ── In-app Rating (aggregate) ─────────────────────────────────────
 
+// RatingBucket holds the count of public reviews for one 0.5-step rating (0.5..5.0).
+type RatingBucket struct {
+	Rating float32 `json:"rating"`
+	Count  int     `json:"count"`
+}
+
 // RatingResponse คือ aggregate rating ที่คำนวณจาก reviews ภายใน app เท่านั้น
 // ไม่เกี่ยวกับ TMDB
 type RatingResponse struct {
-	MediaID       int     `json:"media_id"`
-	MediaType     string  `json:"media_type"`
-	AverageRating float32 `json:"average_rating"` // 0.0 ถ้าไม่มี review
-	ReviewCount   int     `json:"review_count"`
-	HasRating     bool    `json:"has_rating"` // false = ยังไม่มีใครรีวิว
+	MediaID       int            `json:"media_id"`
+	MediaType     string         `json:"media_type"`
+	AverageRating float32        `json:"average_rating"` // 0.0 ถ้าไม่มี review
+	ReviewCount   int            `json:"review_count"`
+	HasRating     bool           `json:"has_rating"` // false = ยังไม่มีใครรีวิว
+	Distribution  []RatingBucket `json:"distribution"`
 }
 
 // ── Comment ───────────────────────────────────────────────────────
@@ -71,11 +78,45 @@ type CommentResponse struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-// Media review list paging.
+// Media and user review list paging, sorting, and filtering constants.
 const (
 	DefaultMediaReviewsPageSize = 20
 	MaxMediaReviewsPageSize     = 50
+
+	ReviewSortNewest  = "newest"
+	ReviewSortOldest  = "oldest"
+	ReviewSortHighest = "highest"
+	ReviewSortLowest  = "lowest"
+
+	ReviewRatingFilterAll      = "all"
+	ReviewRatingFilterHigh     = "high"
+	ReviewRatingFilterLow      = "low"
+	ReviewRatingFilterWithText = "withText"
+
+	MaxReviewSearchLength = 100
+	// MaxReviewsPage bounds the page number so offset arithmetic cannot overflow.
+	MaxReviewsPage = 10000
+
+	// Rating chip thresholds: "high" is rating >= HighRatingMin, "low" is rating <= LowRatingMax.
+	HighRatingMin = 4.0
+	LowRatingMax  = 2.5
 )
+
+// ReviewFilterCounts are the chip counts of a user's reviews, ignoring the active rating filter.
+type ReviewFilterCounts struct {
+	All      int `json:"all"`
+	High     int `json:"high"`
+	Low      int `json:"low"`
+	WithText int `json:"withText"`
+}
+
+// UserReviewsSummary describes the whole privacy/visibility/month scope of a user's review list,
+// independent of rating filter, search and paging.
+type UserReviewsSummary struct {
+	Count         int                `json:"count"`
+	AverageRating float32            `json:"average_rating"` // 0 when there are no reviews
+	FilterCounts  ReviewFilterCounts `json:"filter_counts"`
+}
 
 type Pagination struct {
 	Page     int   `json:"page"`

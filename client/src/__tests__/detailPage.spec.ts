@@ -12,6 +12,7 @@ vi.mock("@/api/endpoints/media", () => ({ mediaApi: { recordMediaView: vi.fn(() 
 vi.mock("@/composables/useMediaActivity", () => ({
   useMediaActivity: () => ({
     stats: ref(null),
+    ratingDistribution: ref([]),
     watchSummary: ref(null),
     isLiked: ref(false),
     isWatchlisted: ref(false),

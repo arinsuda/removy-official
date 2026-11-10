@@ -247,6 +247,8 @@
     "detail": {
       "edit": "Edit",
       "delete": "Delete",
+      "addTitle": "Add to {name}",
+      "toastAdded": "\"{title}\" added to {name}.",
       "notFoundTitle": "List not found",
       "notFoundBody": "It may have been deleted or made private.",
       "forbiddenTitle": "This list is private",

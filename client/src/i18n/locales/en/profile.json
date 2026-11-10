@@ -138,6 +138,7 @@
   "reviews": {
     "titleOwn": "My reviews",
     "titleOther": "Reviews",
+    "searchPlaceholder": "Search review text",
     "filterVisibility": "Visibility filter",
     "filterDate": "Filter by date",
     "clearDate": "Clear date filter",

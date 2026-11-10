@@ -80,21 +80,12 @@ async function load() {
     for (const l of lists.value) {
       contains[l.id] = !!l.contains_media
       counts[l.id] = l.item_count
+      if (l.item_id) itemIds.set(l.id, l.item_id)
     }
   } catch {
     failed.value = true
   } finally {
     loading.value = false
-  }
-}
-
-/** Finds this title's item id in a list by paging through it. */
-async function findItemId(listId: number): Promise<number | null> {
-  for (let page = 1; ; page++) {
-    const { data } = await listApi.get(listId, page)
-    const hit = data.items.find((i) => i.media.id === props.mediaId && i.media_type === props.mediaType)
-    if (hit) return hit.id
-    if (!data.pagination.has_more) return null
   }
 }
 
@@ -115,7 +106,7 @@ async function toggle(l: ListSummary, e: Event) {
         counts[l.id] = (counts[l.id] ?? 0) + 1
       }
     } else {
-      const itemId = itemIds.get(l.id) ?? (await findItemId(l.id).catch(() => null))
+      const itemId = itemIds.get(l.id) ?? null
       if (itemId === null) {
         toast.error(t("library.customLists.sheet.removeFailed"))
       } else if (await actions.removeItem(l.id, itemId)) {

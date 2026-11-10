@@ -59,7 +59,8 @@ import { computed, onBeforeUnmount, ref, useId, watch } from "vue"
 import { useI18n } from "vue-i18n"
 import { useQuery } from "@tanstack/vue-query"
 import { Check, Film, Search } from "lucide-vue-next"
-import { libraryApi, movieApi, reviewApi } from "@/api/api"
+import { libraryApi, movieApi } from "@/api/api"
+import { fetchAllUserReviews } from "@/utils/fetchAllUserReviews"
 import AppButton from "@/components/ui/AppButton.vue"
 import AppModal from "@/components/ui/AppModal.vue"
 import AppTabs from "@/components/ui/AppTabs.vue"
@@ -164,7 +165,7 @@ const favorites = useQuery({
   staleTime: 60_000,
   queryFn: async (): Promise<Candidate[]> => {
     const [reviews, watched] = await Promise.all([
-      reviewApi.getUserReviews(props.userId),
+      fetchAllUserReviews(props.userId),
       libraryApi.getVisibleUserLibrary(props.userId, { list_type: "watched", media_type: props.mediaType }),
     ])
     const out = new Map<string, Candidate>()
@@ -173,7 +174,7 @@ const favorites = useQuery({
       const c: Candidate = { id: m.id, media_type: m.media_type, title: m.title, poster_url: m.poster_url, vote_average: m.vote_average, year: "" }
       if (!out.has(candidateKey(c))) out.set(candidateKey(c), c)
     }
-    reviews.data.reviews.filter((r) => r.rating >= FAVORITE_MIN_RATING).forEach((r) => push(r.media))
+    reviews.filter((r) => r.rating >= FAVORITE_MIN_RATING).forEach((r) => push(r.media))
     watched.data.items.forEach((i) => push(i.media))
     return [...out.values()]
   },

@@ -253,3 +253,73 @@ func TestMyMediaReview(t *testing.T) {
 		t.Fatalf("public list: %d", code)
 	}
 }
+
+func TestMediaRatingDistribution(t *testing.T) {
+	e := newEnv(t)
+
+	// Empty media: guest can call it, returns 10 zero-filled steps with count 0.
+	code, out := e.do("GET", "/api/reviews/media/movies/901/rating", nil, "")
+	if code != 200 {
+		t.Fatalf("guest GET empty rating: %d %v", code, out)
+	}
+	emptyRating, _ := out["rating"].(map[string]any)
+	emptyDist, _ := emptyRating["distribution"].([]any)
+	if len(emptyDist) != 10 || emptyRating["review_count"] != float64(0) || emptyRating["has_rating"] != false {
+		t.Fatalf("empty rating: %v", emptyRating)
+	}
+	for i, raw := range emptyDist {
+		b := raw.(map[string]any)
+		if b["rating"] != float64(i+1)*0.5 || b["count"] != float64(0) {
+			t.Fatalf("empty bucket[%d]: %v", i, b)
+		}
+	}
+
+	insert := func(email string, rating float64, visibility string, privateAccount, deleted bool) {
+		uid := seedUser(t, e.db, email, true, "pw-password1")
+		if privateAccount {
+			e.db.Exec(`UPDATE users SET is_private = true WHERE id = ?`, uid)
+		}
+		delSQL := "NULL"
+		if deleted {
+			delSQL = "now()"
+		}
+		if err := e.db.Exec(fmt.Sprintf(`INSERT INTO reviews (created_at, updated_at, deleted_at, user_id, media_id, media_type, rating, body, is_public, visibility)
+			VALUES (now(), now(), %s, ?, 902, 'movie', ?, 'b', ?, ?)`, delSQL), uid, rating, visibility == "public", visibility).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	insert("u1@x.test", 5.0, "public", false, false)
+	insert("u2@x.test", 5.0, "public", true, false) // public review on private profile is counted in aggregate
+	insert("u3@x.test", 3.5, "public", false, false)
+	insert("u4@x.test", 1.0, "private", false, false)   // excluded: private review
+	insert("u5@x.test", 2.0, "followers", false, false) // excluded: followers-only review
+	insert("u6@x.test", 4.0, "public", false, true)     // excluded: soft-deleted review
+
+	code, out = e.do("GET", "/api/reviews/media/movies/902/rating", nil, "")
+	if code != 200 {
+		t.Fatalf("guest GET rating: %d %v", code, out)
+	}
+	ratingObj, _ := out["rating"].(map[string]any)
+	dist, _ := ratingObj["distribution"].([]any)
+	if len(dist) != 10 {
+		t.Fatalf("len(distribution) = %d, want 10", len(dist))
+	}
+	count := int(ratingObj["review_count"].(float64))
+	if count != 3 {
+		t.Fatalf("review_count = %d, want 3", count)
+	}
+	sum := 0
+	byRating := map[float64]int{}
+	for _, raw := range dist {
+		b := raw.(map[string]any)
+		c := int(b["count"].(float64))
+		sum += c
+		byRating[b["rating"].(float64)] = c
+	}
+	if sum != count {
+		t.Fatalf("sum(distribution) = %d != review_count = %d", sum, count)
+	}
+	if byRating[5.0] != 2 || byRating[3.5] != 1 || byRating[1.0] != 0 || byRating[2.0] != 0 || byRating[4.0] != 0 {
+		t.Fatalf("unexpected bucket counts: %v", byRating)
+	}
+}

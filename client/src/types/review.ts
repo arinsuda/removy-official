@@ -64,3 +64,31 @@ export interface LikeItem {
 export interface LikesResponse {
   likes: LikeItem[];
 }
+
+export interface RatingBucket {
+  rating: number;
+  count: number;
+}
+
+export interface MediaRatingResponse {
+  media_id: number;
+  media_type: MediaType;
+  average_rating: number;
+  review_count: number;
+  has_rating: boolean;
+  distribution: RatingBucket[];
+}
+
+export interface ReviewFilterCounts {
+  all: number;
+  high: number;
+  low: number;
+  withText: number;
+}
+
+/** Scope-wide summary of a user's reviews (ignores rating filter, search and paging). */
+export interface UserReviewsSummary {
+  count: number;
+  average_rating: number;
+  filter_counts: ReviewFilterCounts;
+}

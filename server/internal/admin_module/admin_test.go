@@ -2,6 +2,7 @@ package admin_module
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/arinsuda/movie-hub/config"
+	"github.com/arinsuda/movie-hub/internal/shared"
 	"github.com/arinsuda/movie-hub/middleware"
 	"github.com/gofiber/fiber/v3"
 )
@@ -245,6 +247,174 @@ func TestUpdateUserRoleInactiveUser(t *testing.T) {
 
 	if resp.StatusCode != http.StatusConflict {
 		t.Errorf("Expected 409 Conflict for inactive user role change, got %d", resp.StatusCode)
+	}
+}
+
+func TestAdminErrorCodes(t *testing.T) {
+	tests := []struct {
+		name       string
+		method     string
+		path       string
+		body       string
+		setupRepo  func(m *mockRepository)
+		wantStatus int
+		wantCode   shared.ErrorCode
+	}{
+		{
+			name:   "user not found",
+			method: http.MethodDelete,
+			path:   "/api/admin/users/99",
+			setupRepo: func(m *mockRepository) {
+				m.deleteUserFunc = func(adminID, targetUserID uint, reason *string) error {
+					return ErrUserNotFound
+				}
+			},
+			wantStatus: http.StatusNotFound,
+			wantCode:   shared.ErrorCodeUserNotFound,
+		},
+		{
+			name:   "review not found",
+			method: http.MethodDelete,
+			path:   "/api/admin/reviews/99",
+			setupRepo: func(m *mockRepository) {
+				m.deleteReviewFunc = func(adminID, reviewID uint, reason *string) error {
+					return ErrReviewNotFound
+				}
+			},
+			wantStatus: http.StatusNotFound,
+			wantCode:   shared.ErrorCodeReviewNotFound,
+		},
+		{
+			name:       "invalid role",
+			method:     http.MethodPatch,
+			path:       "/api/admin/users/2/role",
+			body:       `{"role":"superadmin"}`,
+			setupRepo:  func(m *mockRepository) {},
+			wantStatus: http.StatusBadRequest,
+			wantCode:   shared.ErrorCodeInvalidRole,
+		},
+		{
+			name:   "self deactivation",
+			method: http.MethodPatch,
+			path:   "/api/admin/users/1/status",
+			body:   `{"is_active":false}`,
+			setupRepo: func(m *mockRepository) {
+				m.updateStatusFunc = func(adminID, targetUserID uint, isActive bool, reason *string) error {
+					return ErrSelfDeactivation
+				}
+			},
+			wantStatus: http.StatusBadRequest,
+			wantCode:   shared.ErrorCodeSelfDeactivation,
+		},
+		{
+			name:   "self deletion",
+			method: http.MethodDelete,
+			path:   "/api/admin/users/1",
+			setupRepo: func(m *mockRepository) {
+				m.deleteUserFunc = func(adminID, targetUserID uint, reason *string) error {
+					return ErrSelfDeletion
+				}
+			},
+			wantStatus: http.StatusBadRequest,
+			wantCode:   shared.ErrorCodeSelfDeletion,
+		},
+		{
+			name:   "already in status",
+			method: http.MethodPatch,
+			path:   "/api/admin/users/2/status",
+			body:   `{"is_active":true}`,
+			setupRepo: func(m *mockRepository) {
+				m.updateStatusFunc = func(adminID, targetUserID uint, isActive bool, reason *string) error {
+					return ErrUserAlreadyInStatus
+				}
+			},
+			wantStatus: http.StatusBadRequest,
+			wantCode:   shared.ErrorCodeAlreadyInStatus,
+		},
+		{
+			name:   "final admin protection",
+			method: http.MethodPatch,
+			path:   "/api/admin/users/2/role",
+			body:   `{"role":"user"}`,
+			setupRepo: func(m *mockRepository) {
+				m.updateRoleFunc = func(adminID, targetUserID uint, newRole string, reason *string) error {
+					return ErrFinalAdminProtection
+				}
+			},
+			wantStatus: http.StatusConflict,
+			wantCode:   shared.ErrorCodeFinalAdmin,
+		},
+		{
+			name:   "inactive user role change",
+			method: http.MethodPatch,
+			path:   "/api/admin/users/2/role",
+			body:   `{"role":"admin"}`,
+			setupRepo: func(m *mockRepository) {
+				m.updateRoleFunc = func(adminID, targetUserID uint, newRole string, reason *string) error {
+					return ErrInactiveUserRoleChange
+				}
+			},
+			wantStatus: http.StatusConflict,
+			wantCode:   shared.ErrorCodeInactiveUserRole,
+		},
+		{
+			name:       "invalid user id param",
+			method:     http.MethodDelete,
+			path:       "/api/admin/users/abc",
+			setupRepo:  func(m *mockRepository) {},
+			wantStatus: http.StatusBadRequest,
+			wantCode:   shared.ErrorCodeInvalidInput,
+		},
+		{
+			name:   "internal server error",
+			method: http.MethodGet,
+			path:   "/api/admin/overview",
+			setupRepo: func(m *mockRepository) {
+				m.overviewFunc = func(onlineUsers int) (*OverviewStats, error) {
+					return nil, errors.New("db failure")
+				}
+			},
+			wantStatus: http.StatusInternalServerError,
+			wantCode:   shared.ErrorCodeInternal,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mockRepo := &mockRepository{}
+			tc.setupRepo(mockRepo)
+			app := setupTestApp(mockRepo)
+
+			var bodyReader *strings.Reader
+			if tc.body != "" {
+				bodyReader = strings.NewReader(tc.body)
+			} else {
+				bodyReader = strings.NewReader("")
+			}
+			req := httptest.NewRequest(tc.method, tc.path, bodyReader)
+			if tc.body != "" {
+				req.Header.Set("Content-Type", "application/json")
+			}
+
+			resp, err := app.Test(req)
+			if err != nil {
+				t.Fatalf("request failed: %v", err)
+			}
+			if resp.StatusCode != tc.wantStatus {
+				t.Fatalf("status = %d, want %d", resp.StatusCode, tc.wantStatus)
+			}
+
+			var apiErr shared.APIError
+			if err := json.NewDecoder(resp.Body).Decode(&apiErr); err != nil {
+				t.Fatalf("decode error body: %v", err)
+			}
+			if apiErr.Code != tc.wantCode {
+				t.Errorf("code = %q, want %q", apiErr.Code, tc.wantCode)
+			}
+			if apiErr.Error == "" {
+				t.Error("expected non-empty error field")
+			}
+		})
 	}
 }
 

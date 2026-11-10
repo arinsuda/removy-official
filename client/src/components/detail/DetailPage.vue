@@ -57,7 +57,7 @@
             :is-liked="activity.isLiked.value"
           />
           <DetailWatchProviders class="detail__providers" :type="config.type" :id="data.id" />
-          <RatingDistribution class="detail__distribution" :reviews="reviewList" :total-count="reviewTotal" />
+          <RatingDistribution class="detail__distribution" :distribution="activity.ratingDistribution.value" />
           <DetailFacts class="detail__facts" :facts="data.facts" :homepage="data.homepage" />
         </aside>
 
@@ -75,7 +75,7 @@
               :media-type="config.type"
               :media-poster-path="data.posterPath"
               :media-title="data.englishTitle || data.title"
-              @loaded="(list, total) => ((reviewList = list), (reviewTotal = total))"
+              @loaded="list => (reviewList = list)"
               @review-submitted="activity.refreshStats"
             />
           </section>
@@ -154,13 +154,11 @@ const isSwitching = computed(() => status.value === "loading" && data.value !== 
 
 // Reviews
 const reviewList = ref<ReviewResponse[]>([])
-const reviewTotal = ref(0)
 const reviewsRef = useTemplateRef<InstanceType<typeof MovieReviews>>("reviews")
 const myReview = computed(() => reviewList.value.find(r => r.user.id === auth.user?.id) ?? null)
 
 watch(displayId, () => {
   reviewList.value = []
-  reviewTotal.value = 0
 })
 
 function onRate() {

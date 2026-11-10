@@ -1,23 +1,31 @@
 type AdminErrorShape = { response?: { status?: number; data?: { error?: string; code?: string } } }
 
+const CODE_TO_KEY: Record<string, string> = {
+  FINAL_ADMIN: "admin.errors.finalAdmin",
+  INACTIVE_USER_ROLE_CHANGE: "admin.errors.inactiveRole",
+  SELF_DEACTIVATION: "admin.errors.selfDeactivate",
+  SELF_DELETION: "admin.errors.selfDelete",
+  ALREADY_IN_STATUS: "admin.errors.alreadyStatus",
+  INVALID_ROLE: "admin.errors.invalidRole",
+  INVALID_INPUT: "admin.errors.invalidInput",
+  USER_NOT_FOUND: "admin.errors.notFound",
+  REVIEW_NOT_FOUND: "admin.errors.notFound",
+  FORBIDDEN: "admin.errors.forbidden",
+  UNAUTHORIZED: "admin.errors.forbidden",
+  INTERNAL_ERROR: "admin.errors.generic",
+}
+
 /**
- * Maps an admin API failure to an `admin.errors.*` i18n key. The admin API answers with
- * plain `{ "error": "..." }` strings, so known protections are matched by status plus
- * message, or by an explicit `code` if the server adds one.
+ * Maps an admin API failure to an `admin.errors.*` i18n key by machine-readable `code`,
+ * falling back to HTTP status for uncoded 404/403 responses and `admin.errors.generic`.
  */
 export function adminErrorKey(err: unknown): string {
   const res = (err as AdminErrorShape)?.response
-  const status = res?.status
   const code = res?.data?.code
-  const msg = (res?.data?.error ?? "").toLowerCase()
+  if (code && Object.hasOwn(CODE_TO_KEY, code)) return CODE_TO_KEY[code]!
 
-  if (code === "FINAL_ADMIN" || msg.includes("final active admin")) return "admin.errors.finalAdmin"
-  if (msg.includes("inactive user")) return "admin.errors.inactiveRole"
-  if (msg.includes("deactivate your own")) return "admin.errors.selfDeactivate"
-  if (msg.includes("delete your own")) return "admin.errors.selfDelete"
-  if (msg.includes("already in requested status")) return "admin.errors.alreadyStatus"
-  if (msg.includes("invalid role")) return "admin.errors.invalidRole"
+  const status = res?.status
   if (status === 404) return "admin.errors.notFound"
-  if (status === 403) return "admin.errors.forbidden"
+  if (status === 403 || status === 401) return "admin.errors.forbidden"
   return "admin.errors.generic"
 }

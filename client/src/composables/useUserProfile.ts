@@ -1,14 +1,14 @@
 import { computed, toValue, type MaybeRefOrGetter } from "vue"
 import { useQuery } from "@tanstack/vue-query"
 import { isAxiosError } from "axios"
-import { reviewApi, userApi } from "@/api/api"
+import { userApi } from "@/api/api"
+import { fetchAllUserReviews } from "@/utils/fetchAllUserReviews"
 import { useAuthStore } from "@/stores/auth"
 import { useFollowStatus } from "@/composables/useFollow"
 import { tasteSummary } from "@/components/profile/tasteProfile"
 
 export type ProfileErrorKind = "notFound" | "error" | null
 
-const REVIEW_LIMIT = 100
 
 /** Profile, stats and reviews for /users/:id. Sections stay disabled while locked. */
 export function useUserProfile(id: MaybeRefOrGetter<number>) {
@@ -41,8 +41,7 @@ export function useUserProfile(id: MaybeRefOrGetter<number>) {
 
   const reviews = useQuery({
     queryKey: computed(() => ["user-reviews-taste", userId.value]),
-    queryFn: () =>
-      reviewApi.getUserReviews(userId.value, { limit: REVIEW_LIMIT }).then(res => res.data.reviews ?? []),
+    queryFn: () => fetchAllUserReviews(userId.value),
     enabled: computed(() => !!profile.data.value && canViewSections.value),
   })
 

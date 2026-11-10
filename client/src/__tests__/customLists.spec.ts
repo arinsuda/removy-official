@@ -3,27 +3,56 @@ import { flushPromises, mount } from "@vue/test-utils"
 import { createPinia, setActivePinia } from "pinia"
 import { QueryClient, VueQueryPlugin } from "@tanstack/vue-query"
 import AddToListSheet from "@/components/lists/AddToListSheet.vue"
+import LibraryAddSheet from "@/views/library/components/LibraryAddSheet.vue"
 import ListEditorModal from "@/views/library/components/ListEditorModal.vue"
+import { ADD_SEARCH_DEBOUNCE_MS } from "@/views/library/config"
 import { listErrorKey } from "@/components/lists/listErrors"
 import { moveIndex } from "@/views/library/useListReorder"
 import { useUIStore } from "@/stores/ui"
 import { useRealI18n } from "./helpers/realI18n"
 
-const m = vi.hoisted(() => ({ getOwn: vi.fn(), addItem: vi.fn(), removeItem: vi.fn(), get: vi.fn(), create: vi.fn() }))
+const m = vi.hoisted(() => ({
+  getOwn: vi.fn(),
+  addItem: vi.fn(),
+  removeItem: vi.fn(),
+  get: vi.fn(),
+  create: vi.fn(),
+  search: vi.fn(),
+  searchSeries: vi.fn(),
+}))
 vi.mock("@/api/endpoints/list", () => ({ listApi: m }))
+vi.mock("@/api/api", () => ({
+  libraryApi: { addItem: vi.fn() },
+  movieApi: { search: m.search, searchSeries: m.searchSeries },
+}))
 
 const i18n = useRealI18n()
-// Modals teleport into body; drop what a previous test left there.
-afterEach(() => (document.body.innerHTML = ""))
-const list = (id: number, contains: boolean) => ({ id, name: `L${id}`, item_count: 2, contains_media: contains, collage_posters: [], visibility: "public" })
+const wrappers: Array<{ unmount: () => void }> = []
+// Modals teleport into body; unmount wrappers and drop what a previous test left there.
+afterEach(() => {
+  wrappers.splice(0).forEach((w) => w.unmount())
+  document.body.innerHTML = ""
+})
+const list = (id: number, contains: boolean, itemId?: number) => ({
+  id,
+  name: `L${id}`,
+  item_count: 2,
+  contains_media: contains,
+  ...(itemId !== undefined ? { item_id: itemId } : {}),
+  collage_posters: [],
+  visibility: "public",
+})
 
 function mountWith(component: object, props: object) {
+  i18n.global.locale.value = "en"
   setActivePinia(createPinia())
-  return mount(component as never, {
+  const w = mount(component as never, {
     props,
     attachTo: document.body,
     global: { plugins: [i18n, [VueQueryPlugin, { queryClient: new QueryClient() }]] },
   })
+  wrappers.push(w)
+  return w
 }
 
 describe("moveIndex / listErrorKey", () => {
@@ -42,13 +71,12 @@ describe("moveIndex / listErrorKey", () => {
 describe("AddToListSheet", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    m.getOwn.mockResolvedValue({ data: { lists: [list(1, false), list(2, true)] } })
+    m.getOwn.mockResolvedValue({ data: { lists: [list(1, false), list(2, true, 77)] } })
     m.addItem.mockResolvedValue({ data: { item: { id: 55 } } })
     m.removeItem.mockResolvedValue({})
-    m.get.mockResolvedValue({ data: { items: [{ id: 77, media: { id: 9 }, media_type: "movie" }], pagination: { has_more: false } } })
   })
 
-  it("adds to an unchecked list and removes from a checked one (finding the item id)", async () => {
+  it("adds to an unchecked list and removes from a checked one using item_id directly", async () => {
     mountWith(AddToListSheet, { modelValue: true, mediaId: 9, mediaType: "movie" })
     await flushPromises()
     expect(m.getOwn).toHaveBeenCalledWith({ media_type: "movie", media_id: 9 })
@@ -61,6 +89,7 @@ describe("AddToListSheet", () => {
     box(2).click()
     await flushPromises()
     expect(m.removeItem).toHaveBeenCalledWith(2, 77)
+    expect(m.get).not.toHaveBeenCalled()
   })
 })
 
@@ -84,12 +113,9 @@ describe("ListEditorModal", () => {
 })
 
 describe("AddToListSheet failure handling", () => {
-  it("restores the checkbox and toasts when the item cannot be found to remove", async () => {
+  it("restores the checkbox and toasts when item_id is missing on a checked list", async () => {
     m.getOwn.mockResolvedValue({ data: { lists: [list(2, true)] } })
-    m.get.mockResolvedValue({ data: { items: [], pagination: { has_more: false } } })
-    const pinia = createPinia()
-    setActivePinia(pinia)
-    mount(AddToListSheet, { props: { modelValue: true, mediaId: 9, mediaType: "movie" }, attachTo: document.body, global: { plugins: [i18n, pinia, [VueQueryPlugin, { queryClient: new QueryClient() }]] } })
+    mountWith(AddToListSheet, { modelValue: true, mediaId: 9, mediaType: "movie" })
     await flushPromises()
     const box = document.body.querySelector<HTMLInputElement>('[data-list-id="2"]')!
     box.click()
@@ -97,5 +123,29 @@ describe("AddToListSheet failure handling", () => {
     expect(m.removeItem).not.toHaveBeenCalled()
     expect(box.checked).toBe(true)
     expect(useUIStore().toasts.some((x) => x.type === "error")).toBe(true)
+  })
+})
+
+describe("LibraryAddSheet custom list target", () => {
+  it("searches and adds a title to the target custom list", async () => {
+    m.search.mockResolvedValue({ data: { results: [{ id: 603, title: "The Matrix", poster_path: "/m.jpg", release_date: "1999-03-31" }] } })
+    m.searchSeries.mockResolvedValue({ data: { results: [] } })
+    m.addItem.mockResolvedValue({ data: { item: { id: 101 } } })
+
+    const w = mountWith(LibraryAddSheet, { modelValue: true, savedKeys: new Set<string>(), listId: 42, listName: "Sci-Fi Classics" })
+    await flushPromises()
+    expect(document.body.textContent).toContain("Add to Sci-Fi Classics")
+
+    const input = document.body.querySelector<HTMLInputElement>('input[type="search"].las__input')!
+    input.value = "matrix"
+    input.dispatchEvent(new Event("input"))
+    await new Promise((r) => setTimeout(r, ADD_SEARCH_DEBOUNCE_MS + 50))
+    await flushPromises()
+
+    document.body.querySelector<HTMLButtonElement>('[data-action="add"]')!.click()
+    await flushPromises()
+
+    expect(m.addItem).toHaveBeenCalledWith(42, { media_id: 603, media_type: "movie" })
+    expect(w.emitted("added")).toHaveLength(1)
   })
 })

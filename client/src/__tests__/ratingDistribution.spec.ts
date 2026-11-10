@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { mount } from "@vue/test-utils"
 import RatingDistribution from "@/components/detail/RatingDistribution.vue"
-import { ratingDistribution } from "@/components/detail/ratingDistribution"
+import { ratingDistribution, ratingDistributionFromBuckets } from "@/components/detail/ratingDistribution"
 import { i18n } from "@/i18n"
 import type { Visibility } from "@/types"
 
@@ -21,6 +21,19 @@ describe("ratingDistribution", () => {
     expect(ratingDistribution([r(0), r(7)]).total).toBe(0)
     expect(ratingDistribution([]).buckets.every(b => b.pct === 0)).toBe(true)
   })
+
+  it("builds 10 steps from server distribution buckets", () => {
+    const res = ratingDistributionFromBuckets([
+      { rating: 0.5, count: 0 },
+      { rating: 3.5, count: 2 },
+      { rating: 5.0, count: 4 },
+    ])
+    expect(res.total).toBe(6)
+    expect(res.buckets).toHaveLength(10)
+    expect(res.buckets.find(b => b.value === 5)).toMatchObject({ count: 4, pct: 100 })
+    expect(res.buckets.find(b => b.value === 3.5)).toMatchObject({ count: 2, pct: 50 })
+    expect(res.buckets.find(b => b.value === 0.5)).toMatchObject({ count: 0, pct: 0 })
+  })
 })
 
 describe("RatingDistribution", () => {
@@ -33,6 +46,21 @@ describe("RatingDistribution", () => {
     const w = mountDist([r(4), r(3), r(5, "private")])
     expect(w.findAll(".dist__row")).toHaveLength(10)
     expect(w.get('[data-test="dist-based"]').text()).toBe("Based on 2 public reviews")
+  })
+
+  it("renders server distribution buckets directly when provided", () => {
+    i18n.global.locale.value = "en"
+    const w = mount(RatingDistribution, {
+      props: {
+        distribution: [
+          { rating: 4.0, count: 3 },
+          { rating: 5.0, count: 7 },
+        ],
+      },
+      global: { plugins: [i18n] },
+    })
+    expect(w.findAll(".dist__row")).toHaveLength(10)
+    expect(w.get('[data-test="dist-based"]').text()).toBe("Based on 10 public reviews")
   })
 
   it("shows an empty message when only non-public reviews exist", () => {

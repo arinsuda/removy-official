@@ -31,9 +31,19 @@ var (
 // Visibility: "all" (default) | "public" | "private"
 // DateFrom / DateTo: กรองตาม created_at (วันที่ user เขียนรีวิว), inclusive ทั้งสองด้าน
 type ReviewFilter struct {
-	Visibility string
-	DateFrom   *time.Time
-	DateTo     *time.Time
+	Visibility   string
+	DateFrom     *time.Time
+	DateTo       *time.Time
+	Sort         string
+	RatingFilter string
+	Search       string
+	Page         int
+	PageSize     int
+}
+
+func escapeLikePattern(s string) string {
+	r := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
+	return "%" + r.Replace(s) + "%"
 }
 
 type repository struct {
@@ -51,8 +61,10 @@ func (r *repository) CreateReview(review *Review) error {
 	return r.db.Create(review).Error
 }
 
-func (r *repository) FindReviewsByUser(userID uint, filter ReviewFilter) ([]Review, error) {
-	q := r.db.Preload("User").Where("user_id = ?", userID)
+// userReviewScope applies the owner/privacy-relevant scope shared by the list and its summary:
+// author, visibility and date range. Rating filter, search and paging are NOT part of it.
+func (r *repository) userReviewScope(userID uint, filter ReviewFilter) *gorm.DB {
+	q := r.db.Model(&Review{}).Where("user_id = ?", userID)
 
 	switch filter.Visibility {
 	case "public":
@@ -69,10 +81,65 @@ func (r *repository) FindReviewsByUser(userID uint, filter ReviewFilter) ([]Revi
 	if filter.DateTo != nil {
 		q = q.Where("created_at <= ?", *filter.DateTo)
 	}
+	return q
+}
+
+// userReviewSummaryRow is one grouped-aggregate result over the scope of userReviewScope.
+type userReviewSummaryRow struct {
+	Count     int
+	RatingSum float64
+	High      int
+	Low       int
+	WithText  int
+}
+
+// SummarizeReviewsByUser counts the user's reviews in one query, ignoring rating filter, search and paging.
+func (r *repository) SummarizeReviewsByUser(userID uint, filter ReviewFilter) (userReviewSummaryRow, error) {
+	var row userReviewSummaryRow
+	err := r.userReviewScope(userID, filter).
+		Select(`COUNT(*) AS count,
+			COALESCE(SUM(rating), 0) AS rating_sum,
+			COUNT(*) FILTER (WHERE rating >= ?) AS high,
+			COUNT(*) FILTER (WHERE rating <= ?) AS low,
+			COUNT(*) FILTER (WHERE BTRIM(body) <> '') AS with_text`, HighRatingMin, LowRatingMax).
+		Scan(&row).Error
+	return row, err
+}
+
+func (r *repository) FindReviewsByUser(userID uint, filter ReviewFilter, offset, limit int) ([]Review, int64, error) {
+	q := r.userReviewScope(userID, filter)
+
+	switch filter.RatingFilter {
+	case ReviewRatingFilterHigh:
+		q = q.Where("rating >= ?", HighRatingMin)
+	case ReviewRatingFilterLow:
+		q = q.Where("rating <= ?", LowRatingMax)
+	case ReviewRatingFilterWithText:
+		q = q.Where("BTRIM(body) <> ''")
+	}
+
+	if filter.Search != "" {
+		q = q.Where("body ILIKE ? ESCAPE '\\'", escapeLikePattern(filter.Search))
+	}
+
+	var total int64
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	orderClause := "created_at DESC, id DESC"
+	switch filter.Sort {
+	case ReviewSortOldest:
+		orderClause = "created_at ASC, id ASC"
+	case ReviewSortHighest:
+		orderClause = "rating DESC, created_at DESC, id DESC"
+	case ReviewSortLowest:
+		orderClause = "rating ASC, created_at DESC, id DESC"
+	}
 
 	var reviews []Review
-	err := q.Order("created_at DESC").Find(&reviews).Error
-	return reviews, err
+	err := q.Preload("User").Order(orderClause).Offset(offset).Limit(limit).Find(&reviews).Error
+	return reviews, total, err
 }
 
 // FindReviewsByMedia returns one page of the public reviews of a title whose authors the viewer
@@ -147,6 +214,20 @@ func (r *repository) GetMediaRating(ctx context.Context, id shared.MediaIdentity
 			id.ID, string(id.Type)).
 		Scan(&res).Error
 	return shared.RatingStats{Average: res.AvgRating, Count: res.ReviewCount}, err
+}
+
+// GetMediaRatingBuckets returns grouped rating counts for the exact same population as GetMediaRating
+// (visibility = 'public' AND deleted_at IS NULL).
+func (r *repository) GetMediaRatingBuckets(ctx context.Context, id shared.MediaIdentity) ([]RatingBucket, error) {
+	var rows []RatingBucket
+	err := r.db.WithContext(ctx).Model(&Review{}).
+		Select("rating, COUNT(*) AS count").
+		Where("media_id = ? AND media_type = ? AND visibility = 'public' AND deleted_at IS NULL",
+			id.ID, string(id.Type)).
+		Group("rating").
+		Order("rating ASC").
+		Scan(&rows).Error
+	return rows, err
 }
 
 func (r *repository) GetBatchMediaRatings(ctx context.Context, ids []shared.MediaIdentity) (map[shared.MediaKey]shared.RatingStats, error) {

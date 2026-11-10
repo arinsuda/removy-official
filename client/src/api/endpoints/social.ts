@@ -11,14 +11,34 @@ import type {
   FollowActionResponse,
   FollowUserSummary,
   FeedItemResponse,
+  MediaRatingResponse,
+  UserReviewsSummary,
 } from "@/types"
 
 export type ReviewVisibilityFilter = "all" | "public" | "private"
+export type ReviewSortParam = "newest" | "oldest" | "highest" | "lowest"
+export type ReviewRatingFilterParam = "all" | "high" | "low" | "withText"
+
+export interface ReviewListPagination {
+  page: number
+  page_size: number
+  total: number
+  has_more: boolean
+}
+
+export interface UserReviewsResponse {
+  reviews: ReviewResponse[]
+  pagination?: ReviewListPagination
+  summary?: UserReviewsSummary
+}
 
 export interface GetUserReviewsParams {
   page?: number
-  limit?: number
+  page_size?: number
   visibility?: ReviewVisibilityFilter
+  sort?: ReviewSortParam
+  filter?: ReviewRatingFilterParam
+  search?: string
   date_from?: string
   date_to?: string
   year?: number
@@ -30,7 +50,7 @@ export const reviewApi = {
     api.post<{ review: ReviewResponse }>("/reviews", data),
 
   getUserReviews: (userId: number, params: GetUserReviewsParams = {}) =>
-    api.get<{ reviews: ReviewResponse[] }>(`/reviews/user/${userId}`, {
+    api.get<UserReviewsResponse>(`/reviews/user/${userId}`, {
       params,
     }),
 
@@ -50,6 +70,12 @@ export const reviewApi = {
   /** The signed-in user's own review of a title, or null. GET /reviews/media/:type/:id/me */
   getMyReview: (mediaType: "movie" | "tv", mediaId: number) =>
     api.get<{ review: ReviewResponse | null }>(`/reviews/media/${mediaType}/${mediaId}/me`),
+
+  /** Public aggregate rating + 10-step distribution. GET /reviews/media/:type/:id/rating */
+  getMediaRating: (mediaType: "movie" | "tv" | "movies", mediaId: number) => {
+    const mt = mediaType === "movies" ? "movie" : mediaType === "tv" ? "tv" : mediaType
+    return api.get<{ rating: MediaRatingResponse }>(`/reviews/media/${mt}/${mediaId}/rating`)
+  },
 
   updateReview: (reviewId: number, data: UpdateReviewRequest) =>
     api.patch<{ review: ReviewResponse }>(

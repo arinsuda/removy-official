@@ -10,6 +10,7 @@
         <p class="cd__vis"><component :is="LIST_VISIBILITY_ICONS[list.visibility]" :size="13" aria-hidden="true" />{{ t(`visibility.${list.visibility}`) }}</p>
       </div>
       <div v-if="list && isOwner" class="cd__actions">
+        <AppButton size="sm" variant="primary" data-action="add-to-list" @click="showAdd = true"><Plus :size="15" aria-hidden="true" />{{ t("library.lists.addTitles") }}</AppButton>
         <AppButton size="sm" variant="outline" data-action="edit-list" @click="showEditor = true"><PenLine :size="15" aria-hidden="true" />{{ t("library.customLists.detail.edit") }}</AppButton>
         <AppButton size="sm" variant="outline" data-action="delete-list" @click="showDelete = true"><Trash2 :size="15" aria-hidden="true" />{{ t("library.customLists.detail.delete") }}</AppButton>
       </div>
@@ -20,7 +21,11 @@
     <AppErrorState v-else-if="error" :title="t('library.customLists.detail.errorTitle')" :description="t('library.customLists.detail.errorBody')" @retry="load()" />
 
     <template v-else-if="list">
-      <AppEmptyState v-if="!items.length" :icon="ListIcon" :title="t(isOwner ? 'library.customLists.detail.emptyOwnerTitle' : 'library.customLists.detail.emptyVisitorTitle')" :description="isOwner ? t('library.customLists.detail.emptyOwnerBody') : undefined" />
+      <AppEmptyState v-if="!items.length" :icon="ListIcon" :title="t(isOwner ? 'library.customLists.detail.emptyOwnerTitle' : 'library.customLists.detail.emptyVisitorTitle')" :description="isOwner ? t('library.customLists.detail.emptyOwnerBody') : undefined">
+        <template v-if="isOwner" #action>
+          <AppButton size="sm" variant="primary" data-action="add-to-list-empty" @click="showAdd = true"><Plus :size="15" aria-hidden="true" />{{ t("library.lists.addTitles") }}</AppButton>
+        </template>
+      </AppEmptyState>
       <template v-else>
         <TabToolbar v-model:query="tabList.query.value" v-model:sort="tabList.sort.value" :count-label="t('library.lists.count', { n: total }, total)" :sorts="sorts" />
         <p v-if="isOwner && tabList.sort.value !== 'position'" class="cd__note">{{ t("library.customLists.detail.reorderHint") }}</p>
@@ -62,6 +67,7 @@
 
     <p class="sr-only" role="status" aria-live="polite">{{ announcement }}</p>
 
+    <LibraryAddSheet v-if="isOwner && list" v-model="showAdd" :list-id="list.id" :list-name="list.name" :saved-keys="savedKeys" @added="load()" />
     <ListEditorModal v-if="isOwner && list" v-model="showEditor" :list="list" :items="items" @saved="onSaved" />
     <ConfirmModal v-if="isOwner && list" v-model="showDelete" list-type="custom_list_delete" :item-name="list.name" :confirm-disabled="deleting" @confirm="onDelete" @cancel="showDelete = false" />
   </section>
@@ -70,7 +76,7 @@
 <script setup lang="ts">
 import { computed, ref, useId } from "vue"
 import { useI18n } from "vue-i18n"
-import { ArrowDown, ArrowUp, ChevronLeft, GripVertical, List as ListIcon, PenLine, Trash2 } from "lucide-vue-next"
+import { ArrowDown, ArrowUp, ChevronLeft, GripVertical, List as ListIcon, PenLine, Plus, Trash2 } from "lucide-vue-next"
 import { listApi } from "@/api/endpoints/list"
 import AppButton from "@/components/ui/AppButton.vue"
 import AppEmptyState from "@/components/ui/AppEmptyState.vue"
@@ -91,6 +97,7 @@ import type { ListSummary } from "@/types"
 import { LIST_VISIBILITY_ICONS } from "../config"
 import { moveIndex, useListReorder } from "../useListReorder"
 import { useCustomListDetail } from "../useCustomListDetail"
+import LibraryAddSheet from "./LibraryAddSheet.vue"
 import ListEditorModal from "./ListEditorModal.vue"
 
 interface ListEntry extends ProfileEntry {
@@ -107,12 +114,14 @@ const titleId = useId()
 const { list, items, loading, loadingMore, error, hasMore, total, load, loadMore, loadAll, mutate } = useCustomListDetail(() => props.listId)
 
 const isOwner = computed(() => !!list.value && list.value.user_id === props.currentUserId)
+const showAdd = ref(false)
 const showEditor = ref(false)
 const showDelete = ref(false)
 const deleting = ref(false)
 const announcement = ref("")
 
 const entries = computed<ListEntry[]>(() => items.value.map((i) => ({ id: i.id, position: i.position, media: summaryToHomeMedia(i.media), at: i.added_at })))
+const savedKeys = computed(() => new Set(entries.value.map((e) => e.media.key)))
 const byKey = computed(() => new Map(entries.value.map((e) => [e.media.key, e])))
 // Only items from `visible` reach the footer slot, and each has an entry.
 const entryOf = (item: HomeMedia) => byKey.value.get(item.key)!

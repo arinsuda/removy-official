@@ -247,6 +247,8 @@
     "detail": {
       "edit": "แก้ไข",
       "delete": "ลบ",
+      "addTitle": "เพิ่มลงใน {name}",
+      "toastAdded": "เพิ่ม \"{title}\" ลงใน {name} แล้ว",
       "notFoundTitle": "ไม่พบลิสต์นี้",
       "notFoundBody": "ลิสต์อาจถูกลบหรือเปลี่ยนเป็นส่วนตัวแล้ว",
       "forbiddenTitle": "ลิสต์นี้เป็นส่วนตัว",

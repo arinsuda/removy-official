@@ -5,7 +5,7 @@
       <div class="tb__tools">
         <label v-if="searchable" class="tb__search">
           <Search :size="14" aria-hidden="true" />
-          <input v-model="query" type="search" class="tb__input" :placeholder="t('profile.tabContent.common.search')" :aria-label="t('profile.tabContent.common.search')" />
+          <input v-model="query" type="search" class="tb__input" :placeholder="searchPlaceholder ?? t('profile.tabContent.common.search')" :aria-label="searchPlaceholder ?? t('profile.tabContent.common.search')" />
         </label>
         <label v-if="sorts.length" class="tb__sort">
           <span class="sr-only">{{ t("profile.tabContent.common.sort") }}</span>
@@ -46,6 +46,8 @@ withDefaults(
     filters?: ToolbarOption[]
     sorts?: ToolbarOption[]
     searchable?: boolean
+    /** Overrides the default search hint when a tab searches something narrower. */
+    searchPlaceholder?: string
     viewToggle?: boolean
     /** Accessible names for the grid/list buttons when a tab calls them something else. */
     viewLabels?: Partial<Record<ViewMode, string>>

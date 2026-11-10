@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strconv"
 
+	"github.com/arinsuda/movie-hub/internal/shared"
 	mw "github.com/arinsuda/movie-hub/middleware"
 	"github.com/gofiber/fiber/v3"
 )
@@ -47,7 +48,7 @@ func (h *Handler) ListUsers(c fiber.Ctx) error {
 func (h *Handler) UpdateUserRole(c fiber.Ctx) error {
 	claims := mw.GetClaims(c)
 	if claims == nil || claims.UserID == 0 {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+		return shared.WriteAPIError(c, fiber.StatusUnauthorized, shared.ErrorCodeUnauthorized, "unauthorized")
 	}
 
 	targetUserID, err := parseIDParam(c, "userId")
@@ -74,7 +75,7 @@ func (h *Handler) UpdateUserRole(c fiber.Ctx) error {
 func (h *Handler) UpdateUserStatus(c fiber.Ctx) error {
 	claims := mw.GetClaims(c)
 	if claims == nil || claims.UserID == 0 {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+		return shared.WriteAPIError(c, fiber.StatusUnauthorized, shared.ErrorCodeUnauthorized, "unauthorized")
 	}
 
 	targetUserID, err := parseIDParam(c, "userId")
@@ -101,7 +102,7 @@ func (h *Handler) UpdateUserStatus(c fiber.Ctx) error {
 func (h *Handler) DeleteUser(c fiber.Ctx) error {
 	claims := mw.GetClaims(c)
 	if claims == nil || claims.UserID == 0 {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+		return shared.WriteAPIError(c, fiber.StatusUnauthorized, shared.ErrorCodeUnauthorized, "unauthorized")
 	}
 
 	targetUserID, err := parseIDParam(c, "userId")
@@ -134,7 +135,7 @@ func (h *Handler) ListReviews(c fiber.Ctx) error {
 func (h *Handler) DeleteReview(c fiber.Ctx) error {
 	claims := mw.GetClaims(c)
 	if claims == nil || claims.UserID == 0 {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+		return shared.WriteAPIError(c, fiber.StatusUnauthorized, shared.ErrorCodeUnauthorized, "unauthorized")
 	}
 
 	reviewID, err := parseIDParam(c, "reviewId")
@@ -175,26 +176,26 @@ func parseIDParam(c fiber.Ctx, param string) (uint, error) {
 func handleError(c fiber.Ctx, err error) error {
 	switch {
 	case errors.Is(err, ErrUserNotFound):
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "user not found"})
+		return shared.WriteAPIError(c, fiber.StatusNotFound, shared.ErrorCodeUserNotFound, "user not found")
 	case errors.Is(err, ErrReviewNotFound):
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "review not found"})
+		return shared.WriteAPIError(c, fiber.StatusNotFound, shared.ErrorCodeReviewNotFound, "review not found")
 	case errors.Is(err, ErrRoleNotFound):
-		return badRequest(c, "invalid role: must be 'admin' or 'user'")
+		return shared.WriteAPIError(c, fiber.StatusBadRequest, shared.ErrorCodeInvalidRole, "invalid role: must be 'admin' or 'user'")
 	case errors.Is(err, ErrSelfDeactivation):
-		return badRequest(c, "cannot deactivate your own account")
+		return shared.WriteAPIError(c, fiber.StatusBadRequest, shared.ErrorCodeSelfDeactivation, "cannot deactivate your own account")
 	case errors.Is(err, ErrSelfDeletion):
-		return badRequest(c, "cannot delete your own account")
+		return shared.WriteAPIError(c, fiber.StatusBadRequest, shared.ErrorCodeSelfDeletion, "cannot delete your own account")
 	case errors.Is(err, ErrUserAlreadyInStatus):
-		return badRequest(c, "user is already in requested status")
+		return shared.WriteAPIError(c, fiber.StatusBadRequest, shared.ErrorCodeAlreadyInStatus, "user is already in requested status")
 	case errors.Is(err, ErrFinalAdminProtection):
-		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "cannot demote or deactivate final active admin"})
+		return shared.WriteAPIError(c, fiber.StatusConflict, shared.ErrorCodeFinalAdmin, "cannot demote or deactivate final active admin")
 	case errors.Is(err, ErrInactiveUserRoleChange):
-		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "cannot change role of inactive user"})
+		return shared.WriteAPIError(c, fiber.StatusConflict, shared.ErrorCodeInactiveUserRole, "cannot change role of inactive user")
 	default:
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal server error"})
+		return shared.WriteAPIError(c, fiber.StatusInternalServerError, shared.ErrorCodeInternal, "internal server error")
 	}
 }
 
 func badRequest(c fiber.Ctx, msg string) error {
-	return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": msg})
+	return shared.WriteAPIError(c, fiber.StatusBadRequest, shared.ErrorCodeInvalidInput, msg)
 }

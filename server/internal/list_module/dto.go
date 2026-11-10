@@ -44,6 +44,7 @@ type ListSummary struct {
 	CoverPoster    string                        `json:"cover_poster,omitempty"`
 	CollagePosters []string                      `json:"collage_posters"`
 	ContainsMedia  *bool                         `json:"contains_media,omitempty"`
+	ItemID         *uint                         `json:"item_id,omitempty"`
 	CreatedAt      time.Time                     `json:"created_at"`
 	UpdatedAt      time.Time                     `json:"updated_at"`
 }

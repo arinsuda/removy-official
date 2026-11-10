@@ -214,6 +214,7 @@
     "selfDelete": "You can't delete your own account.",
     "alreadyStatus": "This account already has that status.",
     "invalidRole": "That role isn't valid.",
+    "invalidInput": "Some of the information entered isn't valid.",
     "notFound": "That item no longer exists. The list will refresh.",
     "forbidden": "You don't have permission to do that.",
     "generic": "Something went wrong. Please try again."
