@@ -49,7 +49,7 @@ func RegisterRoutes(
 	users.Get("/:userId", h.GetProfile)
 	users.Patch("/:userId", h.UpdateProfile)
 	users.Delete("/:userId", selfRemovalLimit, h.DeleteUser)
-	users.Post("/me/erasure-request", requireXHRJSON, selfRemovalLimit, h.RequestErasure)
+	users.Post("/me/erasure-request", requireJSON, selfRemovalLimit, h.RequestErasure)
 	users.Patch("/:userId/genres", h.UpdateFavoriteGenres)
 	users.Post("/:userId/email", ratelimit.New(5, time.Hour, userKey), h.RequestEmailChange)
 	users.Put("/:userId/email", h.VerifyEmailChange)

@@ -8,8 +8,13 @@ export const LOCK_WAIT_MS = 20000;
 
 // Only a rejected session may log the user out. A 5xx (the server could not check the
 // session) or a network error says nothing about the refresh token, so it must not.
+// A 403 XHR_HEADER_REQUIRED is a missing-header bug, not a dead session.
+export const XHR_HEADER_REQUIRED_CODE = "XHR_HEADER_REQUIRED";
+
 export function isSessionRejected(error: unknown): boolean {
-  const status = (error as { response?: { status?: number } })?.response?.status;
+  const response = (error as { response?: { status?: number; data?: { code?: string } } })?.response;
+  if (response?.data?.code === XHR_HEADER_REQUIRED_CODE) return false;
+  const status = response?.status;
   return status === 400 || status === 401 || status === 403;
 }
 

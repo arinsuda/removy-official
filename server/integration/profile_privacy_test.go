@@ -26,6 +26,7 @@ func (e *env) patchProfile(uid uint, fields map[string]string, token string) (in
 	req := httptest.NewRequest("PATCH", fmt.Sprintf("/api/users/%d", uid), &buf)
 	req.Header.Set("Content-Type", w.FormDataContentType())
 	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("X-Requested-With", "XMLHttpRequest")
 	resp, err := e.app.Test(req, fiber.TestConfig{Timeout: 10 * time.Second})
 	if err != nil {
 		e.t.Fatal(err)

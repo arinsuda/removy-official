@@ -202,7 +202,7 @@ func TestErasureRequestRejectsCrossSiteStyleRequests(t *testing.T) {
 	p := e.loginPair("me@x.test", "my-password1")
 	body := `{"password":"my-password1"}`
 
-	if code, res := e.doWith("POST", erasurePath, body, p.AccessToken, nil, "text/plain"); code != 415 || res["code"] != "UNSUPPORTED_MEDIA_TYPE" {
+	if code, res := e.doWith("POST", erasurePath, body, p.AccessToken, map[string]string{"X-Requested-With": "XMLHttpRequest"}, "text/plain"); code != 415 || res["code"] != "UNSUPPORTED_MEDIA_TYPE" {
 		t.Fatalf("text/plain: %d %v", code, res)
 	}
 	if code, res := e.doWith("POST", erasurePath, body, p.AccessToken, nil, "application/json"); code != 403 || res["code"] != "XHR_HEADER_REQUIRED" {

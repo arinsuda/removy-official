@@ -15,6 +15,7 @@ import (
 	"github.com/arinsuda/movie-hub/database"
 	"github.com/arinsuda/movie-hub/internal/mailer"
 	tmdb "github.com/arinsuda/movie-hub/internal/tmdb_module"
+	mw "github.com/arinsuda/movie-hub/middleware"
 	"github.com/arinsuda/movie-hub/router"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/adaptor"
@@ -40,12 +41,7 @@ func main() {
 		ErrorHandler: customErrorHandler,
 	})
 
-	app.Use(cors.New(cors.Config{
-		AllowOrigins:     cfg.CORS.AllowedOrigins,
-		AllowCredentials: true,
-		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-	}))
+	app.Use(cors.New(corsConfig(cfg.CORS.AllowedOrigins)))
 
 	workerCtx, stopWorkers := context.WithCancel(context.Background())
 	defer stopWorkers()
@@ -62,8 +58,8 @@ func main() {
 				w.Header().Set("Vary", "Origin")
 				w.Header().Set("Access-Control-Allow-Origin", origin)
 				w.Header().Set("Access-Control-Allow-Credentials", "true")
-				w.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, Authorization, X-Requested-With")
-				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+				w.Header().Set("Access-Control-Allow-Headers", strings.Join(corsAllowHeaders, ", "))
+				w.Header().Set("Access-Control-Allow-Methods", strings.Join(corsAllowMethods, ", "))
 			}
 			if r.Method == http.MethodOptions {
 				w.WriteHeader(http.StatusNoContent)
@@ -102,6 +98,23 @@ func main() {
 	}
 
 	log.Println("👋 Server exited cleanly")
+}
+
+// CORS lists shared by Fiber and the /socket.io handler. X-Requested-With must stay allowed: the
+// SPA sends it on every unsafe request (CSRF guard), so the preflight fails without it.
+var (
+	corsAllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization", mw.HeaderRequestedWith}
+	corsAllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
+)
+
+// corsConfig builds the Fiber CORS middleware config from the exact-origin allowlist.
+func corsConfig(origins []string) cors.Config {
+	return cors.Config{
+		AllowOrigins:     origins,
+		AllowCredentials: true,
+		AllowHeaders:     corsAllowHeaders,
+		AllowMethods:     corsAllowMethods,
+	}
 }
 
 // mergeForwardedFor joins repeated X-Forwarded-For lines into one comma-joined
