@@ -26,6 +26,7 @@ const target: AdminUserRow = {
   is_active: false,
   created_at: "2026-01-02T00:00:00Z",
   deleted_at: "2026-02-03T00:00:00Z",
+  erasure_due_at: null,
   review_count: 0,
 }
 

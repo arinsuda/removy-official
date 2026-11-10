@@ -1,11 +1,22 @@
 package user_module
 
 import (
+	"encoding/json"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/arinsuda/movie-hub/internal/identity_policy"
 	"gorm.io/gorm"
+)
+
+const (
+	// AuditActionErasureRequested is the admin_audit_logs action written when a user asks for erasure.
+	AuditActionErasureRequested = "USER_ERASURE_REQUESTED"
+	auditTargetUser             = "user"
+	auditMetaDueAt              = "erasure_due_at"
+	// erasureDateLayout is the date shown in the confirmation mail (UTC, locale-neutral).
+	erasureDateLayout = "2006-01-02"
 )
 
 var (
@@ -113,6 +124,19 @@ func (r *repository) findCredentials(id uint) (username string, password *string
 	return row.Username, row.Password, nil
 }
 
+// findContact returns the address and username of an account, including a deactivated one.
+func (r *repository) findContact(id uint) (email, username string, err error) {
+	var row struct{ Email, Username string }
+	res := r.db.Raw(`SELECT email, username FROM users WHERE id = ?`, id).Scan(&row)
+	if res.Error != nil {
+		return "", "", res.Error
+	}
+	if res.RowsAffected == 0 {
+		return "", "", ErrUserNotFound
+	}
+	return row.Email, row.Username, nil
+}
+
 func (r *repository) UpdateProfile(id uint, updates map[string]any) error {
 	result := r.db.Model(&User{}).Where("id = ?", id).Updates(updates)
 	if result.Error != nil {
@@ -127,6 +151,17 @@ func (r *repository) UpdateProfile(id uint, updates map[string]any) error {
 // DeleteUser deactivates the account and revokes its sessions in one transaction.
 // The last active admin cannot remove itself.
 func (r *repository) DeleteUser(id uint, sessionVersion int) error {
+	return r.deactivateSelf(id, sessionVersion, nil)
+}
+
+// RequestErasure is DeleteUser plus erasure_due_at, in the same transaction.
+func (r *repository) RequestErasure(id uint, sessionVersion int, dueAt time.Time) error {
+	return r.deactivateSelf(id, sessionVersion, &dueAt)
+}
+
+// deactivateSelf deactivates the account and revokes its sessions; a non-nil dueAt also
+// schedules the permanent erasure.
+func (r *repository) deactivateSelf(id uint, sessionVersion int, dueAt *time.Time) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		if err := identity_policy.LockAdminGuard(tx); err != nil {
 			return err
@@ -157,8 +192,8 @@ func (r *repository) DeleteUser(id uint, sessionVersion int) error {
 		}
 
 		result := tx.Exec(
-			"UPDATE users SET is_active = false, token_version = token_version + 1, updated_at = now() WHERE id = ? AND deleted_at IS NULL",
-			id,
+			"UPDATE users SET is_active = false, token_version = token_version + 1, updated_at = now(), erasure_due_at = ? WHERE id = ? AND deleted_at IS NULL",
+			dueAt, id,
 		)
 		if result.Error != nil {
 			return result.Error
@@ -166,7 +201,16 @@ func (r *repository) DeleteUser(id uint, sessionVersion int) error {
 		if result.RowsAffected == 0 {
 			return ErrUserNotFound
 		}
-		return identity_policy.RevokeSessionScope(tx, id)
+		if err := identity_policy.RevokeSessionScope(tx, id); err != nil {
+			return err
+		}
+		if dueAt == nil {
+			return nil
+		}
+		// Non-PII: the due date only. admin_id NULL marks a user-initiated row.
+		meta, _ := json.Marshal(map[string]string{auditMetaDueAt: dueAt.UTC().Format(time.RFC3339)})
+		return tx.Exec(`INSERT INTO admin_audit_logs (admin_id, action, target_type, target_id, meta_data, created_at)
+			VALUES (NULL, ?, ?, ?, ?::jsonb, now())`, AuditActionErasureRequested, auditTargetUser, id, string(meta)).Error
 	})
 }
 

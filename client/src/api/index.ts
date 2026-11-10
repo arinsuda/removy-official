@@ -15,6 +15,8 @@ const api = axios.create({
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
+    // Destructive routes (erasure request) require it: a cross-site form cannot set it without a CORS preflight.
+    "X-Requested-With": "XMLHttpRequest",
   },
 });
 

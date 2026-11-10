@@ -65,6 +65,9 @@ type User struct {
 	FirstLoginAt    *time.Time `gorm:"default:null"`
 	// OnboardedAt is set once, when the user saves or skips favorite genres.
 	OnboardedAt *time.Time
+	// ErasureDueAt is set when the user asks for permanent erasure: the purge worker removes the
+	// account once it passes. -:migration: migration 20261112_users_erasure_due_at adds it.
+	ErasureDueAt *time.Time `gorm:"-:migration"`
 
 	// Read-only for GORM: written only through the identity policy (raw SQL).
 	// -:migration keeps AutoMigrate from adding them; migration 20261107_account_security_columns does.

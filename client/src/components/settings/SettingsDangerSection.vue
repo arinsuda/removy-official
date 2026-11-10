@@ -3,6 +3,7 @@
     <div>
       <AppButton variant="danger" @click="open = true">{{ t("settings.danger.open") }}</AppButton>
     </div>
+    <SettingsEraseAccount :user="user" />
   </SettingsCard>
 
   <AppModal v-model="open" role="alertdialog" size="sm" :title="t('settings.danger.modalTitle')" :dismiss-disabled="loading">
@@ -53,6 +54,7 @@ import AppInput from "@/components/ui/AppInput.vue"
 import AppModal from "@/components/ui/AppModal.vue"
 import type { UserProfile } from "@/types/user"
 import SettingsCard from "./SettingsCard.vue"
+import SettingsEraseAccount from "./SettingsEraseAccount.vue"
 import { deleteErrorKey } from "./deleteAccount"
 
 const props = defineProps<{ user: UserProfile }>()

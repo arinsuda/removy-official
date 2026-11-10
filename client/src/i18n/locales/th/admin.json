@@ -73,7 +73,9 @@
     "statusDeleted": "ลบแล้ว",
     "actionErase": "ลบถาวร",
     "deletedOn": "ลบเมื่อ {date}",
-    "badgeDeleted": "ลบแล้ว"
+    "badgeDeleted": "ลบแล้ว",
+    "badgeErasurePending": "รอลบถาวร",
+    "erasureDueOn": "ลบถาวร {date}"
   },
   "reviews": {
     "title": "จัดการรีวิว",
@@ -130,6 +132,8 @@
     "emptyTitle": "ยังไม่มีบันทึก",
     "emptyDesc": "ยังไม่มีรายการที่ตรงกับตัวกรองเหล่านี้",
     "byAdmin": "โดย {'@'}{admin}",
+    "bySystem": "โดยระบบ",
+    "byAccountOwner": "โดยเจ้าของบัญชี",
     "byDeletedAdmin": "โดยแอดมินที่ถูกลบแล้ว",
     "target": "{type} #{id}",
     "noReason": "ไม่ได้ระบุเหตุผล",
@@ -142,7 +146,9 @@
       "USER_ROLE_CHANGED": "เปลี่ยนสิทธิ์",
       "USER_DELETED": "ลบบัญชี",
       "REVIEW_DELETED": "ลบรีวิว",
-      "USER_ERASED": "ลบบัญชีถาวร"
+      "USER_ERASED": "ลบบัญชีถาวร",
+      "USER_ERASURE_REQUESTED": "ขอลบบัญชีถาวร",
+      "USER_ERASED_SCHEDULED": "ลบบัญชีถาวรตามกำหนด"
     }
   },
   "nav": {

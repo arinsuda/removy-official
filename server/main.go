@@ -47,8 +47,11 @@ func main() {
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 	}))
 
+	workerCtx, stopWorkers := context.WithCancel(context.Background())
+	defer stopWorkers()
+
 	m := mailer.New(cfg.Brevo)
-	notifHub := router.Register(app, database.DB, cfg, m)
+	notifHub := router.Register(workerCtx, app, database.DB, cfg, m)
 
 	fiberHandler := adaptor.FiberApp(app)
 
@@ -84,6 +87,7 @@ func main() {
 	go func() {
 		<-quit
 		log.Println("🛑 Shutting down server...")
+		stopWorkers()
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()

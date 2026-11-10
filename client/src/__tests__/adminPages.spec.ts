@@ -42,6 +42,7 @@ const user = (over = {}) => ({
   is_active: true,
   created_at: "2026-01-02T00:00:00Z",
   deleted_at: null,
+  erasure_due_at: null,
   review_count: 3,
   ...over,
 })

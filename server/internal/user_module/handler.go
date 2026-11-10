@@ -130,6 +130,47 @@ func (h *Handler) DeleteUser(c fiber.Ctx) error {
 	return c.Status(fiber.StatusNoContent).Send(nil)
 }
 
+// RequestErasure schedules the caller's permanent erasure. 202: the account is deactivated now
+// and removed by the purge worker when erasure_due_at passes.
+// Messages and header values used by requireXHRJSON.
+const (
+	msgUnsupportedMedia = "content type must be application/json"
+	msgXHRRequired      = "missing X-Requested-With header"
+	headerRequestedWith = "X-Requested-With"
+	requestedWithXHR    = "XMLHttpRequest"
+)
+
+// requireXHRJSON blocks cross-site form posts on a destructive route. The JSON binder ignores
+// Content-Type, so a text/plain form from another site would otherwise carry the SameSite=None
+// cookie. A browser cannot add a custom header cross-site without a CORS preflight, which only
+// the configured origins pass.
+func requireXHRJSON(c fiber.Ctx) error {
+	if ct := strings.ToLower(c.Get(fiber.HeaderContentType)); !strings.HasPrefix(ct, fiber.MIMEApplicationJSON) {
+		return c.Status(fiber.StatusUnsupportedMediaType).JSON(fiber.Map{"code": apierr.ErrorCodeUnsupportedMedia, "error": msgUnsupportedMedia})
+	}
+	if c.Get(headerRequestedWith) != requestedWithXHR {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"code": apierr.ErrorCodeXHRRequired, "error": msgXHRRequired})
+	}
+	return c.Next()
+}
+
+func (h *Handler) RequestErasure(c fiber.Ctx) error {
+	claims := mw.GetClaims(c)
+
+	var req DeleteAccountRequest
+	if len(c.Body()) > 0 {
+		if err := c.Bind().JSON(&req); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"code": apierr.ErrorCodeInvalidBody, "error": msgInvalidBody})
+		}
+	}
+
+	dueAt, err := h.svc.RequestErasure(claims.UserID, claims.TokenVersion, req)
+	if err != nil {
+		return handleError(c, err)
+	}
+	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{"erasure_due_at": dueAt})
+}
+
 func (h *Handler) UpdateFavoriteGenres(c fiber.Ctx) error {
 	targetID, err := parseUserID(c)
 	if err != nil {

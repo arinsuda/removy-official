@@ -36,6 +36,8 @@ export interface AdminUserRow {
   is_active: boolean
   created_at: string
   deleted_at: string | null
+  /** Set while the user's own permanent-erasure request is pending. */
+  erasure_due_at: string | null
   review_count: number
 }
 

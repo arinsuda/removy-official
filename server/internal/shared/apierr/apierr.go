@@ -44,6 +44,8 @@ const (
 	ErrorCodeWrongPassword     ErrorCode = "WRONG_PASSWORD"
 	ErrorCodePasswordNotSet    ErrorCode = "PASSWORD_NOT_SET"
 	ErrorCodeInvalidBody       ErrorCode = "INVALID_BODY"
+	ErrorCodeUnsupportedMedia  ErrorCode = "UNSUPPORTED_MEDIA_TYPE"
+	ErrorCodeXHRRequired       ErrorCode = "XHR_HEADER_REQUIRED"
 	// ErrorCodeConfirmUsername is the wire code for a wrong confirm_username (distinct from ErrorCodeConfirmMismatch).
 	ErrorCodeConfirmUsername ErrorCode = "CONFIRM_MISMATCH"
 )
