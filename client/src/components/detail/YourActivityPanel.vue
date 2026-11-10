@@ -47,7 +47,7 @@
 import { computed, useId } from "vue"
 import { useI18n } from "vue-i18n"
 import { RouterLink, useRoute } from "vue-router"
-import StarRatingInput from "@/components/movie/Starratinginput.vue"
+import StarRatingInput from "@/components/movie/StarRatingInput.vue"
 import type { WatchSummaryResponse } from "@/types/watchLog"
 
 const props = defineProps<{

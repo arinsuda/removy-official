@@ -65,6 +65,7 @@
   import PasswordStrength from "@/components/auth/PasswordStrength.vue"
   import AppButton from "@/components/ui/AppButton.vue"
   import { authApi } from "@/api/api"
+  import { asApiError } from "@/utils/apiError"
 
   const route = useRoute()
   const { t } = useI18n()
@@ -106,8 +107,9 @@
         confirm_password: form.value.confirm_password,
       })
       success.value = true
-    } catch (e: any) {
-      const status = e?.response?.status
+    } catch (err) {
+      const e = asApiError(err)
+      const status = e.response?.status
       if (status === 404 || status === 410 || status === 422) {
         tokenError.value = true
       } else if (status === 400) {

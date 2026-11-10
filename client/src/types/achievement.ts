@@ -43,7 +43,7 @@ export interface NewlyUnlocked {
   exp_gained: number
 }
 
-export interface AchievementQueryParams extends PaginationParams {}
+export type AchievementQueryParams = PaginationParams
 
 export interface UserAchievementQueryParams extends PaginationParams {
   unlocked?: boolean

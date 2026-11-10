@@ -78,6 +78,7 @@
   import { authApi } from "@/api/api"
   import { useI18n } from "vue-i18n"
   import { isRateLimited } from "@/utils/rateLimit"
+  import { asApiError } from "@/utils/apiError"
 
   const { t } = useI18n()
 
@@ -228,14 +229,15 @@
       await authStore.register(form.value)
       await shellRef.value?.playExit()
       router.push({ name: "check-email" })
-    } catch (e: any) {
-      const status = e?.response?.status
-      if (isRateLimited(e)) {
+    } catch (err) {
+      const e = asApiError(err)
+      const status = e.response?.status
+      if (isRateLimited(err)) {
         serverError.value = t("errors.rateLimited")
       } else if (status === 409) {
         serverError.value =
           e?.response?.data?.error ?? t("auth.register.errors.conflict")
-      } else if (status >= 500) {
+      } else if ((status ?? 0) >= 500) {
         serverError.value = t("auth.register.errors.server")
       } else {
         serverError.value =

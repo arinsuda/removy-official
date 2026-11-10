@@ -2,29 +2,29 @@
   <SettingsCard id="profile" :title="t('settings.profile.title')" :description="t('settings.profile.desc')">
     <AvatarPicker :src="user.avatar_url" :preview="avatarPreview" :name="user.display_name || user.username" @pick="emit('avatar', $event)" />
 
-    <AppInput v-model="form.display_name" :label="t('settings.profile.displayName')" :maxlength="DISPLAY_NAME_MAX" :hint="`${len(form.display_name)} / ${DISPLAY_NAME_MAX}`" :placeholder="user.username" />
+    <AppInput v-model="displayName" :label="t('settings.profile.displayName')" :maxlength="DISPLAY_NAME_MAX" :hint="`${len(displayName)} / ${DISPLAY_NAME_MAX}`" :placeholder="user.username" />
 
     <AppInput :model-value="`@${user.username}`" :label="t('settings.profile.username')" :hint="t('settings.profile.usernameHint')" disabled />
 
     <div class="field">
       <label class="field__label" :for="bioId">{{ t("settings.profile.bio") }}</label>
-      <textarea :id="bioId" data-focus-custom v-model="form.bio" class="field__area" rows="3" :maxlength="BIO_MAX" :placeholder="t('settings.profile.bioPlaceholder')" />
-      <p class="field__hint">{{ len(form.bio) }} / {{ BIO_MAX }}</p>
+      <textarea :id="bioId" data-focus-custom v-model="bio" class="field__area" rows="3" :maxlength="BIO_MAX" :placeholder="t('settings.profile.bioPlaceholder')" />
+      <p class="field__hint">{{ len(bio) }} / {{ BIO_MAX }}</p>
     </div>
 
     <div class="field">
       <label class="field__label" :for="dobId">{{ t("settings.profile.dob") }}</label>
-      <input :id="dobId" v-model="form.date_of_birth" type="date" class="field__input" min="1900-01-01" :max="today" />
+      <input :id="dobId" v-model="dateOfBirth" type="date" class="field__input" min="1900-01-01" :max="today" />
     </div>
 
     <fieldset class="field">
       <legend class="field__label">{{ t("settings.profile.gender") }}</legend>
       <div class="chips">
-        <label v-for="g in genders" :key="g" class="chip" :class="{ 'is-on': form.gender === g }">
-          <input v-model="form.gender" type="radio" class="sr-only" :value="g" />{{ t(`settings.profile.genders.${g}`) }}
+        <label v-for="g in genders" :key="g" class="chip" :class="{ 'is-on': gender === g }">
+          <input v-model="gender" type="radio" class="sr-only" :value="g" />{{ t(`settings.profile.genders.${g}`) }}
         </label>
       </div>
-      <AppInput v-if="form.gender === 'other'" v-model="form.gender_other" :label="t('settings.profile.genderOther')" maxlength="100" />
+      <AppInput v-if="gender === 'other'" v-model="genderOther" :label="t('settings.profile.genderOther')" maxlength="100" />
     </fieldset>
   </SettingsCard>
 </template>
@@ -36,9 +36,14 @@ import AppInput from "@/components/ui/AppInput.vue"
 import type { UserProfile } from "@/types/user"
 import AvatarPicker from "./AvatarPicker.vue"
 import SettingsCard from "./SettingsCard.vue"
-import { BIO_MAX, DISPLAY_NAME_MAX, type ProfileFormValues } from "./useProfileForm"
+import { BIO_MAX, DISPLAY_NAME_MAX } from "./useProfileForm"
 
-defineProps<{ user: UserProfile; form: ProfileFormValues; avatarPreview: string | null }>()
+defineProps<{ user: UserProfile; avatarPreview: string | null }>()
+const displayName = defineModel<string>("displayName", { required: true })
+const bio = defineModel<string>("bio", { required: true })
+const dateOfBirth = defineModel<string>("dateOfBirth", { required: true })
+const gender = defineModel<string>("gender", { required: true })
+const genderOther = defineModel<string>("genderOther", { required: true })
 const emit = defineEmits<{ avatar: [blob: Blob] }>()
 const { t } = useI18n()
 const bioId = useId()

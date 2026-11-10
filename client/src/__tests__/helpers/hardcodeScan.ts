@@ -28,6 +28,33 @@ function stripExempt(source: string): string {
   return lines.map((line, i) => (line.includes(MARK) || lines[i - 1]?.includes(MARK) ? "" : line)).join("\n")
 }
 
+const THAI = /[\u0E00-\u0E7F]/
+const STRING_LITERAL = /(["'`])((?:\\.|(?!\1)[^\\])*)\1/g
+/** Calls whose first argument is shown to the user as-is. */
+const UI_SINK = /\b(?:addToast|showToast|toast\.\w+|alert|confirm|prompt)\(\s*(["'`])((?:\\.|(?!\1)[^\\])*)\1/
+
+function scriptOf(source: string, isVue: boolean): { code: string; offset: number } {
+  if (!isVue) return { code: source, offset: 0 }
+  const m = /<script\b[^>]*>([\s\S]*?)<\/script>/.exec(source)
+  if (!m) return { code: "", offset: 0 }
+  return { code: m[1]!, offset: source.slice(0, m.index).split("\n").length }
+}
+
+/** User-facing copy written into code: any Thai string literal, or a literal passed straight to a toast/dialog. */
+function scanScript(source: string, isVue: boolean): string[] {
+  const { code, offset } = scriptOf(source, isVue)
+  const found: string[] = []
+  code.split("\n").forEach((raw, i) => {
+    const line = raw.replace(/\/\/.*$/, "")
+    const trimmed = line.trim()
+    if (trimmed.startsWith("*") || trimmed.startsWith("/*")) return
+    const sink = UI_SINK.exec(line)
+    if (sink && LETTER.test(sink[2]!)) found.push(`script-text @${i + offset}: ${trimmed}`)
+    else if ([...line.matchAll(STRING_LITERAL)].some((m) => THAI.test(m[2]!))) found.push(`script-text @${i + offset}: ${trimmed}`)
+  })
+  return found
+}
+
 function templateOf(source: string): string {
   const start = source.indexOf("<template>")
   const end = source.lastIndexOf("</template>")
@@ -40,6 +67,7 @@ export function scanSource(source: string, isVue: boolean): string[] {
   text.split("\n").forEach((line, i) => {
     for (const rule of LINE_RULES) if (rule.re.test(line)) found.push(`${rule.name} @${i + 1}: ${line.trim()}`)
   })
+  found.push(...scanScript(text, isVue))
   if (!isVue) return found
 
   const tpl = templateOf(text).replace(/<!--[\s\S]*?-->/g, "")

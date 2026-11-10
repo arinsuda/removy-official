@@ -1,7 +1,7 @@
 import type { MediaRatings } from "@/types/movie";
 import type { UserSummary } from "./user";
 import type { MediaSummary } from "./movie";
-import type { MediaType, ListType, Visibility } from "./common";
+import type { MediaType, Visibility } from "./common";
 
 export interface ReviewResponse {
   id: number;

@@ -74,6 +74,7 @@ jobs:
       - run: npm ci
       - run: npm run verify-locales
       - run: npx oxlint src
+      - run: npx eslint src
       - run: npm run type-check
       - run: npm test
       - run: npm run build-only

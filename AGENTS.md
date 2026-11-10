@@ -17,7 +17,7 @@ cd client && npm run build           # type-check + vite build
 cd client && npm run lint            # verify-locales + oxlint + eslint; both linters use --fix, so it EDITS files
 cd client && npm run verify-locales  # locale check only
 ```
-Verify before finishing: `go vet ./... && go test ./...`, `npm run type-check`, `npm test`, `npm run build-only`, and `npm run verify-locales` when locale files change. CI (`.github/workflows/ci.yml`) runs these plus `oxlint` on every push/PR. ESLint is not in CI yet because of existing errors.
+Verify before finishing: `go vet ./... && go test ./...`, `npm run type-check`, `npm test`, `npm run build-only`, and `npm run verify-locales` when locale files change. CI (`.github/workflows/ci.yml`) runs these plus `oxlint` and `eslint src` (no --fix) on every push/PR.
 
 ## Layout (only what matters)
 ```
@@ -41,7 +41,7 @@ client/src/
   views/  route pages        components/<area>/        layouts/ MainLayout, AdminLayout
   components/ui/  UI primitives, see "UI primitives" below    assets/styles/motion.css  motion + focus tokens
   stores/ auth, ui, feed, notification, achievement, admin
-  composables/ useAuth, useSocket, useFollow, useReviewForm, useShareImage, ...
+  composables/ useSocket, useFollow, useReviewForm, useShareImage, ...
   i18n/locales/{en,th}/*.json  UI text, one file per area
 ```
 
@@ -57,7 +57,7 @@ client/src/
 ## Feature -> files map
 | Feature | Backend (`server/internal/`) | Frontend |
 |---|---|---|
-| Auth, email verification, Google OAuth, sessions | auth_module, user_module (password reset, email change mailers) | views/auth/, components/auth/ (AuthShell, AuthField, AuthAlert, GoogleSignInButton, PasswordStrength), stores/auth.ts, composables/useAuth.ts |
+| Auth, email verification, Google OAuth, sessions | auth_module, user_module (password reset, email change mailers) | views/auth/, components/auth/ (AuthShell, AuthField, AuthAlert, GoogleSignInButton, PasswordStrength), stores/auth.ts |
 | Account linking PLANZI<->POPCORN (HMAC server-to-server, handoff token in URL fragment; contract in `../LINKING_SPEC.md`; disabled when `LINK_SHARED_SECRET` is empty; login falls back to remote `verify-password`) | link_module | views/auth/HandoffView.vue (back-to-PLANZI link from public `GET /api/link/remote` -> `{"web_url"}`, 404 when linking is off), api/endpoints/link.ts |
 | Movie, TV, actor, search, upcoming, where-to-watch (`GET /movies/:id/watch-providers`, `/tv/:id/watch-providers`; TMDB/JustWatch, 6h cache) | movie_module (`providers.go`), tmdb_module (`providers.go`) | views/movie/, views/tv/, views/actor/, views/SearchResultView.vue, components/detail/DetailWatchProviders.vue, composables/useWatchProviders.ts |
 | Ratings display (POPCORN primary; TMDB, IMDb, Rotten Tomatoes secondary). Movie/TV lists return `ratings.{popcorn,tmdb}`; detail adds `imdb`, `rotten_tomatoes` from OMDb (`OMDB_API_KEY`, empty = off). `ExternalRating` table caches 7d (1d for not_found), 3s upstream timeout. A stale row is served at once and refreshed in the background; a cold miss waits at most 700ms, then returns unavailable while the fetch fills the cache. `imdb_id` must match `^tt\d{1,10}$` or it is not_found. The 900 req/day budget is in-memory and per instance (resets on restart; N instances allow N x 900), taken inside the singleflight call. Library, likes, BMOL and feed items carry `media.ratings` via `shared.AttachRatings` | movie_module (dto/service), external_rating_module, shared/media_ratings.go | components/movie/MediaRating.vue (`card`/`detail`), PopcornScoreBadge.vue, popcornTier.ts (tiers: none, stale <2.5, fresh 2.5-3.9, hot >=4.0), utils/mediaRatings.ts |
@@ -85,7 +85,7 @@ Use these instead of hand-rolled modals, tabs, inputs, and loading/empty/error s
 - `AppTabs`: tablist with roving tabindex; Arrow, Home, End keys.
 - `AppCard`, `AppEmptyState`, `AppErrorState`: surfaces and the standard empty/error blocks.
 - `AppSpinner`, `LoadingBar`, `skeleton/`: loading states.
-- `components/movie/Starratinginput.vue`: rating slider (0.5 steps, Arrow/Home/End) and read-only half-star display (`readonly`).
+- `components/movie/StarRatingInput.vue`: rating slider (0.5 steps, Arrow/Home/End) and read-only half-star display (`readonly`).
 - Toasts: one global `ToastContainer` is mounted in `App.vue`; push toasts through the ui store, don't mount another.
 - z-index scale (`main.css`): header 100 < legacy modals 9999-99999 < AppModal (`--z-modal-base` 100000, +10 per open modal) < popovers/datepicker menus (`--z-popover`) < toasts (`--z-toast`). Don't add new hard-coded z-index values above 1000.
 - Icons: `primeicons` font (`pi pi-*`) is still loaded for legacy views; PrimeVue itself is removed. Prefer `lucide-vue-next` for new code.

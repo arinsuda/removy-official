@@ -1,5 +1,5 @@
 <template>
-  <AppModal :model-value="!!achievement" size="sm" :title="achievement?.achievement.name" @close="emit('close')">
+  <AppModal :model-value="!!achievement" size="sm" :title="achievement ? achName(achievement.achievement) : undefined" @close="emit('close')">
     <div v-if="achievement" class="ad">
       <span class="ad__icon" :class="{ 'is-on': achievement.is_unlocked }">
         <component :is="getAchievementIcon(achievement.achievement.action_type)" :size="40" :stroke-width="1.6" aria-hidden="true" />
@@ -36,7 +36,7 @@
           <li v-for="(tier, i) in tiers" :key="tier.achievement_id">
             <button type="button" class="ad__tier" :class="{ 'is-current': tier.achievement_id === achievement.achievement_id }" :aria-current="tier.achievement_id === achievement.achievement_id ? 'true' : undefined" @click="emit('select', tier)">
               <span class="ad__tier-n">{{ TIER_NUMERALS[i] ?? i + 1 }}</span>
-              <span class="ad__tier-name">{{ tier.achievement.name }}</span>
+              <span class="ad__tier-name">{{ achName(tier.achievement) }}</span>
               <CheckCircle2 v-if="tier.is_unlocked" :size="16" class="ad__tier-done" aria-hidden="true" />
               <span v-else class="ad__tier-pct">{{ n(progressOf(tier) / 100, "percent") }}</span>
             </button>
@@ -51,7 +51,7 @@
         v-if="isOwner && achievement?.is_unlocked"
         variant="primary"
         data-test="achievement-share-btn"
-        :aria-label="t('achievements.share.action', { name: achievement.achievement.name })"
+        :aria-label="t('achievements.share.action', { name: achName(achievement.achievement) })"
         @click="openShare(achievement)"
       >
         <Share2 :size="15" aria-hidden="true" />{{ t("achievements.share.button") }}
@@ -95,7 +95,7 @@ const props = defineProps<{
 const emit = defineEmits<{ close: []; select: [achievement: UserAchievement] }>()
 
 const { t, n, locale } = useI18n()
-const { description } = useAchievementText()
+const { description, name: achName } = useAchievementText()
 const auth = useAuthStore()
 const shareTarget = ref<UserAchievement | null>(null)
 const shareOpen = ref(false)

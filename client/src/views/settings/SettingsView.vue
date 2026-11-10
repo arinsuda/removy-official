@@ -19,7 +19,7 @@
         </nav>
 
         <div class="settings__content">
-          <SettingsProfileSection :user="user" :form="form" :avatar-preview="avatarPreview" @avatar="setAvatar" />
+          <SettingsProfileSection :user="user" v-model:display-name="form.display_name" v-model:bio="form.bio" v-model:date-of-birth="form.date_of_birth" v-model:gender="form.gender" v-model:gender-other="form.gender_other" :avatar-preview="avatarPreview" @avatar="setAvatar" />
           <SettingsPreferencesSection v-model="form.favorite_genres" />
           <SettingsPrivacySection v-model="form.is_private" />
           <SettingsActivitySection />

@@ -305,7 +305,9 @@ describe("Achievement share cards", () => {
         global: { plugins: [i18n] },
       })
       wrappers.push(w)
-      expect(w.text()).toContain("Critic I")
+      // Names come from i18n by action type + target (review_count_1), not from the server string.
+      expect(w.text()).toContain(i18n.global.t("achievements.names.review_count_1"))
+      expect(w.text()).not.toContain("Critic I")
       expect(w.text()).toContain("Write your first review")
       expect(w.text()).not.toContain("Critic I description")
       expect(w.text()).toContain("Tier I")

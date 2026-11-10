@@ -38,6 +38,7 @@
   import { useRouter, useRoute } from "vue-router"
   import { useI18n } from "vue-i18n"
   import { isRateLimited } from "@/utils/rateLimit"
+  import { asApiError } from "@/utils/apiError"
   import { User as IconUser, Lock as IconLock } from "lucide-vue-next"
   import AuthAlert from "@/components/auth/AuthAlert.vue"
   import AuthField from "@/components/auth/AuthField.vue"
@@ -115,17 +116,18 @@
       const redirect = route.query.redirect as string | undefined
       await shellRef.value?.playExit()
       router.push(redirect ?? { name: "home" })
-    } catch (e: any) {
-      const status = e?.response?.status
+    } catch (err) {
+      const e = asApiError(err)
+      const status = e.response?.status
 
-      if (isRateLimited(e)) {
+      if (isRateLimited(err)) {
         errorMsg.value = t("errors.rateLimited")
       } else if (status === 403) {
         errorMsg.value = t("auth.login.unverified")
         unverified.value = true
       } else if (status === 401) {
         errorMsg.value = t("auth.login.errors.invalid")
-      } else if (status >= 500) {
+      } else if ((status ?? 0) >= 500) {
         errorMsg.value = t("auth.login.errors.server")
       } else {
         errorMsg.value = t("auth.login.errors.generic")

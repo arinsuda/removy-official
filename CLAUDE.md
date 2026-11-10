@@ -20,7 +20,7 @@ Applies to every file you create or edit. Existing violations in a file you touc
 - **Config and data:** URLs, API paths, image sizes, page sizes, limits, timeouts and feature flags live in named constants (a `config.ts` or `constants.ts` next to the feature, or `server/config`). The server reads environment-specific values from env. Never inline secrets, IDs or magic numbers.
 - **Server (Go):** error messages, limits and TTLs are named constants. HTTP status codes use `fiber.Status*`. Don't put user-facing copy on the server; return error codes for the client to translate.
 - **Exceptions:** tests, fixtures, share-image templates where the rendered PNG must look fixed, `PopcornRatingIcon` gradients and poster scrims. Mark each exception with a short `// hardcode-ok: <reason>` comment.
-- **Enforcement:** `client/src/__tests__/noHardcode.spec.ts` scans the directories listed in its `ZERO_DIRS`. A redesigned area must be added to `ZERO_DIRS` and stay at zero. `designTokens.spec.ts` keeps ratcheting the rest of the codebase down; lower its baseline whenever counts drop, and never raise it.
+- **Enforcement:** `client/src/__tests__/noHardcode.spec.ts` scans the directories listed in its `ZERO_DIRS` (now the whole source tree), including user-facing text written in script code (Thai string literals, literals passed to toasts/dialogs). A redesigned area must be added to `ZERO_DIRS` and stay at zero. `designTokens.spec.ts` keeps ratcheting the rest of the codebase down; lower its baseline whenever counts drop, and never raise it.
 
 # Workflow
 - Reply to the user in Thai; keep code, comments, and commit messages in English.

@@ -23,8 +23,8 @@
           </span>
         </div>
 
-        <h1 class="sc-title ach-sq__title" :class="titleSizeClass(achievement.achievement.name)">
-          {{ achievement.achievement.name }}
+        <h1 class="sc-title ach-sq__title" :class="titleSizeClass(achName(achievement.achievement))">
+          {{ achName(achievement.achievement) }}
         </h1>
         <p class="ach-sq__desc" data-test="share-desc">{{ localizedDesc }}</p>
       </div>
@@ -72,7 +72,7 @@ const props = withDefaults(
 )
 
 const { t, locale } = useI18n()
-const { description } = useAchievementText()
+const { description, name: achName } = useAchievementText()
 
 const icon = computed(() => getAchievementIcon(props.achievement.achievement.action_type))
 const category = computed(() => categoryOf(props.achievement.achievement.action_type))

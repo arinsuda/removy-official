@@ -134,7 +134,7 @@ const router = createRouter({
         {
           path: "upcoming",
           name: "upcoming",
-          component: () => import("@/views/movie/Upcoming.vue"),
+          component: () => import("@/views/movie/UpcomingView.vue"),
           meta: { titleKey: "navigation.upcoming" }
         },
         {

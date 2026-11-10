@@ -1,7 +1,6 @@
 import { ref, onUnmounted } from "vue";
 import { movieApi } from "@/api/api";
 import {
-  resolveTrailer,
   resolveTrailerCandidates,
   useTrailerPreview,
   type ResolvedTrailer,

@@ -1,18 +1,18 @@
 <template>
   <article class="af" :class="{ 'af--done': unit.status === 'unlocked' }">
-    <button type="button" class="af__main" :aria-label="`${current.name}. ${summary}`" @click="emit('open', unit.current)">
+    <button type="button" class="af__main" :aria-label="`${achName(current)}. ${summary}`" @click="emit('open', unit.current)">
       <span class="af__icon" :class="{ 'af__icon--on': doneCount > 0 }">
         <component :is="getAchievementIcon(current.action_type)" :size="24" :stroke-width="1.7" aria-hidden="true" />
       </span>
       <span class="af__text">
-        <span class="af__name">{{ current.name }}</span>
+        <span class="af__name">{{ achName(current) }}</span>
         <span class="af__sub">{{ summary }}</span>
       </span>
     </button>
 
     <ol class="af__track" :aria-label="t('achievements.family.tiers', { done: doneCount, total: unit.tiers.length })">
       <li v-for="(tier, i) in unit.tiers" :key="tier.achievement_id" class="af__step" :class="{ 'is-done': tier.is_unlocked, 'is-current': tier === unit.current && unit.status !== 'unlocked', 'is-linked': i > 0 && unit.tiers[i - 1]?.is_unlocked, 'is-dim': isDim(tier) }">
-        <button type="button" class="af__node" :aria-current="tier === unit.current ? 'step' : undefined" :aria-label="`${tier.achievement.name}. ${t('achievements.family.tier', { tier: TIER_NUMERALS[i] ?? i + 1 })}`" @click="emit('open', tier)">
+        <button type="button" class="af__node" :aria-current="tier === unit.current ? 'step' : undefined" :aria-label="`${achName(tier.achievement)}. ${t('achievements.family.tier', { tier: TIER_NUMERALS[i] ?? i + 1 })}`" @click="emit('open', tier)">
           <span class="af__dot">
             <Check v-if="tier.is_unlocked" :size="14" :stroke-width="3" aria-hidden="true" />
             <template v-else>{{ TIER_NUMERALS[i] ?? i + 1 }}</template>
@@ -28,6 +28,7 @@
 </template>
 
 <script setup lang="ts">
+import { useAchievementText } from "./text"
 import { computed } from "vue"
 import { useI18n } from "vue-i18n"
 import { Check } from "lucide-vue-next"
@@ -40,6 +41,7 @@ const props = defineProps<{ unit: AchievementUnit }>()
 const emit = defineEmits<{ open: [achievement: UserAchievement] }>()
 
 const { t, n } = useI18n()
+const { name: achName } = useAchievementText()
 const current = computed(() => props.unit.current.achievement)
 /** Tiers outside the active status/search filter fade so the matching ones stand out. */
 const isDim = (tier: UserAchievement) => !!props.unit.matched && props.unit.matched.size < props.unit.tiers.length && !props.unit.matched.has(tier.achievement_id)

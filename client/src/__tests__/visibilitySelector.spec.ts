@@ -50,19 +50,19 @@ describe("VisibilitySelector placement", () => {
   })
 
   it("aligns right when there is room on the left", async () => {
-    const w = await openAt({ left: 700, right: 900, top: 100, bottom: 130 })
+    await openAt({ left: 700, right: 900, top: 100, bottom: 130 })
     expect(menu().style.right).toBe(`${window.innerWidth - 900}px`)
     expect(menu().style.left).toBe("")
   })
 
   it("flips up near the bottom of the viewport", async () => {
-    const w = await openAt({ left: 700, right: 900, top: window.innerHeight - 60, bottom: window.innerHeight - 30 })
+    await openAt({ left: 700, right: 900, top: window.innerHeight - 60, bottom: window.innerHeight - 30 })
     expect(menu().style.bottom).toBe(`${60 + 4}px`)
     expect(menu().style.top).toBe("")
   })
 
   it("opens downward when there is room below", async () => {
-    const w = await openAt({ left: 700, right: 900, top: 50, bottom: 80 })
+    await openAt({ left: 700, right: 900, top: 50, bottom: 80 })
     expect(menu().style.top).toBe(`${80 + 4}px`)
   })
 })
