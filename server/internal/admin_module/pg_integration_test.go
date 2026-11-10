@@ -86,7 +86,7 @@ func TestPostgreSQLIntegrationQueries(t *testing.T) {
 
 	// 5. Test JSONB Audit Log insertion
 	auditLog := AdminAuditLog{
-		AdminID:    1,
+		AdminID:    func() *uint { id := uint(1); return &id }(),
 		Action:     ActionUserRoleChanged,
 		TargetType: "user",
 		TargetID:   2,

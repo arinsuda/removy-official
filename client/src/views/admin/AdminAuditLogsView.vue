@@ -37,7 +37,7 @@
                 <AdminBadge>{{ t("admin.auditLogs.target", { type: targetLabel(log.target_type), id: log.target_id }) }}</AdminBadge>
                 <time class="entry__time" :datetime="log.created_at">{{ formatTime(log.created_at) }}</time>
               </div>
-              <p class="entry__by">{{ t("admin.auditLogs.byAdmin", { admin: log.admin_username }) }}</p>
+              <p class="entry__by">{{ log.admin_username ? t("admin.auditLogs.byAdmin", { admin: log.admin_username }) : t("admin.auditLogs.byDeletedAdmin") }}</p>
               <p class="entry__reason" :class="{ 'is-empty': !log.reason }">{{ log.reason || t("admin.auditLogs.noReason") }}</p>
               <details v-if="hasMeta(log)" class="entry__meta">
                 <summary>{{ t("admin.auditLogs.details") }}</summary>

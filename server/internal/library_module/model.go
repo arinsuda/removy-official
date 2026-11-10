@@ -10,7 +10,7 @@ import (
 type LibraryItem struct {
 	gorm.Model
 	UserID    uint                   `gorm:"not null;index"`
-	User      users.User             `gorm:"foreignKey:UserID;contraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	User      users.User             `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	MediaID   int                    `gorm:"not null"`
 	MediaType movie_module.MediaType `gorm:"type:varchar(10);not null"`
 	ListType  movie_module.ListType  `gorm:"type:varchar(20);not null"`

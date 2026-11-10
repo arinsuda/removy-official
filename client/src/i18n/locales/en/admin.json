@@ -126,6 +126,7 @@
     "emptyTitle": "No audit entries",
     "emptyDesc": "Nothing matches these filters yet.",
     "byAdmin": "by {'@'}{admin}",
+    "byDeletedAdmin": "by a deleted admin",
     "target": "{type} #{id}",
     "noReason": "No reason given",
     "details": "Details",
