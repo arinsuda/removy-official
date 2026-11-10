@@ -48,6 +48,10 @@
             <AdminBadge tone="danger">{{ t("admin.users.badgeDeleted") }}</AdminBadge>
             <span class="cell-muted">{{ t("admin.users.deletedOn", { date: formatDate(u.deleted_at) }) }}</span>
           </div>
+          <div v-else-if="u.erasure_due_at" class="status-cell">
+            <AdminBadge tone="danger">{{ t("admin.users.badgeErasurePending") }}</AdminBadge>
+            <span class="cell-muted">{{ t("admin.users.erasureDueOn", { date: formatDate(u.erasure_due_at) }) }}</span>
+          </div>
           <AdminBadge v-else :tone="u.is_active ? 'success' : 'danger'">
             {{ u.is_active ? t("admin.users.statusActive") : t("admin.users.statusInactive") }}
           </AdminBadge>

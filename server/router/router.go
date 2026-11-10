@@ -1,9 +1,11 @@
 package router
 
 import (
+	"context"
 	"log"
 
 	"github.com/arinsuda/movie-hub/config"
+	"github.com/arinsuda/movie-hub/internal/account_erasure"
 	achievementsmodule "github.com/arinsuda/movie-hub/internal/achievements_module"
 	"github.com/arinsuda/movie-hub/internal/admin_module"
 	"github.com/arinsuda/movie-hub/internal/analytics_module"
@@ -32,7 +34,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func Register(app *fiber.App, db *gorm.DB, cfg *config.Config, m *mailer.Mailer) *notification_module.Hub {
+func Register(ctx context.Context, app *fiber.App, db *gorm.DB, cfg *config.Config, m *mailer.Mailer) *notification_module.Hub {
 
 	mc, err := storage.NewMinIOClient(config.MinIOConfig{
 		Endpoint:   cfg.MinIO.Endpoint,
@@ -108,6 +110,9 @@ func Register(app *fiber.App, db *gorm.DB, cfg *config.Config, m *mailer.Mailer)
 	media_stats_module.RegisterRoutes(protected, statsHandler)
 	user_stats_module.RegisterRoutes(protected, db, policy)
 	admin_module.RegisterRoutes(protected, db, notifHub, mc, mw.RequireCurrentAdmin(db))
+
+	// Background purge of accounts whose erasure grace period is over; stops with ctx.
+	go account_erasure.NewPurger(db, mc).Run(ctx)
 
 	return notifHub
 }

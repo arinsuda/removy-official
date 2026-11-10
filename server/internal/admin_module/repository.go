@@ -210,6 +210,7 @@ func (r *gormRepository) ListUsers(filter UserFilter) ([]AdminUserRow, int64, er
 			users.is_active,
 			users.created_at,
 			users.deleted_at,
+			users.erasure_due_at,
 			COALESCE(s.review_count, 0) AS review_count
 		`).
 		Joins("JOIN roles ON roles.id = users.role_id").
@@ -247,16 +248,17 @@ func (r *gormRepository) ListUsers(filter UserFilter) ([]AdminUserRow, int64, er
 	}
 
 	type dbUserRow struct {
-		ID          uint
-		Username    string
-		Email       string
-		DisplayName *string
-		AvatarURL   *string
-		Role        string
-		IsActive    bool
-		CreatedAt   time.Time
-		DeletedAt   *time.Time
-		ReviewCount int
+		ID           uint
+		Username     string
+		Email        string
+		DisplayName  *string
+		AvatarURL    *string
+		Role         string
+		IsActive     bool
+		CreatedAt    time.Time
+		DeletedAt    *time.Time
+		ErasureDueAt *time.Time
+		ReviewCount  int
 	}
 
 	var rows []dbUserRow
@@ -284,6 +286,10 @@ func (r *gormRepository) ListUsers(filter UserFilter) ([]AdminUserRow, int64, er
 		if r.DeletedAt != nil {
 			d := r.DeletedAt.Format(time.RFC3339)
 			result[i].DeletedAt = &d
+		}
+		if r.ErasureDueAt != nil {
+			d := r.ErasureDueAt.Format(time.RFC3339)
+			result[i].ErasureDueAt = &d
 		}
 	}
 
@@ -584,10 +590,15 @@ func (r *gormRepository) UpdateUserStatus(adminID, targetUserID uint, isActive b
 
 		// Any status change ends the target's sessions. Reactivation matters too: accounts
 		// deactivated before sessions were revoked on deactivation may still hold tokens.
-		if err := tx.Table("users").Where("id = ?", targetUserID).Updates(map[string]any{
+		changes := map[string]any{
 			"is_active":     isActive,
 			"token_version": gorm.Expr("token_version + 1"),
-		}).Error; err != nil {
+		}
+		if isActive {
+			// Reactivation cancels a pending self-service erasure.
+			changes["erasure_due_at"] = nil
+		}
+		if err := tx.Table("users").Where("id = ?", targetUserID).Updates(changes).Error; err != nil {
 			return err
 		}
 		if err := identity_policy.RevokeSessionScope(tx, targetUserID); err != nil {

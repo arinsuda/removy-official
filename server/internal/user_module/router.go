@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/arinsuda/movie-hub/config"
+	mailerpkg "github.com/arinsuda/movie-hub/internal/mailer"
 	"github.com/arinsuda/movie-hub/internal/privacy_policy"
 	"github.com/arinsuda/movie-hub/internal/shared/ratelimit"
 	"github.com/arinsuda/movie-hub/internal/shared/storage"
@@ -30,6 +31,7 @@ func RegisterRoutes(
 ) *Service {
 	mailer := NewBrevoMailer(brevoCfg)
 	svc := NewService(db, mc, statsSvc, mailer, emailVerifier, passwordResetMailer, policy)
+	svc.SetErasureMailer(mailerpkg.New(brevoCfg))
 	h := NewHandler(svc)
 
 	userKey := func(c fiber.Ctx) string {
@@ -40,10 +42,14 @@ func RegisterRoutes(
 		return "user:" + strconv.FormatUint(uint64(claims.UserID), 10)
 	}
 
+	// One limiter for both self-removal routes: attempts on either count together.
+	selfRemovalLimit := ratelimit.NewFailedOnly(deleteFailMax, deleteFailWindow, userKey)
+
 	users := router.Group("/users")
 	users.Get("/:userId", h.GetProfile)
 	users.Patch("/:userId", h.UpdateProfile)
-	users.Delete("/:userId", ratelimit.NewFailedOnly(deleteFailMax, deleteFailWindow, userKey), h.DeleteUser)
+	users.Delete("/:userId", selfRemovalLimit, h.DeleteUser)
+	users.Post("/me/erasure-request", requireXHRJSON, selfRemovalLimit, h.RequestErasure)
 	users.Patch("/:userId/genres", h.UpdateFavoriteGenres)
 	users.Post("/:userId/email", ratelimit.New(5, time.Hour, userKey), h.RequestEmailChange)
 	users.Put("/:userId/email", h.VerifyEmailChange)

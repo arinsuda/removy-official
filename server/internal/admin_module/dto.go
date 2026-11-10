@@ -48,7 +48,9 @@ type AdminUserRow struct {
 	IsActive    bool    `json:"is_active"`
 	CreatedAt   string  `json:"created_at"`
 	DeletedAt   *string `json:"deleted_at"`
-	ReviewCount int     `json:"review_count"`
+	// ErasureDueAt is set while the user's self-requested erasure is pending.
+	ErasureDueAt *string `json:"erasure_due_at"`
+	ReviewCount  int     `json:"review_count"`
 }
 
 type AdminReviewRow struct {

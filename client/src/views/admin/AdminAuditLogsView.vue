@@ -37,7 +37,7 @@
                 <AdminBadge>{{ t("admin.auditLogs.target", { type: targetLabel(log.target_type), id: log.target_id }) }}</AdminBadge>
                 <time class="entry__time" :datetime="log.created_at">{{ formatTime(log.created_at) }}</time>
               </div>
-              <p class="entry__by">{{ log.admin_username ? t("admin.auditLogs.byAdmin", { admin: log.admin_username }) : t("admin.auditLogs.byDeletedAdmin") }}</p>
+              <p class="entry__by">{{ actorLabel(log) }}</p>
               <p class="entry__reason" :class="{ 'is-empty': !log.reason }">{{ log.reason || t("admin.auditLogs.noReason") }}</p>
               <details v-if="hasMeta(log)" class="entry__meta">
                 <summary>{{ t("admin.auditLogs.details") }}</summary>
@@ -90,7 +90,7 @@ const targetTypeFilter = ref("all")
 const loadError = ref(false)
 const isFiltered = computed(() => actionFilter.value !== "all" || targetTypeFilter.value !== "all")
 
-const ACTIONS = ["USER_DEACTIVATED", "USER_REACTIVATED", "USER_ROLE_CHANGED", "USER_DELETED", "USER_ERASED", "REVIEW_DELETED"]
+const ACTIONS = ["USER_DEACTIVATED", "USER_REACTIVATED", "USER_ROLE_CHANGED", "USER_DELETED", "USER_ERASED", "USER_ERASURE_REQUESTED", "USER_ERASED_SCHEDULED", "REVIEW_DELETED"]
 const actionOptions = computed(() => [
   { value: "all", label: t("admin.auditLogs.actionAll") },
   ...ACTIONS.map((a) => ({ value: a, label: t(`admin.auditLogs.action.${a}`) })),
@@ -107,7 +107,19 @@ const VISUALS: Record<string, { tone: "danger" | "warning" | "success" | "info";
   USER_ROLE_CHANGED: { tone: "info", icon: Shield },
   USER_DELETED: { tone: "danger", icon: Trash2 },
   USER_ERASED: { tone: "danger", icon: Flame },
+  USER_ERASURE_REQUESTED: { tone: "warning", icon: UserX },
+  USER_ERASED_SCHEDULED: { tone: "danger", icon: Flame },
   REVIEW_DELETED: { tone: "danger", icon: MessageSquareOff },
+}
+// Actions written without an admin: the account owner asked, or the purge worker ran.
+const ACTOR_LABELS: Record<string, string> = {
+  USER_ERASURE_REQUESTED: "admin.auditLogs.byAccountOwner",
+  USER_ERASED_SCHEDULED: "admin.auditLogs.bySystem",
+}
+function actorLabel(log: AdminAuditLogRow): string {
+  if (log.admin_username) return t("admin.auditLogs.byAdmin", { admin: log.admin_username })
+  const key = ACTOR_LABELS[log.action]
+  return key ? t(key) : t("admin.auditLogs.byDeletedAdmin")
 }
 const tone = (action: string) => VISUALS[action]?.tone ?? "info"
 const icon = (action: string) => VISUALS[action]?.icon ?? ScrollText

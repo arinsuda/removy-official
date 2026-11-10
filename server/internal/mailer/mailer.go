@@ -78,6 +78,26 @@ func (m *Mailer) SendLinkCodeEmail(toEmail, username, code string) error {
 	return m.send(toEmail, username, subject, body)
 }
 
+// SendErasureRequestedEmail confirms a permanent-erasure request. A passwordless (Google) account
+// has no other proof the owner asked, so the mail names the date and the support address that
+// cancels it. Like the other mails it is Thai first, with an English line for each message.
+func (m *Mailer) SendErasureRequestedEmail(toEmail, username, dueDate, supportEmail string) error {
+	if m.devLog {
+		PrintDev(m.devOut, toEmail, "erasure_requested", "erase on: "+dueDate, "cancel via: "+supportEmail)
+		return nil
+	}
+	subject := "ยืนยันคำขอลบบัญชีถาวร — POPCORN / Account erasure requested"
+	body := fmt.Sprintf(`<!DOCTYPE html><html><body style="margin:0;padding:32px 16px;background:#050505;font-family:'Helvetica Neue',Arial,sans-serif;">
+<div style="max-width:440px;margin:0 auto;background:#0f0f0f;border:1px solid #1c1c1c;border-radius:4px;padding:40px;">
+<div style="font-size:18px;font-weight:700;letter-spacing:4px;color:#fff;text-align:center;">POPCORN</div>
+<p style="color:#fff;font-size:16px;margin:24px 0 8px;">สวัสดี %[1]s</p>
+<p style="color:#8f8f8f;font-size:14px;line-height:1.7;">เราได้รับคำขอลบบัญชีของคุณถาวร บัญชีจะถูกลบในวันที่ <b style="color:#fff;">%[2]s</b> หากต้องการยกเลิก กรุณาติดต่อ <a href="mailto:%[3]s" style="color:#e5504f;">%[3]s</a> ก่อนวันดังกล่าว</p>
+<p style="color:#8f8f8f;font-size:14px;line-height:1.7;">We received a request to permanently erase your account. It will be erased on <b style="color:#fff;">%[2]s</b>. To cancel, contact <a href="mailto:%[3]s" style="color:#e5504f;">%[3]s</a> before that date.</p>
+<p style="color:#666;font-size:12px;">หากคุณไม่ได้ร้องขอ กรุณาติดต่อเราทันที / If this was not you, contact us right away.</p>
+</div></body></html>`, html.EscapeString(username), html.EscapeString(dueDate), html.EscapeString(supportEmail))
+	return m.send(toEmail, username, subject, body)
+}
+
 func (m *Mailer) send(toEmail, username, subject, htmlBody string) error {
 	if !m.enabled {
 		log.Printf("WARN mailer disabled, skipping email (subject: %s)", subject)

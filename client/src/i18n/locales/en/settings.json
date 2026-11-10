@@ -150,8 +150,20 @@
     "errors": {
       "wrongPassword": "That password is not correct.",
       "confirmMismatch": "That username does not match.",
+      "finalAdmin": "The last active admin cannot delete their account. Make another admin first.",
       "tooMany": "Too many attempts. Try again in a few minutes.",
       "generic": "Could not delete the account. Please try again."
     }
+  },
+  "erase": {
+    "description": "Permanently erase your account and its data. You have {days} days to change your mind: contact support within {days} days to cancel. After that it cannot be undone.",
+    "open": "Delete account permanently",
+    "modalTitle": "Delete your account permanently?",
+    "modalBody": "Your account is deactivated now and you are signed out everywhere. Confirm it is you to continue.",
+    "pointGrace": "After {days} days your account and data are erased for good. To cancel before then, contact support.",
+    "pointIrreversible": "Once erased, your account cannot be recovered.",
+    "pointReviews": "Your reviews, ratings, lists and follows are removed with it.",
+    "confirm": "Delete permanently",
+    "done": "Your account will be permanently erased on {date}."
   }
 }

@@ -34,6 +34,10 @@ export const userApi = {
   deleteUser: (userId: number, body: { password?: string; confirm_username?: string } = {}) =>
     api.delete(`/users/${userId}`, { data: body }),
 
+  /** Deactivates the account now and schedules its permanent erasure (202). */
+  requestErasure: (body: { password?: string; confirm_username?: string }) =>
+    api.post<{ erasure_due_at: string }>("/users/me/erasure-request", body),
+
   updateFavoriteGenres: (userId: number, genres: number[]) =>
     api.patch<{ user: UserProfile }>(`/users/${userId}/genres`, {
       favorite_genres: genres,

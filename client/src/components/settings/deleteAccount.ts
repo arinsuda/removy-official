@@ -2,6 +2,7 @@
 export function deleteErrorKey(status: number | undefined, code: string | undefined): string {
   if (code === "WRONG_PASSWORD") return "settings.danger.errors.wrongPassword"
   if (code === "CONFIRM_MISMATCH") return "settings.danger.errors.confirmMismatch"
+  if (code === "FINAL_ADMIN") return "settings.danger.errors.finalAdmin"
   if (status === 429) return "settings.danger.errors.tooMany"
   return "settings.danger.errors.generic"
 }

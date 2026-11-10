@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"math/big"
 	"mime/multipart"
 	"net/url"
@@ -14,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/arinsuda/movie-hub/config"
 	"github.com/arinsuda/movie-hub/internal/identity_policy"
 	"github.com/arinsuda/movie-hub/internal/privacy_policy"
 	"github.com/arinsuda/movie-hub/internal/shared/fragment"
@@ -32,6 +34,7 @@ type Service struct {
 	policy              privacy_policy.UserAccessPolicy
 	reissuer            SessionReissuer
 	frontendBaseURL     string
+	erasureMailer       ErasureMailer
 }
 
 // SetFrontendBaseURL sets the SPA origin used in mailed links (config.FrontendBaseURL).
@@ -44,6 +47,14 @@ func (s *Service) resetLink(rawToken string, userID uint) string {
 		"uid":   {strconv.FormatUint(uint64(userID), 10)},
 	})
 }
+
+// ErasureMailer confirms an erasure request by email (dueDate is formatted by the caller).
+type ErasureMailer interface {
+	SendErasureRequestedEmail(toEmail, username, dueDate, supportEmail string) error
+}
+
+// SetErasureMailer wires the mail sent when a user requests permanent erasure.
+func (s *Service) SetErasureMailer(m ErasureMailer) { s.erasureMailer = m }
 
 // SetSessionReissuer wires the session issuer used to keep the caller signed in after a password change.
 func (s *Service) SetSessionReissuer(r SessionReissuer) { s.reissuer = r }
@@ -173,7 +184,53 @@ func (s *Service) DeleteUser(targetUserID, requesterID uint, sessionVersion int,
 	if targetUserID != requesterID {
 		return ErrForbidden
 	}
-	username, password, err := s.repo.findCredentials(targetUserID)
+	if err := s.confirmSelfRemoval(targetUserID, req); err != nil {
+		return err
+	}
+	if err := s.repo.DeleteUser(targetUserID, sessionVersion); err != nil {
+		return err
+	}
+	identity_policy.Outcome{SessionsRevoked: true}.Publish(targetUserID)
+	return nil
+}
+
+// RequestErasure deactivates the caller's account like DeleteUser and schedules its permanent
+// erasure for now + config.ErasureGracePeriod. The email and Google identity stay reserved until
+// the purge worker runs; an admin reactivating the account cancels it. Same confirmation rules
+// as DeleteUser.
+func (s *Service) RequestErasure(userID uint, sessionVersion int, req DeleteAccountRequest) (time.Time, error) {
+	if err := s.confirmSelfRemoval(userID, req); err != nil {
+		return time.Time{}, err
+	}
+	dueAt := time.Now().UTC().Add(config.ErasureGracePeriod)
+	if err := s.repo.RequestErasure(userID, sessionVersion, dueAt); err != nil {
+		return time.Time{}, err
+	}
+	identity_policy.Outcome{SessionsRevoked: true}.Publish(userID)
+	s.sendErasureMail(userID, dueAt)
+	return dueAt, nil
+}
+
+// sendErasureMail runs after the commit; a failure is logged (no address) and never undoes the request.
+func (s *Service) sendErasureMail(userID uint, dueAt time.Time) {
+	if s.erasureMailer == nil {
+		return
+	}
+	email, username, err := s.repo.findContact(userID)
+	if err != nil {
+		log.Printf("user %d: erasure mail lookup failed: %v", userID, err)
+		return
+	}
+	go func() {
+		if err := s.erasureMailer.SendErasureRequestedEmail(email, username, dueAt.UTC().Format(erasureDateLayout), config.ErasureSupportEmail); err != nil {
+			log.Printf("user %d: erasure mail failed: %v", userID, err)
+		}
+	}()
+}
+
+// confirmSelfRemoval re-authenticates a destructive self-service request. It changes nothing.
+func (s *Service) confirmSelfRemoval(userID uint, req DeleteAccountRequest) error {
+	username, password, err := s.repo.findCredentials(userID)
 	if err != nil {
 		return err
 	}
@@ -181,13 +238,11 @@ func (s *Service) DeleteUser(targetUserID, requesterID uint, sessionVersion int,
 		if req.Password == "" || bcrypt.CompareHashAndPassword([]byte(*password), []byte(req.Password)) != nil {
 			return ErrWrongPassword
 		}
-	} else if !strings.EqualFold(strings.TrimSpace(req.ConfirmUsername), username) {
+		return nil
+	}
+	if !strings.EqualFold(strings.TrimSpace(req.ConfirmUsername), username) {
 		return ErrConfirmMismatch
 	}
-	if err := s.repo.DeleteUser(targetUserID, sessionVersion); err != nil {
-		return err
-	}
-	identity_policy.Outcome{SessionsRevoked: true}.Publish(targetUserID)
 	return nil
 }
 

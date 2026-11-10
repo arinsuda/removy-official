@@ -486,6 +486,12 @@ func runSQLMigrations(db *gorm.DB, cfg *config.Config) error {
 		return err
 	}
 
+	if err := runSchemaMigrationTx(db, "20261112_users_erasure_due_at", cfg.DB.MigrationLockTimeoutMs, cfg.DB.MigrationStatementTimeoutMs, func(tx *gorm.DB) error {
+		return tx.Exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS erasure_due_at timestamptz").Error
+	}); err != nil {
+		return err
+	}
+
 	// NOT VALID only: drop + add in one ALTER per table, no scan and no data cleanup. Orphan cleanup and validation are the next migration.
 	if err := runSchemaMigrationTx(db, "20261111_user_fk_cascade_not_valid", cfg.DB.MigrationLockTimeoutMs, cfg.DB.MigrationStatementTimeoutMs, func(tx *gorm.DB) error {
 		for _, fk := range migrate.UserFKs {
