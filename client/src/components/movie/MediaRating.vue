@@ -42,7 +42,7 @@
         class="m-0 flex list-none flex-wrap items-center gap-x-2 p-0 text-[10px] leading-none text-text-muted"
       >
         <li :data-source="secondary[0].key" :aria-label="secondary[0].aria" class="inline-flex items-baseline gap-1 whitespace-nowrap">
-          <span aria-hidden="true" class="font-semibold uppercase tracking-wide">TMDB</span>
+          <span aria-hidden="true" class="font-semibold uppercase tracking-wide">{{ t("media.rating.sources.tmdb") }}</span>
           <span aria-hidden="true">{{ secondary[0].short }}</span>
         </li>
       </ul>
@@ -99,7 +99,7 @@ const secondary = computed<Row[]>(() => {
   return [
     { key: "tmdb", value: tmdb ? `${tmdb}/10` : null, short: tmdb ?? "", aria: tmdb ? t("media.rating.tmdbScore", { score: tmdb }) : t("media.rating.unavailable", { source: "TMDB" }) },
     { key: "imdb", value: imdb ? `${imdb}/10` : null, short: imdb ?? "", aria: imdb ? t("media.rating.imdbScore", { score: imdb }) : t("media.rating.unavailable", { source: "IMDb" }) },
-    { key: "rt", value: rt ? `${rt}%` : null, short: rt ?? "", aria: rt ? t("media.rating.rtScore", { score: rt }) : t("media.rating.unavailable", { source: "Rotten Tomatoes" }) },
+    { key: "rt", value: rt ? `${rt}%` : null, short: rt ?? "", aria: rt ? t("media.rating.rtScore", { score: rt }) : t("media.rating.unavailable", { source: t("media.rating.sources.rottenTomatoes") }) },
   ]
 })
 </script>

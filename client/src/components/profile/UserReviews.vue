@@ -48,7 +48,7 @@
               <option value="private">{{ t("profile.reviews.visibility.private") }}</option>
             </select>
           </label>
-          <MonthPicker v-model="monthFilter" @change="fetchReviews" />
+          <MonthPicker v-model="monthFilter" :min-year="joinYear" @change="fetchReviews" />
         </template>
       </TabToolbar>
 
@@ -91,11 +91,17 @@ import TabToolbar from "./tabs/TabToolbar.vue"
 import { REVIEW_FILTERS, REVIEW_SORTS, REVIEW_SORT_KEYS, summarizeReviews } from "./tabs/reviewList"
 import { useTabList } from "./tabs/useTabList"
 
-const props = defineProps<{ userId: number }>()
+const props = defineProps<{ userId: number; createdAt?: string | null }>()
 
 const { t } = useI18n()
 const auth = useAuthStore()
 const isOwner = computed(() => auth.user?.id === props.userId)
+const joinYear = computed(() => {
+  const raw = props.createdAt ?? (isOwner.value ? auth.user?.created_at : undefined)
+  if (!raw) return undefined
+  const y = new Date(raw).getFullYear()
+  return Number.isFinite(y) ? y : undefined
+})
 
 const loading = ref(false)
 const loadError = ref(false)

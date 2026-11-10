@@ -67,7 +67,7 @@
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--color-border);
     border-radius: 10px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    box-shadow: var(--shadow-raised);
     color: var(--color-text-primary);
     position: relative;
     overflow: hidden;

@@ -167,7 +167,7 @@
     pointer-events: none;
   }
   .star-base {
-    color: rgba(255, 255, 255, 0.2);
+    color: var(--color-border-strong);
   }
   .fill--on {
     color: var(--color-rating);

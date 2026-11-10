@@ -75,7 +75,7 @@ import AppModal from "@/components/ui/AppModal.vue"
 import AppSpinner from "@/components/ui/AppSpinner.vue"
 import AppTabs from "@/components/ui/AppTabs.vue"
 import SkeletonBlock from "@/components/ui/skeleton/SkeletonBlock.vue"
-import { useShareImage } from "@/composables/useShareImage"
+import { resolveApiAssetUrl, useShareImage } from "@/composables/useShareImage"
 import { getTmdbImageUrl } from "@/utils/image"
 import type { ShareMediaContext, ShareReviewContext, ShareStatsContext, ShareTemplateKey, ShareTheme } from "@/types/share"
 import ShareTemplateCarousel from "./ShareTemplateCarousel.vue"
@@ -92,19 +92,18 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ "update:modelValue": [value: boolean] }>()
 
+const DEFAULT_VIEWPORT_H = 800
+const MIN_PREVIEW_H = 260
+const MAX_PREVIEW_H = 560
+/** Space taken by the sheet header, tabs, options and footer around the preview. */
+const VIEWPORT_OFFSET_H = 400
+
 const { t } = useI18n()
 const share = useShareImage()
 const isExporting = share.isExporting
 
 const open = computed({ get: () => props.modelValue, set: (v) => emit("update:modelValue", v) })
 const carousel = useTemplateRef<InstanceType<typeof ShareTemplateCarousel>>("carousel")
-
-function getApiBaseUrl(): string {
-  const envUrl = import.meta.env.VITE_API_BASE_URL
-  if (!envUrl) return "/api"
-  const cleanUrl = (envUrl as string).replace(/\/+$/, "")
-  return cleanUrl.endsWith("/api") ? cleanUrl : `${cleanUrl}/api`
-}
 
 // Privacy: another user's stats never appear, and review text needs a public review.
 const ownStats = computed(() => (props.shareType === "poster" && hasOwnStats(props.stats) ? props.stats : null))
@@ -123,8 +122,8 @@ const canNativeShare = ref(false)
 const canCopyImg = ref(false)
 
 // Preview height follows the viewport so the sheet fits on small phones.
-const viewportH = ref(typeof window === "undefined" ? 800 : window.innerHeight)
-const previewMaxHeight = computed(() => Math.max(260, Math.min(560, viewportH.value - 400)))
+const viewportH = ref(typeof window === "undefined" ? DEFAULT_VIEWPORT_H : window.innerHeight)
+const previewMaxHeight = computed(() => Math.max(MIN_PREVIEW_H, Math.min(MAX_PREVIEW_H, viewportH.value - VIEWPORT_OFFSET_H)))
 const stageMinHeight = computed(() => previewMaxHeight.value)
 function onResize() {
   viewportH.value = window.innerHeight
@@ -142,12 +141,7 @@ async function loadImages() {
   status.value = "loading"
   const source = props.media.posterUrl || getTmdbImageUrl(props.media.posterPath, "w780")
 
-  let avatar = props.shareType === "review" ? props.review?.authorAvatarUrl?.trim() || "" : ""
-  if (avatar && !/^(https?:|data:)/.test(avatar)) {
-    const apiBase = getApiBaseUrl()
-    const origin = apiBase.startsWith("http") ? new URL(apiBase).origin : window.location.origin
-    avatar = `${origin}${avatar.startsWith("/") ? "" : "/"}${avatar}`
-  }
+  const avatar = props.shareType === "review" ? resolveApiAssetUrl(props.review?.authorAvatarUrl) : ""
 
   const [poster, avatarData] = await Promise.all([
     source ? share.fetchImageAsBlob(source) : Promise.resolve(null),

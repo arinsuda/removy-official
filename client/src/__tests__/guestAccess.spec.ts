@@ -18,6 +18,17 @@ vi.mock("@/stores/admin", () => ({ useAdminStore: () => ({ reset: vi.fn() }) }))
 vi.mock("@/i18n", () => ({ updateDocumentTitle: vi.fn() }))
 vi.mock("@/composables/useSocket", () => ({ resume: vi.fn() }))
 
+// Stub lazy route views so router.push() tests the guard without compiling heavy page trees.
+vi.mock("@/layouts/MainLayout.vue", () => ({ default: {} }))
+vi.mock("@/views/HomeView.vue", () => ({ default: {} }))
+vi.mock("@/views/FeedView.vue", () => ({ default: {} }))
+vi.mock("@/views/auth/LoginView.vue", () => ({ default: {} }))
+vi.mock("@/views/onboarding/FavoriteGenreView.vue", () => ({ default: {} }))
+vi.mock("@/views/movie/MovieDetailView.vue", () => ({ default: {} }))
+vi.mock("@/views/tv/TVDetailView.vue", () => ({ default: {} }))
+vi.mock("@/views/aboutus/AboutUsView.vue", () => ({ default: {} }))
+vi.mock("@/views/aboutus/DonateView.vue", () => ({ default: {} }))
+
 import api from "@/api/index"
 import router from "@/router"
 

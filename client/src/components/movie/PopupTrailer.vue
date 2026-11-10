@@ -4,8 +4,8 @@
       <button
         class="trailer-popup__close-btn"
         @click="$emit('close')"
-        title="ปิดหน้านี้"
-        aria-label="Close trailer"
+        :title="$t('media.trailer.close')"
+        :aria-label="$t('media.trailer.close')"
       >
         <X :size="24" />
       </button>
@@ -23,7 +23,7 @@
 
         <div v-else class="trailer-popup__no-trailer">
           <VolumeX :size="48" class="trailer-popup__no-icon" />
-          <p>ขออภัย ไม่พบตัวอย่างภาพยนตร์เรื่องนี้</p>
+          <p>{{ $t('media.trailer.unavailable') }}</p>
         </div>
       </div>
     </div>
@@ -76,12 +76,12 @@
   .trailer-popup__overlay {
     position: fixed;
     inset: 0;
-    background-color: rgba(0, 0, 0, 0.85);
+    background-color: color-mix(in srgb, var(--color-surface) 85%, transparent);
     backdrop-filter: blur(8px);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 999; /* มั่นใจว่าจะอยู่เหนือทุกสิ่งบนหน้าจอ */
+    z-index: var(--z-modal-base); /* มั่นใจว่าจะอยู่เหนือทุกสิ่งบนหน้าจอ */
     padding: 1rem;
     animation: fadeIn 0.25s ease-out;
   }
@@ -91,11 +91,11 @@
     position: relative;
     width: 100%;
     max-width: 960px; /* ความกว้างยอดนิยมกำลังพอดีตา */
-    background: #000;
+    background: var(--color-surface);
     border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: var(--shadow-popover);
+    border: 1px solid var(--color-border-strong);
   }
 
   .trailer-popup__media-wrapper {
@@ -121,9 +121,9 @@
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: rgba(0, 0, 0, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: #fff;
+    background: var(--color-scrim);
+    border: 1px solid var(--color-border-strong);
+    color: var(--color-text-primary);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -153,13 +153,13 @@
     align-items: center;
     justify-content: center;
     gap: 12px;
-    color: #666;
+    color: var(--color-text-muted);
     font-size: 1rem;
-    background: #111;
+    background: var(--color-surface-2);
   }
 
   .trailer-popup__no-icon {
-    color: #333;
+    color: var(--color-border-strong);
   }
 
   /* ── Animation เอฟเฟกต์เด้งเบาๆ ตอนเปิดหน้า ─────────────────────────────── */

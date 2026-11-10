@@ -7,8 +7,8 @@
   >
     <defs>
       <linearGradient :id="gradId" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#FF512F" />
-        <stop offset="100%" stop-color="#DD2476" />
+        <stop offset="0%" stop-color="#FF512F" /> <!-- hardcode-ok: brand gradient -->
+        <stop offset="100%" stop-color="#DD2476" /> <!-- hardcode-ok: brand gradient -->
       </linearGradient>
     </defs>
     <!-- Branded Ticket Notch SVG -->

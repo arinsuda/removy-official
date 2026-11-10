@@ -167,3 +167,32 @@ export function bolShareNote(items: { rank: number; note: string }[], include: b
   const text = top?.note?.trim()
   return text ? truncateExcerpt(text, max) : null
 }
+
+// --- Achievement share cards ---
+
+export type AchievementTemplateKey = "story" | "square"
+
+export interface AchievementTemplateDef {
+  key: AchievementTemplateKey
+  width: number
+  height: number
+  labelKey: string
+  ratio: string
+}
+
+const ACHIEVEMENT_DEFS: Record<AchievementTemplateKey, AchievementTemplateDef> = {
+  story: { key: "story", width: 1080, height: 1920, labelKey: "achievements.share.templates.story", ratio: "9:16" },
+  square: { key: "square", width: 1080, height: 1080, labelKey: "achievements.share.templates.square", ratio: "1:1" },
+}
+
+export const ACHIEVEMENT_TEMPLATES: AchievementTemplateDef[] = [ACHIEVEMENT_DEFS.story, ACHIEVEMENT_DEFS.square]
+
+export function achievementTemplateDef(key: AchievementTemplateKey): AchievementTemplateDef {
+  return ACHIEVEMENT_DEFS[key]
+}
+
+/** Only data: and blob: URLs produced by the proxy loader may be rendered on a share card. */
+export function safeCardImageUrl(url: string | null | undefined): string | null {
+  if (!url) return null
+  return url.startsWith("data:") || url.startsWith("blob:") ? url : null
+}

@@ -47,18 +47,38 @@
       <p v-if="isOwner && cta && !achievement.is_unlocked" class="ad__tip"><Lightbulb :size="14" aria-hidden="true" />{{ t("achievements.detail.tip") }}</p>
     </div>
     <template #footer>
-      <AppButton v-if="isOwner && cta && achievement && !achievement.is_unlocked" variant="primary" :to="cta.to(userId)" @click="emit('close')">{{ t(cta.labelKey) }}</AppButton>
+      <AppButton
+        v-if="isOwner && achievement?.is_unlocked"
+        variant="primary"
+        data-test="achievement-share-btn"
+        :aria-label="t('achievements.share.action', { name: achievement.achievement.name })"
+        @click="openShare(achievement)"
+      >
+        <Share2 :size="15" aria-hidden="true" />{{ t("achievements.share.button") }}
+      </AppButton>
+      <AppButton v-else-if="isOwner && cta && achievement && !achievement.is_unlocked" variant="primary" :to="cta.to(userId)" @click="emit('close')">{{ t(cta.labelKey) }}</AppButton>
       <AppButton variant="outline" @click="emit('close')">{{ t("common.close") }}</AppButton>
     </template>
   </AppModal>
+
+  <AchievementShareSheet
+    v-if="isOwner"
+    v-model="shareOpen"
+    :achievement="shareTarget"
+    :tiers="tiers"
+    :username="auth.user?.username"
+    :avatar-url="auth.user?.avatar_url"
+  />
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue"
+import { computed, ref } from "vue"
 import { useI18n } from "vue-i18n"
-import { CheckCircle2, Lightbulb, Lock, Target } from "lucide-vue-next"
+import { CheckCircle2, Lightbulb, Lock, Share2, Target } from "lucide-vue-next"
+import AchievementShareSheet from "@/components/share/AchievementShareSheet.vue"
 import AppButton from "@/components/ui/AppButton.vue"
 import AppModal from "@/components/ui/AppModal.vue"
+import { useAuthStore } from "@/stores/auth"
 import type { UserAchievement } from "@/types/achievement"
 import { getAchievementIcon } from "@/utils/achievementIcons"
 import { progressOf } from "./achievements"
@@ -76,11 +96,19 @@ const emit = defineEmits<{ close: []; select: [achievement: UserAchievement] }>(
 
 const { t, n, locale } = useI18n()
 const { description } = useAchievementText()
+const auth = useAuthStore()
+const shareTarget = ref<UserAchievement | null>(null)
+const shareOpen = ref(false)
 const category = computed(() => categoryOf(props.achievement?.achievement.action_type ?? ""))
 const cta = computed(() => (props.achievement ? ctaFor(props.achievement.achievement.action_type) : null))
 const pct = computed(() => (props.achievement ? progressOf(props.achievement) : 0))
 const tierIndex = computed(() => props.tiers.findIndex((x) => x.achievement_id === props.achievement?.achievement_id))
 const formatDate = (iso: string) => new Intl.DateTimeFormat(locale.value, { dateStyle: "long" }).format(new Date(iso))
+
+function openShare(a: UserAchievement) {
+  shareTarget.value = a
+  shareOpen.value = true
+}
 </script>
 
 <style scoped>

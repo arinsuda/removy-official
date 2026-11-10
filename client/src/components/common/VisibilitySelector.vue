@@ -188,7 +188,7 @@ const sizeClasses = computed(() => {
         :id="menuId"
         ref="menuRef"
         :class="[
-          'absolute z-50 w-64 max-w-[calc(100vw-2rem)] rounded-md border border-border-strong bg-surface-2 shadow-lg focus:outline-none',
+          'vis-menu absolute w-64 max-w-[calc(100vw-2rem)] rounded-md border border-border-strong bg-surface-2 shadow-lg focus:outline-none',
           alignLeft ? 'left-0' : 'right-0',
           openUp ? 'bottom-full mb-1' : 'top-full mt-1',
           alignLeft ? (openUp ? 'origin-bottom-left' : 'origin-top-left') : (openUp ? 'origin-bottom-right' : 'origin-top-right'),
@@ -220,3 +220,8 @@ const sizeClasses = computed(() => {
     </Transition>
   </div>
 </template>
+
+<style scoped>
+/* Floats above sticky bars and inside modals, like other popover menus. */
+.vis-menu { z-index: var(--z-popover); }
+</style>

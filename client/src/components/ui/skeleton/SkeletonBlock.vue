@@ -20,8 +20,8 @@ withDefaults(
   display: block;
   flex-shrink: 0;
   max-width: 100%;
-  background-color: #1f1f1f;
-  background-image: linear-gradient(100deg, transparent 35%, rgb(255 255 255 / 7%) 50%, transparent 65%);
+  background-color: var(--color-surface-3);
+  background-image: linear-gradient(100deg, transparent 35%, var(--color-border) 50%, transparent 65%);
   background-attachment: fixed;
   background-size: 200vw 100%;
   animation: skeleton-sweep 1.8s linear infinite;

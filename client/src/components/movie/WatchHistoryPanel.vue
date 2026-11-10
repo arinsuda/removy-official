@@ -46,6 +46,7 @@ import { X, Trash2, Globe, Users, Lock } from 'lucide-vue-next'
 import { watchLogApi } from '@/api/endpoints/watchLog'
 import type { WatchLogResponse, Visibility } from '@/types'
 import { useToast } from '@/composables/useToast'
+import { logApiError } from '@/utils/logApiError'
 
 const props = defineProps<{
   mediaId: number
@@ -57,7 +58,7 @@ const emit = defineEmits<{
   changed: []
 }>()
 
-const { t, locale } = useI18n()
+const { t, d } = useI18n()
 const { success: toastSuccess, error: toastError } = useToast()
 
 const logs = ref<WatchLogResponse[]>([])
@@ -74,7 +75,7 @@ async function loadHistory() {
     const res = await watchLogApi.getMyWatchLogs(props.mediaType, props.mediaId)
     logs.value = res.data?.logs || []
   } catch (err) {
-    console.error('Failed to load watch history:', err)
+    logApiError('Failed to load watch history', err)
     toastError(t('watchLog.loadFailed'))
   } finally {
     loading.value = false
@@ -89,19 +90,14 @@ async function handleDelete(logId: number) {
     toastSuccess(t('watchLog.deleteSuccess'))
     emit('changed')
   } catch (err) {
-    console.error('Failed to delete watch log:', err)
+    logApiError('Failed to delete watch log', err)
     toastError(t('watchLog.deleteFailed'))
   }
 }
 
 function formatDate(dateStr: string) {
   if (!dateStr) return ''
-  const d = new Date(dateStr)
-  return d.toLocaleDateString(locale.value === 'th' ? 'th-TH' : 'en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  })
+  return d(new Date(dateStr), 'short')
 }
 
 onMounted(() => {
@@ -115,16 +111,16 @@ onBeforeUnmount(() => { document.body.style.overflow = '' })
 .panel-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--color-scrim);
   display: flex;
   justify-content: flex-end;
-  z-index: 200;
+  z-index: var(--z-modal-base);
 }
 .panel {
   width: 100%;
   max-width: 400px;
-  background: #111;
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--color-surface-2);
+  border-left: 1px solid var(--color-border);
   height: 100vh;
   display: flex;
   flex-direction: column;
@@ -134,22 +130,22 @@ onBeforeUnmount(() => { document.body.style.overflow = '' })
   align-items: center;
   justify-content: space-between;
   padding: 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--color-border);
 }
 .panel-title {
   font-size: 1.1rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--color-text-primary);
   margin: 0;
 }
 .panel-close {
   background: transparent;
   border: none;
-  color: #8a8a8e;
+  color: var(--color-text-muted);
   cursor: pointer;
 }
 .panel-close:hover {
-  color: #fff;
+  color: var(--color-text-primary);
 }
 .icon {
   width: 1.25rem;
@@ -161,7 +157,7 @@ onBeforeUnmount(() => { document.body.style.overflow = '' })
   padding: 20px;
 }
 .loading, .empty {
-  color: #8a8a8e;
+  color: var(--color-text-muted);
   text-align: center;
   margin-top: 2rem;
 }
@@ -174,8 +170,8 @@ onBeforeUnmount(() => { document.body.style.overflow = '' })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--color-border);
+  border: 1px solid var(--color-border);
   padding: 12px 16px;
   border-radius: 8px;
 }
@@ -185,7 +181,7 @@ onBeforeUnmount(() => { document.body.style.overflow = '' })
   gap: 4px;
 }
 .log-date {
-  color: #fff;
+  color: var(--color-text-primary);
   font-weight: 500;
   font-size: 0.9rem;
 }
@@ -193,7 +189,7 @@ onBeforeUnmount(() => { document.body.style.overflow = '' })
   display: flex;
   align-items: center;
   gap: 4px;
-  color: #8a8a8e;
+  color: var(--color-text-muted);
   font-size: 0.75rem;
   text-transform: capitalize;
 }
@@ -204,13 +200,13 @@ onBeforeUnmount(() => { document.body.style.overflow = '' })
 .btn-delete {
   background: transparent;
   border: none;
-  color: #ef4444;
+  color: var(--color-danger);
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
 }
 .btn-delete:hover {
-  background: rgba(239, 68, 68, 0.1);
+  background: color-mix(in srgb, var(--color-danger) 10%, transparent);
 }
 .slide-enter-active, .slide-leave-active {
   transition: transform 0.3s ease;
