@@ -30,6 +30,7 @@ const i18n = useRealI18n()
 const wrappers: Array<{ unmount: () => void }> = []
 // Modals teleport into body; unmount wrappers and drop what a previous test left there.
 afterEach(() => {
+  vi.useRealTimers()
   wrappers.splice(0).forEach((w) => w.unmount())
   document.body.innerHTML = ""
 })
@@ -138,8 +139,10 @@ describe("LibraryAddSheet custom list target", () => {
 
     const input = document.body.querySelector<HTMLInputElement>('input[type="search"].las__input')!
     input.value = "matrix"
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] })
     input.dispatchEvent(new Event("input"))
-    await new Promise((r) => setTimeout(r, ADD_SEARCH_DEBOUNCE_MS + 50))
+    await vi.advanceTimersByTimeAsync(ADD_SEARCH_DEBOUNCE_MS)
+    vi.useRealTimers()
     await flushPromises()
 
     document.body.querySelector<HTMLButtonElement>('[data-action="add"]')!.click()

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { defineComponent, h, nextTick, ref } from "vue"
-import { mount, type VueWrapper } from "@vue/test-utils"
+import { flushPromises, mount, type VueWrapper } from "@vue/test-utils"
 import AppModal from "@/components/ui/AppModal.vue"
 import { focusablesIn } from "@/composables/useDialogFocus"
 import { useRealI18n } from "./helpers/realI18n"
@@ -10,7 +10,6 @@ import { useRealI18n } from "./helpers/realI18n"
 const i18n = useRealI18n()
 const wrappers: VueWrapper[] = []
 const origGetClientRects = HTMLElement.prototype.getClientRects
-const waitMacrotask = () => new Promise((r) => setTimeout(r, 0))
 
 function mountModal(props: Record<string, unknown> = {}, slots: Record<string, string> = {}) {
   const wrapper = mount(AppModal, {
@@ -204,15 +203,13 @@ describe("AppModal", () => {
     const lowBtn = document.getElementById("low-btn") as HTMLButtonElement
     lowBtn.disabled = true
     await nextTick()
-    await waitMacrotask()
+    await flushPromises()
     expect(document.activeElement).toBe(first)
 
     // Disabling the focused control inside the top modal moves focus to the top panel itself.
     first.disabled = true
-    await nextTick()
-    await waitMacrotask()
     const upperPanel = Array.from(document.body.querySelectorAll<HTMLElement>('[aria-modal="true"]'))[1]!
-    expect(document.activeElement).toBe(upperPanel)
+    await vi.waitFor(() => expect(document.activeElement).toBe(upperPanel))
     void lower
     void upper
   })
@@ -229,7 +226,7 @@ describe("AppModal", () => {
 
     lowBtn.disabled = true
     await nextTick()
-    await waitMacrotask()
+    await flushPromises()
     expect(document.activeElement).not.toBe(lowerPanel)
     expect(lowerPanel.contains(document.activeElement)).toBe(false)
   })
@@ -321,7 +318,7 @@ describe("AppModal", () => {
     })
     wrappers.push(wrapper)
     await nextTick()
-    await waitMacrotask()
+    await flushPromises()
     const closeBtn = document.body.querySelector<HTMLButtonElement>(".app-modal__header button")!
     closeBtn.click()
     expect(wrapper.emitted("close")).toHaveLength(1)
@@ -382,7 +379,7 @@ describe("AppModal", () => {
   it("closes from the close button, and disables it when dismissDisabled", async () => {
     const wrapper = mountModal()
     await nextTick()
-    await waitMacrotask()
+    await flushPromises()
     document.body.querySelector<HTMLButtonElement>(".app-modal__header button")!.click()
     expect(wrapper.emitted("close")![0]).toEqual(["close-button"])
     await wrapper.setProps({ dismissDisabled: true })

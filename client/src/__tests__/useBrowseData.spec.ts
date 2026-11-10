@@ -1,13 +1,21 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { createApp, defineComponent, ref, type Ref } from "vue"
+import { flushPromises } from "@vue/test-utils"
 import { QueryClient, VueQueryPlugin } from "@tanstack/vue-query"
+import { notifyManager } from "@tanstack/query-core"
 import { fromMovie } from "@/components/home/homeMedia"
 import type { BrowseConfig } from "@/components/browse/browseConfig"
 import { DEFAULT_BROWSE_STATE, type BrowseState } from "@/components/browse/browseQuery"
 import { useBrowseData } from "@/composables/useBrowseData"
 import type { Movie } from "@/types"
 
-const flush = async (ms = 20) => new Promise((r) => setTimeout(r, ms))
+// Deterministic: query notifications run synchronously, mocked fetchers settle in microtasks,
+// and flushPromises drains them (no wall-clock waits).
+notifyManager.setScheduler((cb) => cb())
+const flush = async () => {
+  for (let i = 0; i < FLUSH_ROUNDS; i++) await flushPromises()
+}
+const FLUSH_ROUNDS = 5
 
 const movie = (id: number, avg = 0, count = 0) =>
   fromMovie({ id, title: `m${id}`, poster_path: "/p", ratings: { popcorn: { average: avg, count, available: !!count, scale: 5 } } } as unknown as Movie)
@@ -94,7 +102,7 @@ describe("useBrowseData", () => {
     const state = ref<BrowseState>({ ...DEFAULT_BROWSE_STATE, tier: "hot" })
     const s = setup(cfg, state)
     app = s.app
-    await flush(60)
+    await flush()
     expect(fetchList).toHaveBeenCalledTimes(3)
     expect(s.result.items.value.map((m) => m.id)).toEqual([5])
     expect(s.result.tierCounts.value.hot).toBe(1)
