@@ -32,6 +32,7 @@
           rows="2"
           :placeholder="reasonPlaceholder || t('admin.confirmModal.reasonPlaceholder')"
         />
+        <p v-if="reasonHint" class="admin-confirm__hint">{{ reasonHint }}</p>
       </div>
     </div>
 
@@ -74,6 +75,7 @@ const props = withDefaults(
     showReasonInput?: boolean
     reasonPlaceholder?: string
     reasonLabel?: string
+    reasonHint?: string
     confirmDisabled?: boolean
     loading?: boolean
     icon?: Component
@@ -219,6 +221,12 @@ watch(
   font-family: var(--font-sans);
   font-size: 0.85rem;
   resize: vertical;
+}
+
+.admin-confirm__hint {
+  margin: 0;
+  font-size: var(--text-caption);
+  color: var(--color-text-muted);
 }
 
 .admin-confirm__reason::placeholder {

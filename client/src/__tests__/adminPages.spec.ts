@@ -20,6 +20,7 @@ vi.mock("@/api/api", async (orig) => ({
     updateUserRole: vi.fn(),
     updateUserStatus: vi.fn(),
     deleteUser: vi.fn(),
+    eraseUser: vi.fn(),
     listReviews: vi.fn(),
     deleteReview: vi.fn(),
     listAuditLogs: vi.fn(),
@@ -40,6 +41,7 @@ const user = (over = {}) => ({
   role: "user",
   is_active: true,
   created_at: "2026-01-02T00:00:00Z",
+  deleted_at: null,
   review_count: 3,
   ...over,
 })
@@ -218,6 +220,43 @@ describe("AdminUsersView", () => {
     await flushPromises()
     expect(api.deleteUser).not.toHaveBeenCalled()
     expect(document.body.querySelector('[role="alertdialog"]')!.textContent).toContain("soft-deleted")
+  })
+
+  it("filters by deleted status and offers only erasure on deleted rows", async () => {
+    api.listUsers.mockResolvedValue(page([user()]))
+    const w = await mountView(AdminUsersView)
+    const statusSelect = w.findAll("select").find((s) => s.findAll("option").some((o) => o.text() === "Deleted"))!
+    api.listUsers.mockResolvedValue(page([user({ is_active: false, deleted_at: "2026-02-03T00:00:00Z" })]))
+    await statusSelect.setValue("deleted")
+    await flushPromises()
+    expect(api.listUsers).toHaveBeenLastCalledWith(expect.objectContaining({ status: "deleted", page: 1 }))
+    expect(w.text()).toContain("Deleted")
+    menuTrigger("Actions for @jane").click()
+    await flushPromises()
+    const items = Array.from(document.body.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')).map((b) => b.textContent!.trim())
+    expect(items).toEqual(["Erase permanently"])
+  })
+
+  it("erases a deleted user only after the username is typed, then refreshes and toasts", async () => {
+    api.listUsers.mockResolvedValue(page([user({ is_active: false, deleted_at: "2026-02-03T00:00:00Z" })]))
+    api.eraseUser.mockResolvedValue({} as never)
+    await mountView(AdminUsersView)
+    menuTrigger("Actions for @jane").click()
+    await flushPromises()
+    menuItem("Erase permanently").click()
+    await flushPromises()
+    const dialog = document.body.querySelector('[role="alertdialog"]')!
+    expect(dialog.textContent).toContain("cannot be undone")
+    const input = dialog.querySelector<HTMLInputElement>("input")!
+    input.value = "jane"
+    input.dispatchEvent(new Event("input"))
+    await flushPromises()
+    api.listUsers.mockClear()
+    dialogButton("Erase permanently").click()
+    await flushPromises()
+    expect(api.eraseUser).toHaveBeenCalledWith(5, { confirm_username: "jane", reason: undefined })
+    expect(api.listUsers).toHaveBeenCalled()
+    expect(useUIStore().toasts.map((t) => t.message)).toContain("Permanently erased @jane")
   })
 
   it("shows an error state and an empty-with-filters state", async () => {

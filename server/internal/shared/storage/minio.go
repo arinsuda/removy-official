@@ -109,7 +109,7 @@ func (m *MinIOClient) UploadAvatar(ctx context.Context, userID uint, file multip
 		return "", err
 	}
 
-	objectKey := fmt.Sprintf("avatars/%d/%s%s", userID, uuid.NewString(), ext)
+	objectKey := AvatarKey(userID, uuid.NewString(), ext)
 
 	_, err = m.client.PutObject(ctx, m.bucketName, objectKey, file, header.Size, minio.PutObjectOptions{
 		ContentType: contentType,
@@ -155,4 +155,46 @@ func (m *MinIOClient) DeleteObject(ctx context.Context, objectKey string) error 
 	}
 
 	return nil
+}
+
+// DeletePrefix removes every object under prefix (for example all avatars of one user).
+func (m *MinIOClient) DeletePrefix(ctx context.Context, prefix string) error {
+	if prefix == "" {
+		return nil
+	}
+	for obj := range m.client.ListObjects(ctx, m.bucketName, minio.ListObjectsOptions{Prefix: prefix, Recursive: true}) {
+		if obj.Err != nil {
+			return fmt.Errorf("minio: list prefix: %w", obj.Err)
+		}
+		if err := m.client.RemoveObject(ctx, m.bucketName, obj.Key, minio.RemoveObjectOptions{}); err != nil {
+			return fmt.Errorf("minio: delete object: %w", err)
+		}
+	}
+	return nil
+}
+
+// Avatar object key formats. Upload code and erasure cleanup both use these, so a new
+// format cannot be added without its prefix being listed in AvatarPrefixes.
+const avatarRoot = "avatars/"
+
+// AvatarKey is the key of an uploaded avatar.
+func AvatarKey(userID uint, name, ext string) string {
+	return fmt.Sprintf("%s%d/%s%s", avatarRoot, userID, name, ext)
+}
+
+// GoogleAvatarKey is the key of an avatar imported from Google at sign-up.
+func GoogleAvatarKey(userID uint, unix int64, ext string) string {
+	return fmt.Sprintf("%sgoogle_%d_%d%s", avatarRoot, userID, unix, ext)
+}
+
+// IsAvatarKey reports whether a stored avatar_url is one of our object keys (not an external URL).
+func IsAvatarKey(v string) bool { return strings.HasPrefix(v, avatarRoot) }
+
+// AvatarPrefixes lists every prefix under which userID may own avatar objects. Both end with a
+// separator so user 1 never matches user 12.
+func AvatarPrefixes(userID uint) []string {
+	return []string{
+		fmt.Sprintf("%s%d/", avatarRoot, userID),
+		fmt.Sprintf("%sgoogle_%d_", avatarRoot, userID),
+	}
 }

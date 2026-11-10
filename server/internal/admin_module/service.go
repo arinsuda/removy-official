@@ -2,7 +2,9 @@ package admin_module
 
 import (
 	"context"
+	"log"
 	"strings"
+	"time"
 
 	notification_module "github.com/arinsuda/movie-hub/internal/notification_module"
 	"github.com/arinsuda/movie-hub/internal/shared/storage"
@@ -74,6 +76,48 @@ func (s *Service) UpdateUserStatus(adminID, targetUserID uint, req UpdateStatusR
 
 func (s *Service) DeleteUser(adminID, targetUserID uint, req DeleteUserRequest) error {
 	return s.repo.DeleteUser(adminID, targetUserID, req.Reason)
+}
+
+// erasureCleanupTimeout bounds each MinIO call of the post-commit cleanup.
+const erasureCleanupTimeout = 15 * time.Second
+
+// EraseUser permanently removes a soft-deleted user. Storage cleanup runs after the commit; a
+// failure is logged (keys only, no PII) and left as storage_cleanup "pending" in the audit row,
+// because the account is already gone.
+func (s *Service) EraseUser(adminID, targetUserID uint, req EraseUserRequest) error {
+	res, out, err := s.repo.EraseUser(adminID, targetUserID, req.ConfirmUsername, req.Reason)
+	if err != nil {
+		return err
+	}
+	out.Publish(targetUserID)
+	if s.minio == nil {
+		return nil
+	}
+	ok := true
+	for _, prefix := range res.AvatarPrefixes {
+		ok = s.cleanup(prefix, s.minio.DeletePrefix) && ok
+	}
+	ok = s.cleanup(res.AvatarKey, s.minio.DeleteObject) && ok
+	if ok {
+		if err := s.repo.SetErasureCleanup(res.AuditID, CleanupDone); err != nil {
+			log.Printf("admin: erase user %d: record cleanup failed: %v", targetUserID, err)
+		}
+	}
+	return nil
+}
+
+// cleanup runs one storage call under its own timeout.
+func (s *Service) cleanup(key string, del func(context.Context, string) error) bool {
+	if key == "" {
+		return true
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), erasureCleanupTimeout)
+	defer cancel()
+	if err := del(ctx, key); err != nil {
+		log.Printf("admin: erase: storage cleanup of %q failed: %v", key, err)
+		return false
+	}
+	return true
 }
 
 func (s *Service) DeleteReview(adminID, reviewID uint, req DeleteReviewRequest) error {

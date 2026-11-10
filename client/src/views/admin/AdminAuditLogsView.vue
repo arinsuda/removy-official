@@ -67,7 +67,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch, type Component } from "vue"
 import { useI18n } from "vue-i18n"
-import { MessageSquareOff, ScrollText, SearchX, Shield, Trash2, UserCheck, UserX } from "lucide-vue-next"
+import { Flame, MessageSquareOff, ScrollText, SearchX, Shield, Trash2, UserCheck, UserX } from "lucide-vue-next"
 import AdminBadge from "@/components/admin/AdminBadge.vue"
 import AdminFilters from "@/components/admin/AdminFilters.vue"
 import AdminPage from "@/components/admin/AdminPage.vue"
@@ -90,7 +90,7 @@ const targetTypeFilter = ref("all")
 const loadError = ref(false)
 const isFiltered = computed(() => actionFilter.value !== "all" || targetTypeFilter.value !== "all")
 
-const ACTIONS = ["USER_DEACTIVATED", "USER_REACTIVATED", "USER_ROLE_CHANGED", "USER_DELETED", "REVIEW_DELETED"]
+const ACTIONS = ["USER_DEACTIVATED", "USER_REACTIVATED", "USER_ROLE_CHANGED", "USER_DELETED", "USER_ERASED", "REVIEW_DELETED"]
 const actionOptions = computed(() => [
   { value: "all", label: t("admin.auditLogs.actionAll") },
   ...ACTIONS.map((a) => ({ value: a, label: t(`admin.auditLogs.action.${a}`) })),
@@ -106,6 +106,7 @@ const VISUALS: Record<string, { tone: "danger" | "warning" | "success" | "info";
   USER_REACTIVATED: { tone: "success", icon: UserCheck },
   USER_ROLE_CHANGED: { tone: "info", icon: Shield },
   USER_DELETED: { tone: "danger", icon: Trash2 },
+  USER_ERASED: { tone: "danger", icon: Flame },
   REVIEW_DELETED: { tone: "danger", icon: MessageSquareOff },
 }
 const tone = (action: string) => VISUALS[action]?.tone ?? "info"
