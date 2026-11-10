@@ -61,7 +61,7 @@ func TestDevLogPrintsAndSkipsHTTP(t *testing.T) {
 	if !m.IsEnabled() {
 		t.Fatal("IsEnabled must be true when dev log active")
 	}
-	if err := m.SendVerificationEmail(recipient, "P", "http://localhost:3000/auth/verify-email?token=abc"); err != nil {
+	if err := m.SendVerificationEmail(recipient, "P", "http://localhost:3000/auth/verify-email#token=abc"); err != nil {
 		t.Fatal(err)
 	}
 	if err := m.SendLinkCodeEmail(recipient, "P", "123456"); err != nil {

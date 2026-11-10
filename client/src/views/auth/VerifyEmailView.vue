@@ -81,9 +81,10 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
   import AuthShell from "@/components/auth/AuthShell.vue"
   import AuthStatus from "@/components/auth/AuthStatus.vue"
   import { computed, ref, onMounted } from "vue"
-  import { useRoute } from "vue-router"
+  import { useRouter } from "vue-router"
   import { useI18n } from "vue-i18n"
   import { isRateLimited } from "@/utils/rateLimit"
+  import { consumeUrlSecrets, URL_SECRET_KEYS } from "@/utils/urlSecrets"
   import { authApi } from "@/api/api"
   import {
     CircleCheck as IconCircleCheck,
@@ -91,7 +92,7 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
     Lock as IconLock,
   } from "lucide-vue-next"
 
-  const route = useRoute()
+  const router = useRouter()
   const { t } = useI18n()
 
   type Status = "form" | "loading" | "success" | "error"
@@ -123,8 +124,12 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
         : t("auth.verifyEmail.resendLink"),
   )
 
+  // Read in setup, before any navigation can copy the token into route.fullPath / history.state.
+  const secrets = consumeUrlSecrets([URL_SECRET_KEYS.token], { legacyQuery: true })
+  token.value = secrets[URL_SECRET_KEYS.token] ?? ""
+  void router.replace({ query: {}, hash: "" })
+
   onMounted(() => {
-    token.value = (route.query.token as string) || ""
     // Opening the link must not verify anything by itself; the person confirms below.
     if (!token.value) status.value = "error"
   })

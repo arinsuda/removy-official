@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -17,12 +18,16 @@ import (
 	"github.com/arinsuda/movie-hub/internal/identity_policy"
 	"github.com/arinsuda/movie-hub/internal/mailer"
 	"github.com/arinsuda/movie-hub/internal/notification_module"
+	"github.com/arinsuda/movie-hub/internal/shared/fragment"
 	"github.com/arinsuda/movie-hub/internal/shared/storage"
 	"github.com/arinsuda/movie-hub/internal/user_module"
 	"github.com/gofiber/fiber/v3"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
+
+// VerifyEmailPath is the SPA route of the mailed verification link (secret goes in its fragment).
+const VerifyEmailPath = "/auth/verify-email"
 
 var (
 	ErrGoogleOAuthDisabled             = errors.New("google authentication is disabled")
@@ -989,6 +994,6 @@ func (s *Service) sendVerificationEmail(u *user_module.User) error {
 		return err
 	}
 
-	verifyURL := fmt.Sprintf("%s/auth/verify-email?token=%s", s.cfg.AppBaseURL, rawToken)
+	verifyURL := fragment.URL(s.cfg.AppBaseURL, VerifyEmailPath, url.Values{"token": {rawToken}})
 	return s.mailer.SendVerificationEmail(u.Email, u.Username, verifyURL)
 }

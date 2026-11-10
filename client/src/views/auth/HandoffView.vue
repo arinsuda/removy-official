@@ -97,6 +97,7 @@ import { useAuthStore } from "@/stores/auth"
 import { safeWebUrl } from "@/utils/safeWebUrl"
 import { handoffErrorKey } from "@/utils/handoffError"
 import { playPlatformEnter } from "@/utils/platformTransition"
+import { consumeUrlSecrets, URL_SECRET_KEYS } from "@/utils/urlSecrets"
 
 /** Wait before the email code can be requested again. */
 const RESEND_COOLDOWN_SECONDS = 30
@@ -145,20 +146,15 @@ function done(data: LinkSessionResponse) {
   void router.replace({ name: "home" }).finally(() => void playPlatformEnter())
 }
 
-function readToken(): string {
-  const m = /(?:^#|&)t=([^&]+)/.exec(window.location.hash)
-  return m && m[1] ? decodeURIComponent(m[1]) : ""
-}
-
 function errorFor(err: unknown): string {
   return t(handoffErrorKey(err))
 }
 
 onMounted(async () => {
   void loadPlanziUrl()
-  const token = readToken()
-  // never leave the one-time token in the address bar / history
-  history.replaceState(history.state, "", window.location.pathname)
+  // consumeUrlSecrets also strips the one-time token from the address bar / history
+  const token = consumeUrlSecrets([URL_SECRET_KEYS.handoff])[URL_SECRET_KEYS.handoff] ?? ""
+  void router.replace({ hash: "" })
   if (!token) {
     failedMessage.value = t("navigation.link.handoff.failed")
     state.value = "failed"

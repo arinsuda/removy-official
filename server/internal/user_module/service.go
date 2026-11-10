@@ -8,13 +8,16 @@ import (
 	"fmt"
 	"math/big"
 	"mime/multipart"
+	"net/url"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/arinsuda/movie-hub/internal/identity_policy"
 	"github.com/arinsuda/movie-hub/internal/privacy_policy"
+	"github.com/arinsuda/movie-hub/internal/shared/fragment"
 	"github.com/arinsuda/movie-hub/internal/shared/storage"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -468,11 +471,10 @@ func (s *Service) ForgotPassword(email string) error {
 		return err
 	}
 
-	resetURL := fmt.Sprintf("%s/reset-password?token=%s&uid=%d",
-		getEnv("FRONTEND_BASE_URL", "http://localhost:3000"),
-		rawToken,
-		user.ID,
-	)
+	resetURL := fragment.URL(getEnv(frontendBaseURLEnv, defaultFrontendBaseURL), ResetPasswordPath, url.Values{
+		"token": {rawToken},
+		"uid":   {strconv.FormatUint(uint64(user.ID), 10)},
+	})
 
 	if err := s.passwordResetMailer.SendResetLink(user.Email, resetURL); err != nil {
 		_ = s.repo.DeletePasswordResetToken(user.ID)
@@ -576,6 +578,15 @@ func isValidEmail(email string) bool {
 	matched, _ := regexp.MatchString(pattern, email)
 	return matched
 }
+
+const (
+	// ResetPasswordPath is the SPA route of the mailed reset link (secrets go in its fragment).
+	ResetPasswordPath = "/reset-password"
+	// frontendBaseURLEnv names the env var holding the SPA origin used in reset links.
+	frontendBaseURLEnv = "FRONTEND_BASE_URL"
+	// defaultFrontendBaseURL is the local-dev SPA origin.
+	defaultFrontendBaseURL = "http://localhost:3000"
+)
 
 func getEnv(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {

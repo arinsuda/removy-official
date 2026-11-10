@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { flushPromises, mount } from "@vue/test-utils"
 import { createPinia, setActivePinia } from "pinia"
-import { createMemoryHistory, createRouter } from "vue-router"
+import { createMemoryHistory, createRouter, createWebHistory } from "vue-router"
 import ForgotPasswordView from "@/views/auth/ForgotPasswordView.vue"
 import ResetPasswordView from "@/views/auth/ResetPasswordView.vue"
 import VerifyEmailView from "@/views/auth/VerifyEmailView.vue"
@@ -21,7 +21,9 @@ vi.mock("@/utils/platformTransition", () => ({ playPlatformEnter: vi.fn() }))
 
 const i18n = useRealI18n()
 
-async function mountAt(view: object, path: string) {
+// Mailed secrets live in the real browser URL (fragment), not in the memory-history route.
+async function mountAt(view: object, path: string, browserUrl = "/") {
+  window.history.replaceState(null, "", browserUrl)
   setActivePinia(createPinia())
   const router = createRouter({
     history: createMemoryHistory(),
@@ -31,6 +33,27 @@ async function mountAt(view: object, path: string) {
   const w = mount(view, { global: { plugins: [createPinia(), i18n, router] } })
   await flushPromises()
   return w
+}
+
+// Real window history: vue-router writes the full location into history.state.current/back.
+async function mountWithWebHistory(view: object, browserUrl: string) {
+  window.history.replaceState(null, "", "/")
+  window.history.pushState(null, "", "/previous")
+  window.history.pushState(null, "", browserUrl)
+  const router = createRouter({
+    history: createWebHistory(),
+    routes: [{ path: "/:p(.*)*", name: "home", component: { template: "<div />" } }],
+  })
+  await router.push(browserUrl)
+  mount(view, { global: { plugins: [createPinia(), i18n, router] } })
+  await flushPromises()
+  return router
+}
+
+function expectNoSecret(router: { currentRoute: { value: { fullPath: string } } }, secret: string) {
+  expect(window.location.href).not.toContain(secret)
+  expect(JSON.stringify(window.history.state)).not.toContain(secret)
+  expect(router.currentRoute.value.fullPath).not.toContain(secret)
 }
 
 const api = vi.mocked(authApi)
@@ -78,9 +101,9 @@ describe("reset password", () => {
     expect(w.findAll("a").map((a) => a.attributes("href"))).toContain("/forgot-password")
   })
 
-  it("validates mismatch and submits the token and uid from the query", async () => {
+  it("validates mismatch and submits the token and uid from the fragment", async () => {
     api.resetPassword.mockResolvedValue({} as never)
-    const w = await mountAt(ResetPasswordView, "/reset-password?token=T&uid=7")
+    const w = await mountAt(ResetPasswordView, "/reset-password", "/reset-password#token=T&uid=7")
     const [a, b] = w.findAll("input")
     await a!.setValue("Passw0rdOK")
     await b!.setValue("Different1")
@@ -98,9 +121,30 @@ describe("reset password", () => {
     expect(w.get("h1").text()).toBe("Password updated")
   })
 
+  it("still accepts the legacy query link and strips the secrets", async () => {
+    api.resetPassword.mockResolvedValue({} as never)
+    const w = await mountAt(ResetPasswordView, "/reset-password", "/reset-password?token=T&uid=7")
+    expect(window.location.href).not.toContain("token=")
+    expect(w.vm.$route.fullPath).not.toContain("T&")
+    const [a, b] = w.findAll("input")
+    await a!.setValue("Passw0rdOK")
+    await b!.setValue("Passw0rdOK")
+    await w.get("form").trigger("submit")
+    await flushPromises()
+    expect(api.resetPassword).toHaveBeenCalledWith(expect.objectContaining({ token: "T", user_id: 7 }))
+  })
+
+  it("strips token and uid from the URL and route without calling the API", async () => {
+    const w = await mountAt(ResetPasswordView, "/reset-password", "/reset-password#token=SECRETTOKEN&uid=7")
+    expect(api.resetPassword).not.toHaveBeenCalled()
+    expect(window.location.href).not.toContain("SECRETTOKEN")
+    expect(window.location.hash).toBe("")
+    expect(w.vm.$route.fullPath).not.toContain("SECRETTOKEN")
+  })
+
   it("falls back to the expired state when the server rejects the token", async () => {
     api.resetPassword.mockRejectedValue({ response: { status: 410 } })
-    const w = await mountAt(ResetPasswordView, "/reset-password?token=T&uid=7")
+    const w = await mountAt(ResetPasswordView, "/reset-password", "/reset-password#token=T&uid=7")
     const [a, b] = w.findAll("input")
     await a!.setValue("Passw0rdOK")
     await b!.setValue("Passw0rdOK")
@@ -110,16 +154,47 @@ describe("reset password", () => {
   })
 })
 
+describe("real window history", () => {
+  it.each([
+    ["verify", VerifyEmailView, "/auth/verify-email#token=SECRETTOKEN"],
+    ["reset", ResetPasswordView, "/reset-password#token=SECRETTOKEN&uid=7"],
+    ["handoff", HandoffView, "/auth/handoff#t=SECRETTOKEN"],
+  ])("%s leaves no secret in history.state or the route", async (_n, view, url) => {
+    vi.mocked(linkApi.remote).mockRejectedValue(new Error("x"))
+    vi.mocked(linkApi.redeem).mockRejectedValue({ response: { status: 400 } })
+    const router = await mountWithWebHistory(view, url)
+    expectNoSecret(router, "SECRETTOKEN")
+  })
+})
+
 describe("verify email", () => {
   it("does not verify on open and asks for the password", async () => {
-    const w = await mountAt(VerifyEmailView, "/verify-email?token=T")
+    const w = await mountAt(VerifyEmailView, "/verify-email", "/verify-email#token=T")
     expect(api.verifyEmail).not.toHaveBeenCalled()
     expect(w.findAll("label").map((l) => l.text())).toEqual(["Password"])
   })
 
+  it("strips the fragment token from the URL and route without calling the API", async () => {
+    const w = await mountAt(VerifyEmailView, "/verify-email", "/verify-email#token=SECRETTOKEN")
+    expect(api.verifyEmail).not.toHaveBeenCalled()
+    expect(window.location.href).not.toContain("SECRETTOKEN")
+    expect(w.vm.$route.fullPath).not.toContain("SECRETTOKEN")
+    expect(window.history.state?.back ?? "").not.toContain("SECRETTOKEN")
+  })
+
+  it("still accepts the legacy query link", async () => {
+    api.verifyEmail.mockResolvedValue({ data: { password_reset_required: false } } as never)
+    const w = await mountAt(VerifyEmailView, "/verify-email", "/verify-email?token=LEGACY")
+    expect(window.location.href).not.toContain("LEGACY")
+    await w.get("input").setValue("pw")
+    await w.get("form").trigger("submit")
+    await flushPromises()
+    expect(api.verifyEmail).toHaveBeenCalledWith("LEGACY", { password: "pw" })
+  })
+
   it("keeps the form and token after a wrong password", async () => {
     api.verifyEmail.mockRejectedValue({ response: { status: 400, data: { code: "WRONG_PASSWORD" } } })
-    const w = await mountAt(VerifyEmailView, "/verify-email?token=T")
+    const w = await mountAt(VerifyEmailView, "/verify-email", "/verify-email#token=T")
     await w.get("input").setValue("nope")
     await w.get("form").trigger("submit")
     await flushPromises()
@@ -130,7 +205,7 @@ describe("verify email", () => {
 
   it("requires an explicit confirmation before skipping the password", async () => {
     api.verifyEmail.mockResolvedValue({ data: { password_reset_required: true } } as never)
-    const w = await mountAt(VerifyEmailView, "/verify-email?token=T")
+    const w = await mountAt(VerifyEmailView, "/verify-email", "/verify-email#token=T")
     await w.get("button.auth-link").trigger("click")
     expect(api.verifyEmail).not.toHaveBeenCalled()
     expect(w.get('[role="alertdialog"]').text()).toContain("cannot be undone")
@@ -144,7 +219,7 @@ describe("verify email", () => {
 
   it("shows the attempts-exceeded message with a resend option", async () => {
     api.verifyEmail.mockRejectedValue({ response: { status: 400, data: { code: "VERIFY_ATTEMPTS_EXCEEDED" } } })
-    const w = await mountAt(VerifyEmailView, "/verify-email?token=T")
+    const w = await mountAt(VerifyEmailView, "/verify-email", "/verify-email#token=T")
     await w.get("input").setValue("x")
     await w.get("form").trigger("submit")
     await flushPromises()
@@ -200,8 +275,7 @@ describe("handoff", () => {
         data: { code: "LINK_CONFIRM_REQUIRED", pending_id: "p", email: "a@b.c", methods: ["local_password", "email_code"] },
       },
     })
-    window.location.hash = "#t=SECRET"
-    const w = await mountAt(HandoffView, "/")
+    const w = await mountAt(HandoffView, "/", "/#t=SECRET")
     expect(w.get("h1").text()).toBe("Confirm it's you")
     expect(w.find(".auth-brand").exists()).toBe(true)
     expect(w.findAll("label").map((l) => l.text())).toEqual(["POPCORN password"])
@@ -212,7 +286,6 @@ describe("handoff", () => {
 
   it("renders the failed state with a back-to-login button", async () => {
     vi.mocked(linkApi.remote).mockRejectedValue(new Error("x"))
-    window.location.hash = ""
     const w = await mountAt(HandoffView, "/")
     expect(w.get("h1").text()).toBe("Link problem")
     expect(w.get('[role="alert"]').text()).toContain("invalid or has expired")
