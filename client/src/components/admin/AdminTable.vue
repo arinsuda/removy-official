@@ -104,6 +104,7 @@ const { t } = useI18n()
 .admin-table__scroll {
   max-height: min(72dvh, 46rem);
   overflow: auto;
+  overscroll-behavior-x: contain;
 }
 
 .admin-table__table {
@@ -161,8 +162,8 @@ const { t } = useI18n()
   color: var(--color-text-primary);
 }
 
-/* On phones the row actions stay reachable while the other columns scroll sideways. */
-@media (max-width: 767.98px) {
+/* Below lg the row actions stay reachable while the other columns scroll sideways. */
+@media (max-width: 1023.98px) {
   .admin-table__table :deep(th.is-end),
   .admin-table__table :deep(td.is-end) {
     position: sticky;

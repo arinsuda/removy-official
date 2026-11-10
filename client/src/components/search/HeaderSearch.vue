@@ -135,6 +135,10 @@ onBeforeUnmount(() => document.removeEventListener("pointerdown", onPointerDown)
 }
 .hs-toggle {
   display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
   padding: 0.5rem 0.6rem;
   border: none;
   background: none;
@@ -149,7 +153,7 @@ onBeforeUnmount(() => document.removeEventListener("pointerdown", onPointerDown)
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  width: 280px;
+  width: clamp(12rem, 24vw, 17.5rem);
   height: 40px;
   padding: 0 0.5rem 0 0.9rem;
   background: var(--color-surface-2);

@@ -5,7 +5,7 @@
         <AppButton
           class="admin-topbar__menu"
           variant="ghost"
-          size="sm"
+          size="md"
           icon-only
           :aria-label="t('admin.nav.openMenu')"
           :aria-expanded="drawerOpen"
@@ -37,14 +37,14 @@
         class="admin-sidebar"
         :class="{ 'is-open': drawerOpen }"
         :aria-label="t('admin.nav.primary')"
-        @keydown.esc="closeDrawer"
+        @keydown="onSidebarKeydown"
       >
         <div class="admin-sidebar__head">
           <span class="admin-sidebar__title">{{ t("admin.nav.adminMode") }}</span>
           <AppButton
             class="admin-sidebar__close"
             variant="ghost"
-            size="sm"
+            size="md"
             icon-only
             :aria-label="t('admin.nav.closeMenu')"
             @click="closeDrawer"
@@ -89,7 +89,7 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, ref, watch } from "vue"
+import { onBeforeUnmount, onMounted, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
 import {
@@ -107,6 +107,8 @@ import {
 import AdminBadge from "@/components/admin/AdminBadge.vue"
 import AppButton from "@/components/ui/AppButton.vue"
 import { lockScroll, unlockScroll } from "@/composables/scrollLock"
+import { useDialogFocus } from "@/composables/useDialogFocus"
+import { isAtLeast } from "@/constants/breakpoints"
 import { useAdminStore } from "@/stores/admin"
 
 const NAV = [
@@ -131,21 +133,38 @@ function toggleCollapsed() {
   localStorage.setItem(COLLAPSE_KEY, String(collapsed.value))
 }
 
-async function openDrawer() {
+// Focus moves into the drawer on open, wraps on Tab, and returns to the menu button on close.
+const { onKeydown: trapTab } = useDialogFocus(sidebarRef, drawerOpen)
+
+function openDrawer() {
+  if (drawerOpen.value) return
   drawerOpen.value = true
   lockScroll()
-  await nextTick()
-  sidebarRef.value?.querySelector<HTMLElement>("a, button")?.focus()
 }
 
 function closeDrawer() {
   if (!drawerOpen.value) return
   drawerOpen.value = false
   unlockScroll()
-  document.querySelector<HTMLElement>(".admin-topbar__menu")?.focus()
 }
 
-// Following a link closes the drawer without stealing focus back to the menu button.
+function onSidebarKeydown(e: KeyboardEvent) {
+  if (!drawerOpen.value) return
+  if (e.key === "Escape") {
+    e.stopPropagation()
+    closeDrawer()
+    return
+  }
+  trapTab(e)
+}
+
+// The fixed sidebar takes over from lg, so a drawer left open is dropped.
+function onResize() {
+  if (isAtLeast("lg")) closeDrawer()
+}
+onMounted(() => window.addEventListener("resize", onResize))
+
+// Following a link closes the drawer.
 watch(
   () => route.fullPath,
   () => {
@@ -156,6 +175,7 @@ watch(
 )
 
 onBeforeUnmount(() => {
+  window.removeEventListener("resize", onResize)
   if (drawerOpen.value) unlockScroll()
 })
 
@@ -240,7 +260,7 @@ function handleExitAdmin() {
   min-width: 0;
 }
 
-/* Phones: the sidebar is an off-canvas drawer. */
+/* Below lg: the sidebar is an off-canvas drawer. */
 .admin-sidebar {
   position: fixed;
   top: 0;
@@ -250,8 +270,9 @@ function handleExitAdmin() {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  width: min(18rem, 85vw);
+  width: min(18rem, 85dvw);
   padding: 0.75rem;
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
   background: var(--color-surface-2);
   border-right: 1px solid var(--color-border);
   box-shadow: var(--shadow-sheet);
@@ -346,7 +367,7 @@ function handleExitAdmin() {
   }
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .admin-topbar__menu,
   .admin-sidebar__close,
   .admin-scrim {

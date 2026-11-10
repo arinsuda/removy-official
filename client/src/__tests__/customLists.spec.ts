@@ -10,6 +10,7 @@ import { listErrorKey } from "@/components/lists/listErrors"
 import { moveIndex } from "@/views/library/useListReorder"
 import { useUIStore } from "@/stores/ui"
 import { useRealI18n } from "./helpers/realI18n"
+import { waitAfterDebounce, waitForEnabled } from "./helpers/waitForEnabled"
 
 const m = vi.hoisted(() => ({
   getOwn: vi.fn(),
@@ -139,16 +140,12 @@ describe("LibraryAddSheet custom list target", () => {
 
     const input = document.body.querySelector<HTMLInputElement>('input[type="search"].las__input')!
     input.value = "matrix"
-    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] })
     input.dispatchEvent(new Event("input"))
-    await vi.advanceTimersByTimeAsync(ADD_SEARCH_DEBOUNCE_MS)
-    vi.useRealTimers()
-    await flushPromises()
+    // Assert on outcomes (result rendered, request sent) instead of racing fake timers.
+    const addButton = await waitForEnabled('[data-action="add"]', ADD_SEARCH_DEBOUNCE_MS)
+    addButton.click()
 
-    document.body.querySelector<HTMLButtonElement>('[data-action="add"]')!.click()
-    await flushPromises()
-
-    expect(m.addItem).toHaveBeenCalledWith(42, { media_id: 603, media_type: "movie" })
+    await vi.waitFor(() => expect(m.addItem).toHaveBeenCalledWith(42, { media_id: 603, media_type: "movie" }), waitAfterDebounce(ADD_SEARCH_DEBOUNCE_MS))
     expect(w.emitted("added")).toHaveLength(1)
   })
 })
