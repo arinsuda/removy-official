@@ -55,8 +55,8 @@ export interface AdminReviewRow {
 
 export interface AdminAuditLogRow {
   id: number
-  admin_id: number
-  admin_username: string
+  admin_id: number | null
+  admin_username: string | null
   action: string
   target_type: string
   target_id: number

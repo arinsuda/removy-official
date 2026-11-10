@@ -64,8 +64,8 @@ type AdminReviewRow struct {
 
 type AdminAuditLogRow struct {
 	ID            uint           `json:"id"`
-	AdminID       uint           `json:"admin_id"`
-	AdminUsername string         `json:"admin_username"`
+	AdminID       *uint          `json:"admin_id"`
+	AdminUsername *string        `json:"admin_username"`
 	Action        AuditAction    `json:"action"`
 	TargetType    string         `json:"target_type"`
 	TargetID      uint           `json:"target_id"`

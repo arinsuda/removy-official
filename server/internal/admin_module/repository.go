@@ -400,7 +400,7 @@ func (r *gormRepository) ListAuditLogs(filter AuditLogFilter) ([]AdminAuditLogRo
 			admin_audit_logs.meta_data,
 			admin_audit_logs.created_at
 		`).
-		Joins("JOIN users ON users.id = admin_audit_logs.admin_id")
+		Joins("LEFT JOIN users ON users.id = admin_audit_logs.admin_id")
 
 	if filter.Action != "" && filter.Action != "all" {
 		query = query.Where("admin_audit_logs.action = ?", filter.Action)
@@ -416,8 +416,8 @@ func (r *gormRepository) ListAuditLogs(filter AuditLogFilter) ([]AdminAuditLogRo
 
 	type dbAuditRow struct {
 		ID            uint
-		AdminID       uint
-		AdminUsername string
+		AdminID       *uint
+		AdminUsername *string
 		Action        AuditAction
 		TargetType    string
 		TargetID      uint
@@ -510,7 +510,7 @@ func (r *gormRepository) UpdateUserRole(adminID, targetUserID uint, newRoleName 
 		metaJS, _ := json.Marshal(metaMap)
 
 		auditLog := AdminAuditLog{
-			AdminID:    adminID,
+			AdminID:    &adminID,
 			Action:     ActionUserRoleChanged,
 			TargetType: "user",
 			TargetID:   targetUserID,
@@ -587,7 +587,7 @@ func (r *gormRepository) UpdateUserStatus(adminID, targetUserID uint, isActive b
 		metaJS, _ := json.Marshal(metaMap)
 
 		auditLog := AdminAuditLog{
-			AdminID:    adminID,
+			AdminID:    &adminID,
 			Action:     action,
 			TargetType: "user",
 			TargetID:   targetUserID,
@@ -686,7 +686,7 @@ func (r *gormRepository) DeleteUser(adminID, targetUserID uint, reason *string) 
 		metaJS, _ := json.Marshal(metaMap)
 
 		auditLog := AdminAuditLog{
-			AdminID:    adminID,
+			AdminID:    &adminID,
 			Action:     ActionUserDeleted,
 			TargetType: "user",
 			TargetID:   targetUserID,
@@ -731,7 +731,7 @@ func (r *gormRepository) DeleteReview(adminID, reviewID uint, reason *string) er
 		metaJS, _ := json.Marshal(metaMap)
 
 		auditLog := AdminAuditLog{
-			AdminID:    adminID,
+			AdminID:    &adminID,
 			Action:     ActionReviewDeleted,
 			TargetType: "review",
 			TargetID:   reviewID,

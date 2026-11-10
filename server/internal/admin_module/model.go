@@ -3,7 +3,6 @@ package admin_module
 import (
 	"time"
 
-	users "github.com/arinsuda/movie-hub/internal/user_module"
 	"gorm.io/datatypes"
 )
 
@@ -18,9 +17,10 @@ const (
 )
 
 type AdminAuditLog struct {
-	ID         uint           `gorm:"primarykey;autoIncrement" json:"id"`
-	AdminID    uint           `gorm:"not null;index" json:"admin_id"`
-	Admin      users.User     `gorm:"foreignKey:AdminID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"-"`
+	ID uint `gorm:"primarykey;autoIncrement" json:"id"`
+	// AdminID becomes NULL when the admin is hard-deleted (FK fk_admin_audit_logs_admin, SET NULL).
+	// No relation tag: the FK is created by a SQL migration, not AutoMigrate.
+	AdminID    *uint          `gorm:"index" json:"admin_id"`
 	Action     AuditAction    `gorm:"type:varchar(50);not null;index" json:"action"`
 	TargetType string         `gorm:"type:varchar(50);not null;index" json:"target_type"`
 	TargetID   uint           `gorm:"not null;index" json:"target_id"`

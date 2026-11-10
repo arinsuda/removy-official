@@ -24,6 +24,7 @@ import (
 	"github.com/arinsuda/movie-hub/internal/media_stats_module"
 	noti "github.com/arinsuda/movie-hub/internal/notification_module"
 	"github.com/arinsuda/movie-hub/internal/review_module"
+	"github.com/arinsuda/movie-hub/internal/shared"
 	"github.com/arinsuda/movie-hub/internal/user_module"
 	"github.com/arinsuda/movie-hub/internal/user_stats_module"
 	"github.com/arinsuda/movie-hub/internal/watch_log_module"
@@ -478,6 +479,40 @@ func runSQLMigrations(db *gorm.DB, cfg *config.Config) error {
 		for _, t := range identity_policy.ReleasedTables() {
 			if err := tx.Exec("DELETE FROM " + t[0] + " WHERE " + t[1] + " IN (SELECT id FROM users WHERE deleted_at IS NOT NULL)").Error; err != nil {
 				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	// NOT VALID only: drop + add in one ALTER per table, no scan and no data cleanup. Orphan cleanup and validation are the next migration.
+	if err := runSchemaMigrationTx(db, "20261111_user_fk_cascade_not_valid", cfg.DB.MigrationLockTimeoutMs, cfg.DB.MigrationStatementTimeoutMs, func(tx *gorm.DB) error {
+		for _, fk := range migrate.UserFKs {
+			if err := migrate.ReplaceUserFK(tx, fk); err != nil {
+				return fmt.Errorf("user fk %s: %w", fk.Constraint, err)
+			}
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	// A statement/lock timeout or deadlock while cleaning orphans or validating defers the migration (retried next boot).
+	if err := runSchemaMigrationTx(db, "20261111_user_fk_cascade_validate", cfg.DB.MigrationLockTimeoutMs, cfg.DB.MigrationStatementTimeoutMs, func(tx *gorm.DB) error {
+		for _, fk := range migrate.UserFKs {
+			if err := tx.Exec("SAVEPOINT user_fk_validate").Error; err != nil {
+				return err
+			}
+			if err := migrate.ValidateUserFK(tx, fk); err != nil {
+				if shared.IsPgRetryable(err) {
+					log.Printf("WARN user fk %s: transient failure while validating, deferred", fk.Constraint)
+					if rbErr := tx.Exec("ROLLBACK TO SAVEPOINT user_fk_validate").Error; rbErr != nil {
+						return rbErr
+					}
+					return errMigrationDeferred
+				}
+				return fmt.Errorf("user fk %s: %w", fk.Constraint, err)
 			}
 		}
 		return nil
