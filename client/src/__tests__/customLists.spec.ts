@@ -10,7 +10,7 @@ import { listErrorKey } from "@/components/lists/listErrors"
 import { moveIndex } from "@/views/library/useListReorder"
 import { useUIStore } from "@/stores/ui"
 import { useRealI18n } from "./helpers/realI18n"
-import { waitAfterDebounce, waitForEnabled } from "./helpers/waitForEnabled"
+import { clickAfterRender, waitAfterDebounce, waitForEnabled } from "./helpers/waitForEnabled"
 
 const m = vi.hoisted(() => ({
   getOwn: vi.fn(),
@@ -143,7 +143,7 @@ describe("LibraryAddSheet custom list target", () => {
     input.dispatchEvent(new Event("input"))
     // Assert on outcomes (result rendered, request sent) instead of racing fake timers.
     const addButton = await waitForEnabled('[data-action="add"]', ADD_SEARCH_DEBOUNCE_MS)
-    addButton.click()
+    clickAfterRender(addButton)
 
     await vi.waitFor(() => expect(m.addItem).toHaveBeenCalledWith(42, { media_id: 603, media_type: "movie" }), waitAfterDebounce(ADD_SEARCH_DEBOUNCE_MS))
     expect(w.emitted("added")).toHaveLength(1)
