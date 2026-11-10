@@ -46,8 +46,8 @@ async function onKeydown(e: KeyboardEvent) {
 .picker__btn {
   width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--color-border-strong); cursor: pointer;
 }
-.picker__btn--dark { background: #0b0b0c; }
-.picker__btn--light { background: #f6f3ee; }
+.picker__btn--dark { background: #0b0b0c; } /* hardcode-ok: swatch previews the fixed share-card theme background */
+.picker__btn--light { background: #f6f3ee; } /* hardcode-ok: swatch previews the fixed share-card theme background */
 .picker__btn--brand { background: var(--color-brand); }
 .picker__btn[aria-checked="true"] { outline: 2px solid var(--color-text-primary); outline-offset: 2px; }
 .picker__name { color: var(--color-text-secondary); font-size: 13px; font-weight: 600; }

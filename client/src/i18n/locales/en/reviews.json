@@ -31,7 +31,8 @@
     "notRated": "NR",
     "loginRequired": "Sign in to write a review",
     "submitFailed": "Could not post your review. Please try again.",
-    "updateFailed": "Could not update your review. Please try again."
+    "updateFailed": "Could not update your review. Please try again.",
+    "deleteFailed": "Could not delete your review. Please try again."
   },
   "composer": {
     "title": "Write a review",
@@ -41,7 +42,8 @@
     "placeholder": {
       "movie": "What did you think of this movie?",
       "tv": "What did you think of this series?"
-    }
+    },
+    "visibilityLabel": "Visibility"
   },
   "own": {
     "title": "Your review",

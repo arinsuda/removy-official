@@ -82,8 +82,10 @@
 
         <!-- Review body -->
         <div class="review-body">
+          <!-- hardcode-ok: typographic quote glyph -->
           <span class="quote-mark">&ldquo;</span>
           <p class="review-text">{{ truncatedBody }}</p>
+          <!-- hardcode-ok: typographic quote glyph -->
           <span class="quote-mark quote-end">&rdquo;</span>
         </div>
 
@@ -94,20 +96,23 @@
     <!-- Branding footer -->
     <div class="brand-footer">
       <div class="brand-divider" />
-      <span class="reviewed-label">REVIEWED ON</span>
+      <span class="reviewed-label">{{ t("share.reviewedOnLabel") }}</span>
       <div class="brand-logo">
+        <!-- hardcode-ok: brand wordmark -->
         <span class="logo-re">POP</span><span class="logo-mov">CORN</span>
       </div>
-      <span class="brand-handle">POPCORN</span>
+      <span class="brand-handle">{{ t("common.brand") }}</span>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
   import { computed } from "vue"
+  import { useI18n } from "vue-i18n"
   import type { ShareMediaContext, ShareReviewContext } from "@/types/share"
   import { useShareImage } from "@/composables/useShareImage"
 
+  const { t } = useI18n()
   const props = defineProps<{
     media: ShareMediaContext
     review: ShareReviewContext
@@ -136,7 +141,7 @@
     height: 1920px;
     position: relative;
     overflow: hidden;
-    background: #0a0a0a;
+    background: #0a0a0a; /* hardcode-ok: share PNG template must render identically */
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
@@ -164,9 +169,9 @@
     inset: 0;
     background: linear-gradient(
       180deg,
-      rgba(10, 10, 10, 0.5) 0%,
-      rgba(10, 10, 10, 0.85) 50%,
-      #0a0a0a 100%
+      rgba(10, 10, 10, 0.5) 0%, /* hardcode-ok: share PNG template must render identically */
+      rgba(10, 10, 10, 0.85) 50%, /* hardcode-ok: share PNG template must render identically */
+      #0a0a0a 100% /* hardcode-ok: share PNG template must render identically */
     );
   }
 
@@ -195,8 +200,8 @@
     overflow: hidden;
     flex-shrink: 0;
     box-shadow:
-      0 16px 48px rgba(0, 0, 0, 0.5),
-      0 0 0 1px rgba(255, 255, 255, 0.08);
+      0 16px 48px rgba(0, 0, 0, 0.5), /* hardcode-ok: share PNG template must render identically */
+      0 0 0 1px rgba(255, 255, 255, 0.08); /* hardcode-ok: share PNG template must render identically */
   }
 
   .poster-img {
@@ -209,11 +214,11 @@
   .poster-fallback {
     width: 100%;
     height: 100%;
-    background: #1a1a2e;
+    background: #1a1a2e; /* hardcode-ok: share PNG template must render identically */
     display: flex;
     align-items: center;
     justify-content: center;
-    color: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.2); /* hardcode-ok: share PNG template must render identically */
     font-size: 60px;
   }
 
@@ -229,8 +234,8 @@
   .type-badge {
     display: inline-block;
     align-self: flex-start;
-    background: rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.1); /* hardcode-ok: share PNG template must render identically */
+    color: rgba(255, 255, 255, 0.8); /* hardcode-ok: share PNG template must render identically */
     font-size: 18px;
     font-weight: 600;
     padding: 4px 16px;
@@ -240,7 +245,7 @@
   }
 
   .media-title {
-    color: #ffffff;
+    color: #ffffff; /* hardcode-ok: share PNG template must render identically */
     font-size: 40px;
     font-weight: 800;
     line-height: 1.2;
@@ -256,7 +261,7 @@
   }
 
   .media-year {
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(255, 255, 255, 0.5); /* hardcode-ok: share PNG template must render identically */
     font-size: 22px;
     margin: 0;
     font-weight: 500;
@@ -269,7 +274,7 @@
     background: linear-gradient(
       90deg,
       transparent,
-      rgba(255, 255, 255, 0.15),
+      rgba(255, 255, 255, 0.15), /* hardcode-ok: share PNG template must render identically */
       transparent
     );
   }
@@ -294,7 +299,7 @@
     border-radius: 50%;
     overflow: hidden;
     flex-shrink: 0;
-    border: 2px solid rgba(255, 255, 255, 0.15);
+    border: 2px solid rgba(255, 255, 255, 0.15); /* hardcode-ok: share PNG template must render identically */
   }
 
   .avatar-img {
@@ -307,11 +312,11 @@
   .avatar-fallback {
     width: 100%;
     height: 100%;
-    background: #1a1a2e;
+    background: #1a1a2e; /* hardcode-ok: share PNG template must render identically */
     display: flex;
     align-items: center;
     justify-content: center;
-    color: rgba(255, 255, 255, 0.3);
+    color: rgba(255, 255, 255, 0.3); /* hardcode-ok: share PNG template must render identically */
     font-size: 28px;
   }
 
@@ -324,7 +329,7 @@
   }
 
   .author-name {
-    color: #ffffff;
+    color: #ffffff; /* hardcode-ok: share PNG template must render identically */
     font-size: 26px;
     font-weight: 700;
     white-space: nowrap;
@@ -333,7 +338,7 @@
   }
 
   .author-username {
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(255, 255, 255, 0.5); /* hardcode-ok: share PNG template must render identically */
     font-size: 20px;
     font-weight: 400;
   }
@@ -352,17 +357,17 @@
   }
 
   .star-filled {
-    color: #f5c518;
+    color: #f5c518; /* hardcode-ok: share PNG template must render identically */
     font-size: 24px;
   }
 
   .star-empty {
-    color: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.2); /* hardcode-ok: share PNG template must render identically */
     font-size: 24px;
   }
 
   .rating-text {
-    color: rgba(255, 255, 255, 0.7);
+    color: rgba(255, 255, 255, 0.7); /* hardcode-ok: share PNG template must render identically */
     font-size: 20px;
     font-weight: 600;
   }
@@ -371,15 +376,15 @@
   .review-body {
     position: relative;
     padding: 24px 32px;
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(255, 255, 255, 0.04); /* hardcode-ok: share PNG template must render identically */
     border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.08); /* hardcode-ok: share PNG template must render identically */
     overflow: hidden;
     max-height: 500px;
   }
 
   .quote-mark {
-    color: rgba(245, 67, 44, 0.4);
+    color: rgba(245, 67, 44, 0.4); /* hardcode-ok: share PNG template must render identically */
     font-size: 64px;
     font-weight: 800;
     line-height: 1;
@@ -396,7 +401,7 @@
   }
 
   .review-text {
-    color: rgba(255, 255, 255, 0.9);
+    color: rgba(255, 255, 255, 0.9); /* hardcode-ok: share PNG template must render identically */
     font-size: 26px;
     line-height: 1.6;
     margin: 24px 0 8px;
@@ -407,7 +412,7 @@
   }
 
   .watched-date {
-    color: rgba(255, 255, 255, 0.4);
+    color: rgba(255, 255, 255, 0.4); /* hardcode-ok: share PNG template must render identically */
     font-size: 20px;
     margin: 0;
     display: flex;
@@ -429,11 +434,11 @@
   .brand-divider {
     width: 60px;
     height: 2px;
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.2); /* hardcode-ok: share PNG template must render identically */
   }
 
   .reviewed-label {
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(255, 255, 255, 0.5); /* hardcode-ok: share PNG template must render identically */
     font-size: 20px;
     font-weight: 500;
     letter-spacing: 1px;
@@ -446,15 +451,15 @@
   }
 
   .logo-re {
-    color: #ffffff;
+    color: #ffffff; /* hardcode-ok: share PNG template must render identically */
   }
 
   .logo-mov {
-    color: #f5432c;
+    color: #f5432c; /* hardcode-ok: share PNG template must render identically */
   }
 
   .brand-handle {
-    color: rgba(255, 255, 255, 0.35);
+    color: rgba(255, 255, 255, 0.35); /* hardcode-ok: share PNG template must render identically */
     font-size: 16px;
     font-weight: 500;
   }

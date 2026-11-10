@@ -106,7 +106,7 @@ Tokens live in `client/src/assets/styles/main.css` (`@theme static`); use them a
 - Hard-coded color mapping: #080808-#141414 page roots -> `surface`; #111-#1a1a1a cards -> `surface-2`; #1f1f1f/#2a2a2a fills -> `surface-3`; white alpha 5-8% -> `border`, 12-15% -> `border-strong`; #e1251b/#f5432c -> `brand` (actions) or `danger` (destructive); #f5c518/#fbbf24 -> `rating`.
 - Leave alone: share templates, poster scrims, `PopcornRatingIcon` gradients.
 - Convert on edit: when you touch a file, convert its hard-coded colors. Never run a codemod over the repo.
-- `--c-*` variables are legacy aliases to the tokens; remove them file by file, don't add new ones.
+- `--c-*` legacy variables are gone (baseline 0); don't reintroduce them.
 - `designTokens.spec.ts` is a ratchet: it fails if `.vue` hex/rgb counts or `--c-` definitions grow. Lower its baseline when counts drop.
 - Breakpoints for new CSS: 480/640/768/1024/1280, mobile-first (`min-width`).
 - Input focus ring is global (`motion.css`); add `data-focus-custom` to opt out when a control draws its own.
@@ -147,7 +147,7 @@ Changing any of these affects stored data, live sessions, or other systems:
 - `users.onboarded_at` is set once when favorite genres are saved or skipped (`PATCH /users/:id/genres`); existing users have NULL until they do. Self-delete (`DELETE /users/:id`) needs `{password}` or, for accounts without a password, `{confirm_username}`.
 - Activity-type defaults live only in `privacy_policy/activity_defaults.go` (feed SQL is generated from it).
 - Huge files: UserBmol.vue (~2.4k), BmolSection.vue (~1.8k), TVDetailView / EditProfile / MovieDetailView (~1.6k), HomeView (~1.4k), MainLayout (~1.3k), MovieReviews (~1.3k). Use grep + ranged reads, not full reads.
-- `server/tmp/` is air build output (`.air.toml`). `components/HelloWorld.vue`, `TheWelcome.vue`, and `WelcomeItem.vue` look like Vite scaffold leftovers; check usage before relying on or removing them.
+- `server/tmp/` is air build output (`.air.toml`).
 
 ## Docs (trust level)
 - Code > this file > `README.md` (may lag code) > `client/README.md`.

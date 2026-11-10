@@ -7,6 +7,7 @@ const SIDE = 1
 const EXIT_MS = 480
 const ENTER_MS = 680
 const EASING = "cubic-bezier(0.32, 0.72, 0, 1)"
+// hardcode-ok: must match the inline arrival script in index.html and PLANZI's copy
 const BACKDROP = "#050505"
 // Must match the inline arrival script in index.html.
 const ARRIVING_CLASS = "platform-arriving"
