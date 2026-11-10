@@ -5,7 +5,7 @@
     :data-variant="variant"
   >
     <template v-if="variant === 'detail'">
-      <div class="flex w-full flex-col items-stretch gap-3 min-[360px]:flex-row min-[360px]:items-center">
+      <div class="flex w-full flex-col items-stretch gap-3 xs:flex-row xs:items-center">
         <div class="flex flex-1 flex-col items-center gap-1 text-center">
           <PopcornScoreBadge :average="popcorn.average" :count="popcorn.count" size="detail" />
           <span data-test="review-count" class="text-caption text-text-muted">
@@ -13,7 +13,7 @@
           </span>
         </div>
         <ul
-          class="m-0 flex list-none flex-col justify-center gap-2 border-t border-border p-0 pt-3 min-[360px]:border-l min-[360px]:border-t-0 min-[360px]:pl-4 min-[360px]:pt-0"
+          class="m-0 flex list-none flex-col justify-center gap-2 border-t border-border p-0 pt-3 xs:border-l xs:border-t-0 xs:pl-4 xs:pt-0"
         >
           <li
             v-for="s in secondary"

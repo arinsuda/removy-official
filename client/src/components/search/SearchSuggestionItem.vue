@@ -167,7 +167,7 @@ const tmdb = computed(() => {
 .ssi-popcorn[data-tier="hot"] svg {
   color: var(--color-brand);
 }
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
   .ssi {
     min-height: 76px;
   }

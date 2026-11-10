@@ -93,7 +93,7 @@ const respond = useMutation({
 </script>
 
 <style scoped>
-.fl { min-height: 8rem; max-height: 60vh; margin-top: 0.75rem; overflow-y: auto; }
+.fl { min-height: 8rem; max-height: 60svh; margin-top: 0.75rem; overflow-y: auto; }
 .fl__msg { padding: 2rem 0; font-size: 0.875rem; text-align: center; color: var(--color-text-muted); }
 .fl__list { display: flex; flex-direction: column; gap: 0.5rem; padding: 0; list-style: none; }
 .fl__row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }

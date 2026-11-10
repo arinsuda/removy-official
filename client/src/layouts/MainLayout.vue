@@ -39,7 +39,7 @@ watch(
 
 <style scoped>
 .app-shell {
-  min-height: 100vh;
+  min-height: 100vh; min-height: 100dvh;
   background: var(--color-surface);
 }
 

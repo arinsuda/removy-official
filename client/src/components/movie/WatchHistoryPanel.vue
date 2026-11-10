@@ -122,7 +122,9 @@ onBeforeUnmount(() => { document.body.style.overflow = '' })
   max-width: 400px;
   background: var(--color-surface-2);
   border-left: 1px solid var(--color-border);
-  height: 100vh;
+  height: 100vh; height: 100dvh;
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
   display: flex;
   flex-direction: column;
 }

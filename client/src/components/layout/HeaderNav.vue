@@ -106,7 +106,7 @@ onBeforeUnmount(() => observer?.disconnect())
 .hn-indicator--ready {
   transition: transform var(--motion-base) var(--ease-out-soft), width var(--motion-base) var(--ease-out-soft), opacity var(--motion-fast);
 }
-@media (max-width: 1100px) {
+@media (max-width: 1279.98px) {
   .hn-link {
     padding: 0.5rem 0.5rem;
     font-size: 0.8125rem;

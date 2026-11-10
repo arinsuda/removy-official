@@ -4,6 +4,7 @@ import type { Video } from "@/types"
 import type { MediaRatings } from "@/types/movie"
 import type { HomeMedia } from "@/components/home/homeMedia"
 import { resolveTrailerCandidates, useTrailerPreview } from "@/composables/useTrailerPreview"
+import { minWidthQuery } from "@/constants/breakpoints"
 
 type TrailerState = ReturnType<typeof useTrailerPreview>
 
@@ -206,7 +207,7 @@ export function provideHomePopup(): HomePopup {
   }
 
   onMounted(() => {
-    media = window.matchMedia("(min-width: 768px)")
+    media = window.matchMedia(minWidthQuery("md"))
     syncViewport()
     media.addEventListener("change", syncViewport)
     document.addEventListener("keydown", onKeydown)

@@ -253,7 +253,7 @@ async function submit() {
 }
 .add-sheet__hint { font-size: var(--text-caption); color: var(--color-text-muted); }
 
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
   .app-modal:has(> .add-sheet) { align-items: flex-end; padding: 0; }
   .add-sheet { max-width: none; max-height: 94dvh; border-bottom: 0; border-radius: 20px 20px 0 0; padding-bottom: env(safe-area-inset-bottom); }
 }

@@ -253,7 +253,7 @@ function onMenuFocusOut(e: FocusEvent) {
 .bcard--shelf .bcard__title { font-size: var(--text-caption); font-weight: 600; }
 .bcard--shelf .bcard__handle,
 .bcard--shelf .bcard__menu-btn { width: 1.75rem; height: 1.75rem; }
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
   .bcard--podium .bcard__note { -webkit-line-clamp: 3; line-clamp: 3; display: -webkit-box; }
 }
 .bcard--hero .bcard__note,

@@ -168,7 +168,7 @@ function confirmUnfollow() {
 </script>
 
 <style scoped>
-.profile { width: 100%; min-height: 100vh; color: var(--color-text-primary); background: var(--color-surface); }
+.profile { width: 100%; min-height: 100vh; min-height: 100dvh; color: var(--color-text-primary); background: var(--color-surface); }
 .profile__layout { max-width: 75rem; margin: 0 auto; padding: 0 1rem 5rem; }
 .profile__grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
 .profile__rail { display: flex; flex-direction: column; gap: 1rem; }

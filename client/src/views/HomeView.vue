@@ -88,7 +88,7 @@ const data = useHomeData()
 
 <style scoped>
 .home {
-  min-height: 100vh;
+  min-height: 100vh; min-height: 100dvh;
   background: var(--color-surface);
   color: var(--color-text-primary);
 }
