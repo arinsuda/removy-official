@@ -14,6 +14,7 @@ import (
 	"github.com/arinsuda/movie-hub/config"
 	"github.com/arinsuda/movie-hub/database"
 	"github.com/arinsuda/movie-hub/internal/mailer"
+	"github.com/arinsuda/movie-hub/monitoring"
 	tmdb "github.com/arinsuda/movie-hub/internal/tmdb_module"
 	mw "github.com/arinsuda/movie-hub/middleware"
 	"github.com/arinsuda/movie-hub/router"
@@ -33,6 +34,14 @@ func main() {
 		log.Fatalf("❌ Config error: %v", err)
 	}
 
+	if monitoring.Init(monitoring.Options{
+		DSN:              cfg.Sentry.DSN,
+		Environment:      cfg.Sentry.Environment,
+		TracesSampleRate: cfg.Sentry.TracesSampleRate,
+	}) {
+		log.Println("Sentry error reporting enabled")
+	}
+
 	tmdb.Init(cfg)
 	database.Connect(cfg)
 
@@ -41,6 +50,7 @@ func main() {
 		ErrorHandler: customErrorHandler,
 	})
 
+	app.Use(monitoring.Middleware())
 	app.Use(cors.New(corsConfig(cfg.CORS.AllowedOrigins)))
 
 	workerCtx, stopWorkers := context.WithCancel(context.Background())
@@ -77,10 +87,12 @@ func main() {
 		Handler: mainHandler,
 	}
 
+	shutdownDone := make(chan struct{})
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
+		defer close(shutdownDone)
 		<-quit
 		log.Println("🛑 Shutting down server...")
 		stopWorkers()
@@ -90,6 +102,7 @@ func main() {
 		if err := srv.Shutdown(ctx); err != nil {
 			log.Printf("❌ Server shutdown error: %v", err)
 		}
+		monitoring.Flush()
 	}()
 
 	log.Printf("🚀 Server running on port %s (HTTP API & Socket.io WebSockets)", cfg.Port)
@@ -97,6 +110,7 @@ func main() {
 		log.Fatalf("❌ Server error: %v", err)
 	}
 
+	<-shutdownDone
 	log.Println("👋 Server exited cleanly")
 }
 

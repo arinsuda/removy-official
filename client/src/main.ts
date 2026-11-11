@@ -4,6 +4,7 @@ import { VueQueryPlugin } from "@tanstack/vue-query"
 
 import App from "./App.vue"
 import router from "./router"
+import { initSentry } from "./monitoring/sentry"
 
 import { VueDatePicker } from "@vuepic/vue-datepicker"
 import "@vuepic/vue-datepicker/dist/main.css"
@@ -18,6 +19,8 @@ async function bootstrap() {
   // set saved or default locale
   const savedLocale = getSavedLocale()
   await setLocale(savedLocale)
+
+  initSentry(app, router)
 
   const pinia = createPinia()
   app.use(pinia)
