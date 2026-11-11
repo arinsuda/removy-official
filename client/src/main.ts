@@ -5,6 +5,7 @@ import { VueQueryPlugin } from "@tanstack/vue-query"
 import App from "./App.vue"
 import router from "./router"
 import { initSentry } from "./monitoring/sentry"
+import { installStaleChunkReload } from "./monitoring/staleChunkReload"
 
 import { VueDatePicker } from "@vuepic/vue-datepicker"
 import "@vuepic/vue-datepicker/dist/main.css"
@@ -21,6 +22,7 @@ async function bootstrap() {
   await setLocale(savedLocale)
 
   initSentry(app, router)
+  installStaleChunkReload(router)
 
   const pinia = createPinia()
   app.use(pinia)
