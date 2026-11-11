@@ -13,3 +13,9 @@ export const minWidthQuery = (bp: BreakpointName): string => `(min-width: ${BREA
 export const maxWidthQuery = (bp: BreakpointName): string => `(max-width: ${BREAKPOINTS[bp] - MAX_WIDTH_EPSILON}px)`
 
 export const isAtLeast = (bp: BreakpointName): boolean => window.innerWidth >= BREAKPOINTS[bp]
+
+/**
+ * Short viewport (landscape phones). Same value as every `@media (max-height: 30rem)` in CSS,
+ * which cannot read this constant: change them together.
+ */
+export const SHORT_VIEWPORT_QUERY = "(max-height: 30rem)"

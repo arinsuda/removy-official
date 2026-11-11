@@ -31,6 +31,8 @@ const menuId = `visibility-menu-${useId()}`;
 const MENU_WIDTH = 256;
 const MENU_FALLBACK_HEIGHT = 200;
 const EDGE = 8;
+/** Smallest menu height (px) before it stops shrinking to fit the viewport. */
+const MENU_MIN_HEIGHT = 96;
 /** Gap (px) between the trigger and the menu. */
 const MENU_OFFSET = 4;
 const alignLeft = ref(false);
@@ -48,8 +50,11 @@ function updatePlacement() {
   const height = menuRef.value?.offsetHeight || MENU_FALLBACK_HEIGHT;
   const below = window.innerHeight - rect.bottom;
   openUp.value = below < height + EDGE && rect.top > below;
+  const room = Math.max(MENU_MIN_HEIGHT, (openUp.value ? rect.top : below) - EDGE - MENU_OFFSET);
   menuStyle.value = {
     width: `${width}px`,
+    maxHeight: `${room}px`,
+    overflowY: "auto",
     ...(alignLeft.value
       ? { left: `${Math.max(EDGE, rect.left)}px` }
       : { right: `${Math.max(EDGE, window.innerWidth - rect.right)}px` }),

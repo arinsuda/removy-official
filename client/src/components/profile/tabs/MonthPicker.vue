@@ -158,7 +158,7 @@ useClickOutside(root, close)
 .mp__btn.is-active { color: var(--color-text-primary); border-color: var(--color-border-strong); }
 .mp__chev { color: var(--color-text-muted); transition: transform var(--motion-fast) var(--ease-water); }
 .mp__chev.is-open { transform: rotate(180deg); }
-.mp__pop { position: absolute; inset-block-start: calc(100% + 0.375rem); inset-inline-start: 0; z-index: var(--z-popover); display: flex; flex-direction: column; gap: 0.625rem; width: 15.5rem; padding: 0.75rem; background: var(--color-surface-2); border: 1px solid var(--color-border-strong); border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
+.mp__pop { position: absolute; inset-block-start: calc(100% + 0.375rem); inset-inline-start: 0; z-index: var(--z-popover); display: flex; flex-direction: column; gap: 0.625rem; width: 15.5rem; max-width: calc(100vw - 1rem); max-height: 70vh; max-height: 70dvh; overflow-y: auto; padding: 0.75rem; background: var(--color-surface-2); border: 1px solid var(--color-border-strong); border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
 .mp__pop--end { inset-inline-start: auto; inset-inline-end: 0; }
 .mp__head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
 .mp__year { font-size: var(--text-small); font-weight: 700; color: var(--color-text-primary); }

@@ -238,6 +238,7 @@
     }
   },
   "trailer": {
+    "title": "Trailer",
     "close": "Close trailer",
     "unavailable": "Sorry, no trailer is available for this title"
   }

@@ -85,10 +85,11 @@ onBeforeUnmount(() => document.removeEventListener("click", onDocumentClick))
 .noti-dropdown {
   position: fixed;
   top: 4rem;
-  right: 0.75rem;
-  left: 0.75rem;
+  right: max(0.75rem, env(safe-area-inset-right));
+  left: max(0.75rem, env(safe-area-inset-left));
   z-index: var(--z-above-header);
   display: flex;
+  max-height: min(32rem, calc(100vh - 5rem));
   max-height: min(32rem, calc(100dvh - 5rem));
   flex-direction: column;
   overflow: hidden;
