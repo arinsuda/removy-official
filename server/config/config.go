@@ -29,9 +29,23 @@ type Config struct {
 	MinIO           MinIOConfig
 	Google          GoogleConfig
 	Link            LinkConfig
+	Sentry          SentryConfig
 
 	// TrustedProxyHops is how many proxies append to X-Forwarded-For (Render = 1).
 	TrustedProxyHops int
+}
+
+// Sentry defaults. An empty DSN keeps error reporting off.
+const (
+	DefaultSentryEnvironment      = "production"
+	DefaultSentryTracesSampleRate = 0.05
+)
+
+// SentryConfig configures optional error monitoring (SENTRY_DSN empty = off).
+type SentryConfig struct {
+	DSN              string
+	Environment      string
+	TracesSampleRate float64
 }
 
 // LinkConfig configures PLANZI <-> POPCORN account linking. Empty Secrets disables the feature.
@@ -199,6 +213,11 @@ func Load() (*Config, error) {
 			FrontendSuccessURL: getEnv("GOOGLE_FRONTEND_SUCCESS_URL", "http://localhost:5173/"),
 			FrontendErrorURL:   getEnv("GOOGLE_FRONTEND_ERROR_URL", "http://localhost:5173/login"),
 		},
+		Sentry: SentryConfig{
+			DSN:              getEnv("SENTRY_DSN", ""),
+			Environment:      getEnv("SENTRY_ENVIRONMENT", DefaultSentryEnvironment),
+			TracesSampleRate: parseRate(getEnv("SENTRY_TRACES_SAMPLE_RATE", ""), DefaultSentryTracesSampleRate),
+		},
 		Link: LinkConfig{
 			Secrets:      splitSecrets(getEnv("LINK_SHARED_SECRET", "")),
 			RemoteAPIURL: strings.TrimRight(getEnv("LINK_REMOTE_API_URL", ""), "/"),
@@ -309,4 +328,13 @@ func DevMailLogAllowed(origins []string, baseURLs ...string) bool {
 		}
 	}
 	return true
+}
+
+// parseRate reads a 0..1 sample rate, falling back when empty or out of range.
+func parseRate(raw string, fallback float64) float64 {
+	v, err := strconv.ParseFloat(raw, 64)
+	if err != nil || v < 0 || v > 1 {
+		return fallback
+	}
+	return v
 }
