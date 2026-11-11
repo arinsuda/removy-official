@@ -800,6 +800,35 @@ func (s *Service) issueAndStoreTokensTx(tx *gorm.DB, user *user_module.User, use
 	return pair, nil
 }
 
+// HasSession checks whether rawRefresh maps to a live, unrevoked session without rotating it.
+func (s *Service) HasSession(rawRefresh string) (bool, error) {
+	if rawRefresh == "" {
+		return false, nil
+	}
+	claims, err := s.jwt.ParseRefresh(rawRefresh)
+	if err != nil {
+		return false, nil
+	}
+	stored, err := s.repo.FindRefreshToken(HashToken(rawRefresh))
+	if err != nil {
+		if errors.Is(err, ErrInvalidToken) {
+			return false, nil
+		}
+		return false, fmt.Errorf("find refresh token: %w", err)
+	}
+	if stored.IsExpired() {
+		return false, nil
+	}
+	st, found, err := identity_policy.ReadSession(s.db, claims.UserID)
+	if err != nil {
+		return false, fmt.Errorf("read session: %w", err)
+	}
+	if !found || !st.Active || !st.Verified || st.Version != claims.TokenVersion {
+		return false, nil
+	}
+	return true, nil
+}
+
 func (s *Service) Refresh(rawRefresh, userAgent, ip string) (*TokenPair, *user_module.User, error) {
 	claims, err := s.jwt.ParseRefresh(rawRefresh)
 	if err != nil {

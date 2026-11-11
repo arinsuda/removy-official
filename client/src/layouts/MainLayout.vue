@@ -9,6 +9,8 @@
         </Transition>
       </RouterView>
     </main>
+
+    <AuthPromptModal />
   </div>
 </template>
 
@@ -16,6 +18,7 @@
 import { watch } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { useNotificationStore } from "@/stores/notification";
+import AuthPromptModal from "@/components/auth/AuthPromptModal.vue";
 import AppHeader from "@/components/layout/AppHeader.vue";
 
 const authStore = useAuthStore();

@@ -84,7 +84,7 @@ func Register(ctx context.Context, app *fiber.App, db *gorm.DB, cfg *config.Conf
 	movieHandler := movie_module.New(ratingRepo, extRatings)
 	reviewHandler := review_module.New(db, mc, statsSvc, achieveModule.Service, notifSvc, feedModule.Service, policy)
 	statsHandler := media_stats_module.New(db)
-	RegisterPublicRoutes(api, mw.OptionalAuth, PublicReadLimiter(cfg.TrustedProxyHops), movieHandler, reviewHandler, statsHandler)
+	RegisterPublicRoutes(api, mw.OptionalAuth, PublicReadLimiter(cfg.TrustedProxyHops), PublicSearchLimiter(cfg.TrustedProxyHops), movieHandler, reviewHandler, statsHandler)
 
 	protected := api.Group("/", mw.RequireAuth)
 

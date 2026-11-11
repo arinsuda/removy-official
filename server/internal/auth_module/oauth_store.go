@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	neturl "net/url"
 	"strings"
 	"sync"
 	"time"
@@ -135,19 +136,27 @@ func (s *MemoryOAuthTransactionStore) backgroundCleanup(interval time.Duration) 
 	}
 }
 
-func ValidateRelativeReturnURL(url string) string {
-	if url == "" {
+// ValidateRelativeReturnURL restricts OAuth return URLs to clean same-origin path+query targets.
+func ValidateRelativeReturnURL(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
 		return "/"
 	}
-	url = strings.TrimSpace(url)
-	if strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://") || strings.HasPrefix(url, "//") || strings.HasPrefix(url, "\\") {
+	if strings.ContainsAny(raw, "\x00\r\n\t\\") {
 		return "/"
 	}
-	if !strings.HasPrefix(url, "/") {
+	if !strings.HasPrefix(raw, "/") || strings.HasPrefix(raw, "//") {
 		return "/"
 	}
-	if url == "/login" || url == "/register" || url == "/q" || strings.HasPrefix(url, "/q") || strings.HasPrefix(url, "/login?") || strings.HasPrefix(url, "/register?") {
+	u, err := neturl.Parse(raw)
+	if err != nil || u.Scheme != "" || u.Host != "" {
 		return "/"
 	}
-	return url
+	if !strings.HasPrefix(u.Path, "/") || strings.HasPrefix(u.Path, "//") {
+		return "/"
+	}
+	if u.Path == "/login" || u.Path == "/register" || u.Path == "/forgot-password" || u.Path == "/reset-password" || u.Path == "/q" || strings.HasPrefix(u.Path, "/q") {
+		return "/"
+	}
+	return u.RequestURI()
 }

@@ -58,7 +58,7 @@
       <GoogleSignInButton :disabled="isLoading" @click="handleGoogleLogin" />
       <p class="auth-footer form-item">
         <span class="auth-footer__text">{{ t("auth.register.hasAccount") }}</span>
-        <RouterLink to="/login" class="auth-link auth-link--strong">{{ t("auth.register.login") }}</RouterLink>
+        <RouterLink :to="{ path: '/login', query: buildAuthQuery(route.query.redirect) }" class="auth-link auth-link--strong">{{ t("auth.register.login") }}</RouterLink>
       </p>
     </form>
   </AuthShell>
@@ -66,7 +66,7 @@
 
 <script setup lang="ts">
   import { ref } from "vue"
-  import { useRouter } from "vue-router"
+  import { useRoute, useRouter } from "vue-router"
   import { User as IconUser, Mail as IconMail, Lock as IconLock } from "lucide-vue-next"
   import AuthAlert from "@/components/auth/AuthAlert.vue"
   import AuthField from "@/components/auth/AuthField.vue"
@@ -79,22 +79,25 @@
   import { useI18n } from "vue-i18n"
   import { isRateLimited } from "@/utils/rateLimit"
   import { asApiError } from "@/utils/apiError"
+  import { buildAuthQuery, sanitizeRedirect } from "@/utils/safeRedirect"
 
   const { t } = useI18n()
 
+  const route = useRoute()
   const router = useRouter()
   const authStore = useAuthStore()
 
   async function handleGoogleLogin() {
+    const redirect = sanitizeRedirect(route.query.redirect) ?? "/"
     try {
       const { data } = await authApi.getGoogleConfig()
       if (!data.enabled) {
         serverError.value = t("auth.login.errors.googleDisabled")
         return
       }
-      window.location.assign(authApi.getGoogleLoginUrl("/"))
+      window.location.assign(authApi.getGoogleLoginUrl(redirect))
     } catch {
-      window.location.assign(authApi.getGoogleLoginUrl("/"))
+      window.location.assign(authApi.getGoogleLoginUrl(redirect))
     }
   }
 

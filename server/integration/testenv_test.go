@@ -264,7 +264,7 @@ func newEnv(t *testing.T) *env {
 	movieH := movie_module.New(review_module.NewRatingStatsReader(db), nil)
 	reviewH := review_module.New(db, nil, nil, nil, nil, nil, policy)
 	statsH := media_stats_module.New(db)
-	router.RegisterPublicRoutes(api, mw.OptionalAuth, router.PublicReadLimiter(e.cfg.TrustedProxyHops), movieH, reviewH, statsH)
+	router.RegisterPublicRoutes(api, mw.OptionalAuth, router.PublicReadLimiter(e.cfg.TrustedProxyHops), router.PublicSearchLimiter(e.cfg.TrustedProxyHops), movieH, reviewH, statsH)
 
 	protected := api.Group("/", mw.RequireAuth)
 	movie_module.RegisterRoutes(protected, movieH)

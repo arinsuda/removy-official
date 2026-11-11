@@ -14,7 +14,7 @@
     </p>
     <p v-else-if="!auth.isLoggedIn" class="reviews__guest">
       {{ t("reviews.guestPrompt") }}
-      <RouterLink :to="{ name: 'login', query: { redirect: route.fullPath } }" class="reviews__link">
+      <RouterLink :to="{ name: 'login', query: buildAuthQuery(route.fullPath) }" class="reviews__link">
         {{ t("media.detail.activity.signIn") }}
       </RouterLink>
     </p>
@@ -54,12 +54,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, useTemplateRef, watch } from "vue"
 import { useI18n } from "vue-i18n"
-import { RouterLink, useRoute, useRouter } from "vue-router"
-import { useToast } from "@/composables/useToast"
+import { RouterLink, useRoute } from "vue-router"
 import { httpStatus } from "@/components/lists/listErrors"
 import { followApi, reviewApi } from "@/api/api"
 import { useAuthStore } from "@/stores/auth"
+import { useAuthGate } from "@/composables/useAuthGate"
 import { useProfileNav } from "@/composables/useProfileNav"
+import { buildAuthQuery } from "@/utils/safeRedirect"
 import AppButton from "@/components/ui/AppButton.vue"
 import AppErrorState from "@/components/ui/AppErrorState.vue"
 import SkeletonList from "@/components/ui/skeleton/SkeletonList.vue"
@@ -89,8 +90,7 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const auth = useAuthStore()
 const route = useRoute()
-const router = useRouter()
-const toast = useToast()
+const { requireAuth } = useAuthGate()
 const { goToProfile } = useProfileNav()
 const composer = useTemplateRef<InstanceType<typeof ReviewComposer>>("composer")
 const own = useTemplateRef<InstanceType<typeof OwnReviewCard>>("own")
@@ -272,16 +272,8 @@ function onOwnUpdated(updated: ReviewResponse) {
 }
 
 // Optimistic like with rollback on error.
-/** Guests are sent to login; returns true when signed in. */
-function requireLogin(): boolean {
-  if (auth.isLoggedIn) return true
-  toast.error(t("media.detail.loginRequired"))
-  router.push({ name: "login", query: { redirect: route.fullPath } })
-  return false
-}
-
 async function toggleLike(item: ReviewResponse) {
-  if (!requireLogin()) return
+  if (!requireAuth("like")) return
   if (pendingLike.value.has(item.id)) return
   pendingLike.value.add(item.id)
   const wasLiked = item.is_liked
@@ -299,7 +291,7 @@ async function toggleLike(item: ReviewResponse) {
 }
 
 async function toggleHelpful(item: ReviewResponse) {
-  if (!requireLogin()) return
+  if (!requireAuth("helpful")) return
   if (pendingHelpful.value.has(item.id)) return
   pendingHelpful.value.add(item.id)
   const wasVoted = item.is_helpful_voted

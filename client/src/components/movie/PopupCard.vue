@@ -155,6 +155,8 @@ import { useImageUrl } from "@/composables/useImageUrl";
 import type { Movie, TVSeries } from "@/types";
 import type { ResolvedTrailer } from "@/composables/useTrailerPreview";
 import { libraryApi } from "@/api/endpoints/library";
+import { useAuthGate } from "@/composables/useAuthGate";
+import { useToast } from "@/composables/useToast";
 import { useAuthStore } from "@/stores/auth";
 import { mediaApi } from "@/api/endpoints/media";
 import MediaRating from "./MediaRating.vue";
@@ -179,6 +181,8 @@ const props = defineProps<{
 
 const { t, n } = useI18n();
 const authStore = useAuthStore();
+const { requireAuth } = useAuthGate();
+const toast = useToast();
 const currentUserId = computed(() => authStore.user?.id ?? null);
 
 // ─── Derived media type (default: "movie") ────────────────────────────────
@@ -303,10 +307,7 @@ onMounted(async () => {
 
 // ─── Watched Toggle ───────────────────────────────────────────────────────
 async function handleWatchedToggle() {
-  if (!currentUserId.value) {
-    window.$toast?.warning(t("media.popup.toast.loginRequired"), t("media.popup.toast.loginRequiredTitle"));
-    return;
-  }
+  if (!requireAuth("watchLog")) return;
 
   try {
     if (isWatched.value && watchedItemId.value) {
@@ -314,7 +315,7 @@ async function handleWatchedToggle() {
       stats.value.view_count = Math.max(0, stats.value.view_count - 1);
       isWatched.value = false;
       watchedItemId.value = null;
-      window.$toast?.info(t("media.popup.toast.removedWatched"), displayTitle.value);
+      toast.toast(t("media.popup.toast.removedWatched"));
     } else {
       const res = await libraryApi.addItem({
         media_id: props.movie.id,
@@ -329,46 +330,39 @@ async function handleWatchedToggle() {
 
       stats.value.view_count++;
       isWatched.value = true;
-      window.$toast?.success(
-        t("media.popup.toast.markedWatched"),
-        displayTitle.value,
-      );
+      toast.success(t("media.popup.toast.markedWatched"));
     }
   } catch (err) {
     logApiError("Watched toggle failed", err);
-    window.$toast?.error(t("media.popup.toast.saveFailed"), t("common.brand"));
+    toast.error(t("media.popup.toast.saveFailed"));
   }
 }
 
 // ─── Like Toggle ──────────────────────────────────────────────────────────
 async function handleLikeToggle() {
+  if (!requireAuth("like")) return;
+
   try {
     if (isLiked.value) {
       await mediaApi.unlikeMedia(mt.value, props.movie.id);
       stats.value.like_count = Math.max(0, stats.value.like_count - 1);
       isLiked.value = false;
-      window.$toast?.info(t("media.popup.toast.removedLike"), displayTitle.value);
+      toast.toast(t("media.popup.toast.removedLike"));
     } else {
       await mediaApi.likeMedia(mt.value, props.movie.id);
       stats.value.like_count++;
       isLiked.value = true;
-      window.$toast?.success(
-        t("media.popup.toast.addedLike"),
-        displayTitle.value,
-      );
+      toast.success(t("media.popup.toast.addedLike"));
     }
   } catch (err) {
     logApiError("Like toggle failed", err);
-    window.$toast?.error(t("media.popup.toast.genericError"), t("common.brand"));
+    toast.error(t("media.popup.toast.genericError"));
   }
 }
 
 // ─── Watchlist Toggle ─────────────────────────────────────────────────────
 async function handleWatchlistToggle() {
-  if (!currentUserId.value) {
-    window.$toast?.warning(t("media.popup.toast.loginRequired"), t("media.popup.toast.loginRequiredTitle"));
-    return;
-  }
+  if (!requireAuth("watchlist")) return;
 
   try {
     if (isInWatchlist.value && watchlistItemId.value) {
@@ -379,7 +373,7 @@ async function handleWatchlistToggle() {
       );
       isInWatchlist.value = false;
       watchlistItemId.value = null;
-      window.$toast?.info(t("media.popup.toast.removedWatchlist"), displayTitle.value);
+      toast.toast(t("media.popup.toast.removedWatchlist"));
     } else {
       const res = await libraryApi.addItem({
         media_id: props.movie.id,
@@ -393,14 +387,11 @@ async function handleWatchlistToggle() {
 
       stats.value.watchlist_count++;
       isInWatchlist.value = true;
-      window.$toast?.success(
-        t("media.popup.toast.addedWatchlist"),
-        displayTitle.value,
-      );
+      toast.success(t("media.popup.toast.addedWatchlist"));
     }
   } catch (err) {
     logApiError("Watchlist toggle failed", err);
-    window.$toast?.error(t("media.popup.toast.saveFailed"), t("common.brand"));
+    toast.error(t("media.popup.toast.saveFailed"));
   }
 }
 

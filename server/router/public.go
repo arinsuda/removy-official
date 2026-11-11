@@ -19,6 +19,22 @@ const (
 	PublicReadRateWindow = time.Minute
 )
 
+// Guests hitting TMDB-backed search get a tighter, separate budget per IP.
+const (
+	PublicSearchRateMax    = 30
+	PublicSearchRateWindow = time.Minute
+)
+
+// PublicSearchLimiter limits guest /movies/search and /tv/search per IP; signed-in users are not counted.
+func PublicSearchLimiter(trustedProxyHops int) fiber.Handler {
+	return ratelimit.New(PublicSearchRateMax, PublicSearchRateWindow, func(c fiber.Ctx) string {
+		if middleware.GetClaims(c) != nil {
+			return ""
+		}
+		return "public-search:" + shared.RateLimitIP(c, trustedProxyHops)
+	})
+}
+
 // PublicReadLimiter limits guest reads per IP (IPv6 collapsed to /64 by shared.RateLimitIP).
 func PublicReadLimiter(trustedProxyHops int) fiber.Handler {
 	return ratelimit.New(PublicReadRateMax, PublicReadRateWindow, func(c fiber.Ctx) string {
@@ -35,12 +51,12 @@ func PublicReadLimiter(trustedProxyHops int) fiber.Handler {
 // so routes registered after it never run before authentication.
 func RegisterPublicRoutes(
 	api fiber.Router,
-	optionalAuth, limiter fiber.Handler,
+	optionalAuth, limiter, searchLimiter fiber.Handler,
 	movies *movie_module.Handler,
 	reviews *review_module.Handler,
 	stats *media_stats_module.Handler,
 ) {
-	movie_module.RegisterPublicRoutes(api, movies, optionalAuth, limiter)
+	movie_module.RegisterPublicRoutes(api, movies, searchLimiter, optionalAuth, limiter)
 	review_module.RegisterPublicRoutes(api, reviews, optionalAuth, limiter)
 	media_stats_module.RegisterPublicRoutes(api, stats, optionalAuth, limiter)
 }

@@ -6,7 +6,7 @@ import { createPinia, setActivePinia } from "pinia"
 import { useAuthStore } from "@/stores/auth"
 
 vi.mock("@/api/api", () => ({
-  authApi: { refreshToken: vi.fn(), logout: vi.fn() },
+  authApi: { refreshToken: vi.fn(), logout: vi.fn(), getSession: vi.fn() },
   userApi: { me: vi.fn() },
 }))
 
@@ -35,6 +35,9 @@ describe("fetchMe refresh lock", () => {
     localStorage.clear()
     localStorage.setItem("refresh_token", "rt0")
     vi.clearAllMocks()
+    vi.mocked(authApi.getSession).mockResolvedValue({
+      data: { has_session: true },
+    } as Awaited<ReturnType<typeof authApi.getSession>>)
     Object.defineProperty(navigator, "locks", { value: fakeLocks(), configurable: true })
     vi.mocked(userApi.me).mockResolvedValue({
       data: { user: { id: 1, username: "u", favorite_genres: "[]" } },

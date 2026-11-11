@@ -40,6 +40,7 @@ import { useI18n } from "vue-i18n"
 import { Bookmark, CalendarCheck, ListPlus, Share2, Star } from "lucide-vue-next"
 import AddToListSheet from "@/components/lists/AddToListSheet.vue"
 import WatchLogModal from "@/components/movie/WatchLogModal.vue"
+import type { AuthGateReason } from "@/composables/useAuthGate"
 
 const props = defineProps<{
   mediaId: number
@@ -47,8 +48,8 @@ const props = defineProps<{
   watchlisted: boolean
   watchlistPending?: boolean
   hasOwnReview: boolean
-  /** Returns true when signed in; otherwise prompts the guest to log in. */
-  requireLogin: () => boolean
+  /** Returns true when signed in; otherwise opens the auth prompt for `reason`. */
+  requireLogin: (reason?: AuthGateReason) => boolean
 }>()
 
 const emit = defineEmits<{
@@ -69,15 +70,15 @@ watch(() => [props.mediaId, props.mediaType], () => {
 })
 
 function onRate() {
-  if (props.requireLogin()) emit("rate")
+  if (props.requireLogin("rate")) emit("rate")
 }
 
 function onAddToList() {
-  if (props.requireLogin()) showLists.value = true
+  if (props.requireLogin("list")) showLists.value = true
 }
 
 function onLog() {
-  if (props.requireLogin()) showLog.value = true
+  if (props.requireLogin("watchLog")) showLog.value = true
 }
 </script>
 

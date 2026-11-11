@@ -1,13 +1,13 @@
 import { computed, ref, watch, type Ref } from "vue"
 import { useI18n } from "vue-i18n"
 import { isAxiosError } from "axios"
-import { useRoute, useRouter } from "vue-router"
 import { libraryApi } from "@/api/endpoints/library"
 import { mediaApi } from "@/api/endpoints/media"
 import { reviewApi } from "@/api/endpoints/social"
 import { watchLogApi } from "@/api/endpoints/watchLog"
-import { useAuthStore } from "@/stores/auth"
+import { useAuthGate, type AuthGateReason } from "@/composables/useAuthGate"
 import { useToast } from "@/composables/useToast"
+import { useAuthStore } from "@/stores/auth"
 import type { MediaStats } from "@/types/movie"
 import type { RatingBucket } from "@/types/review"
 import type { WatchSummaryResponse } from "@/types/watchLog"
@@ -24,8 +24,7 @@ type PendingAction = "like" | "watchlist" | "watched"
 export function useMediaActivity(type: MediaKind, idRef: Ref<number>) {
   const { t } = useI18n()
   const auth = useAuthStore()
-  const router = useRouter()
-  const route = useRoute()
+  const { requireAuth } = useAuthGate()
   const toast = useToast()
 
   const stats = ref<MediaStats | null>(null)
@@ -100,18 +99,10 @@ export function useMediaActivity(type: MediaKind, idRef: Ref<number>) {
     await Promise.all([loadStats(id), loadLists(id), loadWatchSummary(id)])
   }
 
-  /** Returns true when signed in; otherwise explains and sends the guest to login. */
-  function requireLogin(): boolean {
-    if (auth.isLoggedIn) return true
-    toast.error(t("media.detail.loginRequired"))
-    router.push({ name: "login", query: { redirect: route.fullPath } })
-    return false
-  }
-
-  /** Runs `fn` for the current id unless the same action is already in flight. */
-  async function guarded(action: PendingAction, fn: (id: number) => Promise<void>) {
+  /** Runs `fn` for the current id unless the caller is a guest or the same action is already in flight. */
+  async function guarded(action: PendingAction, reason: AuthGateReason, fn: (id: number) => Promise<void>) {
     const id = idRef.value
-    if (!id || !requireLogin() || pending.value.has(action)) return
+    if (!id || !requireAuth(reason) || pending.value.has(action)) return
     pending.value.add(action)
     try {
       await fn(id)
@@ -128,7 +119,7 @@ export function useMediaActivity(type: MediaKind, idRef: Ref<number>) {
   }
 
   const toggleLike = () =>
-    guarded("like", async id => {
+    guarded("like", "like", async id => {
       if (isLiked.value) {
         await mediaApi.unlikeMedia(type, id)
         if (id !== idRef.value) return
@@ -159,7 +150,7 @@ export function useMediaActivity(type: MediaKind, idRef: Ref<number>) {
   }
 
   const toggleWatchlist = () =>
-    guarded("watchlist", async id => {
+    guarded("watchlist", "watchlist", async id => {
       const current = itemIds.value.watchlist
       if (current !== null) {
         await libraryApi.removeItem(current)
@@ -177,7 +168,7 @@ export function useMediaActivity(type: MediaKind, idRef: Ref<number>) {
 
   /** Called after the WatchLogModal saved a log: mark watched too, then refresh the summary. */
   const markLogged = () =>
-    guarded("watched", async id => {
+    guarded("watched", "watchLog", async id => {
       if (itemIds.value.watched === null) {
         const itemId = await addToList(id, "watched")
         if (id === idRef.value) {
@@ -204,7 +195,7 @@ export function useMediaActivity(type: MediaKind, idRef: Ref<number>) {
     isWatchlisted,
     isWatched,
     pending,
-    requireLogin,
+    requireLogin: requireAuth,
     toggleLike,
     toggleWatchlist,
     markLogged,

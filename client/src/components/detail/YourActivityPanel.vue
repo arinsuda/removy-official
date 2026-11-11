@@ -4,7 +4,7 @@
 
     <p v-if="!loggedIn" class="activity__guest">
       {{ t("media.detail.activity.guest") }}
-      <RouterLink :to="{ name: 'login', query: { redirect: route.fullPath } }" class="activity__link">
+      <RouterLink :to="{ name: 'login', query: buildAuthQuery(route.fullPath) }" class="activity__link">
         {{ t("media.detail.activity.signIn") }}
       </RouterLink>
     </p>
@@ -48,6 +48,7 @@ import { computed, useId } from "vue"
 import { useI18n } from "vue-i18n"
 import { RouterLink, useRoute } from "vue-router"
 import StarRatingInput from "@/components/movie/StarRatingInput.vue"
+import { buildAuthQuery } from "@/utils/safeRedirect"
 import type { WatchSummaryResponse } from "@/types/watchLog"
 
 const props = defineProps<{

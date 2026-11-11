@@ -316,7 +316,7 @@ func (r *repository) IsLiked(reviewID, userID uint) (bool, error) {
 }
 
 func (r *repository) FindLikedIDs(reviewIDs []uint, userID uint) (map[uint]bool, error) {
-	if len(reviewIDs) == 0 {
+	if len(reviewIDs) == 0 || userID == 0 {
 		return map[uint]bool{}, nil
 	}
 	var likes []ReviewLike
@@ -369,7 +369,7 @@ func (r *repository) IsHelpful(reviewID, userID uint) (bool, error) {
 }
 
 func (r *repository) FindHelpfulIDs(reviewIDs []uint, userID uint) (map[uint]bool, error) {
-	if len(reviewIDs) == 0 {
+	if len(reviewIDs) == 0 || userID == 0 {
 		return map[uint]bool{}, nil
 	}
 	var votes []ReviewHelpful

@@ -9,7 +9,9 @@ import { dedupeMedia, interleave } from "@/components/home/popcornHome"
 import type { SearchState } from "@/components/search/searchQuery"
 import type { Genre, PaginatedResult, PersonSearchResult } from "@/types"
 
-export function useSearchResults(state: Ref<SearchState>) {
+export function useSearchResults(state: Ref<SearchState>, options: { allowPeople?: Ref<boolean> } = {}) {
+  const allowPeople = options.allowPeople ?? ref(true)
+  const effectiveTab = computed(() => (!allowPeople.value && state.value.tab === "people" ? "all" : state.value.tab))
   const q = computed(() => state.value.q)
   const enabled = computed(() => q.value.length > 0)
 
@@ -69,7 +71,10 @@ export function useSearchResults(state: Ref<SearchState>) {
 
   const movies = paged("movie", movieBrowse.fetchSearch, { active: computed(() => enabled.value && movieFits.value) })
   const series = paged("tv", tvBrowse.fetchSearch, { active: computed(() => enabled.value && tvFits.value) })
-  const people = paged<PersonSearchResult>("people", async (query, page) => (await actorApi.search(query, page)).data, { filtered: false })
+  const people = paged<PersonSearchResult>("people", async (query, page) => (await actorApi.search(query, page)).data, {
+    filtered: false,
+    active: computed(() => enabled.value && allowPeople.value),
+  })
 
   const flat = <T>(pages: PaginatedResult<T>[] | undefined) => (pages ?? []).flatMap((p) => p.results ?? [])
   const movieItems = computed(() => dedupeMedia(flat<HomeMedia>(movies.data.value?.pages)))
@@ -78,7 +83,7 @@ export function useSearchResults(state: Ref<SearchState>) {
 
   /** Titles of the active tab before year/genre filters; "all" alternates movies and series. */
   const pool = computed(() => {
-    const { tab } = state.value
+    const tab = effectiveTab.value
     if (tab === "movie") return movieItems.value
     if (tab === "tv") return seriesItems.value
     return interleave(movieItems.value, seriesItems.value)
@@ -104,7 +109,7 @@ export function useSearchResults(state: Ref<SearchState>) {
 
   /** Every TMDB genre of the active tab (the API filters by id, so options no longer depend on loaded titles). */
   const genres = computed(() => {
-    const { tab } = state.value
+    const tab = effectiveTab.value
     const source = tab === "movie" ? movieGenres.data.value : tab === "tv" ? tvGenres.data.value : [...(movieGenres.data.value ?? []), ...(tvGenres.data.value ?? [])]
     const names = new Map<number, string>()
     for (const g of source ?? []) names.set(g.id, g.name)
@@ -117,30 +122,30 @@ export function useSearchResults(state: Ref<SearchState>) {
   const counts = computed(() => ({
     movie: total(movies),
     tv: total(series),
-    people: total(people),
+    people: allowPeople.value ? total(people) : 0,
     all: total(movies) + total(series),
   }))
 
   const busy = computed(() =>
-    state.value.tab === "people"
+    effectiveTab.value === "people"
       ? people.isLoading.value
-      : state.value.tab === "movie"
+      : effectiveTab.value === "movie"
         ? movies.isLoading.value
-        : state.value.tab === "tv"
+        : effectiveTab.value === "tv"
           ? series.isLoading.value
           : movies.isLoading.value || series.isLoading.value,
   )
   // "all" only fails when both lists fail; one working list is still useful.
   const failed = computed(() =>
-    state.value.tab === "people"
+    effectiveTab.value === "people"
       ? people.isError.value
-      : state.value.tab === "movie"
+      : effectiveTab.value === "movie"
         ? movies.isError.value
-        : state.value.tab === "tv"
+        : effectiveTab.value === "tv"
           ? series.isError.value
           : movies.isError.value && series.isError.value,
   )
-  const lists = computed(() => (state.value.tab === "people" ? [people] : state.value.tab === "movie" ? [movies] : state.value.tab === "tv" ? [series] : [movies, series]))
+  const lists = computed(() => (effectiveTab.value === "people" ? [people] : effectiveTab.value === "movie" ? [movies] : effectiveTab.value === "tv" ? [series] : [movies, series]))
   const hasNext = computed(() => lists.value.some((l) => l.hasNextPage.value))
   const fetchingNext = computed(() => lists.value.some((l) => l.isFetchingNextPage.value))
 

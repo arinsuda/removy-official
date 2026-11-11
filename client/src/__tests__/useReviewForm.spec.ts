@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { ref } from "vue"
 import { createPinia, setActivePinia } from "pinia"
+import { useAuthGate } from "@/composables/useAuthGate"
 import { useReviewForm } from "@/composables/useReviewForm"
 import { useAuthStore } from "@/stores/auth"
+import { useUIStore } from "@/stores/ui"
 
 const { createReview } = vi.hoisted(() => ({ createReview: vi.fn() }))
 vi.mock("@/api/api", () => ({ reviewApi: { createReview } }))
@@ -10,6 +12,7 @@ vi.mock("@/api/api", () => ({ reviewApi: { createReview } }))
 describe("useReviewForm", () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    useAuthGate().close()
     useAuthStore().user = { id: 7 } as never
     createReview.mockReset()
     createReview.mockResolvedValue({ data: { review: { id: 1 } } })
@@ -42,5 +45,18 @@ describe("useReviewForm", () => {
     expect(createReview).not.toHaveBeenCalled()
     form.rating.value = 3.5
     expect(form.canSubmit.value).toBe(true)
+  })
+
+  it("opens the shared auth gate and avoids toasts/API calls when a guest submits", async () => {
+    useAuthStore().user = null
+    const form = useReviewForm(1, "movie")
+    form.rating.value = 4
+    form.body.value = "Nice"
+
+    expect(await form.submit()).toBeNull()
+    expect(createReview).not.toHaveBeenCalled()
+    expect(useAuthGate().isOpen.value).toBe(true)
+    expect(useAuthGate().reason.value).toBe("review")
+    expect(useUIStore().toasts).toHaveLength(0)
   })
 })

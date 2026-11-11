@@ -20,6 +20,7 @@ type Handler struct {
 	svc                  *Service
 	cfg                  *config.Config
 	handleGoogleCallback func(ctx context.Context, code, stateParam, cookieState, userAgent, ip string) (*TokenPair, *user_module.User, string, error)
+	checkSession         func(rawRefresh string) (bool, error)
 }
 
 func NewHandler(svc *Service, cfg *config.Config) *Handler {
@@ -73,6 +74,27 @@ func (h *Handler) refreshTokenFrom(c fiber.Ctx) string {
 	}
 	_ = c.Bind().JSON(&body)
 	return body.RefreshToken
+}
+
+// GetSession passively tells the client whether the refresh cookie backs a live session,
+// letting guest page loads skip POST /auth/refresh and avoid unauthenticated 401s.
+func (h *Handler) GetSession(c fiber.Ctx) error {
+	rawRefresh := c.Cookies("refresh_token")
+	if rawRefresh == "" {
+		return c.JSON(fiber.Map{"has_session": false})
+	}
+
+	check := h.svc.HasSession
+	if h.checkSession != nil {
+		check = h.checkSession
+	}
+	hasSession, err := check(rawRefresh)
+	if err != nil {
+		log.Printf("ERROR session check: %v", err)
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "service temporarily unavailable"})
+	}
+
+	return c.JSON(fiber.Map{"has_session": hasSession})
 }
 
 func (h *Handler) Refresh(c fiber.Ctx) error {
@@ -325,10 +347,21 @@ func (h *Handler) GoogleCallback(c fiber.Ctx) error {
 	}
 
 	successURL := h.cfg.Google.FrontendSuccessURL
-	if returnURL != "" && returnURL != "/" && strings.HasPrefix(returnURL, "/") && !strings.HasPrefix(returnURL, "//") && returnURL != "/q" {
+	if safeReturn := ValidateRelativeReturnURL(returnURL); safeReturn != "/" {
 		if u, err := url.Parse(successURL); err == nil {
-			u.Path = returnURL
-			successURL = u.String()
+			if ru, rErr := url.Parse(safeReturn); rErr == nil {
+				u.Path = ru.Path
+				if ru.RawQuery != "" {
+					q := u.Query()
+					for k, vals := range ru.Query() {
+						for _, v := range vals {
+							q.Add(k, v)
+						}
+					}
+					u.RawQuery = q.Encode()
+				}
+				successURL = u.String()
+			}
 		}
 	}
 
@@ -410,8 +443,8 @@ func (h *Handler) buildErrorRedirectURL(errCode string, returnPath string) strin
 	}
 	q := u.Query()
 	q.Set("error", errCode)
-	if returnPath != "" && returnPath != "/" {
-		q.Set("return_url", returnPath)
+	if safeReturn := ValidateRelativeReturnURL(returnPath); safeReturn != "/" {
+		q.Set("return_url", safeReturn)
 	}
 	u.RawQuery = q.Encode()
 	return u.String()

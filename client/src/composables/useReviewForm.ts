@@ -1,5 +1,6 @@
 import { reviewApi } from "@/api/api"
 import { useAuthStore } from "@/stores/auth"
+import { useAuthGate } from "@/composables/useAuthGate"
 import { useToast } from "@/composables/useToast"
 import { i18n } from "@/i18n"
 import { computed, ref, toValue, type MaybeRefOrGetter } from "vue"
@@ -15,6 +16,7 @@ type MediaType = "movie" | "tv"
  */
 export function useReviewForm(mediaId: MaybeRefOrGetter<number>, mediaType: MaybeRefOrGetter<MediaType>) {
   const auth = useAuthStore()
+  const { requireAuth } = useAuthGate()
   const { error: toastError } = useToast()
   const t = i18n.global.t
 
@@ -40,7 +42,7 @@ export function useReviewForm(mediaId: MaybeRefOrGetter<number>, mediaType: Mayb
 
   async function submit(): Promise<ReviewResponse | null> {
     if (!isAuthenticated.value) {
-      toastError(t("reviews.errors.loginRequired"))
+      requireAuth("review")
       return null
     }
     if (rating.value <= 0 || !body.value.trim() || isSubmitting.value) return null

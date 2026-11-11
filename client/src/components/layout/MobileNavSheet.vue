@@ -82,8 +82,8 @@
               </button>
             </div>
             <div v-else class="mns-guest">
-              <AppButton to="/login" variant="outline" block size="lg" @click="close">{{ t("navigation.logIn") }}</AppButton>
-              <AppButton to="/register" block size="lg" @click="close">{{ t("navigation.signUp") }}</AppButton>
+              <AppButton :to="{ path: '/login', query: buildAuthQuery(route.fullPath) }" variant="outline" block size="lg" @click="close">{{ t("navigation.logIn") }}</AppButton>
+              <AppButton :to="{ path: '/register', query: buildAuthQuery(route.fullPath) }" block size="lg" @click="close">{{ t("navigation.signUp") }}</AppButton>
             </div>
           </div>
         </div>
@@ -103,6 +103,7 @@ import LanguageToggle from "./LanguageToggle.vue"
 import { NAV_ITEMS } from "./navItems"
 import { lockScroll, unlockScroll } from "@/composables/scrollLock"
 import { useDialogFocus } from "@/composables/useDialogFocus"
+import { buildAuthQuery } from "@/utils/safeRedirect"
 import type { AuthUser } from "@/types/auth"
 
 const props = defineProps<{ modelValue: boolean; user: AuthUser | null; isAdmin: boolean }>()
