@@ -3,7 +3,7 @@
     <Transition name="slide">
       <!-- eslint-disable-next-line vue/require-toggle-inside-transition -- parent mounts the panel with v-if -->
       <div class="panel-backdrop" @click.self="$emit('close')">
-        <div class="panel" role="dialog" aria-modal="true" :aria-label="t('watchLog.watchHistory')">
+        <div ref="panelEl" class="panel" role="dialog" aria-modal="true" :aria-label="t('watchLog.watchHistory')" tabindex="-1" @keydown="onPanelKeydown">
           <div class="panel-header">
             <h2 class="panel-title">{{ t('watchLog.watchHistory') }}</h2>
             <button class="panel-close touch-target" :aria-label="t('common.close')" @click="$emit('close')">
@@ -42,6 +42,8 @@
 <script setup lang="ts">
 import SkeletonList from "@/components/ui/skeleton/SkeletonList.vue"
 import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { lockScroll, unlockScroll } from '@/composables/scrollLock'
+import { useDialogFocus } from '@/composables/useDialogFocus'
 import { useI18n } from 'vue-i18n'
 import { X, Trash2, Globe, Users, Lock } from 'lucide-vue-next'
 import { watchLogApi } from '@/api/endpoints/watchLog'
@@ -61,6 +63,18 @@ const emit = defineEmits<{
 
 const { t, d } = useI18n()
 const { success: toastSuccess, error: toastError } = useToast()
+
+const panelEl = ref<HTMLElement | null>(null)
+const { onKeydown } = useDialogFocus(panelEl, ref(true))
+
+function onPanelKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    emit('close')
+    return
+  }
+  onKeydown(event)
+}
 
 const logs = ref<WatchLogResponse[]>([])
 const loading = ref(true)
@@ -102,10 +116,10 @@ function formatDate(dateStr: string) {
 }
 
 onMounted(() => {
-  document.body.style.overflow = 'hidden'
+  lockScroll()
   loadHistory()
 })
-onBeforeUnmount(() => { document.body.style.overflow = '' })
+onBeforeUnmount(unlockScroll)
 </script>
 
 <style scoped>
@@ -127,6 +141,27 @@ onBeforeUnmount(() => { document.body.style.overflow = '' })
   padding-bottom: env(safe-area-inset-bottom);
   display: flex;
   flex-direction: column;
+  outline: none;
+}
+
+/* Below md: full-width bottom sheet instead of a side panel. */
+@media (max-width: 767.98px) {
+  .panel-backdrop {
+    align-items: flex-end;
+  }
+  .panel {
+    max-width: none;
+    height: auto;
+    max-height: calc(100vh - 1rem - env(safe-area-inset-top));
+    max-height: calc(100dvh - 1rem - env(safe-area-inset-top));
+    padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
+    border-left: 0;
+    border-top: 1px solid var(--color-border);
+    border-radius: var(--radius-card) var(--radius-card) 0 0;
+  }
+  .slide-enter-from, .slide-leave-to {
+    transform: translateY(100%);
+  }
 }
 .panel-header {
   display: flex;

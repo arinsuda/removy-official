@@ -1,5 +1,5 @@
 <template>
-  <div class="trailer-popup__overlay" @click.self="$emit('close')">
+  <div class="trailer-popup__overlay" role="dialog" aria-modal="true" :aria-label="$t('media.trailer.title')" @click.self="$emit('close')" @keydown.esc="$emit('close')">
     <div class="trailer-popup__container">
       <button
         class="trailer-popup__close-btn touch-target"
@@ -74,6 +74,7 @@
 <style scoped>
   /* ── Overlay คลุมทั้งหน้าจอ ───────────────────────────────────────── */
   .trailer-popup__overlay {
+    --trailer-max-width: 60rem; /* 16:9 width cap on large screens */
     position: fixed;
     inset: 0;
     background-color: color-mix(in srgb, var(--color-surface) 85%, transparent);
@@ -82,15 +83,18 @@
     align-items: center;
     justify-content: center;
     z-index: var(--z-modal-base); /* มั่นใจว่าจะอยู่เหนือทุกสิ่งบนหน้าจอ */
-    padding: 1rem;
+    padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
     animation: fadeIn 0.25s ease-out;
   }
 
   /* ── กล่องกรอบของ Trailer (สัดส่วน 16:9 อัตโนมัติ) ────────────────────── */
   .trailer-popup__container {
     position: relative;
-    width: 100%;
-    max-width: 960px; /* ความกว้างยอดนิยมกำลังพอดีตา */
+    /* 16:9 contained in both axes: width is capped by the viewport height too */
+    width: min(100%, var(--trailer-max-width), calc((100vh - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 16 / 9));
+    width: min(100%, var(--trailer-max-width), calc((100dvh - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 16 / 9));
+    max-height: calc(100vh - 2rem);
+    max-height: calc(100dvh - 2rem);
     background: var(--color-surface);
     border-radius: 12px;
     overflow: hidden;
@@ -116,10 +120,10 @@
   /* ── ปุ่มกากบาทปิด (Close Button) ─────────────────────────────────── */
   .trailer-popup__close-btn {
     position: absolute;
-    top: 16px;
-    right: 16px;
-    width: 40px;
-    height: 40px;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 2.75rem;
+    height: 2.75rem;
     border-radius: 50%;
     background: var(--color-scrim);
     border: 1px solid var(--color-border-strong);

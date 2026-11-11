@@ -25,7 +25,7 @@
         :review="shareableReview"
         :max-height="previewMaxHeight"
       />
-      <SkeletonBlock v-else-if="status === 'loading'" class="share-sheet__skeleton" height="100%" radius="12px" />
+      <SkeletonBlock v-else-if="status === 'loading'" class="share-sheet__skeleton" height="100%" radius="var(--radius-card)" />
       <div v-else class="share-sheet__error" role="alert">
         <p>{{ t("share.imageLoadFailed") }}</p>
         <AppButton variant="outline" size="sm" @click="loadImages">{{ t("share.retry") }}</AppButton>
@@ -231,32 +231,28 @@ function handleCopyLink() {
 </script>
 
 <style>
-.share-sheet__tabs { margin-bottom: 12px; overflow-x: auto; }
+.share-sheet__tabs { margin-bottom: 0.75rem; overflow-x: auto; }
 .share-sheet__stage { position: relative; display: flex; align-items: stretch; justify-content: center; }
 .share-sheet__stage > * { flex: 1; min-width: 0; }
 .share-sheet__skeleton { flex: 1; }
 .share-sheet__error {
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px;
-  border-radius: 12px; background: var(--color-surface); color: var(--color-text-secondary); font-size: 14px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; padding: 1.5rem;
+  border-radius: var(--radius-card); background: var(--color-surface); color: var(--color-text-secondary); font-size: var(--text-small); text-align: center;
 }
 .share-sheet__busy {
-  position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
-  border-radius: 12px; background: color-mix(in srgb, black 70%, transparent); color: var(--color-text-primary); font-size: 14px;
+  position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem;
+  border-radius: var(--radius-card); background: color-mix(in srgb, black 70%, transparent); color: var(--color-text-primary); font-size: var(--text-small);
 }
-.share-sheet__meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; }
-.share-sheet__ratio { margin-left: auto; color: var(--color-text-muted); font-size: 12px; }
-.share-sheet__actions { display: flex; flex-direction: column; gap: 8px; width: 100%; }
-.share-sheet__secondary { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
+.share-sheet__meta { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-top: 1rem; }
+.share-sheet__ratio { margin-left: auto; color: var(--color-text-muted); font-size: var(--text-caption); }
+.share-sheet__actions { display: flex; flex-direction: column; gap: 0.5rem; width: 100%; }
+.share-sheet__secondary { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.25rem; }
 
-/* Bottom sheet below 768px. */
-@media (max-width: 767.98px) {
-  .app-modal:has(> .share-sheet) { align-items: flex-end; padding: 0; }
-  .share-sheet {
-    max-width: none;
-    max-height: 94dvh;
-    border-bottom: 0;
-    border-radius: 20px 20px 0 0;
-    padding-bottom: env(safe-area-inset-bottom);
-  }
+/* Short viewports (landscape phones): compact actions so the preview keeps room and the body scrolls. */
+@media (max-height: 30rem) {
+  .share-sheet__stage { min-height: 14rem; }
+  .share-sheet__actions { flex-direction: row; flex-wrap: wrap; }
+  .share-sheet__actions > * { flex: 1 1 10rem; }
+  .share-sheet__secondary { flex-basis: 100%; }
 }
 </style>

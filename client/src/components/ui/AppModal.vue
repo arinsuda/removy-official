@@ -4,7 +4,7 @@
       <div
         v-if="modelValue"
         class="app-modal"
-        :class="{ 'app-modal--sheet': sheet }"
+        :class="{ 'app-modal--sheet': isSheet }"
         :style="{ zIndex: `calc(var(--z-modal-base) + ${modalZOffset})` }"
         @mousedown="onBackdropDown"
         @mouseup="onBackdropUp"
@@ -13,13 +13,14 @@
           ref="panel"
           v-bind="$attrs"
           class="app-modal__panel"
-          :class="[`app-modal__panel--${size}`, { 'app-modal__panel--sheet': sheet }]"
+          :class="[`app-modal__panel--${size}`, { 'app-modal__panel--sheet': isSheet }]"
           :role="role"
           aria-modal="true"
           :aria-label="ariaLabel"
           :aria-labelledby="ariaLabel ? undefined : hasTitleSlot ? titleId : ($attrs['aria-labelledby'] as string | undefined)"
           tabindex="-1"
           @keydown="onKeydown"
+          @focusin="onFocusIn"
         >
           <header v-if="hasTitleSlot || showClose" class="app-modal__header">
             <div v-if="hasTitleSlot" :id="titleId" class="app-modal__title">
@@ -86,10 +87,13 @@ const props = withDefaults(
     /** CSS selector or element to focus first instead of the first focusable. */
     initialFocus?: string | HTMLElement
     showClose?: boolean
-    /** Anchors the panel to the bottom edge on narrow screens (touch quick-action sheet). */
+    /**
+     * Anchors the panel to the bottom edge below `sm` (bottom sheet). Defaults to on for dialogs
+     * and off for alertdialogs (tiny confirms stay centered); pass `false`/`true` to override.
+     */
     sheet?: boolean
   }>(),
-  { size: "md", role: "dialog", closeOnBackdrop: true, closeOnEscape: true, showClose: true },
+  { size: "md", role: "dialog", closeOnBackdrop: true, closeOnEscape: true, showClose: true, sheet: undefined },
 )
 
 const emit = defineEmits<{
@@ -103,6 +107,7 @@ const attrs = useAttrs()
 const titleId = useId()
 const panel = ref<HTMLElement | null>(null)
 const hasTitleSlot = computed(() => Boolean(props.title || slots.header))
+const isSheet = computed(() => props.sheet ?? props.role !== "alertdialog")
 const token = Symbol("app-modal")
 const modalZOffset = ref(0)
 
@@ -138,6 +143,16 @@ watch(
   },
   { immediate: true },
 )
+
+// Keep the focused field visible when the on-screen keyboard shrinks the viewport.
+const TEXT_ENTRY = "input:not([type=checkbox]):not([type=radio]):not([type=button]), textarea, select, [contenteditable=true]"
+const KEYBOARD_SETTLE_MS = 300
+
+function onFocusIn(event: FocusEvent) {
+  const target = event.target
+  if (!(target instanceof HTMLElement) || !target.matches(TEXT_ENTRY)) return
+  window.setTimeout(() => target.scrollIntoView?.({ block: "nearest", behavior: "auto" }), KEYBOARD_SETTLE_MS)
+}
 
 function dismiss(reason: AppModalCloseReason) {
   if (!props.modelValue || props.dismissDisabled) return
@@ -203,7 +218,7 @@ function onBackdropUp(event: MouseEvent) {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
   background: color-mix(in srgb, black 72%, transparent);
   backdrop-filter: blur(6px);
 }
@@ -212,7 +227,8 @@ function onBackdropUp(event: MouseEvent) {
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-height: calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  max-height: calc(100vh - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  max-height: calc(100dvh - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   background: var(--color-surface-2);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-card);
@@ -232,15 +248,59 @@ function onBackdropUp(event: MouseEvent) {
   max-width: 760px;
 }
 
+/* Landscape phones: short viewport, so tighten the gutters and keep header/footer reachable. */
+@media (max-height: 30rem) {
+  .app-modal {
+    padding-block: max(0.5rem, env(safe-area-inset-top)) max(0.5rem, env(safe-area-inset-bottom));
+  }
+
+  .app-modal__panel {
+    max-height: calc(100vh - 1rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    max-height: calc(100dvh - 1rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+}
+
 @media (max-width: 639.98px) {
   .app-modal--sheet {
     align-items: flex-end;
+    padding: max(1rem, env(safe-area-inset-top)) 0 0;
   }
 
   .app-modal__panel--sheet {
     max-width: none;
+    max-height: calc(100vh - 1rem - env(safe-area-inset-top));
+    max-height: calc(100dvh - 1rem - env(safe-area-inset-top));
+    border-inline: 0;
+    border-bottom: 0;
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
+    border-top-left-radius: var(--radius-card);
+    border-top-right-radius: var(--radius-card);
+  }
+
+  /* Decorative drag indicator. */
+  .app-modal__panel--sheet::before {
+    content: "";
+    flex: none;
+    align-self: center;
+    width: 2.25rem;
+    height: 0.25rem;
+    margin-top: 0.5rem;
+    border-radius: var(--radius-full);
+    background: var(--color-border-strong);
+  }
+
+  .app-modal__panel--sheet .app-modal__footer {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .app-modal__panel--sheet .app-modal__body:last-child {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .app-modal--sheet.app-modal-enter-from .app-modal__panel,
+  .app-modal--sheet.app-modal-leave-to .app-modal__panel {
+    transform: translateY(100%);
   }
 }
 
@@ -273,6 +333,8 @@ function onBackdropUp(event: MouseEvent) {
 .app-modal__footer {
   display: flex;
   justify-content: flex-end;
+  flex: none;
+  flex-wrap: wrap;
   gap: 8px;
   padding: 0 20px 16px;
 }

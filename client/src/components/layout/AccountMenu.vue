@@ -265,6 +265,19 @@ onBeforeUnmount(() => {
   box-shadow: var(--shadow-popover);
   transform-origin: top right;
 }
+/* Phones: full-width panel under the header, like the notification dropdown. */
+@media (max-width: 639.98px) {
+  .am-panel {
+    position: fixed;
+    top: 4rem;
+    right: max(0.75rem, env(safe-area-inset-right));
+    left: max(0.75rem, env(safe-area-inset-left));
+    width: auto;
+    max-width: none;
+    max-height: calc(100vh - 5rem - env(safe-area-inset-bottom));
+    max-height: calc(100dvh - 5rem - env(safe-area-inset-bottom));
+  }
+}
 .am-card {
   display: flex;
   align-items: center;

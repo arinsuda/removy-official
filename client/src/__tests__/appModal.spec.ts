@@ -44,6 +44,39 @@ afterEach(() => {
 })
 
 describe("AppModal", () => {
+  it("is a bottom sheet below sm by default (CSS applies it via the sheet classes)", () => {
+    mountModal()
+    expect(document.body.querySelector(".app-modal")!.classList.contains("app-modal--sheet")).toBe(true)
+    expect(panel()!.classList.contains("app-modal__panel--sheet")).toBe(true)
+  })
+
+  it("opts out of the sheet with sheet=false and for alertdialogs", () => {
+    mountModal({ sheet: false })
+    expect(document.body.querySelector(".app-modal--sheet")).toBeNull()
+    wrappers.splice(0).forEach((w) => w.unmount())
+    mountModal({ role: "alertdialog" })
+    expect(document.body.querySelector(".app-modal--sheet")).toBeNull()
+    wrappers.splice(0).forEach((w) => w.unmount())
+    mountModal({ role: "alertdialog", sheet: true })
+    expect(document.body.querySelector(".app-modal--sheet")).not.toBeNull()
+  })
+
+  it("scrolls a focused text field into view after the keyboard settles", async () => {
+    vi.useFakeTimers()
+    try {
+      mountModal({}, { default: '<input id="field" />' })
+      const field = document.getElementById("field")!
+      const spy = vi.fn()
+      field.scrollIntoView = spy
+      field.dispatchEvent(new FocusEvent("focusin", { bubbles: true }))
+      expect(spy).not.toHaveBeenCalled()
+      vi.advanceTimersByTime(400)
+      expect(spy).toHaveBeenCalledWith({ block: "nearest", behavior: "auto" })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it("renders an accessible dialog in body labelled by its title", () => {
     mountModal()
     const el = panel()!

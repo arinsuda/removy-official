@@ -56,6 +56,7 @@
 
   --radius-card: 0.75rem;
   --radius-btn: 9999px;
+  --radius-full: 9999px;
 }
 
 @layer base {
@@ -136,6 +137,26 @@
 /* The datepicker hard-codes z-index 99999, which would sit under an AppModal. */
 body .dp--menu-wrapper {
   z-index: var(--z-popover);
+  max-width: calc(100vw - 1rem);
+}
+
+/* Short viewport = landscape phone; keep in sync with SHORT_VIEWPORT_QUERY (30rem = 480px at default
+   font size) used by every `max-height` query. Landscape phones: no room above or below the field, so the calendar is centered in the
+   viewport and scrolls. !important overrides the inline coordinates floating-ui writes.
+   hardcode-ok: overrides floating-ui inline coords */
+@media (max-height: 30rem) {
+  body .dp--menu-wrapper {
+    position: fixed !important;
+    inset: 50% auto auto 50% !important;
+    transform: translate(-50%, -50%) !important;
+    max-height: calc(100vh - 1rem);
+    max-height: calc(100dvh - 1rem);
+    overflow-y: auto;
+  }
+  body .dp__arrow_top,
+  body .dp__arrow_bottom {
+    display: none;
+  }
 }
 
 /* vue-datepicker v14 names its dark theme class dp--theme-dark. `body` outranks the
