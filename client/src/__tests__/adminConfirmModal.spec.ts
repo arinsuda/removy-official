@@ -3,6 +3,7 @@ import { defineComponent, h, nextTick, ref } from "vue"
 import { mount, type VueWrapper } from "@vue/test-utils"
 import AdminConfirmModal from "@/components/admin/AdminConfirmModal.vue"
 import { expectKeysInBothLocales, useRealI18n } from "./helpers/realI18n"
+import { clickAfterRender } from "./helpers/waitForEnabled"
 
 const i18n = useRealI18n()
 const origGetClientRects = HTMLElement.prototype.getClientRects
@@ -85,14 +86,14 @@ describe("AdminConfirmModal", () => {
     const textarea = dialog()!.querySelector("textarea")!
     textarea.value = "  spam  "
     textarea.dispatchEvent(new Event("input"))
-    btn("Confirm").click()
+    clickAfterRender(btn("Confirm"))
     expect(events).toEqual([["confirm", "spam"]])
   })
 
   it("cancels from the button and returns focus to the opener", async () => {
     const events = mountHarness()
     const opener = await openIt()
-    btn("Cancel").click()
+    clickAfterRender(btn("Cancel"))
     await settle()
     expect(events).toEqual(["cancel"])
     expect(dialog()).toBeNull()

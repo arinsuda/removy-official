@@ -4,6 +4,7 @@ import { mount, type VueWrapper } from "@vue/test-utils"
 import ConfirmModal from "@/components/profile/components/ConfirmModal.vue"
 import en from "@/i18n/locales/en/profile.json"
 import { expectKeysInBothLocales, useRealI18n } from "./helpers/realI18n"
+import { clickAfterRender } from "./helpers/waitForEnabled"
 
 const i18n = useRealI18n()
 const origGetClientRects = HTMLElement.prototype.getClientRects
@@ -95,14 +96,14 @@ describe("ConfirmModal", () => {
   it("emits confirm from the confirm button", async () => {
     const { events } = mountHarness()
     await openIt()
-    btn(en.confirmModal.unfollow.confirm).click()
+    clickAfterRender(btn(en.confirmModal.unfollow.confirm))
     expect(events).toEqual(["confirm"])
   })
 
   it("emits cancel from the cancel button and returns focus to the opener", async () => {
     const { events } = mountHarness()
     const opener = await openIt()
-    btn("Cancel").click()
+    clickAfterRender(btn("Cancel"))
     await nextTick()
     await nextTick()
     expect(events).toEqual(["cancel"])

@@ -175,7 +175,7 @@ describe("lists", () => {
     await flushPromises()
     expect(router.currentRoute.value.query).toMatchObject({ tab: "lists", list: "watchlist" })
     expect(w.find(".ld__title").text()).toBe("Watchlist")
-    await w.find(".ld__head button").trigger("click")
+    clickAfterRender(w.find(".ld__head button").element as HTMLElement)
     await flushPromises()
     expect(router.currentRoute.value.query.list).toBeUndefined()
     expect(w.findAll(".lc")).toHaveLength(4)
@@ -183,10 +183,13 @@ describe("lists", () => {
 
   it("lets the owner remove an item after confirming", async () => {
     const w = await mountAt("/users/1/library?tab=lists&list=watchlist", 1)
-    await w.find('[data-action="remove"]').trigger("click")
-    await flushPromises()
-    const confirm = document.body.querySelector<HTMLButtonElement>(".confirm-actions button:last-child")!
-    confirm.click()
+    clickAfterRender(w.find('[data-action="remove"]').element as HTMLElement)
+    const confirm = await vi.waitFor(() => {
+      const el = document.body.querySelector<HTMLButtonElement>(".confirm-actions button:last-child")
+      if (!el) throw new Error("confirm dialog not open")
+      return el
+    })
+    clickAfterRender(confirm)
     await flushPromises()
     expect(m.removeItem).toHaveBeenCalledWith(12)
   })

@@ -14,7 +14,8 @@
     "lint:oxlint": "oxlint src --fix",
     "lint:eslint": "eslint src --fix --cache",
     "format": "prettier --write --experimental-cli src/",
-    "test": "vitest run"
+    "test": "vitest run",
+    "shots": "node scripts/responsive-shots.mjs"
   },
   "dependencies": {
     "@tanstack/vue-query": "^5.100.10",
@@ -53,6 +54,7 @@
     "jiti": "^2.6.1",
     "npm-run-all2": "^8.0.4",
     "oxlint": "~1.60.0",
+    "playwright-core": "^1.65.0",
     "prettier": "3.8.3",
     "typescript": "~6.0.0",
     "vite": "^8.0.8",

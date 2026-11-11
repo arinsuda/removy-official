@@ -5,6 +5,7 @@ import AdminEraseUserModal from "@/components/admin/AdminEraseUserModal.vue"
 import { adminApi } from "@/api/api"
 import type { AdminUserRow } from "@/types"
 import { expectKeysInBothLocales, useRealI18n } from "./helpers/realI18n"
+import { clickAfterRender } from "./helpers/waitForEnabled"
 
 vi.mock("@/api/api", async (orig) => ({
   ...(await orig<typeof import("@/api/api")>()),
@@ -88,7 +89,7 @@ describe("AdminEraseUserModal", () => {
     reason.value = "  spam  "
     reason.dispatchEvent(new Event("input"))
     await flushPromises()
-    confirmButton().click()
+    clickAfterRender(confirmButton())
     await flushPromises()
     expect(api.eraseUser).toHaveBeenCalledWith(7, { confirm_username: "Jane_Doe", reason: "spam" })
     expect(w.emitted("erased")?.[0]).toEqual([target])
@@ -105,7 +106,7 @@ describe("AdminEraseUserModal", () => {
     const w = open()
     await flushPromises()
     await type("Jane_Doe")
-    confirmButton().click()
+    clickAfterRender(confirmButton())
     await flushPromises()
     expect(document.body.querySelector('[role="alert"]')!.textContent).toContain(message)
     expect(!!w.emitted("stale")).toBe(stale)

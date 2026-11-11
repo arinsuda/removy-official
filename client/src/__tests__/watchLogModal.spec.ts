@@ -3,6 +3,7 @@ import { nextTick } from "vue"
 import { flushPromises, mount, type VueWrapper } from "@vue/test-utils"
 import WatchLogModal from "@/components/movie/WatchLogModal.vue"
 import { expectKeysInBothLocales, useRealI18n } from "./helpers/realI18n"
+import { clickAfterRender } from "./helpers/waitForEnabled"
 
 const { createWatchLog, toastSuccess, toastError } = vi.hoisted(() => ({
   createWatchLog: vi.fn(),
@@ -81,7 +82,7 @@ describe("WatchLogModal", () => {
     let resolve!: () => void
     createWatchLog.mockReturnValue(new Promise<void>((r) => (resolve = r)))
     await mountModal()
-    saveBtn().click()
+    clickAfterRender(saveBtn())
     await nextTick()
     expect(createWatchLog).toHaveBeenCalledWith("movie", 7, expect.objectContaining({ visibility: "public" }))
     expect(wrapper.emitted("logged")).toBeUndefined()
@@ -97,7 +98,7 @@ describe("WatchLogModal", () => {
     vi.spyOn(console, "error").mockImplementation(() => {})
     createWatchLog.mockRejectedValue(new Error("boom"))
     await mountModal()
-    saveBtn().click()
+    clickAfterRender(saveBtn())
     await flushPromises()
     expect(toastError).toHaveBeenCalledOnce()
     expect(wrapper.emitted("logged")).toBeUndefined()
@@ -107,12 +108,12 @@ describe("WatchLogModal", () => {
 
   it("closes on Escape, but not while the datepicker menu is open", async () => {
     await mountModal()
-    document.getElementById("dp-open")!.click()
+    clickAfterRender(document.getElementById("dp-open")!)
     await nextTick()
     pressEscape()
     await nextTick()
     expect(wrapper.emitted("close")).toBeUndefined()
-    document.getElementById("dp-close")!.click()
+    clickAfterRender(document.getElementById("dp-close")!)
     await nextTick()
     pressEscape()
     await nextTick()
@@ -123,10 +124,10 @@ describe("WatchLogModal", () => {
     await mountModal()
     const input = document.getElementById("dp-input")!
     input.focus()
-    document.getElementById("dp-open")!.click()
+    clickAfterRender(document.getElementById("dp-open")!)
     await nextTick()
     pressEscape()
-    document.getElementById("dp-close")!.click()
+    clickAfterRender(document.getElementById("dp-close")!)
     await nextTick()
     expect(wrapper.emitted("close")).toBeUndefined()
     pressEscape()
