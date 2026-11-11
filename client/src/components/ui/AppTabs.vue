@@ -76,20 +76,28 @@ function onKeydown(e: KeyboardEvent) {
 <style scoped>
 .app-tabs {
   display: flex;
-  gap: 6px;
+  gap: 0.375rem;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.app-tabs::-webkit-scrollbar {
+  display: none;
 }
 .app-tabs__tab {
   font-family: var(--font-sans);
-  font-size: 0.75rem;
+  flex: none;
+  font-size: var(--text-caption);
   font-weight: 500;
   color: var(--color-text-secondary);
   background: var(--color-surface-2);
   border: 1px solid var(--color-border);
-  padding: 6px 14px;
-  border-radius: 20px;
+  padding: 0.375rem 0.875rem;
+  border-radius: var(--radius-full);
   white-space: nowrap;
   cursor: pointer;
-  transition: color 0.2s, border-color 0.2s, background-color 0.2s;
+  transition: color var(--motion-fast) var(--ease-water), border-color var(--motion-fast) var(--ease-water), background-color var(--motion-fast) var(--ease-water);
 }
 .app-tabs__tab:hover:not(:disabled) {
   color: var(--color-text-primary);
