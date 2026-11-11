@@ -7,6 +7,7 @@ import { h } from "vue"
 import SettingsView from "@/views/settings/SettingsView.vue"
 import { useAuthStore } from "@/stores/auth"
 import { useRealI18n } from "./helpers/realI18n"
+import { clickAfterRender } from "./helpers/waitForEnabled"
 
 const m = vi.hoisted(() => ({ getProfile: vi.fn(), updateProfile: vi.fn(), updateFavoriteGenres: vi.fn() }))
 vi.mock("@/api/api", () => ({
@@ -88,7 +89,7 @@ describe("SettingsView", () => {
     expect(dialog1).not.toBeNull()
     expect(dialog1.textContent).toContain(t("settings.unsavedConfirm"))
     const cancelBtn = Array.from(dialog1.querySelectorAll("button")).find(b => b.textContent === t("common.cancel"))!
-    cancelBtn.click()
+    clickAfterRender(cancelBtn)
     await nav1
     await flushPromises()
     expect(router.currentRoute.value.path).toBe("/settings")
@@ -97,7 +98,7 @@ describe("SettingsView", () => {
     await flushPromises()
     const dialog2 = document.body.querySelector('[role="dialog"]')!
     const discardBtn = Array.from(dialog2.querySelectorAll("button")).find(b => b.textContent === t("settings.saveBar.discard"))!
-    discardBtn.click()
+    clickAfterRender(discardBtn)
     await nav2
     await flushPromises()
     expect(router.currentRoute.value.path).toBe("/elsewhere")

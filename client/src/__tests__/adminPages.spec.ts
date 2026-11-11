@@ -11,6 +11,7 @@ import AdminAuditLogsView from "@/views/admin/AdminAuditLogsView.vue"
 import { adminApi } from "@/api/api"
 import { useUIStore } from "@/stores/ui"
 import { useRealI18n } from "./helpers/realI18n"
+import { clickAfterRender } from "./helpers/waitForEnabled"
 
 vi.mock("@/api/api", async (orig) => ({
   ...(await orig<typeof import("@/api/api")>()),
@@ -216,12 +217,12 @@ describe("AdminUsersView", () => {
     await mountView(AdminUsersView)
     menuTrigger("Actions for @jane").click()
     await flushPromises()
-    menuItem("Deactivate").click()
+    clickAfterRender(menuItem("Deactivate"))
     await flushPromises()
     expect(api.updateUserStatus).not.toHaveBeenCalled()
     const dialog = document.body.querySelector('[role="alertdialog"]')!
     expect(dialog.textContent).toContain("signed out of every device")
-    dialogButton("Deactivate account").click()
+    clickAfterRender(dialogButton("Deactivate account"))
     await flushPromises()
     expect(api.updateUserStatus).toHaveBeenCalledWith(5, false, undefined)
   })
@@ -234,9 +235,9 @@ describe("AdminUsersView", () => {
     await mountView(AdminUsersView)
     menuTrigger("Actions for @jane").click()
     await flushPromises()
-    menuItem("Remove admin access").click()
+    clickAfterRender(menuItem("Remove admin access"))
     await flushPromises()
-    dialogButton("Remove admin access").click()
+    clickAfterRender(dialogButton("Remove admin access"))
     await flushPromises()
     expect(api.updateUserRole).toHaveBeenCalledWith(5, "user", undefined)
     expect(useUIStore().toasts.map((t) => t.message)).toContain("You can't demote, deactivate or delete the last active admin.")
@@ -248,7 +249,7 @@ describe("AdminUsersView", () => {
     menuTrigger("Actions for @jane").click()
     await flushPromises()
     expect(menuItem("Make admin").disabled).toBe(true)
-    menuItem("Delete account").click()
+    clickAfterRender(menuItem("Delete account"))
     await flushPromises()
     expect(api.deleteUser).not.toHaveBeenCalled()
     expect(document.body.querySelector('[role="alertdialog"]')!.textContent).toContain("soft-deleted")
@@ -275,7 +276,7 @@ describe("AdminUsersView", () => {
     await mountView(AdminUsersView)
     menuTrigger("Actions for @jane").click()
     await flushPromises()
-    menuItem("Erase permanently").click()
+    clickAfterRender(menuItem("Erase permanently"))
     await flushPromises()
     const dialog = document.body.querySelector('[role="alertdialog"]')!
     expect(dialog.textContent).toContain("cannot be undone")
@@ -284,7 +285,7 @@ describe("AdminUsersView", () => {
     input.dispatchEvent(new Event("input"))
     await flushPromises()
     api.listUsers.mockClear()
-    dialogButton("Erase permanently").click()
+    clickAfterRender(dialogButton("Erase permanently"))
     await flushPromises()
     expect(api.eraseUser).toHaveBeenCalledWith(5, { confirm_username: "jane", reason: undefined })
     expect(api.listUsers).toHaveBeenCalled()
@@ -317,10 +318,10 @@ describe("AdminReviewsView", () => {
     expect(w.text()).toContain("Dune")
     menuTrigger("Actions for #9").click()
     await flushPromises()
-    menuItem("Delete Review").click()
+    clickAfterRender(menuItem("Delete Review"))
     await flushPromises()
     expect(api.deleteReview).not.toHaveBeenCalled()
-    dialogButton("Delete review").click()
+    clickAfterRender(dialogButton("Delete review"))
     await flushPromises()
     expect(api.deleteReview).toHaveBeenCalledWith(9, undefined)
   })

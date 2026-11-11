@@ -8,6 +8,7 @@ import TakeCard from "@/components/share/cards/TakeCard.vue"
 import PosterStoryCard from "@/components/share/cards/PosterStoryCard.vue"
 import { availableTemplates, BOL_TEMPLATES, bolShareNote, bolTopItems, publicExcerpt, shareTier, truncateExcerpt } from "@/components/share/shareCards"
 import { useShareImage } from "@/composables/useShareImage"
+import { clickAfterRender } from "./helpers/waitForEnabled"
 import type { ShareMediaContext, ShareReviewContext, ShareStatsContext } from "@/types/share"
 
 vi.mock("html-to-image", () => ({ toPng: vi.fn().mockResolvedValue("data:image/png;base64,AAAA") }))
@@ -150,7 +151,7 @@ describe("modal", () => {
     await vi.waitFor(() => expect(document.body.querySelector("[role=alert]")).not.toBeNull())
     expect(document.body.querySelector("[data-template]")).toBeNull()
     fetchMock.mockResolvedValue(new Response(new Blob([new Uint8Array([1])], { type: "image/jpeg" })))
-    ;(document.body.querySelector("[role=alert] button") as HTMLButtonElement).click()
+    clickAfterRender(document.body.querySelector("[role=alert] button") as HTMLButtonElement)
     await flushPromises()
     await vi.waitFor(() => expect(document.body.querySelector("[data-template=poster]")).not.toBeNull())
     w.unmount()

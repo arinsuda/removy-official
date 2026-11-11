@@ -11,6 +11,7 @@ import FeedFilters from "@/components/feed/FeedFilters.vue"
 import { i18n } from "@/i18n"
 import type { FeedItemResponse } from "@/types/feed"
 import { useRealI18n } from "./helpers/realI18n"
+import { clickAfterRender } from "./helpers/waitForEnabled"
 
 vi.mock("@/api/api", () => ({ reviewApi: { likeReview: vi.fn(), unlikeReview: vi.fn() } }))
 import { reviewApi } from "@/api/api"
@@ -121,7 +122,7 @@ describe("FeedItem", () => {
     expect(w.emitted("delete-activity")).toBeUndefined()
     const confirm = document.body.querySelector<HTMLButtonElement>(".app-btn--danger")
     expect(confirm).not.toBeNull()
-    confirm!.click()
+    clickAfterRender(confirm!)
     await flushPromises()
     expect(w.emitted("delete-activity")?.[0]).toEqual([1])
     w.unmount()

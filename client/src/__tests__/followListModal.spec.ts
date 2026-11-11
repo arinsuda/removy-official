@@ -3,6 +3,7 @@ import { flushPromises, mount, type VueWrapper } from "@vue/test-utils"
 import { QueryClient, VueQueryPlugin } from "@tanstack/vue-query"
 import FollowListModal from "@/components/profile/FollowListModal.vue"
 import { useRealI18n } from "./helpers/realI18n"
+import { clickAfterRender } from "./helpers/waitForEnabled"
 
 const m = vi.hoisted(() => ({
   getFollowers: vi.fn(),
@@ -70,10 +71,10 @@ describe("FollowListModal", () => {
   it("accepts a request", async () => {
     open({ isOwner: true })
     await flushPromises()
-    ;(document.body.querySelectorAll("[role=tab]")[2] as HTMLElement).click()
+    clickAfterRender(document.body.querySelectorAll("[role=tab]")[2] as HTMLElement)
     await flushPromises()
     const accept = [...document.body.querySelectorAll("button")].find((b) => b.textContent?.trim() === t("profile.follow.accept"))!
-    accept.click()
+    clickAfterRender(accept)
     await flushPromises()
     expect(m.acceptRequest).toHaveBeenCalledWith(9, 4)
   })

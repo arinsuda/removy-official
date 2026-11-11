@@ -16,8 +16,11 @@ cd client && npm test                # Vitest (src/__tests__)
 cd client && npm run build           # type-check + vite build
 cd client && npm run lint            # verify-locales + oxlint + eslint; both linters use --fix, so it EDITS files
 cd client && npm run verify-locales  # locale check only
+cd client && npm run shots           # responsive screenshots + horizontal-overflow check (see below); needs a running stack, not in CI
 ```
 Verify before finishing: `go vet ./... && go test ./...`, `npm run type-check`, `npm test`, `npm run build-only`, and `npm run verify-locales` when locale files change. CI (`.github/workflows/ci.yml`) runs these plus `oxlint` and `eslint src` (no --fix) on every push/PR.
+
+**Responsive shots (local only).** `client/scripts/responsive-shots.mjs` visits guest and signed-in routes at 390/768/1024/1180/1440 px, writes PNGs + `report.json` to `client/.shots/latest/` (gitignored) and exits 1 if any page has document-level horizontal overflow (elements inside overflow-x auto/scroll/hidden containers are ignored). Start the stack first, then: `RESPONSIVE_BASE_URL=http://localhost:3000 RESPONSIVE_USER=<user> RESPONSIVE_PASSWORD=<pw> npm run shots -- --montage`. Credentials come only from env; without them authed routes are skipped. It drives system Chrome (`channel: chrome`); set `RESPONSIVE_CHROME_PATH` to use another executable. `--montage` adds a contact sheet per viewport. Routes and viewports are constants at the top of the script.
 
 ## Layout (only what matters)
 ```
@@ -154,6 +157,7 @@ Changing any of these affects stored data, live sessions, or other systems:
 - CORS has one source: `CORS_ALLOWED_ORIGIN` (comma-separated exact origins, no wildcard), used by Fiber, Socket.io, and the `/socket.io` handler in `main.go`. Production must set its frontend origin.
 - `node_modules` is platform-specific. After moving between OSes, run `npm ci` in `client/`.
 - `client/dist` is committed, so `npm run build-only` dirties the tree. Restore it with `git restore client/dist && git clean -fd client/dist` unless you mean to update it.
+- Specs: a click in the same millisecond as the render can be silently dropped by Vue's event invoker (both `.click()` and test-utils `trigger`, whenever an earlier listener such as AppButton's `@click.capture` stamped the event). Use `clickAfterRender` from `__tests__/helpers/waitForEnabled.ts` for buttons just rendered by v-if/modals.
 - `npm run lint` rewrites files, so run it only when you accept those edits.
 - `tmdb_module` caches movie and TV detail in process (`detailCacheTTL`, `detailCacheMax`; keyed by type + id + the configured TMDB language). Tests that fake TMDB should use ids no other test caches.
 - `users.onboarded_at` is set once when favorite genres are saved or skipped (`PATCH /users/:id/genres`); existing users have NULL until they do. Self-delete (`DELETE /users/:id`) needs `{password}` or, for accounts without a password, `{confirm_username}`.
