@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { createPinia, setActivePinia } from "pinia"
-import { mount } from "@vue/test-utils"
+import { mount, flushPromises } from "@vue/test-utils"
 import { createRouter, createWebHistory, type Router } from "vue-router"
 import { useAuthStore } from "@/stores/auth"
 import App from "@/App.vue"
@@ -14,6 +14,7 @@ import SessionBootstrapView from "@/components/common/SessionBootstrapView.vue"
 
 vi.mock("@/api/api", () => ({
   authApi: {
+    getSession: vi.fn(),
     refreshToken: vi.fn(),
     login: vi.fn(),
     register: vi.fn(),
@@ -113,6 +114,9 @@ describe("Session Bootstrap and Authorization", () => {
     setActivePinia(pinia)
     localStorage.clear()
     vi.clearAllMocks()
+    vi.mocked(authApi.getSession).mockResolvedValue({
+      data: { has_session: true },
+    } as Awaited<ReturnType<typeof authApi.getSession>>)
   })
 
   describe("Vue Mounting & Initial Loading UI", () => {
@@ -284,6 +288,7 @@ describe("Session Bootstrap and Authorization", () => {
 
       const retryBtn = wrapper.find(".btn-retry")
       await retryBtn.trigger("click")
+      await flushPromises()
 
       expect(authStore.isLoggedIn).toBe(true)
       expect(authStore.initError).toBeNull()
@@ -374,6 +379,56 @@ describe("Session Bootstrap and Authorization", () => {
       // Newly logged in user must NOT be overwritten by the stale response
       expect(authStore.user?.username).toBe("newlyLoggedInUser")
       expect(authStore.user?.id).toBe(99)
+    })
+  })
+
+  describe("Guest cold boot via /auth/session", () => {
+    it("skips POST /auth/refresh and finishes unauthenticated when getSession returns has_session: false", async () => {
+      const authStore = useAuthStore()
+      vi.mocked(authApi.getSession).mockResolvedValueOnce({
+        data: { has_session: false },
+      } as Awaited<ReturnType<typeof authApi.getSession>>)
+
+      await authStore.initialize()
+
+      expect(authApi.getSession).toHaveBeenCalledTimes(1)
+      expect(authApi.refreshToken).not.toHaveBeenCalled()
+      expect(userApi.me).not.toHaveBeenCalled()
+      expect(authStore.isInitialized).toBe(true)
+      expect(authStore.isLoggedIn).toBe(false)
+      expect(authStore.initError).toBe("unauthenticated")
+    })
+
+    it("surfaces network error if GET /auth/session fails due to network", async () => {
+      const authStore = useAuthStore()
+      vi.mocked(authApi.getSession).mockRejectedValueOnce({ code: "ERR_NETWORK" })
+
+      await authStore.initialize()
+
+      expect(authApi.refreshToken).not.toHaveBeenCalled()
+      expect(authStore.initError).toBe("network")
+    })
+
+    it("skips GET /auth/session and refreshes directly when OAuth hash tokens are present", async () => {
+      const authStore = useAuthStore()
+      window.history.replaceState(null, "", "/#access_token=oauth_at&refresh_token=oauth_rt")
+      vi.mocked(authApi.refreshToken).mockResolvedValueOnce({
+        data: {
+          user: { id: 2, email: "oauth@test.com" },
+          access_token: "at2",
+          refresh_token: "rt2",
+        },
+      } as Awaited<ReturnType<typeof authApi.refreshToken>>)
+      vi.mocked(userApi.me).mockResolvedValueOnce({
+        data: { user: { id: 2, username: "oauthUser" } },
+      } as Awaited<ReturnType<typeof userApi.me>>)
+
+      await authStore.initialize()
+
+      expect(authApi.getSession).not.toHaveBeenCalled()
+      expect(authApi.refreshToken).toHaveBeenCalledWith("oauth_rt")
+      expect(authStore.isLoggedIn).toBe(true)
+      expect(window.location.hash).toBe("")
     })
   })
 })

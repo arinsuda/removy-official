@@ -21,7 +21,17 @@ vi.mock("@/composables/useSocket", () => ({ resume: vi.fn() }))
 // Stub lazy route views so router.push() tests the guard without compiling heavy page trees.
 vi.mock("@/layouts/MainLayout.vue", () => ({ default: {} }))
 vi.mock("@/views/HomeView.vue", () => ({ default: {} }))
+vi.mock("@/views/SearchResultView.vue", () => ({ default: {} }))
+vi.mock("@/views/movie/UpcomingView.vue", () => ({ default: {} }))
+vi.mock("@/views/actor/ActorDetailView.vue", () => ({ default: {} }))
 vi.mock("@/views/FeedView.vue", () => ({ default: {} }))
+vi.mock("@/views/movie/MoviesView.vue", () => ({ default: {} }))
+vi.mock("@/views/tv/TVSeriesView.vue", () => ({ default: {} }))
+vi.mock("@/views/NotificationsView.vue", () => ({ default: {} }))
+vi.mock("@/views/settings/SettingsView.vue", () => ({ default: {} }))
+vi.mock("@/views/user/UserProfileView.vue", () => ({ default: {} }))
+vi.mock("@/views/library/LibraryView.vue", () => ({ default: {} }))
+vi.mock("@/views/achievement/AchievementsView.vue", () => ({ default: {} }))
 vi.mock("@/views/auth/LoginView.vue", () => ({ default: {} }))
 vi.mock("@/views/onboarding/FavoriteGenreView.vue", () => ({ default: {} }))
 vi.mock("@/views/movie/MovieDetailView.vue", () => ({ default: {} }))
@@ -42,15 +52,33 @@ describe("route guard for guests", () => {
     auth.user = null
   })
 
-  it.each(["/movies/603", "/tv/1399", "/about-us", "/donate"])("lets a guest open %s", async (path) => {
+  it.each([
+    "/",
+    "/search?q=dune",
+    "/upcoming",
+    "/actors/100",
+    "/movies/603",
+    "/tv/1399",
+    "/about-us",
+    "/donate",
+  ])("lets a guest open %s", async (path) => {
     await router.push(path)
     expect(router.currentRoute.value.fullPath).toBe(path)
   })
 
-  it("still sends a guest from a private page to login", async () => {
-    await router.push("/feed")
+  it.each([
+    "/feed",
+    "/movies",
+    "/tv",
+    "/users/1",
+    "/users/1/library",
+    "/users/1/achievements",
+    "/notifications",
+    "/settings",
+  ])("sends a guest from private page %s to login with redirect query", async (path) => {
+    await router.push(path)
     expect(router.currentRoute.value.name).toBe("login")
-    expect(router.currentRoute.value.query.redirect).toBe("/feed")
+    expect(router.currentRoute.value.query.redirect).toBe(path)
   })
 
   it("sends a signed-in, not onboarded user from a public page to onboarding, but never a guest", async () => {

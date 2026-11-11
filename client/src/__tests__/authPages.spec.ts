@@ -9,6 +9,20 @@ import { useAuthStore } from "@/stores/auth"
 import { useRealI18n } from "./helpers/realI18n"
 
 vi.mock("@/api/api", () => ({ authApi: { getGoogleConfig: vi.fn(), getGoogleLoginUrl: vi.fn(), resendVerification: vi.fn() } }))
+vi.mock("gsap", () => ({
+  gsap: {
+    timeline: () => ({
+      from: vi.fn(function (this: unknown) {
+        return this
+      }),
+    }),
+    fromTo: vi.fn(),
+    to: vi.fn((_el: unknown, vars?: { onComplete?: () => void }) => {
+      vars?.onComplete?.()
+      return Promise.resolve()
+    }),
+  },
+}))
 
 const i18n = useRealI18n()
 
@@ -17,6 +31,24 @@ function mountView(view: typeof LoginView | typeof RegisterView) {
   setActivePinia(pinia)
   const router = createRouter({ history: createMemoryHistory(), routes: [{ path: "/:p(.*)*", component: { template: "<div />" } }] })
   return { w: mount(view, { global: { plugins: [pinia, i18n, router] } }), pinia }
+}
+
+async function mountAt(view: typeof LoginView | typeof RegisterView, url: string) {
+  const pinia = createPinia()
+  setActivePinia(pinia)
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: [
+      { path: "/", name: "home", component: { template: "<div />" } },
+      { path: "/login", name: "login", component: LoginView },
+      { path: "/register", name: "register", component: RegisterView },
+      { path: "/movies/:id", name: "movie-detail", component: { template: "<div />" } },
+      { path: "/:p(.*)*", component: { template: "<div />" } },
+    ],
+  })
+  await router.push(url)
+  await router.isReady()
+  return { w: mount(view, { global: { plugins: [pinia, i18n, router] } }), pinia, router }
 }
 
 describe("auth pages", () => {
@@ -64,5 +96,48 @@ describe("auth pages", () => {
     expect(w.text()).toBe("Strong")
     await w.setProps({ password: "abc" })
     expect(w.text()).toBe("Weak")
+  })
+
+  it("redirects after login only to validated same-origin paths and forwards safe query across login/register links", async () => {
+    const { w, router } = await mountAt(LoginView, "/login?redirect=%2Fmovies%2F603%3Ftab%3Dreviews")
+    const registerUrl = new URL(w.get('a[href^="/register"]').attributes("href") ?? "", "http://localhost")
+    expect(registerUrl.pathname).toBe("/register")
+    expect(registerUrl.searchParams.get("redirect")).toBe("/movies/603?tab=reviews")
+
+    const authStore = useAuthStore()
+    vi.spyOn(authStore, "login").mockResolvedValue({ id: 1 } as never)
+    const inputs = w.findAll("input")
+    await inputs[0]!.setValue("user")
+    await inputs[1]!.setValue("secret")
+    await w.get("form").trigger("submit")
+    await flushPromises()
+    expect(router.currentRoute.value.fullPath).toBe("/movies/603?tab=reviews")
+  })
+
+  it("accepts return_url as a fallback and sanitizes it", async () => {
+    const ok = await mountAt(LoginView, "/login?return_url=%2Fmovies%2F603")
+    const url = new URL(ok.w.get('a[href^="/register"]').attributes("href") ?? "", "http://localhost")
+    expect(url.searchParams.get("redirect")).toBe("/movies/603")
+    const bad = await mountAt(LoginView, "/login?return_url=//evil.com")
+    expect(bad.w.get('a[href^="/register"]').attributes("href")).toBe("/register")
+  })
+
+  it("drops unsafe protocol-relative redirects on login and preserves safe links on register", async () => {
+    const { w, router } = await mountAt(LoginView, "/login?redirect=//evil.com")
+    expect(w.get('a[href^="/register"]').attributes("href")).toBe("/register")
+
+    const authStore = useAuthStore()
+    vi.spyOn(authStore, "login").mockResolvedValue({ id: 1 } as never)
+    const inputs = w.findAll("input")
+    await inputs[0]!.setValue("user")
+    await inputs[1]!.setValue("secret")
+    await w.get("form").trigger("submit")
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe("home")
+
+    const reg = await mountAt(RegisterView, "/register?redirect=%2Factors%2F100")
+    const loginUrl = new URL(reg.w.get('a[href^="/login"]').attributes("href") ?? "", "http://localhost")
+    expect(loginUrl.pathname).toBe("/login")
+    expect(loginUrl.searchParams.get("redirect")).toBe("/actors/100")
   })
 })

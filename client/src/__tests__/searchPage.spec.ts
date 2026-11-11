@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { flushPromises, mount } from "@vue/test-utils"
 import { QueryClient, VueQueryPlugin } from "@tanstack/vue-query"
+import { createPinia, setActivePinia } from "pinia"
 import { createMemoryHistory, createRouter } from "vue-router"
 import SearchResultView from "@/views/SearchResultView.vue"
 import { actorApi, movieApi } from "@/api/api"
 import { SEARCH_MAX_EMPTY_PAGES } from "@/components/browse/browseConfig"
+import { useAuthStore } from "@/stores/auth"
 import { useRealI18n } from "./helpers/realI18n"
 
 vi.mock("@/api/api", () => ({
@@ -25,14 +27,17 @@ const page = (results: unknown[], total = results.length) => ({ data: { page: 1,
 const movie = (id: number, title: string, date = "2021-05-01") => ({ id, title, poster_path: "/p.jpg", release_date: date, vote_average: 7, genre_ids: [28], overview: "" })
 const show = (id: number, name: string) => ({ id, name, poster_path: "/s.jpg", first_air_date: "2019-01-01", vote_average: 8, genre_ids: [18], overview: "" })
 
-async function render(url: string) {
+async function render(url: string, loggedIn = true) {
+  const pinia = createPinia()
+  setActivePinia(pinia)
+  useAuthStore().user = (loggedIn ? { id: 1 } : null) as never
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [{ path: "/search", name: "search-results", component: SearchResultView }, { path: "/actors/:id", name: "actor-detail", component: { template: "<div />" } }, { path: "/:p(.*)*", component: { template: "<div />" } }],
   })
   await router.push(url)
   const w = mount(SearchResultView, {
-    global: { plugins: [i18n, router, [VueQueryPlugin, { queryClient: new QueryClient({ defaultOptions: { queries: { retry: false } } }) }]], stubs: { HomePosterCard: { props: ["item", "highlight", "caption"], template: "<a class='card'>{{ item.title }}|{{ caption }}</a>" } } },
+    global: { plugins: [pinia, i18n, router, [VueQueryPlugin, { queryClient: new QueryClient({ defaultOptions: { queries: { retry: false } } }) }]], stubs: { HomePosterCard: { props: ["item", "highlight", "caption"], template: "<a class='card'>{{ item.title }}|{{ caption }}</a>" } } },
   })
   await flushPromises()
   return { w, router }
@@ -121,5 +126,20 @@ describe("SearchResultView", () => {
     const { w } = await render("/search?q=dune")
     expect(w.text()).toContain("couldn't load the results")
     expect(w.find('[role="alert"] button').exists()).toBe(true)
+  })
+
+  it("hides the people tab for guests and never calls actorApi.search", async () => {
+    const { w } = await render("/search?q=dune", false)
+    const tabs = w.findAll('[role="tab"]').map((t) => t.text())
+    expect(tabs).toEqual(["All 3", "Movies 2", "Series 1"])
+    expect(actorApi.search).not.toHaveBeenCalled()
+  })
+
+  it("coerces direct ?tab=people navigation back to media results for guests", async () => {
+    const { w } = await render("/search?q=dune&tab=people", false)
+    expect(actorApi.search).not.toHaveBeenCalled()
+    expect(w.text()).toContain("Dune")
+    expect(w.text()).toContain("3 results")
+    expect(w.text()).not.toContain("Dune Person")
   })
 })

@@ -11,6 +11,7 @@
       />
 
       <HomeFriendsStrip
+        v-if="auth.isLoggedIn"
         :items="data.friendItems.value"
         :loading="data.friends.isLoading.value"
         :error="data.friends.isError.value"
@@ -30,7 +31,7 @@
       >
         <HomePosterCard v-for="item in data.recommendedItems.value" :key="item.key" :item="item" rail="recommended" />
       </HomeRail>
-      <HomeGenreCta v-else />
+      <HomeGenreCta v-else-if="auth.isLoggedIn" />
 
       <HomeRail
         v-if="data.unrated.value.length || data.nowPlaying.isLoading.value"
@@ -80,8 +81,10 @@ import HomeRail from "@/components/home/HomeRail.vue"
 import HomeTierRail from "@/components/home/HomeTierRail.vue"
 import { useHomeData } from "@/composables/useHomeData"
 import { provideHomePopup } from "@/composables/useHomePopup"
+import { useAuthStore } from "@/stores/auth"
 
 const { t } = useI18n()
+const auth = useAuthStore()
 provideHomePopup()
 const data = useHomeData()
 </script>

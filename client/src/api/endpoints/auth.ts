@@ -30,6 +30,8 @@ export const authApi = {
 
   refreshToken: (token?: string) => api.post<AuthResponse>("/auth/refresh", { refresh_token: token }, { timeout: REFRESH_POST_TIMEOUT_MS }),
 
+  getSession: () => api.get<{ has_session: boolean }>("/auth/session"),
+
   // The stored refresh token goes in the body so the server can revoke it when the cookie is missing.
   logout: () => api.post("/auth/logout", { refresh_token: localStorage.getItem("refresh_token") ?? undefined }),
 

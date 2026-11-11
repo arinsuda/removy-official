@@ -2,6 +2,8 @@ package auth_module
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -191,4 +193,155 @@ func TestGoogleCallbackDeliversTokensInFragment(t *testing.T) {
 			t.Errorf("expected refresh_token cookie to still be set, got %+v", cookies["refresh_token"])
 		}
 	}
+}
+
+func TestValidateRelativeReturnURL(t *testing.T) {
+	cases := []struct {
+		in   string
+		want string
+	}{
+		{"", "/"},
+		{"   ", "/"},
+		{"/search?q=dune&tab=movies", "/search?q=dune&tab=movies"},
+		{"/movies/603", "/movies/603"},
+		{"/actors/100", "/actors/100"},
+		{"//evil.com", "/"},
+		{"https://evil.com/phish", "/"},
+		{"/\tevil", "/"},
+		{"/\\evil.com", "/"},
+		{"/login", "/"},
+		{"/login?redirect=/movies/603", "/"},
+		{"/register?redirect=/movies/603", "/"},
+		{"/forgot-password", "/"},
+		{"/reset-password#token=abc", "/"},
+		{"/movies/603#fragment-dropped", "/movies/603"},
+	}
+
+	for _, tc := range cases {
+		if got := ValidateRelativeReturnURL(tc.in); got != tc.want {
+			t.Errorf("ValidateRelativeReturnURL(%q) = %q, want %q", tc.in, got, tc.want)
+		}
+	}
+}
+
+func TestGoogleCallbackPreservesQueryReturnURL(t *testing.T) {
+	cfg := &config.Config{}
+	cfg.Google.Enabled = true
+	cfg.Google.FrontendSuccessURL = "https://app.popcorn.test/?from=google"
+	cfg.Google.FrontendErrorURL = "https://app.popcorn.test/login"
+	cfg.JWT.AccessTTL = 15 * time.Minute
+	cfg.JWT.RefreshTTL = 24 * time.Hour
+
+	h := &Handler{
+		cfg: cfg,
+		handleGoogleCallback: func(ctx context.Context, code, stateParam, cookieState, userAgent, ip string) (*TokenPair, *user_module.User, string, error) {
+			return &TokenPair{AccessToken: "acc", RefreshToken: "ref"}, &user_module.User{}, "/search?q=dune+2&tab=movie", nil
+		},
+	}
+
+	app := fiber.New()
+	app.Get("/api/auth/google/callback", h.GoogleCallback)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/auth/google/callback?code=c1&state=s1", nil)
+	req.AddCookie(&http.Cookie{Name: "popcorn_oauth_state", Value: "s1"})
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	loc := resp.Header.Get("Location")
+	parsed, err := url.Parse(loc)
+	if err != nil {
+		t.Fatalf("invalid Location URL %q: %v", loc, err)
+	}
+	if parsed.Path != "/search" {
+		t.Errorf("expected path /search, got %q", parsed.Path)
+	}
+	q := parsed.Query()
+	if q.Get("from") != "google" || q.Get("q") != "dune 2" || q.Get("tab") != "movie" {
+		t.Errorf("unexpected query params %v", q)
+	}
+}
+
+func TestGetSessionPassiveEndpoint(t *testing.T) {
+	t.Run("missing refresh cookie returns false without checking service", func(t *testing.T) {
+		called := false
+		h := &Handler{
+			checkSession: func(string) (bool, error) {
+				called = true
+				return true, nil
+			},
+		}
+		app := fiber.New()
+		app.Get("/api/auth/session", h.GetSession)
+
+		resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/api/auth/session", nil))
+		if err != nil {
+			t.Fatalf("request failed: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("status = %d, want 200", resp.StatusCode)
+		}
+		var out map[string]bool
+		if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+			t.Fatalf("decode failed: %v", err)
+		}
+		if out["has_session"] || called {
+			t.Fatalf("unexpected result: out=%v called=%v", out, called)
+		}
+	})
+
+	t.Run("valid cookie returns true", func(t *testing.T) {
+		h := &Handler{
+			checkSession: func(raw string) (bool, error) {
+				return raw == "live-refresh", nil
+			},
+		}
+		app := fiber.New()
+		app.Get("/api/auth/session", h.GetSession)
+
+		req := httptest.NewRequest(http.MethodGet, "/api/auth/session", nil)
+		req.AddCookie(&http.Cookie{Name: "refresh_token", Value: "live-refresh"})
+		resp, err := app.Test(req)
+		if err != nil {
+			t.Fatalf("request failed: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("status = %d, want 200", resp.StatusCode)
+		}
+		var out map[string]bool
+		if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+			t.Fatalf("decode failed: %v", err)
+		}
+		if !out["has_session"] {
+			t.Fatalf("expected has_session=true, got %v", out)
+		}
+	})
+
+	t.Run("infra failure returns 503", func(t *testing.T) {
+		h := &Handler{
+			checkSession: func(string) (bool, error) {
+				return false, errors.New("db down")
+			},
+		}
+		app := fiber.New()
+		app.Get("/api/auth/session", h.GetSession)
+
+		req := httptest.NewRequest(http.MethodGet, "/api/auth/session", nil)
+		req.AddCookie(&http.Cookie{Name: "refresh_token", Value: "any"})
+		resp, err := app.Test(req)
+		if err != nil {
+			t.Fatalf("request failed: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusServiceUnavailable {
+			t.Fatalf("status = %d, want 503", resp.StatusCode)
+		}
+	})
 }

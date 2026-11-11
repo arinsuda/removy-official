@@ -16,7 +16,7 @@
     <AppEmptyState v-if="!state.q" :icon="Search" :title="t('media.search.promptTitle')" :description="t('media.search.promptHint')" />
 
     <template v-else>
-      <SearchFilterBar :state="state" :counts="data.counts.value" :counts-approximate="data.countsApproximate.value" :years="data.years.value" :genres="data.genres.value" @update="update" />
+      <SearchFilterBar :state="state" :counts="data.counts.value" :counts-approximate="data.countsApproximate.value" :years="data.years.value" :genres="data.genres.value" :allow-people="allowPeople" @update="update" />
       <SearchResults
         :state="state"
         :items="data.items.value"
@@ -44,15 +44,22 @@ import { mergeSearchQuery, parseSearchQuery, type SearchState } from "@/componen
 import AppEmptyState from "@/components/ui/AppEmptyState.vue"
 import { useSearchResults } from "@/composables/useSearchResults"
 import { provideHomePopup } from "@/composables/useHomePopup"
+import { useAuthStore } from "@/stores/auth"
 
 const { t, locale } = useI18n()
 const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 
 provideHomePopup()
+const allowPeople = computed(() => auth.isLoggedIn)
 // The URL is the single source of truth for q, tab, sort, year and genre.
-const state = computed<SearchState>(() => parseSearchQuery(route.query))
-const data = useSearchResults(state)
+// People search requires a session, so guests see the media "all" tab cleanly.
+const state = computed<SearchState>(() => {
+  const parsed = parseSearchQuery(route.query)
+  return !allowPeople.value && parsed.tab === "people" ? { ...parsed, tab: "all" } : parsed
+})
+const data = useSearchResults(state, { allowPeople })
 
 // Carry route.hash: OAuth and handoff tokens can arrive in the fragment.
 function update(patch: Partial<SearchState>) {

@@ -171,6 +171,24 @@ export const useAuthStore = defineStore("auth", () => {
         )
       }
 
+      const hasLocalTokens = Boolean(
+        localStorage.getItem("refresh_token") || localStorage.getItem("access_token"),
+      )
+      // Avoid a 401 POST /auth/refresh on cold guest loads when no session cookie exists.
+      if (!hasLocalTokens) {
+        const sessionRes = await authApi.getSession()
+        if (!sessionUnchanged(null, myGen)) {
+          if (myGen === _generation) return fetchMe()
+          return
+        }
+        if (!sessionRes.data?.has_session) {
+          clearUser()
+          initError.value = "unauthenticated"
+          isInitialized.value = true
+          return
+        }
+      }
+
       // Read the refresh token inside the lock: another tab may have rotated it while
       // we waited, and replaying the spent one would end the session everywhere.
       // Store the rotated tokens inside the lock: the server already spent the old refresh

@@ -43,8 +43,8 @@
         />
       </template>
       <div v-else class="hdr-guest">
-        <AppButton to="/login" variant="ghost" size="sm">{{ t("navigation.logIn") }}</AppButton>
-        <AppButton to="/register" size="sm">{{ t("navigation.signUp") }}</AppButton>
+        <AppButton :to="{ path: '/login', query: buildAuthQuery(route.fullPath) }" variant="ghost" size="sm">{{ t("navigation.logIn") }}</AppButton>
+        <AppButton :to="{ path: '/register', query: buildAuthQuery(route.fullPath) }" size="sm">{{ t("navigation.signUp") }}</AppButton>
       </div>
 
       <button
@@ -73,8 +73,9 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue"
-import { useRouter } from "vue-router"
+import { useRoute, useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
+import { buildAuthQuery } from "@/utils/safeRedirect"
 import { Bell, Menu } from "lucide-vue-next"
 import { useAuthStore } from "@/stores/auth"
 import { useAdminStore } from "@/stores/admin"
@@ -95,6 +96,7 @@ import { isAtLeast } from "@/constants/breakpoints"
 
 const { t } = useI18n()
 const resetSession = useSessionReset()
+const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const adminStore = useAdminStore()

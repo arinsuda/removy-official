@@ -21,12 +21,13 @@ describe("DetailActionBar", () => {
     i18n.global.locale.value = "en"
   })
 
-  it("prompts guests instead of rating or logging", async () => {
+  it("prompts guests with specific reasons instead of rating, logging, or opening lists", async () => {
     const requireLogin = vi.fn(() => false)
     const w = mountBar({ requireLogin })
     await w.get('[data-test="action-rate"]').trigger("click")
     await w.get('[data-test="action-log"]').trigger("click")
-    expect(requireLogin).toHaveBeenCalledTimes(2)
+    await w.get('[data-test="action-list"]').trigger("click")
+    expect(requireLogin.mock.calls).toEqual([["rate"], ["watchLog"], ["list"]])
     expect(w.emitted("rate")).toBeUndefined()
     expect(w.find('[data-test="modal-save"]').exists()).toBe(false)
   })

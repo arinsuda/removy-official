@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from "vue-router"
 import { useAuthStore } from "@/stores/auth"
 import { useAdminStore } from "@/stores/admin"
 import { updateDocumentTitle } from "@/i18n"
+import { buildAuthQuery } from "@/utils/safeRedirect"
 
 function hasGenres(genres: string | null | undefined): boolean {
   if (!genres) return false
@@ -93,7 +94,7 @@ const router = createRouter({
           path: "",
           name: "home",
           component: () => import("@/views/HomeView.vue"),
-          meta: { titleKey: "navigation.home" }
+          meta: { public: true, titleKey: "navigation.home" }
         },
         {
           path: "/notifications",
@@ -105,7 +106,7 @@ const router = createRouter({
           path: "search",
           name: "search-results",
           component: () => import("@/views/SearchResultView.vue"),
-          meta: { titleKey: "media.search.title" }
+          meta: { public: true, titleKey: "media.search.title" }
         },
         {
           path: "movies",
@@ -135,7 +136,7 @@ const router = createRouter({
           path: "upcoming",
           name: "upcoming",
           component: () => import("@/views/movie/UpcomingView.vue"),
-          meta: { titleKey: "navigation.upcoming" }
+          meta: { public: true, titleKey: "navigation.upcoming" }
         },
         {
           path: "about-us",
@@ -183,7 +184,7 @@ const router = createRouter({
           path: "actors/:id",
           name: "actor-detail",
           component: () => import("@/views/actor/ActorDetailView.vue"),
-          meta: { titleKey: "actor.title" }
+          meta: { public: true, titleKey: "actor.title" }
         },
       ],
     },
@@ -249,7 +250,7 @@ router.beforeEach(async to => {
 
   // ยังไม่ login → ไป login
   if (needsAuth && !authStore.isLoggedIn)
-    return { name: "login", query: { redirect: to.fullPath } }
+    return { name: "login", query: buildAuthQuery(to.fullPath) }
 
   // login แล้วเข้า guest-only page → ไป home
   if (to.meta.guestOnly && authStore.isLoggedIn)

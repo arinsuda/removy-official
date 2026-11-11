@@ -43,17 +43,26 @@ import AppButton from "@/components/ui/AppButton.vue"
 import AppTabs from "@/components/ui/AppTabs.vue"
 import { SEARCH_TABS, type SearchState, type SearchTab } from "./searchQuery"
 
-defineProps<{
-  state: SearchState
-  counts: Record<SearchTab, number>
-  countsApproximate?: boolean
-  years: number[]
-  genres: { id: number; name: string }[]
-}>()
+const props = withDefaults(
+  defineProps<{
+    state: SearchState
+    counts: Record<SearchTab, number>
+    countsApproximate?: boolean
+    years: number[]
+    genres: { id: number; name: string }[]
+    allowPeople?: boolean
+  }>(),
+  { allowPeople: true },
+)
 const emit = defineEmits<{ update: [patch: Partial<SearchState>] }>()
 
 const { t } = useI18n()
-const tabs = computed(() => SEARCH_TABS.map((key) => ({ key, label: t(`media.search.tabs.${key}`) })))
+const tabs = computed(() =>
+  (props.allowPeople ? SEARCH_TABS : SEARCH_TABS.filter((key) => key !== "people")).map((key) => ({
+    key,
+    label: t(`media.search.tabs.${key}`),
+  })),
+)
 
 const value = (e: Event) => (e.target as HTMLSelectElement).value
 const onYear = (e: Event) => emit("update", { year: Number(value(e)) || null })

@@ -3,6 +3,7 @@ import { defineComponent, h, ref } from "vue"
 import { flushPromises, mount } from "@vue/test-utils"
 import { createPinia, setActivePinia } from "pinia"
 import { createMemoryHistory, createRouter } from "vue-router"
+import { useAuthGate } from "@/composables/useAuthGate"
 import { useMediaActivity } from "@/composables/useMediaActivity"
 import { useAuthStore } from "@/stores/auth"
 import { useUIStore } from "@/stores/ui"
@@ -39,7 +40,9 @@ async function setup(loggedIn: boolean) {
 
 describe("useMediaActivity", () => {
   beforeEach(() => {
+    setActivePinia(createPinia())
     i18n.global.locale.value = "en"
+    useAuthGate().close()
     vi.resetAllMocks()
     m.likeMedia.mockResolvedValue({})
     m.unlikeMedia.mockResolvedValue({})
@@ -49,15 +52,31 @@ describe("useMediaActivity", () => {
     m.addItem.mockResolvedValue({ data: { item: { id: 55 } } })
   })
 
-  it("sends guests to login without calling the API", async () => {
+  it("opens the shared auth gate for guests without navigating or calling private/mutating APIs", async () => {
     const { api, router } = await setup(false)
+    expect(m.getOwnMediaStatus).not.toHaveBeenCalled()
+    expect(m.getMyWatchLogs).not.toHaveBeenCalled()
+
+    const gate = useAuthGate()
     await api.toggleLike()
+    expect(gate.isOpen.value).toBe(true)
+    expect(gate.reason.value).toBe("like")
+
+    gate.close()
     await api.toggleWatchlist()
+    expect(gate.isOpen.value).toBe(true)
+    expect(gate.reason.value).toBe("watchlist")
+
+    gate.close()
+    await api.markLogged()
+    expect(gate.isOpen.value).toBe(true)
+    expect(gate.reason.value).toBe("watchLog")
+
     await flushPromises()
     expect(m.likeMedia).not.toHaveBeenCalled()
     expect(m.addItem).not.toHaveBeenCalled()
-    expect(router.currentRoute.value.name).toBe("login")
-    expect(useUIStore().toasts.at(-1)?.message).toBe("Sign in to do that.")
+    expect(router.currentRoute.value.path).toBe("/")
+    expect(useUIStore().toasts).toHaveLength(0)
   })
 
   it("likes and unlikes, updating the count", async () => {

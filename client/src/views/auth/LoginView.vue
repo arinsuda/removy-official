@@ -27,18 +27,19 @@
       <GoogleSignInButton :disabled="isLoading" @click="handleGoogleLogin" />
       <p class="auth-footer form-item">
         <span class="auth-footer__text">{{ t("auth.login.noAccount") }}</span>
-        <RouterLink to="/register" class="auth-link auth-link--strong">{{ t("auth.login.register") }}</RouterLink>
+        <RouterLink :to="{ path: '/register', query: buildAuthQuery(redirectParam) }" class="auth-link auth-link--strong">{{ t("auth.login.register") }}</RouterLink>
       </p>
     </form>
   </AuthShell>
 </template>
 
 <script setup lang="ts">
-  import { ref, onMounted } from "vue"
+  import { ref, computed, onMounted } from "vue"
   import { useRouter, useRoute } from "vue-router"
   import { useI18n } from "vue-i18n"
   import { isRateLimited } from "@/utils/rateLimit"
   import { asApiError } from "@/utils/apiError"
+  import { buildAuthQuery, sanitizeRedirect } from "@/utils/safeRedirect"
   import { User as IconUser, Lock as IconLock } from "lucide-vue-next"
   import AuthAlert from "@/components/auth/AuthAlert.vue"
   import AuthField from "@/components/auth/AuthField.vue"
@@ -52,6 +53,8 @@
   const { t } = useI18n()
   const router = useRouter()
   const route = useRoute()
+  // Google error redirects come back with return_url instead of redirect.
+  const redirectParam = computed(() => route.query.redirect ?? route.query.return_url)
   const authStore = useAuthStore()
 
   const form = ref({ identifier: "", password: "" })
@@ -84,21 +87,20 @@
       } else {
         errorMsg.value = t("auth.login.errors.google")
       }
-      router.replace({ query: {} })
+      router.replace({ query: buildAuthQuery(redirectParam.value) ?? {} })
     }
   })
 
   async function handleGoogleLogin() {
+    const redirect = sanitizeRedirect(redirectParam.value) ?? "/"
     try {
       const { data } = await authApi.getGoogleConfig()
       if (!data.enabled) {
         errorMsg.value = t("auth.login.errors.googleDisabled")
         return
       }
-      const redirect = (route.query.redirect as string) || "/"
       window.location.assign(authApi.getGoogleLoginUrl(redirect))
     } catch {
-      const redirect = (route.query.redirect as string) || "/"
       window.location.assign(authApi.getGoogleLoginUrl(redirect))
     }
   }
@@ -113,7 +115,7 @@
     isLoading.value = true
     try {
       await authStore.login(form.value)
-      const redirect = route.query.redirect as string | undefined
+      const redirect = sanitizeRedirect(redirectParam.value)
       await shellRef.value?.playExit()
       router.push(redirect ?? { name: "home" })
     } catch (err) {

@@ -14,6 +14,12 @@ import (
 	"gorm.io/gorm"
 )
 
+// Per-IP budget for the unauthenticated cold-boot probe GET /auth/session.
+const (
+	sessionProbeRateMax    = 60
+	sessionProbeRateWindow = time.Minute
+)
+
 func RegisterRoutes(router fiber.Router, db *gorm.DB, cfg *config.Config, m *mailer.Mailer, s *storage.MinIOClient, notifSvc *notification_module.Service) *Service {
 	svc := NewService(db, cfg, m, s, notifSvc)
 	h := NewHandler(svc, cfg)
@@ -52,6 +58,7 @@ func RegisterRoutes(router fiber.Router, db *gorm.DB, cfg *config.Config, m *mai
 		ratelimit.NewFailedOnly(30, 15*time.Minute, identifierKey),
 		h.Login)
 	auth.Post("/refresh", h.Refresh)
+	auth.Get("/session", ratelimit.New(sessionProbeRateMax, sessionProbeRateWindow, ipKey), h.GetSession)
 	auth.Post("/logout", h.Logout)
 	auth.Get("/verify-email", h.VerifyEmailLink)
 	auth.Post("/verify-email", ratelimit.New(20, time.Hour, ipKey), h.VerifyEmail)
