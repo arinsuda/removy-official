@@ -167,6 +167,11 @@ Changing any of these affects stored data, live sessions, or other systems:
 - Huge files: UserBmol.vue (~2.4k), BmolSection.vue (~1.8k), TVDetailView / EditProfile / MovieDetailView (~1.6k), HomeView (~1.4k), MainLayout (~1.3k), MovieReviews (~1.3k). Use grep + ranged reads, not full reads.
 - `server/tmp/` is air build output (`.air.toml`).
 
+## Backups
+- Daily encrypted logical backup: [`.github/workflows/db-backup.yml`](.github/workflows/db-backup.yml) runs daily off-peak + `workflow_dispatch`, streams `pg_dump` (PG 16) into `age`, and keeps encrypted `.dump.age` artifacts for `BACKUP_RETENTION_DAYS` (30 days).
+- Required GitHub Secrets: `BACKUP_DATABASE_URL` (read-only Neon role on the **direct**, non-pooler host with `sslmode=require`) and `BACKUP_AGE_RECIPIENT` (`age1...` public key; the private key stays offline).
+- Restore script & runbook: [`scripts/db-restore.sh`](scripts/db-restore.sh) (guards `*.neon.tech` unless `--i-know-this-is-prod`) and [`docs/backup-restore.md`](docs/backup-restore.md) (role SQL, <6h PITR vs >6h backup table, manual restore drill, 30-day PDPA retention note).
+
 ## Docs (trust level)
 - Code > this file > `README.md` (may lag code) > `client/README.md`.
 - `../LINKING_SPEC.md` is the shared linking contract with PLANZI (`../cooked-app`). 

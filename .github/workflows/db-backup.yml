@@ -1,0 +1,209 @@
+name: Daily Encrypted Database Backup
+
+on:
+  schedule:
+    # BACKUP_SCHEDULE_CRON: 20:17 UTC daily (03:17 ICT / Asia/Bangkok, off-peak; non-:00/:30 avoids runner queue spikes).
+    # GitHub Actions requires a literal cron expression in `on.schedule`.
+    - cron: "17 20 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+env:
+  PG_MAJOR_VERSION: "16"
+  BACKUP_RETENTION_DAYS: "30"
+  BACKUP_MIN_SIZE_BYTES: "1024"
+  BACKUP_ARTIFACT_PREFIX: "popcorn-db"
+  PGDG_SIGNING_KEY_URL: "https://www.postgresql.org/media/keys/ACCC4CF8.asc"
+  PGDG_APT_REPO_URL: "https://apt.postgresql.org/pub/repos/apt"
+
+jobs:
+  backup:
+    name: Backup and Encrypt Postgres
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      artifact_name: ${{ steps.backup.outputs.artifact_name }}
+
+    steps:
+      - name: Install PostgreSQL client and age
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          if ! apt-cache show "postgresql-client-${PG_MAJOR_VERSION}" >/dev/null 2>&1; then
+            sudo install -d /usr/share/postgresql-common/pgdg
+            sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc "${PGDG_SIGNING_KEY_URL}"
+            # shellcheck source=/dev/null
+            . /etc/os-release
+            echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] ${PGDG_APT_REPO_URL} ${VERSION_CODENAME}-pgdg main" \
+              | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+            sudo apt-get update
+          fi
+          sudo apt-get install -y --no-install-recommends \
+            "postgresql-client-${PG_MAJOR_VERSION}" \
+            age
+
+          pg_bin_dir="/usr/lib/postgresql/${PG_MAJOR_VERSION}/bin"
+          if [ -d "$pg_bin_dir" ]; then
+            echo "$pg_bin_dir" >> "$GITHUB_PATH"
+          fi
+
+      - name: Verify PostgreSQL client version
+        shell: bash
+        run: |
+          set -euo pipefail
+          client_major="$(pg_dump --version | sed -nE 's/^pg_dump \(PostgreSQL\) ([0-9]+).*/\1/p')"
+          if [ "$client_major" != "$PG_MAJOR_VERSION" ]; then
+            echo "::error::Expected pg_dump major version ${PG_MAJOR_VERSION}, got '${client_major:-unknown}'"
+            exit 1
+          fi
+          echo "Using pg_dump major version ${client_major}"
+
+      - name: Stream pg_dump to age and verify encrypted artifact
+        id: backup
+        shell: bash
+        env:
+          BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          BACKUP_AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${BACKUP_DATABASE_URL:-}" ]; then
+            echo "::error::Missing required secret BACKUP_DATABASE_URL"
+            exit 1
+          fi
+          if [ -z "${BACKUP_AGE_RECIPIENT:-}" ]; then
+            echo "::error::Missing required secret BACKUP_AGE_RECIPIENT"
+            exit 1
+          fi
+
+          echo "::add-mask::${BACKUP_DATABASE_URL}"
+          echo "::add-mask::${BACKUP_AGE_RECIPIENT}"
+
+          # Mask parsed URL components (host/user/password) so connection errors never leak secrets in public logs.
+          python3 - <<'PY'
+          import os
+          from urllib.parse import unquote, urlparse
+
+          parsed = urlparse(os.environ["BACKUP_DATABASE_URL"])
+          if parsed.scheme not in ("postgres", "postgresql") or not parsed.hostname:
+              raise SystemExit("::error::BACKUP_DATABASE_URL must be a valid postgres:// or postgresql:// URI")
+
+          candidates = [parsed.hostname]
+          if parsed.password:
+              candidates.extend([parsed.password, unquote(parsed.password)])
+          if parsed.username and parsed.username not in ("postgres", "neondb_owner"):
+              candidates.extend([parsed.username, unquote(parsed.username)])
+
+          seen = set()
+          for value in candidates:
+              if value and len(value) >= 4 and value not in seen:
+                  seen.add(value)
+                  print(f"::add-mask::{value}")
+          PY
+
+          server_major="$(psql "$BACKUP_DATABASE_URL" -Atqc "SELECT current_setting('server_version_num')::int / 10000;")"
+          if [ "$server_major" != "$PG_MAJOR_VERSION" ]; then
+            echo "::error::Database server major version '${server_major:-unknown}' does not match client major version ${PG_MAJOR_VERSION}"
+            exit 1
+          fi
+
+          timestamp_utc="$(date -u +%Y%m%dT%H%M%SZ)"
+          artifact_name="${BACKUP_ARTIFACT_PREFIX}-${timestamp_utc}.dump.age"
+          artifact_path="${RUNNER_TEMP}/${artifact_name}"
+
+          backup_ok="false"
+          rm -f "$artifact_path"
+          trap 'if [ "$backup_ok" != "true" ]; then rm -f "$artifact_path"; fi' EXIT
+
+          pg_dump --format=custom --no-owner --no-privileges "$BACKUP_DATABASE_URL" \
+            | age -r "$BACKUP_AGE_RECIPIENT" -o "$artifact_path"
+
+          if [ ! -s "$artifact_path" ]; then
+            echo "::error::Encrypted backup file was not created or is empty"
+            exit 1
+          fi
+
+          file_size="$(wc -c < "$artifact_path" | tr -d '[:space:]')"
+          if [ "$file_size" -le "$BACKUP_MIN_SIZE_BYTES" ]; then
+            echo "::error::Encrypted backup size (${file_size} bytes) must exceed ${BACKUP_MIN_SIZE_BYTES} bytes"
+            exit 1
+          fi
+
+          first_line="$(head -n 1 "$artifact_path" | tr -d '\r')"
+          if [ "$first_line" != "age-encryption.org/v1" ]; then
+            echo "::error::Backup file is missing age-encryption.org/v1 header; refusing to upload"
+            exit 1
+          fi
+
+          magic_bytes="$(head -c 5 "$artifact_path" || true)"
+          if [ "$magic_bytes" = "PGDMP" ]; then
+            echo "::error::Plaintext pg_dump header detected; refusing to upload"
+            exit 1
+          fi
+
+          backup_ok="true"
+          echo "artifact_name=${artifact_name}" >> "$GITHUB_OUTPUT"
+          echo "artifact_path=${artifact_path}" >> "$GITHUB_OUTPUT"
+          echo "Created encrypted backup ${artifact_name} (${file_size} bytes)"
+
+      - name: Upload encrypted backup artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ${{ steps.backup.outputs.artifact_name }}
+          path: ${{ steps.backup.outputs.artifact_path }}
+          retention-days: ${{ env.BACKUP_RETENTION_DAYS }}
+          if-no-files-found: error
+
+  verify:
+    name: Verify Encrypted Backup Integrity
+    needs: backup
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Download encrypted backup artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: ${{ needs.backup.outputs.artifact_name }}
+          path: ${{ runner.temp }}/verify
+
+      - name: Verify artifact integrity without decrypting
+        shell: bash
+        env:
+          ARTIFACT_NAME: ${{ needs.backup.outputs.artifact_name }}
+        run: |
+          set -euo pipefail
+          artifact_file="${RUNNER_TEMP}/verify/${ARTIFACT_NAME}"
+
+          if [ ! -f "$artifact_file" ]; then
+            echo "::error::Downloaded artifact '${ARTIFACT_NAME}' is missing"
+            exit 1
+          fi
+
+          file_size="$(wc -c < "$artifact_file" | tr -d '[:space:]')"
+          if [ "$file_size" -le "$BACKUP_MIN_SIZE_BYTES" ]; then
+            echo "::error::Downloaded backup size (${file_size} bytes) must exceed ${BACKUP_MIN_SIZE_BYTES} bytes"
+            exit 1
+          fi
+
+          first_line="$(head -n 1 "$artifact_file" | tr -d '\r')"
+          if [ "$first_line" != "age-encryption.org/v1" ]; then
+            echo "::error::Downloaded backup is missing age-encryption.org/v1 header"
+            exit 1
+          fi
+
+          magic_bytes="$(head -c 5 "$artifact_file" || true)"
+          if [ "$magic_bytes" = "PGDMP" ]; then
+            echo "::error::Plaintext pg_dump header detected in downloaded artifact"
+            exit 1
+          fi
+
+          echo "Verified ${ARTIFACT_NAME} (${file_size} bytes > ${BACKUP_MIN_SIZE_BYTES} byte threshold, valid age header)."
+          echo "Note: Full decrypt + pg_restore requires the offline age private key; run manual restore drills per docs/backup-restore.md."
