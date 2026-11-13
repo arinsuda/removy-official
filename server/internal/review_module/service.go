@@ -150,7 +150,7 @@ func (s *Service) CreateReview(ctx context.Context, userID uint, req CreateRevie
 	if err != nil {
 		return nil, err
 	}
-	return toReviewResponse(inserted, false, false, s.minio), nil
+	return toReviewResponse(inserted, true, false, false, s.minio), nil
 }
 
 func (s *Service) GetUserReviews(ctx context.Context, userID, requesterID uint, filter ReviewFilter) ([]ReviewResponse, Pagination, UserReviewsSummary, error) {
@@ -174,6 +174,9 @@ func (s *Service) GetUserReviews(ctx context.Context, userID, requesterID uint, 
 	if userID != requesterID {
 		filter.Visibility = "public"
 	}
+	if requesterID == 0 {
+		filter.OnlyPublicFlag = true
+	}
 
 	reviews, total, err := s.repo.FindReviewsByUser(userID, filter, (filter.Page-1)*filter.PageSize, filter.PageSize)
 	if err != nil {
@@ -191,12 +194,15 @@ func (s *Service) GetUserReviews(ctx context.Context, userID, requesterID uint, 
 		ids[i] = r.ID
 	}
 
-	likedMap, _ := s.repo.FindLikedIDs(ids, requesterID)
-	helpfulMap, _ := s.repo.FindHelpfulIDs(ids, requesterID)
+	var likedMap, helpfulMap map[uint]bool
+	if requesterID != 0 && len(ids) > 0 {
+		likedMap, _ = s.repo.FindLikedIDs(ids, requesterID)
+		helpfulMap, _ = s.repo.FindHelpfulIDs(ids, requesterID)
+	}
 
 	responses := make([]ReviewResponse, len(reviews))
 	for i, r := range reviews {
-		responses[i] = *toReviewResponse(&r, likedMap[r.ID], helpfulMap[r.ID], s.minio)
+		responses[i] = *toReviewResponse(&r, requesterID != 0, likedMap[r.ID], helpfulMap[r.ID], s.minio)
 	}
 	return responses, pg, buildUserReviewsSummary(summaryRow), nil
 }
@@ -237,12 +243,15 @@ func (s *Service) GetMediaReviews(ctx context.Context, mediaID int, mediaType st
 	for i, r := range reviews {
 		ids[i] = r.ID
 	}
-	likedMap, _ := s.repo.FindLikedIDs(ids, requesterID)
-	helpfulMap, _ := s.repo.FindHelpfulIDs(ids, requesterID)
+	var likedMap, helpfulMap map[uint]bool
+	if requesterID != 0 && len(ids) > 0 {
+		likedMap, _ = s.repo.FindLikedIDs(ids, requesterID)
+		helpfulMap, _ = s.repo.FindHelpfulIDs(ids, requesterID)
+	}
 
 	responses := make([]ReviewResponse, len(reviews))
 	for i, r := range reviews {
-		responses[i] = *toReviewResponse(&r, likedMap[r.ID], helpfulMap[r.ID], s.minio)
+		responses[i] = *toReviewResponse(&r, requesterID != 0, likedMap[r.ID], helpfulMap[r.ID], s.minio)
 	}
 	return responses, pg, nil
 }
@@ -255,7 +264,7 @@ func (s *Service) GetMyMediaReview(userID uint, mediaID int, mediaType string) (
 	}
 	liked, _ := s.repo.IsLiked(review.ID, userID)
 	helpful, _ := s.repo.IsHelpful(review.ID, userID)
-	return toReviewResponse(review, liked, helpful, s.minio), nil
+	return toReviewResponse(review, true, liked, helpful, s.minio), nil
 }
 
 func (s *Service) UpdateReview(ctx context.Context, reviewID, requesterID uint, req UpdateReviewRequest) (*ReviewResponse, error) {
@@ -278,7 +287,7 @@ func (s *Service) UpdateReview(ctx context.Context, reviewID, requesterID uint, 
 	if len(updates) == 0 {
 		liked, _ := s.repo.IsLiked(reviewID, requesterID)
 		helpful, _ := s.repo.IsHelpful(reviewID, requesterID)
-		return toReviewResponse(review, liked, helpful, s.minio), nil
+		return toReviewResponse(review, true, liked, helpful, s.minio), nil
 	}
 
 	if err := s.repo.UpdateReview(reviewID, updates); err != nil {
@@ -301,7 +310,7 @@ func (s *Service) UpdateReview(ctx context.Context, reviewID, requesterID uint, 
 
 	liked, _ := s.repo.IsLiked(reviewID, requesterID)
 	helpful, _ := s.repo.IsHelpful(reviewID, requesterID)
-	return toReviewResponse(updated, liked, helpful, s.minio), nil
+	return toReviewResponse(updated, true, liked, helpful, s.minio), nil
 }
 
 func (s *Service) DeleteReview(ctx context.Context, reviewID, requesterID uint) error {
@@ -634,12 +643,18 @@ func buildUpdateMap(req UpdateReviewRequest) (map[string]any, error) {
 	return updates, nil
 }
 
-func toReviewResponse(r *Review, isLiked, isHelpful bool, minio *storage.MinIOClient) *ReviewResponse {
+func toReviewResponse(r *Review, includeViewerFlags, isLiked, isHelpful bool, minio *storage.MinIOClient) *ReviewResponse {
 	if r == nil {
 		return nil
 	}
 
 	title, posterURL := fetchMediaSummary(r.MediaID, r.MediaType)
+
+	var likedPtr, helpfulPtr *bool
+	if includeViewerFlags {
+		likedPtr = &isLiked
+		helpfulPtr = &isHelpful
+	}
 
 	return &ReviewResponse{
 		ID:   r.ID,
@@ -655,9 +670,9 @@ func toReviewResponse(r *Review, isLiked, isHelpful bool, minio *storage.MinIOCl
 		Visibility:     r.Visibility,
 		LikeCount:      r.LikeCount,
 		CommentCount:   r.CommentCount,
-		IsLiked:        isLiked,
+		IsLiked:        likedPtr,
 		HelpfulCount:   r.HelpfulCount,
-		IsHelpfulVoted: isHelpful,
+		IsHelpfulVoted: helpfulPtr,
 		CreatedAt:      r.CreatedAt,
 		UpdatedAt:      r.UpdatedAt,
 	}

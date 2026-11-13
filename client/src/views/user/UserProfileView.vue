@@ -19,10 +19,11 @@
       <ProfileHero
         :user="user"
         :is-owner="isOwner"
-        :can-follow="auth.isLoggedIn"
+        :can-follow="!isOwner"
+        :is-guest="!auth.isLoggedIn"
         :follow-state="followState"
         :busy="follow.isPending.value || unfollow.isPending.value"
-        @follow="follow.mutate()"
+        @follow="handleFollow"
         @unfollow="showUnfollowConfirm = true"
         @cancel="unfollow.mutate()"
         @open-list="openList"
@@ -30,10 +31,11 @@
 
       <ProfileLockedState
         v-if="isLocked"
-        :can-follow="auth.isLoggedIn"
+        :can-follow="!isOwner"
+        :is-guest="!auth.isLoggedIn"
         :follow-state="followState"
         :busy="follow.isPending.value || unfollow.isPending.value"
-        @follow="follow.mutate()"
+        @follow="handleFollow"
         @cancel="unfollow.mutate()"
       />
 
@@ -78,6 +80,7 @@ import { useRoute, useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
 import { UserX } from "lucide-vue-next"
 import { useAuthStore } from "@/stores/auth"
+import { useAuthGate } from "@/composables/useAuthGate"
 import { useUserProfile } from "@/composables/useUserProfile"
 import { useFollowActions } from "@/composables/useFollow"
 import type { ListType } from "@/types"
@@ -104,11 +107,17 @@ const TAB_KEYS: TabKey[] = ["reviews", "watchlist", "likes", "watched", "bol", "
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const { requireAuth } = useAuthGate()
 const { t } = useI18n()
 
 const userIdParam = computed(() => Number(route.params.userId))
 const { userId, isOwner, profile, followStatus, isLocked, stats, reviews, taste, errorKind } = useUserProfile(userIdParam)
 const { follow, unfollow } = useFollowActions(userId)
+
+function handleFollow() {
+  if (!requireAuth("follow")) return
+  follow.mutate()
+}
 
 const user = computed(() => profile.data.value ?? null)
 const followState = computed(() => followStatus.data.value?.follow_status)

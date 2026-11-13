@@ -21,7 +21,7 @@ export const libraryApi = {
     userId: number,
     params?: { list_type?: string; media_type?: string },
   ) =>
-    api.get<{ items: LibraryItemResponse[] }>(`/library/user/${userId}`, {
+    api.get<{ items: LibraryItemResponse[]; has_more?: boolean }>(`/library/user/${userId}`, {
       params,
     }),
 

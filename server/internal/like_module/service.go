@@ -104,20 +104,33 @@ func (s *Service) Unlike(ctx context.Context, userID uint, mediaID int, mediaTyp
 	return nil
 }
 
-func (s *Service) GetLikes(ctx context.Context, ownerID, requesterID uint) ([]LikeResponse, error) {
+// GuestLikesLimit caps how many likes a guest gets per request, which bounds the per-item
+// TMDB lookups an unauthenticated caller can trigger.
+const GuestLikesLimit = 100
+
+// GetLikes returns the visible likes and whether the list was cut at GuestLikesLimit.
+func (s *Service) GetLikes(ctx context.Context, ownerID, requesterID uint) ([]LikeResponse, bool, error) {
 	if s.policy != nil {
 		canView, err := s.policy.CanViewProfileSection(ctx, requesterID, ownerID, privacy_policy.SectionLibrary)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 		if !canView {
-			return nil, ErrForbidden
+			return nil, false, ErrForbidden
 		}
 	}
 
-	likes, err := s.repo.FindByUser(ownerID)
+	limit := 0
+	if requesterID == 0 {
+		limit = GuestLikesLimit + 1 // one extra row tells us whether more exist
+	}
+	likes, err := s.repo.FindByUser(ownerID, limit)
 	if err != nil {
-		return nil, err
+		return nil, false, err
+	}
+	hasMore := limit > 0 && len(likes) > GuestLikesLimit
+	if hasMore {
+		likes = likes[:GuestLikesLimit]
 	}
 
 	responses := make([]LikeResponse, len(likes))
@@ -156,10 +169,10 @@ func (s *Service) GetLikes(ctx context.Context, ownerID, requesterID uint) ([]Li
 		summaries[i] = &responses[i].Media
 	}
 	if err := shared.AttachRatings(ctx, s.db, summaries); err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
-	return responses, nil
+	return responses, hasMore, nil
 }
 
 func (s *Service) createAchievementFeedActivities(ctx context.Context, userID uint, unlocked []shared.NeutralUnlocked) {

@@ -63,12 +63,12 @@ func (h *Handler) GetLibrary(c fiber.Ctx) error {
 		requesterID = claims.UserID
 	}
 
-	items, err := h.svc.GetLibrary(c.Context(), userID, requesterID, listType, mediaType)
+	items, hasMore, err := h.svc.GetLibrary(c.Context(), userID, requesterID, listType, mediaType)
 	if err != nil {
 		return handleError(c, err)
 	}
 
-	return c.JSON(fiber.Map{"items": items})
+	return c.JSON(fiber.Map{"items": items, "has_more": hasMore})
 }
 
 func (h *Handler) RemoveItem(c fiber.Ctx) error {

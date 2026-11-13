@@ -2,6 +2,7 @@ package achievementsmodule
 
 import (
 	"github.com/arinsuda/movie-hub/internal/privacy_policy"
+	mw "github.com/arinsuda/movie-hub/middleware"
 	"github.com/gofiber/fiber/v3"
 	"gorm.io/gorm"
 )
@@ -16,10 +17,13 @@ func New(db *gorm.DB, policy privacy_policy.UserAccessPolicy) *Module {
 	return &Module{Service: svc}
 }
 
-func (m *Module) RegisterRoutes(router fiber.Router, authMiddleware fiber.Handler) {
+func (m *Module) RegisterPublicRoutes(router fiber.Router, guards ...fiber.Handler) {
+	h := newHandler(m.Service)
+	mw.GetRoute(router, "/users/:userID<int>/achievements", h.listUserAchievements, guards...)
+}
+
+func (m *Module) RegisterRoutes(router fiber.Router) {
 	h := newHandler(m.Service)
 
 	router.Get("/achievements", h.listAllAchievements)
-
-	router.Get("/users/:userID/achievements", authMiddleware, h.listUserAchievements)
 }

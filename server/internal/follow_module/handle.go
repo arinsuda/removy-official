@@ -48,9 +48,12 @@ func (h *Handler) GetFollowers(c fiber.Ctx) error {
 	if err != nil {
 		return badRequest(c, "invalid user id")
 	}
-	claims := mw.GetClaims(c)
+	var requesterID uint
+	if claims := mw.GetClaims(c); claims != nil {
+		requesterID = claims.UserID
+	}
 
-	list, err := h.svc.GetFollowers(c.Context(), claims.UserID, userID)
+	list, err := h.svc.GetFollowers(c.Context(), requesterID, userID)
 	if err != nil {
 		return handleErr(c, err)
 	}
@@ -62,9 +65,12 @@ func (h *Handler) GetFollowing(c fiber.Ctx) error {
 	if err != nil {
 		return badRequest(c, "invalid user id")
 	}
-	claims := mw.GetClaims(c)
+	var requesterID uint
+	if claims := mw.GetClaims(c); claims != nil {
+		requesterID = claims.UserID
+	}
 
-	list, err := h.svc.GetFollowing(c.Context(), claims.UserID, userID)
+	list, err := h.svc.GetFollowing(c.Context(), requesterID, userID)
 	if err != nil {
 		return handleErr(c, err)
 	}

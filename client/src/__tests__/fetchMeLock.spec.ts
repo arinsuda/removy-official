@@ -40,7 +40,7 @@ describe("fetchMe refresh lock", () => {
     } as Awaited<ReturnType<typeof authApi.getSession>>)
     Object.defineProperty(navigator, "locks", { value: fakeLocks(), configurable: true })
     vi.mocked(userApi.me).mockResolvedValue({
-      data: { user: { id: 1, username: "u", favorite_genres: "[]" } },
+      data: { user: { id: 1, username: "u", role: "user", favorite_genres: "[]" } },
     } as Awaited<ReturnType<typeof userApi.me>>)
   })
   afterEach(() => {
@@ -119,7 +119,7 @@ describe("fetchMe refresh lock", () => {
   // Tab 1's first refresh waits for the test; any later refresh answers for whatever
   // session is stored by then: B's token rotates, anything else is rejected.
   const replyB = { data: { user: { id: 2, email: "b@x.test", is_verified: true }, access_token: "at-B2", refresh_token: "rt-B2" } } as Awaited<ReturnType<typeof authApi.refreshToken>>
-  const meB = { data: { user: { id: 2, username: "b", favorite_genres: "[]" } } } as Awaited<ReturnType<typeof userApi.me>>
+  const meB = { data: { user: { id: 2, username: "b", role: "user", favorite_genres: "[]" } } } as Awaited<ReturnType<typeof userApi.me>>
 
   it.each([
     ["logs out", () => localStorage.removeItem("refresh_token"), null, false],
@@ -190,7 +190,7 @@ describe("fetchMe refresh lock", () => {
       throw { response: { status: 401 } }
     })
     vi.mocked(userApi.me).mockResolvedValue({
-      data: { user: { id: 2, username: "b", favorite_genres: "[]" } },
+      data: { user: { id: 2, username: "b", role: "user", favorite_genres: "[]" } },
     } as Awaited<ReturnType<typeof userApi.me>>)
 
     setActivePinia(createPinia())
@@ -297,5 +297,38 @@ describe("fetchMe refresh lock", () => {
     expect(window.location.hash).toBe("#cast")
     replaceSpy.mockRestore()
     window.history.replaceState({}, "", "/")
+  })
+
+  it("treats a public/non-owner profile response (missing role or mismatched id) as unauthenticated", async () => {
+    localStorage.setItem("refresh_token", "rt-1")
+    vi.mocked(authApi.refreshToken).mockResolvedValueOnce(refreshReply(1))
+    // Simulate GET /users/:id answering 200 without owner fields (e.g. role omitted).
+    vi.mocked(userApi.me).mockResolvedValueOnce({
+      data: {
+        user: {
+          id: 1,
+          username: "u1",
+          display_name: null,
+          bio: null,
+          avatar_url: null,
+          favorite_genres: null,
+          review_count: 0,
+          follower_count: 0,
+          following_count: 0,
+          is_private: false,
+          level: 1,
+          created_at: "",
+        },
+      },
+    } as never)
+
+    setActivePinia(createPinia())
+    const store = useAuthStore()
+    await store.fetchMe()
+
+    expect(store.user).toBeNull()
+    expect(store.isLoggedIn).toBe(false)
+    expect(store.initError).toBe("unauthenticated")
+    expect(store.isInitialized).toBe(true)
   })
 })

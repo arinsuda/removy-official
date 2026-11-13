@@ -25,7 +25,7 @@ export interface FollowUserSummary {
   username: string
   display_name: string | null
   avatar_url: string | null
-  status: "pending" | "accepted"
+  status?: "pending" | "accepted"
 }
 
 export interface FeedReviewResponse {

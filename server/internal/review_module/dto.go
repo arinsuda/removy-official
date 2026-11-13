@@ -33,9 +33,9 @@ type ReviewResponse struct {
 	Visibility     string                    `json:"visibility"`
 	LikeCount      int                       `json:"like_count"`
 	CommentCount   int                       `json:"comment_count"`
-	IsLiked        bool                      `json:"is_liked"`
-	HelpfulCount   int                       `json:"helpful_count"`    // NEW
-	IsHelpfulVoted bool                      `json:"is_helpful_voted"` // NEW
+	IsLiked        *bool                     `json:"is_liked,omitempty"`
+	HelpfulCount   int                       `json:"helpful_count"`              // NEW
+	IsHelpfulVoted *bool                     `json:"is_helpful_voted,omitempty"` // NEW
 	CreatedAt      time.Time                 `json:"created_at"`
 	UpdatedAt      time.Time                 `json:"updated_at"`
 }

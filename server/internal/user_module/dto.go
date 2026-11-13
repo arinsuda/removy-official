@@ -5,22 +5,22 @@ import "time"
 type UserProfileResponse struct {
 	ID              uint       `json:"id"`
 	Username        string     `json:"username"`
-	Email           string     `json:"email"`
-	VerifiedEmailAt *time.Time `json:"verified_email_at"`
+	Email           string     `json:"email,omitempty"`
+	VerifiedEmailAt *time.Time `json:"verified_email_at,omitempty"`
 	DisplayName     *string    `json:"display_name"`
 	Bio             *string    `json:"bio"`
 	AvatarURL       *string    `json:"avatar_url"`
-	DateOfBirth     *time.Time `json:"date_of_birth"`
-	Gender          GenderType `json:"gender"`
+	DateOfBirth     *time.Time `json:"date_of_birth,omitempty"`
+	Gender          GenderType `json:"gender,omitempty"`
 	FavoriteGenres  *string    `json:"favorite_genres"`
 	ReviewCount     int        `json:"review_count"`
 	FollowerCount   int        `json:"follower_count"`
 	FollowingCount  int        `json:"following_count"`
 	IsPrivate       bool       `json:"is_private"`
 	Level           int        `json:"level"`
-	Role            string     `json:"role"`
+	Role            string     `json:"role,omitempty"`
 	CreatedAt       time.Time  `json:"created_at"`
-	OnboardedAt     *time.Time `json:"onboarded_at"` // owner only
+	OnboardedAt     *time.Time `json:"onboarded_at,omitempty"` // owner only
 }
 
 type UpdateProfileRequest struct {

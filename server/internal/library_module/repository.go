@@ -35,7 +35,7 @@ func (r *repository) Create(item *LibraryItem) error {
 	return err
 }
 
-func (r *repository) FindByUser(userID uint, listType *movie_module.ListType, mediaType *movie_module.MediaType) ([]LibraryItem, error) {
+func (r *repository) FindByUser(userID uint, listType *movie_module.ListType, mediaType *movie_module.MediaType, limit int) ([]LibraryItem, error) {
 	query := r.db.Where("user_id = ?", userID)
 	if listType != nil {
 		query = query.Where("list_type = ?", *listType)
@@ -43,9 +43,12 @@ func (r *repository) FindByUser(userID uint, listType *movie_module.ListType, me
 	if mediaType != nil {
 		query = query.Where("media_type = ?", *mediaType)
 	}
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
 
 	var items []LibraryItem
-	err := query.Order("created_at DESC").Find(&items).Error
+	err := query.Order("created_at DESC, id DESC").Find(&items).Error
 	if err != nil {
 		return nil, err
 	}

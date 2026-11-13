@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/arinsuda/movie-hub/internal/privacy_policy"
 	"github.com/arinsuda/movie-hub/internal/shared"
 	mw "github.com/arinsuda/movie-hub/middleware"
 	"github.com/gofiber/fiber/v3"
@@ -53,14 +54,17 @@ func (h *Handler) GetUserReviews(c fiber.Ctx) error {
 	if err != nil {
 		return badRequest(c, "invalid user id")
 	}
-	claims := mw.GetClaims(c)
+	var requesterID uint
+	if claims := mw.GetClaims(c); claims != nil {
+		requesterID = claims.UserID
+	}
 
 	filter, err := parseReviewFilter(c)
 	if err != nil {
 		return badRequest(c, err.Error())
 	}
 
-	reviews, pagination, summary, err := h.svc.GetUserReviews(c.Context(), userID, claims.UserID, filter)
+	reviews, pagination, summary, err := h.svc.GetUserReviews(c.Context(), userID, requesterID, filter)
 	if err != nil {
 		return handleError(c, err)
 	}
@@ -448,10 +452,14 @@ func parseCommentID(c fiber.Ctx) (uint, error) {
 	return uint(id), nil
 }
 
+const errMsgUserNotFound = "user not found"
+
 func handleError(c fiber.Ctx, err error) error {
 	switch {
 	case shared.IsPgUniqueViolationOn(err, "uq_active_user_media_review"):
 		return shared.WriteAPIError(c, fiber.StatusConflict, shared.ErrorCodeDuplicateReview, "you have already reviewed this media")
+	case errors.Is(err, privacy_policy.ErrNotFound):
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": errMsgUserNotFound})
 	case errors.Is(err, ErrReviewNotFound):
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "review not found"})
 	case errors.Is(err, ErrCommentNotFound):

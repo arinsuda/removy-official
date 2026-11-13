@@ -7,6 +7,7 @@
         </TabIconButton>
       </template>
     </PosterTab>
+    <GuestCapNote v-if="capped" />
 
     <ConfirmModal v-model="showModal" :list-type="listType" :item-name="selected?.media.title" @confirm="doRemove" @cancel="showModal = false" />
   </div>
@@ -20,6 +21,7 @@ import { mediaApi } from "@/api/endpoints/media"
 import ConfirmModal from "@/components/profile/components/ConfirmModal.vue"
 import { useAuthStore } from "@/stores/auth"
 import type { LikeItem, ListType } from "@/types"
+import GuestCapNote from "./tabs/GuestCapNote.vue"
 import PosterTab from "./tabs/PosterTab.vue"
 import TabIconButton from "./tabs/TabIconButton.vue"
 import { summaryToHomeMedia, type ProfileEntry } from "./tabs/profileMedia"
@@ -33,6 +35,7 @@ const isOwner = computed(() => auth.user?.id === props.userId)
 const entries = ref<ProfileEntry[]>([])
 const loading = ref(false)
 const loadError = ref(false)
+const capped = ref(false)
 
 const showModal = ref(false)
 const selected = ref<ProfileEntry | null>(null)
@@ -42,6 +45,7 @@ async function load() {
     loading.value = true
     loadError.value = false
     const response = await mediaApi.getLikeByUserId(props.userId)
+    capped.value = response.data.has_more ?? false
     // Likes are keyed by media id: the unlike call takes (type, media id).
     entries.value = response.data.likes.map((item: LikeItem) => ({ id: item.media.id, media: summaryToHomeMedia(item.media), at: item.created_at }))
   } catch (err) {

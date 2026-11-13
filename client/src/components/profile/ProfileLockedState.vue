@@ -6,7 +6,7 @@
           {{ t("profile.follow.requested") }}
         </AppButton>
         <AppButton v-else variant="primary" :loading="busy" @click="emit('follow')">
-          {{ t("profile.follow.follow") }}
+          {{ isGuest ? t("profile.follow.logInToFollow") : t("profile.follow.follow") }}
         </AppButton>
       </template>
     </AppEmptyState>
@@ -19,7 +19,7 @@ import { Lock } from "lucide-vue-next"
 import AppButton from "@/components/ui/AppButton.vue"
 import AppEmptyState from "@/components/ui/AppEmptyState.vue"
 
-defineProps<{ canFollow: boolean; followState?: "pending" | "accepted"; busy?: boolean }>()
+defineProps<{ canFollow: boolean; isGuest?: boolean; followState?: "pending" | "accepted"; busy?: boolean }>()
 const emit = defineEmits<{ follow: []; cancel: [] }>()
 const { t } = useI18n()
 </script>

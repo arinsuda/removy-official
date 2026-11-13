@@ -25,18 +25,18 @@ func New(
 	return NewHandler(NewService(db, mc, exp, achieve, notif, feed, policy))
 }
 
-// RegisterPublicRoutes mounts the media review reads guests may use (viewer id 0: the service
+// RegisterPublicRoutes mounts the review reads guests may use (viewer id 0: the service
 // only returns public reviews of accounts the policy lets a guest see). Register it on the
 // root /api router before any auth group.
 func RegisterPublicRoutes(router fiber.Router, h *Handler, guards ...fiber.Handler) {
 	mw.GetRoute(router, "/reviews/media/:mediaType/:mediaId", h.GetMediaReviews, guards...)
 	mw.GetRoute(router, "/reviews/media/:mediaType/:mediaId/rating", h.GetMediaRating, guards...)
+	mw.GetRoute(router, "/reviews/user/:userId<int>", h.GetUserReviews, guards...)
 }
 
 func RegisterRoutes(router fiber.Router, h *Handler) {
 	reviews := router.Group("/reviews")
 	reviews.Post("", h.CreateReview)
-	reviews.Get("/user/:userId", h.GetUserReviews)
 	// Distinct from the public /media/:mediaType/:mediaId[/rating] routes: the extra /me segment never matches them.
 	reviews.Get("/media/:mediaType/:mediaId/me", h.GetMyMediaReview)
 	reviews.Patch("/:reviewId", h.UpdateReview)

@@ -31,10 +31,10 @@
     </div>
 
     <div v-if="step === 'otp'" class="otp">
-      <AppInput v-model="otp" inputmode="numeric" maxlength="6" placeholder="000000" :label="t('settings.email.currentCodeLabel')" :hint="t('settings.email.currentCodeHint', { email: user.email })" @input="otp = otp.replace(/\D/g, '')" />
-      <AppInput v-model="newOtp" inputmode="numeric" maxlength="6" placeholder="000000" :label="t('settings.email.newCodeLabel')" :hint="t('settings.email.newCodeHint', { email: emailInput })" @input="newOtp = newOtp.replace(/\D/g, '')" />
+      <AppInput v-model="otp" inputmode="numeric" :maxlength="EMAIL_OTP_LENGTH" :placeholder="OTP_PLACEHOLDER" :label="t('settings.email.currentCodeLabel')" :hint="t('settings.email.currentCodeHint', { email: user.email })" @input="otp = otp.replace(/\D/g, '')" />
+      <AppInput v-model="newOtp" inputmode="numeric" :maxlength="EMAIL_OTP_LENGTH" :placeholder="OTP_PLACEHOLDER" :label="t('settings.email.newCodeLabel')" :hint="t('settings.email.newCodeHint', { email: emailInput })" @input="newOtp = newOtp.replace(/\D/g, '')" />
       <p v-if="otpError" class="otp__error" role="alert">{{ otpError }}</p>
-      <AppButton variant="primary" :loading="confirming" :disabled="otp.length !== 6 || newOtp.length !== 6" @click="verifyOtp">
+      <AppButton variant="primary" :loading="confirming" :disabled="otp.length !== EMAIL_OTP_LENGTH || newOtp.length !== EMAIL_OTP_LENGTH" @click="verifyOtp">
         {{ t("settings.email.confirm") }}
       </AppButton>
     </div>
@@ -61,6 +61,7 @@ import AppInput from "@/components/ui/AppInput.vue"
 import ConfirmModal from "@/components/profile/components/ConfirmModal.vue"
 import type { UserProfile } from "@/types/user"
 import SettingsCard from "./SettingsCard.vue"
+import { EMAIL_CHANGED_NOTICE_MS, EMAIL_FORMAT_PATTERN, EMAIL_OTP_LENGTH, OTP_PLACEHOLDER, emailErrorKey } from "./emailChange"
 
 const props = defineProps<{ user: UserProfile }>()
 const { t } = useI18n()
@@ -73,9 +74,8 @@ const ui = useUIStore()
 // done  -> codes verified, email swapped on the server and still verified
 type EmailStep = "idle" | "input" | "otp" | "done"
 const step = ref<EmailStep>("idle")
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-const emailInput = ref(props.user.email)
+const emailInput = ref(props.user.email ?? "")
 const error = ref("")
 const sending = ref(false)
 const showConfirm = ref(false)
@@ -85,12 +85,12 @@ const otpError = ref("")
 const confirming = ref(false)
 
 const isVerified = computed(() => !!props.user.verified_email_at)
-const isFormatValid = computed(() => EMAIL_REGEX.test(emailInput.value.trim()))
+const isFormatValid = computed(() => EMAIL_FORMAT_PATTERN.test(emailInput.value.trim()))
 const isSameAsCurrent = computed(() => emailInput.value.trim().toLowerCase() === props.user.email?.toLowerCase())
 const canSend = computed(() => !!emailInput.value && !isSameAsCurrent.value && !sending.value && isFormatValid.value)
 
 watch(emailInput, () => (error.value = ""))
-watch(() => props.user.email, email => step.value === "idle" && (emailInput.value = email))
+watch(() => props.user.email, email => step.value === "idle" && (emailInput.value = email ?? ""))
 
 function reset() {
   step.value = "idle"
@@ -98,7 +98,7 @@ function reset() {
   newOtp.value = ""
   otpError.value = ""
   error.value = ""
-  emailInput.value = props.user.email
+  emailInput.value = props.user.email ?? ""
 }
 const cancel = reset
 
@@ -137,8 +137,7 @@ async function confirmRequestOtp() {
     otp.value = ""
     newOtp.value = ""
   } catch (err: unknown) {
-    const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
-    error.value = msg === "email already in use" ? t("settings.email.errors.inUse") : (msg ?? t("settings.email.errors.sendFailed"))
+    error.value = t(emailErrorKey(err))
   } finally {
     sending.value = false
   }
@@ -147,17 +146,17 @@ async function confirmRequestOtp() {
 // Step 4: PUT /users/:id/email { otp, new_email_otp }
 // The server verifies both, then swaps the email and keeps it verified in one transaction.
 async function verifyOtp() {
-  if (otp.value.length !== 6 || newOtp.value.length !== 6) return
+  if (otp.value.length !== EMAIL_OTP_LENGTH || newOtp.value.length !== EMAIL_OTP_LENGTH) return
   confirming.value = true
   otpError.value = ""
   try {
     const { data } = await userApi.verifyEmailChange(props.user.id, { otp: otp.value, new_email_otp: newOtp.value })
-    emailInput.value = data.user.email
+    emailInput.value = data.user.email ?? ""
     await authStore.fetchMe()
     step.value = "done"
-    setTimeout(() => (step.value = "idle"), 2500)
-  } catch (err: unknown) {
-    otpError.value = (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? t("settings.email.errors.invalidCode")
+    setTimeout(() => (step.value = "idle"), EMAIL_CHANGED_NOTICE_MS)
+  } catch {
+    otpError.value = t("settings.email.errors.invalidCode")
   } finally {
     confirming.value = false
   }

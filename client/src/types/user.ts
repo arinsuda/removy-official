@@ -1,20 +1,24 @@
 export interface UserProfile {
   id: number
   username: string
-  email: string 
-  verified_email_at: string | null
+  /** Owner-only: omitted for guests and signed-in non-owners. */
+  email?: string
+  verified_email_at?: string | null
   display_name: string | null
   bio: string | null
   avatar_url: string | null
-  date_of_birth: string | null
-  gender: string
+  /** Owner-only: omitted for guests and signed-in non-owners. */
+  date_of_birth?: string | null
+  /** Owner-only: omitted for guests and signed-in non-owners. */
+  gender?: string
   favorite_genres: string | null
   review_count: number
   follower_count: number
   following_count: number
   is_private: boolean
   level: number
-  role: string
+  /** Owner-only: omitted for guests and signed-in non-owners. */
+  role?: string
   created_at: string
   /** Owner-only: set once favorite genres are saved or skipped. */
   onboarded_at?: string | null
