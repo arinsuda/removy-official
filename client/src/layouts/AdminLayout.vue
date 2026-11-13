@@ -103,6 +103,7 @@ import {
   Shield,
   Users,
   X,
+  Megaphone,
 } from "lucide-vue-next"
 import AdminBadge from "@/components/admin/AdminBadge.vue"
 import AppButton from "@/components/ui/AppButton.vue"
@@ -115,6 +116,7 @@ const NAV = [
   { name: "admin-dashboard", to: "/admin", label: "admin.nav.dashboard", icon: LayoutDashboard },
   { name: "admin-users", to: "/admin/users", label: "admin.nav.users", icon: Users },
   { name: "admin-reviews", to: "/admin/reviews", label: "admin.nav.reviews", icon: MessageSquare },
+  { name: "admin-events", to: "/admin/events", label: "admin.nav.events", icon: Megaphone },
   { name: "admin-audit-logs", to: "/admin/audit-logs", label: "admin.nav.auditLogs", icon: FileText },
 ]
 const COLLAPSE_KEY = "admin_sidebar_collapsed"

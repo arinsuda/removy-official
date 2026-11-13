@@ -67,7 +67,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch, type Component } from "vue"
 import { useI18n } from "vue-i18n"
-import { Flame, MessageSquareOff, ScrollText, SearchX, Shield, Trash2, UserCheck, UserX } from "lucide-vue-next"
+import { CalendarCog, CalendarPlus, CalendarX, Flame, MessageSquareOff, ScrollText, SearchX, Shield, Trash2, UserCheck, UserX } from "lucide-vue-next"
 import AdminBadge from "@/components/admin/AdminBadge.vue"
 import AdminFilters from "@/components/admin/AdminFilters.vue"
 import AdminPage from "@/components/admin/AdminPage.vue"
@@ -90,7 +90,7 @@ const targetTypeFilter = ref("all")
 const loadError = ref(false)
 const isFiltered = computed(() => actionFilter.value !== "all" || targetTypeFilter.value !== "all")
 
-const ACTIONS = ["USER_DEACTIVATED", "USER_REACTIVATED", "USER_ROLE_CHANGED", "USER_DELETED", "USER_ERASED", "USER_ERASURE_REQUESTED", "USER_ERASED_SCHEDULED", "REVIEW_DELETED"]
+const ACTIONS = ["USER_DEACTIVATED", "USER_REACTIVATED", "USER_ROLE_CHANGED", "USER_DELETED", "USER_ERASED", "USER_ERASURE_REQUESTED", "USER_ERASED_SCHEDULED", "REVIEW_DELETED", "EVENT_CREATED", "EVENT_UPDATED", "EVENT_DELETED"]
 const actionOptions = computed(() => [
   { value: "all", label: t("admin.auditLogs.actionAll") },
   ...ACTIONS.map((a) => ({ value: a, label: t(`admin.auditLogs.action.${a}`) })),
@@ -99,6 +99,7 @@ const targetOptions = computed(() => [
   { value: "all", label: t("admin.auditLogs.targetAll") },
   { value: "user", label: t("admin.auditLogs.targetUser") },
   { value: "review", label: t("admin.auditLogs.targetReview") },
+  { value: "event", label: t("admin.auditLogs.targetEvent") },
 ])
 
 const VISUALS: Record<string, { tone: "danger" | "warning" | "success" | "info"; icon: Component }> = {
@@ -110,6 +111,9 @@ const VISUALS: Record<string, { tone: "danger" | "warning" | "success" | "info";
   USER_ERASURE_REQUESTED: { tone: "warning", icon: UserX },
   USER_ERASED_SCHEDULED: { tone: "danger", icon: Flame },
   REVIEW_DELETED: { tone: "danger", icon: MessageSquareOff },
+  EVENT_CREATED: { tone: "success", icon: CalendarPlus },
+  EVENT_UPDATED: { tone: "info", icon: CalendarCog },
+  EVENT_DELETED: { tone: "danger", icon: CalendarX },
 }
 // Actions written without an admin: the account owner asked, or the purge worker ran.
 const ACTOR_LABELS: Record<string, string> = {
@@ -125,8 +129,12 @@ const tone = (action: string) => VISUALS[action]?.tone ?? "info"
 const icon = (action: string) => VISUALS[action]?.icon ?? ScrollText
 // Unknown future actions fall back to the raw code instead of a missing-key warning.
 const actionLabel = (action: string) => (te(`admin.auditLogs.action.${action}`) ? t(`admin.auditLogs.action.${action}`) : action)
-const targetLabel = (type: string) =>
-  type === "user" ? t("admin.auditLogs.targetUser") : type === "review" ? t("admin.auditLogs.targetReview") : type
+const TARGET_LABEL_KEYS: Record<string, string> = {
+  user: "admin.auditLogs.targetUser",
+  review: "admin.auditLogs.targetReview",
+  event: "admin.auditLogs.targetEvent",
+}
+const targetLabel = (type: string) => (TARGET_LABEL_KEYS[type] ? t(TARGET_LABEL_KEYS[type]) : type)
 
 const hasMeta = (log: AdminAuditLogRow) => !!log.meta_data && Object.keys(log.meta_data).length > 0
 const formatMeta = (v: unknown) => (typeof v === "object" && v !== null ? JSON.stringify(v) : String(v))

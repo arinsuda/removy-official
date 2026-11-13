@@ -11,6 +11,7 @@ import (
 	"github.com/arinsuda/movie-hub/internal/analytics_module"
 	"github.com/arinsuda/movie-hub/internal/auth_module"
 	"github.com/arinsuda/movie-hub/internal/bmol_module"
+	"github.com/arinsuda/movie-hub/internal/event_module"
 	"github.com/arinsuda/movie-hub/internal/external_rating_module"
 	"github.com/arinsuda/movie-hub/internal/feed_module"
 	"github.com/arinsuda/movie-hub/internal/follow_module"
@@ -89,6 +90,7 @@ func Register(ctx context.Context, app *fiber.App, db *gorm.DB, cfg *config.Conf
 	likeHandler := like_module.New(db, achieveModule.Service, notifSvc, feedModule.Service, policy)
 	bmolHandler := bmol_module.New(db, policy)
 	followHandler := follow_module.New(db, achieveModule.Service, notifSvc, feedModule.Service, policy)
+	eventHandler := event_module.New(db, mc)
 	RegisterPublicRoutes(api, mw.OptionalAuth, PublicReadLimiter(cfg.TrustedProxyHops), PublicSearchLimiter(cfg.TrustedProxyHops), PublicHandlers{
 		Movies:       movieHandler,
 		Reviews:      reviewHandler,
@@ -99,6 +101,7 @@ func Register(ctx context.Context, app *fiber.App, db *gorm.DB, cfg *config.Conf
 		Likes:        likeHandler,
 		BMOL:         bmolHandler,
 		Follows:      followHandler,
+		Events:       eventHandler,
 		DB:           db,
 		Policy:       policy,
 	})
@@ -122,11 +125,13 @@ func Register(ctx context.Context, app *fiber.App, db *gorm.DB, cfg *config.Conf
 	like_module.RegisterRoutes(protected, likeHandler)
 	bmol_module.RegisterRoutes(protected, bmolHandler)
 	list_module.RegisterRoutes(protected, db, policy)
+	event_module.RegisterRoutes(protected, eventHandler)
 
 	analytics_module.RegisterRoutes(protected, db)
 	movie_module.RegisterRoutes(protected, movieHandler)
 	media_stats_module.RegisterRoutes(protected, statsHandler)
 	admin_module.RegisterRoutes(protected, db, notifHub, mc, mw.RequireCurrentAdmin(db))
+	event_module.RegisterAdminRoutes(protected, eventHandler, mw.RequireCurrentAdmin(db))
 
 	// Background purge of accounts whose erasure grace period is over; stops with ctx.
 	go account_erasure.NewPurger(db, mc).Run(ctx)

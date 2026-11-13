@@ -15,6 +15,9 @@ const (
 	ActionUserDeleted     AuditAction = "USER_DELETED"
 	ActionUserErased      AuditAction = "USER_ERASED"
 	ActionReviewDeleted   AuditAction = "REVIEW_DELETED"
+	ActionEventCreated    AuditAction = "EVENT_CREATED"
+	ActionEventUpdated    AuditAction = "EVENT_UPDATED"
+	ActionEventDeleted    AuditAction = "EVENT_DELETED"
 )
 
 type AdminAuditLog struct {

@@ -23,6 +23,7 @@ import (
 	"github.com/arinsuda/movie-hub/internal/admin_module"
 	"github.com/arinsuda/movie-hub/internal/auth_module"
 	"github.com/arinsuda/movie-hub/internal/bmol_module"
+	"github.com/arinsuda/movie-hub/internal/event_module"
 	"github.com/arinsuda/movie-hub/internal/feed_module"
 	"github.com/arinsuda/movie-hub/internal/follow_module"
 	"github.com/arinsuda/movie-hub/internal/library_module"
@@ -274,6 +275,7 @@ func newEnv(t *testing.T) *env {
 	likeH := like_module.New(db, achieve.Service, nil, nil, policy)
 	bmolH := bmol_module.New(db, policy)
 	followH := follow_module.New(db, achieve.Service, nil, nil, policy)
+	eventH := event_module.New(db, nil)
 	router.RegisterPublicRoutes(api, mw.OptionalAuth, router.PublicReadLimiter(e.cfg.TrustedProxyHops), router.PublicSearchLimiter(e.cfg.TrustedProxyHops), router.PublicHandlers{
 		Movies:       movieH,
 		Reviews:      reviewH,
@@ -284,6 +286,7 @@ func newEnv(t *testing.T) *env {
 		Likes:        likeH,
 		BMOL:         bmolH,
 		Follows:      followH,
+		Events:       eventH,
 		DB:           db,
 		Policy:       policy,
 	})
@@ -305,8 +308,10 @@ func newEnv(t *testing.T) *env {
 	library_module.RegisterRoutes(protected, libH)
 	like_module.RegisterRoutes(protected, likeH)
 	follow_module.RegisterRoutes(protected, followH)
+	event_module.RegisterRoutes(protected, eventH)
 	watch_log_module.RegisterRoutes(protected, db, nil, libSvc, policy)
 	admin_module.RegisterRoutes(protected, db, nil, nil, mw.RequireCurrentAdmin(db))
+	event_module.RegisterAdminRoutes(protected, eventH, mw.RequireCurrentAdmin(db))
 	feed_module.New(db, nil, nil).RegisterRoutes(protected)
 	return e
 }

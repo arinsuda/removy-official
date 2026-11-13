@@ -1,0 +1,43 @@
+{
+  "title": "Events & Announcements",
+  "subtitle": "Discover the latest community events, announcements, and activities on POPCORN.",
+  "tabs": {
+    "active": "Active",
+    "upcoming": "Upcoming",
+    "past": "Past"
+  },
+  "card": {
+    "viewDetails": "View Details",
+    "openLink": "Open Link",
+    "externalLink": "External link",
+    "startsAt": "Starts: {date}",
+    "endsAt": "Ends: {date}",
+    "period": "{start} – {end}"
+  },
+  "detail": {
+    "backToEvents": "Back to events",
+    "announcement": "Announcement",
+    "dates": "Event duration:",
+    "link": "Learn more / Participate",
+    "notFoundTitle": "Event not found",
+    "notFoundDesc": "This event may have been removed or unpublished."
+  },
+  "empty": {
+    "active": "No active events right now",
+    "activeDesc": "Check back soon for upcoming community events and announcements!",
+    "upcoming": "No upcoming events scheduled",
+    "upcomingDesc": "Stay tuned! We'll announce future activities right here.",
+    "past": "No past events yet",
+    "pastDesc": "Events will appear here after they conclude."
+  },
+  "popup": {
+    "title": "What's New on POPCORN",
+    "dontShowToday": "Don't show again today",
+    "next": "Next",
+    "counter": "{current} / {total}",
+    "prev": "Previous",
+    "close": "Close",
+    "viewEvent": "Learn more"
+  },
+  "loadErrorDesc": "Something went wrong while loading events. Please try again."
+}

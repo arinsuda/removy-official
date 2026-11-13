@@ -13,15 +13,22 @@ import (
 
 	"github.com/arinsuda/movie-hub/config"
 	"github.com/arinsuda/movie-hub/database"
+	"github.com/arinsuda/movie-hub/internal/event_module"
 	"github.com/arinsuda/movie-hub/internal/mailer"
-	"github.com/arinsuda/movie-hub/monitoring"
 	tmdb "github.com/arinsuda/movie-hub/internal/tmdb_module"
 	mw "github.com/arinsuda/movie-hub/middleware"
+	"github.com/arinsuda/movie-hub/monitoring"
 	"github.com/arinsuda/movie-hub/router"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/adaptor"
 	"github.com/gofiber/fiber/v3/middleware/cors"
 )
+
+// multipartOverheadBytes is headroom for multipart framing around the largest file upload.
+const multipartOverheadBytes = 1 << 20
+
+// maxRequestBodyBytes must admit the largest upload (event banner, avatar), which Fiber's 4 MB default rejects.
+const maxRequestBodyBytes = event_module.MaxImageBytes + multipartOverheadBytes
 
 func main() {
 
@@ -48,6 +55,7 @@ func main() {
 	app := fiber.New(fiber.Config{
 		AppName:      "movie-hub v1.0",
 		ErrorHandler: customErrorHandler,
+		BodyLimit:    maxRequestBodyBytes,
 	})
 
 	app.Use(monitoring.Middleware())

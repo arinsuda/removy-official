@@ -139,6 +139,18 @@ const router = createRouter({
           meta: { public: true, titleKey: "navigation.upcoming" }
         },
         {
+          path: "events",
+          name: "events",
+          component: () => import("@/views/events/EventsView.vue"),
+          meta: { public: true, titleKey: "navigation.events" }
+        },
+        {
+          path: "events/:id(\\d+)",
+          name: "event-detail",
+          component: () => import("@/views/events/EventDetailView.vue"),
+          meta: { public: true, titleKey: "navigation.events" }
+        },
+        {
           path: "about-us",
           name: "about-us",
           component: () => import("@/views/aboutus/AboutUsView.vue"),
@@ -212,6 +224,12 @@ const router = createRouter({
           name: "admin-reviews",
           component: () => import("@/views/admin/AdminReviewsView.vue"),
           meta: { titleKey: "admin.reviews.title" }
+        },
+        {
+          path: "events",
+          name: "admin-events",
+          component: () => import("@/views/admin/AdminEventsView.vue"),
+          meta: { titleKey: "admin.events.title" }
         },
         {
           path: "audit-logs",

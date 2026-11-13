@@ -107,7 +107,13 @@ describe("AdminLayout", () => {
   it("renders the nav with the current page marked and a drawer toggle", async () => {
     const w = await mountView(AdminLayout, "/admin/users")
     const links = w.findAll("nav a")
-    expect(links.map((l) => l.attributes("href"))).toEqual(["/admin", "/admin/users", "/admin/reviews", "/admin/audit-logs"])
+    expect(links.map((l) => l.attributes("href"))).toEqual([
+      "/admin",
+      "/admin/users",
+      "/admin/reviews",
+      "/admin/events",
+      "/admin/audit-logs",
+    ])
     expect(links[1]!.attributes("aria-current")).toBe("page")
     const menu = w.get(".admin-topbar__menu")
     expect(menu.attributes("aria-expanded")).toBe("false")

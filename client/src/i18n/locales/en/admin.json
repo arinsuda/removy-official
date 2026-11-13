@@ -140,6 +140,7 @@
     "details": "Details",
     "targetUser": "User",
     "targetReview": "Review",
+    "targetEvent": "Event",
     "action": {
       "USER_DEACTIVATED": "Account deactivated",
       "USER_REACTIVATED": "Account reactivated",
@@ -148,7 +149,10 @@
       "REVIEW_DELETED": "Review deleted",
       "USER_ERASED": "Account erased permanently",
       "USER_ERASURE_REQUESTED": "Erasure requested",
-      "USER_ERASED_SCHEDULED": "Account erased by schedule"
+      "USER_ERASED_SCHEDULED": "Account erased by schedule",
+      "EVENT_CREATED": "Event created",
+      "EVENT_UPDATED": "Event updated",
+      "EVENT_DELETED": "Event deleted"
     }
   },
   "nav": {
@@ -157,6 +161,7 @@
     "users": "User Management",
     "reviews": "Review Moderation",
     "auditLogs": "Audit Logs",
+    "events": "Events",
     "exitAdmin": "Exit Admin Mode",
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
@@ -228,6 +233,81 @@
     "confirm": "Delete review",
     "target": "Review #{id} by {'@'}{username}",
     "deleted": "Deleted review #{id}"
+  },
+  "events": {
+    "title": "Events & Announcements",
+    "subtitle": "Create and manage site-wide events, promotions, and announcements.",
+    "newEvent": "New Event",
+    "editEvent": "Edit Event",
+    "deleteTitle": "Delete this event?",
+    "deleteDesc": "The event will be removed and hidden from all users immediately.",
+    "deleteConfirm": "Delete event",
+    "deleted": "Event deleted",
+    "created": "Event created",
+    "updated": "Event updated",
+    "status": {
+      "all": "All statuses",
+      "draft": "Draft",
+      "published": "Published",
+      "cancelled": "Cancelled"
+    },
+    "state": {
+      "upcoming": "Upcoming",
+      "active": "Active",
+      "past": "Past"
+    },
+    "table": {
+      "dateSeparator": "→",
+      "title": "Title",
+      "status": "Status",
+      "schedule": "Schedule",
+      "popup": "Popup",
+      "priority": "Priority",
+      "actions": "Actions",
+      "emptyTitle": "No events found",
+      "emptyDesc": "Create your first event or announcement.",
+      "popupYes": "Yes",
+      "popupNo": "No"
+    },
+    "form": {
+      "titleEn": "Title (EN)",
+      "titleTh": "Title (TH)",
+      "titleEnPlaceholder": "English title...",
+      "titleThPlaceholder": "Thai title...",
+      "bodyEn": "Description (EN)",
+      "bodyTh": "Description (TH)",
+      "bodyEnPlaceholder": "English description...",
+      "bodyThPlaceholder": "Thai description...",
+      "linkUrl": "Link URL",
+      "linkUrlPlaceholder": "e.g. /movies or https://...",
+      "startsAt": "Start Time",
+      "endsAt": "End Time",
+      "status": "Status",
+      "showPopup": "Show in daily login popup",
+      "popupPriority": "Popup Priority (-100 to 100)",
+      "image": "Banner Image",
+      "imageHint": "JPEG, PNG, WebP, GIF (max 5 MB)",
+      "uploadImage": "Upload Image",
+      "changeImage": "Change Image",
+      "removeImage": "Remove Image",
+      "imageUploading": "Uploading image...",
+      "imageRemoved": "Banner image removed",
+      "imageUpdated": "Banner image updated",
+      "save": "Save Event",
+      "cancel": "Cancel"
+    },
+    "errors": {
+      "titleRequired": "Title is required in both English and Thai.",
+      "titleTooLong": "Title must not exceed 120 characters.",
+      "bodyTooLong": "Description must not exceed 2000 characters.",
+      "linkInvalid": "Link must be a valid path (e.g. /movies) or HTTP(S) URL.",
+      "dateRequired": "Both start and end dates are required.",
+      "endBeforeStart": "End time must be after start time.",
+      "imageTooLarge": "Image is too large (max 5 MB).",
+      "imageType": "Unsupported image format. Use JPEG, PNG, WebP, or GIF.",
+      "invalidInput": "Please check the form for errors.",
+      "notFound": "Event not found."
+    }
   },
   "errors": {
     "finalAdmin": "You can't demote, deactivate or delete the last active admin.",

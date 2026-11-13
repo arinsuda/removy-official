@@ -140,6 +140,7 @@
     "details": "รายละเอียด",
     "targetUser": "ผู้ใช้",
     "targetReview": "รีวิว",
+    "targetEvent": "กิจกรรม",
     "action": {
       "USER_DEACTIVATED": "ระงับบัญชี",
       "USER_REACTIVATED": "เปิดใช้งานบัญชีอีกครั้ง",
@@ -148,7 +149,10 @@
       "REVIEW_DELETED": "ลบรีวิว",
       "USER_ERASED": "ลบบัญชีถาวร",
       "USER_ERASURE_REQUESTED": "ขอลบบัญชีถาวร",
-      "USER_ERASED_SCHEDULED": "ลบบัญชีถาวรตามกำหนด"
+      "USER_ERASED_SCHEDULED": "ลบบัญชีถาวรตามกำหนด",
+      "EVENT_CREATED": "สร้างกิจกรรม",
+      "EVENT_UPDATED": "อัปเดตกิจกรรม",
+      "EVENT_DELETED": "ลบกิจกรรม"
     }
   },
   "nav": {
@@ -157,6 +161,7 @@
     "users": "จัดการผู้ใช้",
     "reviews": "จัดการรีวิว",
     "auditLogs": "บันทึกประวัติ",
+    "events": "กิจกรรม",
     "exitAdmin": "ออกจากโหมดผู้ดูแล",
     "openMenu": "เปิดเมนู",
     "closeMenu": "ปิดเมนู",
@@ -228,6 +233,81 @@
     "confirm": "ลบรีวิว",
     "target": "รีวิว #{id} โดย {'@'}{username}",
     "deleted": "ลบรีวิว #{id} แล้ว"
+  },
+  "events": {
+    "title": "กิจกรรมและประกาศ",
+    "subtitle": "สร้างและจัดการกิจกรรม โปรโมชัน และประกาศต่างๆ ภายในระบบ",
+    "newEvent": "สร้างกิจกรรมใหม่",
+    "editEvent": "แก้ไขกิจกรรม",
+    "deleteTitle": "ลบกิจกรรมนี้?",
+    "deleteDesc": "กิจกรรมนี้จะถูกนำออกและซ่อนจากผู้ใช้ทุกคนทันที",
+    "deleteConfirm": "ลบกิจกรรม",
+    "deleted": "ลบกิจกรรมแล้ว",
+    "created": "สร้างกิจกรรมเรียบร้อยแล้ว",
+    "updated": "อัปเดตกิจกรรมเรียบร้อยแล้ว",
+    "status": {
+      "all": "ทุกสถานะ",
+      "draft": "ร่าง",
+      "published": "เผยแพร่แล้ว",
+      "cancelled": "ยกเลิกแล้ว"
+    },
+    "state": {
+      "upcoming": "เร็วๆ นี้",
+      "active": "กำลังเปิด",
+      "past": "สิ้นสุดแล้ว"
+    },
+    "table": {
+      "dateSeparator": "→",
+      "title": "ชื่อกิจกรรม",
+      "status": "สถานะ",
+      "schedule": "กำหนดเวลา",
+      "popup": "ป๊อปอัป",
+      "priority": "ลำดับความสำคัญ",
+      "actions": "การจัดการ",
+      "emptyTitle": "ไม่พบกิจกรรม",
+      "emptyDesc": "สร้างกิจกรรมหรือประกาศแรกของคุณ",
+      "popupYes": "ใช่",
+      "popupNo": "ไม่ใช่"
+    },
+    "form": {
+      "titleEn": "ชื่อกิจกรรม (EN)",
+      "titleTh": "ชื่อกิจกรรม (TH)",
+      "titleEnPlaceholder": "ชื่อภาษาอังกฤษ...",
+      "titleThPlaceholder": "ชื่อภาษาไทย...",
+      "bodyEn": "รายละเอียด (EN)",
+      "bodyTh": "รายละเอียด (TH)",
+      "bodyEnPlaceholder": "รายละเอียดภาษาอังกฤษ...",
+      "bodyThPlaceholder": "รายละเอียดภาษาไทย...",
+      "linkUrl": "ลิงก์เชื่อมโยง",
+      "linkUrlPlaceholder": "เช่น /movies หรือ https://...",
+      "startsAt": "เวลาเริ่มต้น",
+      "endsAt": "เวลาสิ้นสุด",
+      "status": "สถานะ",
+      "showPopup": "แสดงในป๊อปอัปประจำวันตอนเข้าสู่ระบบ",
+      "popupPriority": "ลำดับความสำคัญของป๊อปอัป (-100 ถึง 100)",
+      "image": "รูปแบนเนอร์",
+      "imageHint": "JPEG, PNG, WebP, GIF (สูงสุด 5 MB)",
+      "uploadImage": "อัปโหลดรูปภาพ",
+      "changeImage": "เปลี่ยนรูปภาพ",
+      "removeImage": "ลบรูปภาพ",
+      "imageUploading": "กำลังอัปโหลดรูปภาพ...",
+      "imageRemoved": "ลบรูปแบนเนอร์แล้ว",
+      "imageUpdated": "อัปเดตรูปแบนเนอร์แล้ว",
+      "save": "บันทึกกิจกรรม",
+      "cancel": "ยกเลิก"
+    },
+    "errors": {
+      "titleRequired": "ต้องระบุชื่อกิจกรรมทั้งภาษาอังกฤษและภาษาไทย",
+      "titleTooLong": "ชื่อกิจกรรมต้องไม่เกิน 120 ตัวอักษร",
+      "bodyTooLong": "รายละเอียดต้องไม่เกิน 2000 ตัวอักษร",
+      "linkInvalid": "ลิงก์ต้องเป็น path ภายใน (เช่น /movies) หรือ URL แบบ HTTP(S)",
+      "dateRequired": "ต้องระบุทั้งเวลาเริ่มต้นและเวลาสิ้นสุด",
+      "endBeforeStart": "เวลาสิ้นสุดต้องอยู่หลังเวลาเริ่มต้น",
+      "imageTooLarge": "รูปภาพมีขนาดใหญ่เกินไป (สูงสุด 5 MB)",
+      "imageType": "ไฟล์รูปภาพไม่รองรับ กรุณาใช้ JPEG, PNG, WebP หรือ GIF",
+      "invalidInput": "กรุณาตรวจสอบข้อมูลในฟอร์มให้ถูกต้อง",
+      "notFound": "ไม่พบกิจกรรมนี้"
+    }
   },
   "errors": {
     "finalAdmin": "ไม่สามารถถอนสิทธิ์ ระงับ หรือลบผู้ดูแลที่ใช้งานอยู่คนสุดท้ายได้",

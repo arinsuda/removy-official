@@ -53,7 +53,7 @@ func TestUserForeignKeysValidatedWithExpectedRules(t *testing.T) {
 		}
 		want := "c"
 		switch {
-		case r.Tbl == "admin_audit_logs" && r.Col == "admin_id", r.Tbl == "activity_events" && r.Col == "target_user_id":
+		case r.Tbl == "admin_audit_logs" && r.Col == "admin_id", r.Tbl == "activity_events" && r.Col == "target_user_id", r.Tbl == "events" && r.Col == "created_by":
 			want = "n"
 		}
 		if r.Confdel != want {
