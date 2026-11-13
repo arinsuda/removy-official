@@ -39,7 +39,7 @@ The user authorizes delegation. The main session is the **orchestrator**: it dec
 | (main session) | your current model | — | Decisions, small edits (≤2 files, location known), talking to the user |
 | `scout` | Haiku 5.5, low | $0.10 / $0.50 | Finding code, tracing call paths, summarizing files. Read-only |
 | `verifier` | Haiku 5.5, low | $0.10 / $0.50 | Running vet/test/type-check, reporting only failures |
-| `implementer` | Sonnet 5.5, medium | $2 / $10 | Writing code from a clear spec, plus verification |
+| `implementer` | Haiku 5.5, medium | $0.10 / $0.50 | Writing code from a clear spec, plus verification |
 | `architect` | Opus 5.5, high | $4 / $20 | Plans for ambiguous, cross-domain, or high-risk work |
 | `reviewer` | Opus 5.5, high | $4 / $20 | Reviewing diffs touching auth, account linking, privacy, admin, migrations |
 | `escalation` | Fable 5.1, high | $10 / $50 | Last resort only (see the rules below) |
@@ -52,6 +52,7 @@ The user authorizes delegation. The main session is the **orchestrator**: it dec
 5. **Escalate to `escalation` (Fable) only when** an Opus-level attempt failed twice, or the problem is a race/deadlock/data corruption. State the reason to the user in one line before spawning.
 6. **Independent subtasks** (e.g. server + client of one feature after the API contract is fixed) → spawn them in parallel in one message.
 7. Prefer the cheaper agent when in doubt; upgrade only when its output is insufficient.
+8. If `implementer` (Haiku) fails or its change does not pass verification, re-run that task once with `model: sonnet`.
 
 ## Brief template (keep under 15 lines)
 ```
