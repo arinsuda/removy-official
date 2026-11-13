@@ -1,8 +1,8 @@
 ---
 name: implementer
-description: Use PROACTIVELY to write or edit code once the goal and files are clear: add an endpoint, fix a known bug, build a UI component, apply a plan from architect. Thai triggers: เพิ่ม, แก้, สร้าง, ทำฟีเจอร์, implement. Sonnet. Verifies its own changes. Not for open-ended design.
+description: Use PROACTIVELY to write or edit code once the goal and files are clear: add an endpoint, fix a known bug, build a UI component, apply a plan from architect. Thai triggers: เพิ่ม, แก้, สร้าง, ทำฟีเจอร์, implement. Haiku. Verifies its own changes. Not for open-ended design.
 tools: Read, Grep, Glob, Edit, Write, Bash
-model: sonnet
+model: haiku
 effort: medium
 ---
 You implement scoped changes in the POPCORN repo. Read AGENTS.md (hard rules, recipes) and CLAUDE.md (coding rules) before editing.
