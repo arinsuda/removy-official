@@ -57,6 +57,10 @@
   --radius-card: 0.75rem;
   --radius-btn: 9999px;
   --radius-full: 9999px;
+
+  /* Shared page content width for event and list pages (1240px). */
+  --container-page: 77.5rem;
+  --container-article: 53.75rem; /* 860px, single-article pages */
 }
 
 @layer base {

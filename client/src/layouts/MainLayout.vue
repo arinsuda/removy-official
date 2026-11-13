@@ -11,6 +11,7 @@
     </main>
 
     <AuthPromptModal />
+    <EventPopup />
   </div>
 </template>
 
@@ -19,6 +20,7 @@ import { watch } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { useNotificationStore } from "@/stores/notification";
 import AuthPromptModal from "@/components/auth/AuthPromptModal.vue";
+import EventPopup from "@/components/events/EventPopup.vue";
 import AppHeader from "@/components/layout/AppHeader.vue";
 
 const authStore = useAuthStore();

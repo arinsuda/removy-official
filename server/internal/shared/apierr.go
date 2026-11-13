@@ -51,6 +51,7 @@ const (
 	ErrorCodePasswordNotSet    = apierr.ErrorCodePasswordNotSet
 	ErrorCodeInvalidBody       = apierr.ErrorCodeInvalidBody
 	ErrorCodeConfirmUsername   = apierr.ErrorCodeConfirmUsername
+	ErrorCodeUnsupportedMedia  = apierr.ErrorCodeUnsupportedMedia
 	ErrorCodeEmailInvalid      = apierr.ErrorCodeEmailInvalid
 	ErrorCodeEmailSame         = apierr.ErrorCodeEmailSame
 	ErrorCodeEmailInUse        = apierr.ErrorCodeEmailInUse

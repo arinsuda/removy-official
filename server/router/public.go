@@ -5,6 +5,7 @@ import (
 
 	achievementsmodule "github.com/arinsuda/movie-hub/internal/achievements_module"
 	"github.com/arinsuda/movie-hub/internal/bmol_module"
+	"github.com/arinsuda/movie-hub/internal/event_module"
 	"github.com/arinsuda/movie-hub/internal/follow_module"
 	"github.com/arinsuda/movie-hub/internal/library_module"
 	"github.com/arinsuda/movie-hub/internal/like_module"
@@ -65,6 +66,7 @@ type PublicHandlers struct {
 	Likes        *like_module.Handler
 	BMOL         *bmol_module.Handler
 	Follows      *follow_module.Handler
+	Events       *event_module.Handler
 	DB           *gorm.DB
 	Policy       privacy_policy.UserAccessPolicy
 }
@@ -88,4 +90,5 @@ func RegisterPublicRoutes(
 	like_module.RegisterPublicRoutes(api, h.Likes, optionalAuth, limiter)
 	bmol_module.RegisterPublicRoutes(api, h.BMOL, optionalAuth, limiter)
 	follow_module.RegisterPublicRoutes(api, h.Follows, optionalAuth, limiter)
+	event_module.RegisterPublicRoutes(api, h.Events, optionalAuth, limiter)
 }

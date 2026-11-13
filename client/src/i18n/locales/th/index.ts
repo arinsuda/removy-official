@@ -23,6 +23,7 @@ import watchLog from "./watchLog.json";
 import visibility from "./visibility.json";
 import browse from "./browse.json";
 import upcoming from "./upcoming.json";
+import events from "./events.json";
 
 export default {
   common,
@@ -50,4 +51,5 @@ export default {
   visibility,
   browse,
   upcoming,
+  events,
 };
