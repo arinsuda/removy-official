@@ -112,7 +112,7 @@
               class="form-input"
               :class="{ 'is-invalid': formErrors.title_en }"
               :placeholder="t('admin.events.form.titleEnPlaceholder')"
-              maxlength="EVENT_TITLE_MAX"
+              :maxlength="EVENT_TITLE_MAX"
               required
             />
             <span v-if="formErrors.title_en" class="form-error">
@@ -131,7 +131,7 @@
               class="form-input"
               :class="{ 'is-invalid': formErrors.title_th }"
               :placeholder="t('admin.events.form.titleThPlaceholder')"
-              maxlength="EVENT_TITLE_MAX"
+              :maxlength="EVENT_TITLE_MAX"
               required
             />
             <span v-if="formErrors.title_th" class="form-error">
@@ -318,7 +318,6 @@ import { computed, onMounted, ref, watch } from "vue"
 import { useI18n } from "vue-i18n"
 import { useRouter } from "vue-router"
 import {
-  ExternalLink,
   Eye,
   Image as ImageIcon,
   Megaphone,
