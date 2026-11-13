@@ -5,7 +5,9 @@ import { createPinia, setActivePinia } from "pinia"
 import { QueryClient, VueQueryPlugin } from "@tanstack/vue-query"
 import { createMemoryHistory, createRouter } from "vue-router"
 import UserProfileView from "@/views/user/UserProfileView.vue"
+import { useAuthGate } from "@/composables/useAuthGate"
 import { useAuthStore } from "@/stores/auth"
+import { clickAfterRender } from "./helpers/waitForEnabled"
 import { useRealI18n } from "./helpers/realI18n"
 
 const m = vi.hoisted(() => ({
@@ -13,7 +15,12 @@ const m = vi.hoisted(() => ({
   getStats: vi.fn(),
   getUserReviews: vi.fn(),
   getUserBMOL: vi.fn(),
+  getVisibleUserLibrary: vi.fn(),
+  getMyWatchLogs: vi.fn(),
   getFollowStatus: vi.fn(),
+  getFollowers: vi.fn(),
+  getFollowing: vi.fn(),
+  getPendingRequests: vi.fn(),
   follow: vi.fn(),
   unfollow: vi.fn(),
 }))
@@ -22,12 +29,30 @@ vi.mock("@/api/api", () => ({
   userApi: { getProfile: m.getProfile, getStats: m.getStats },
   reviewApi: { getUserReviews: m.getUserReviews },
   bmolApi: { getUserBMOL: m.getUserBMOL },
-  followApi: { getFollowStatus: m.getFollowStatus, follow: m.follow, unfollow: m.unfollow },
+  libraryApi: { getVisibleUserLibrary: m.getVisibleUserLibrary },
+  followApi: {
+    getFollowStatus: m.getFollowStatus,
+    getFollowers: m.getFollowers,
+    getFollowing: m.getFollowing,
+    getPendingRequests: m.getPendingRequests,
+    follow: m.follow,
+    unfollow: m.unfollow,
+  },
 }))
 // useFollow imports followApi straight from the endpoint module.
 vi.mock("@/api/endpoints/social", () => ({
-  followApi: { getFollowStatus: m.getFollowStatus, follow: m.follow, unfollow: m.unfollow },
+  followApi: {
+    getFollowStatus: m.getFollowStatus,
+    getFollowers: m.getFollowers,
+    getFollowing: m.getFollowing,
+    getPendingRequests: m.getPendingRequests,
+    follow: m.follow,
+    unfollow: m.unfollow,
+  },
 }))
+vi.mock("@/api/endpoints/review", () => ({ reviewApi: { getUserReviews: m.getUserReviews } }))
+vi.mock("@/api/endpoints/library", () => ({ libraryApi: { getVisibleUserLibrary: m.getVisibleUserLibrary } }))
+vi.mock("@/api/endpoints/watchLog", () => ({ watchLogApi: { getMyWatchLogs: m.getMyWatchLogs } }))
 vi.mock("@/api/endpoints/achievement", () => ({ achievementApi: { listByUser: vi.fn().mockResolvedValue({ data: [] }) } }))
 
 const i18n = useRealI18n()
@@ -43,16 +68,28 @@ const stubs = Object.fromEntries(
   ["UserReviews", "UserWatchlist", "UserWatched", "UserLikes", "UserAchievements", "UserBmol", "FollowListModal", "ProfileTastePanel", "ProfileBmolHighlight"].map((n) => [n, tabStub(n)]),
 )
 
-async function mountAt(path: string) {
+async function mountAt(path: string, loggedIn = true, withStubs = true) {
   const pinia = createPinia()
   setActivePinia(pinia)
-  useAuthStore().user = { id: 1 } as never
-  const router = createRouter({ history: createMemoryHistory(), routes: [{ path: "/users/:userId", component: UserProfileView }] })
+  const auth = useAuthStore()
+  auth.user = loggedIn ? ({ id: 1 } as never) : null
+  auth.isInitialized = true
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: [
+      { path: "/users/:userId", component: UserProfileView },
+      { path: "/movies/:id", name: "movie-detail", component: tabStub("MovieDetail") },
+      { path: "/tv/:id", name: "tv-detail", component: tabStub("TVDetail") },
+    ],
+  })
   await router.push(path)
   await router.isReady()
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const wrapper = mount(UserProfileView, {
-    global: { plugins: [i18n, pinia, router, [VueQueryPlugin, { queryClient: client }]], stubs },
+    global: {
+      plugins: [i18n, pinia, router, [VueQueryPlugin, { queryClient: client }]],
+      ...(withStubs ? { stubs } : {}),
+    },
     attachTo: document.body,
   })
   await flushPromises()
@@ -63,9 +100,14 @@ beforeEach(() => {
   vi.clearAllMocks()
   m.getProfile.mockResolvedValue({ data: { user: profile() } })
   m.getStats.mockResolvedValue({ data: { stats: { review_count: 1, watchlist_count: 2, like_count: 3, watched_count: 4, level: 2 } } })
-  m.getUserReviews.mockResolvedValue({ data: { reviews: [] } })
+  m.getUserReviews.mockResolvedValue({ data: { reviews: [], pagination: { page: 1, page_size: 20, total: 0, has_more: false }, summary: { count: 0, average_rating: 0, filter_counts: { all: 0, high: 0, low: 0, with_text: 0 } } } })
   m.getUserBMOL.mockResolvedValue({ data: { items: [] } })
+  m.getVisibleUserLibrary.mockResolvedValue({ data: { items: [{ id: 10, media: { id: 603, media_type: "movie", title: "The Matrix", poster_path: "/m.jpg" }, list_type: "watched", created_at: "2025-01-01T00:00:00Z" }] } })
+  m.getMyWatchLogs.mockResolvedValue({ data: { logs: [] } })
   m.getFollowStatus.mockResolvedValue({ data: { is_following: false, is_followed_by: false } })
+  m.getFollowers.mockResolvedValue({ data: { followers: [] } })
+  m.getFollowing.mockResolvedValue({ data: { following: [] } })
+  m.getPendingRequests.mockResolvedValue({ data: { requests: [] } })
 })
 
 describe("UserProfileView states", () => {
@@ -129,5 +171,66 @@ describe("UserProfileView follow flow", () => {
     await flushPromises()
     expect(m.unfollow).toHaveBeenCalledWith(5)
     expect(wrapper.text()).toContain(label("profile.states.lockedTitle"))
+  })
+})
+
+describe("UserProfileView guest mode", () => {
+  beforeEach(() => {
+    useAuthGate().close()
+  })
+
+  it("renders a public profile with real child components for a guest without auth-only calls and gates follow through useAuthGate", async () => {
+    const { wrapper } = await mountAt("/users/5", false, false)
+    expect(wrapper.find(".hero__name").text()).toBe("Alice")
+    expect(wrapper.find("[role=tablist]").exists()).toBe(true)
+    expect(wrapper.find("aside.taste").exists()).toBe(true)
+    expect(m.getFollowStatus).not.toHaveBeenCalled()
+    expect(m.getPendingRequests).not.toHaveBeenCalled()
+
+    const watchedTab = wrapper.findAll("[role=tab]").find((b) => b.text().startsWith(i18n.global.t("profile.tabs.watched")))!
+    clickAfterRender(watchedTab.element as HTMLElement)
+    await flushPromises()
+
+    expect(m.getVisibleUserLibrary).toHaveBeenCalledWith(5, { list_type: "watched" })
+    expect(m.getMyWatchLogs).not.toHaveBeenCalled()
+
+    const followBtn = wrapper.findAll("button").find((b) => b.text().includes(i18n.global.t("profile.follow.logInToFollow")))!
+    expect(followBtn).toBeTruthy()
+    clickAfterRender(followBtn.element as HTMLElement)
+
+    expect(m.follow).not.toHaveBeenCalled()
+    expect(useAuthGate().isOpen.value).toBe(true)
+    expect(useAuthGate().reason.value).toBe("follow")
+    wrapper.unmount()
+  })
+
+  it("renders a private profile with ProfileHero, counts, ProfileLockedState, and Log in to follow for a guest", async () => {
+    m.getProfile.mockResolvedValue({ data: { user: profile({ is_private: true }) } })
+    const { wrapper } = await mountAt("/users/5", false, false)
+
+    expect(wrapper.find(".hero__name").text()).toBe("Alice")
+    const counts = wrapper.findAll(".hero__counts .hero__count")
+    expect(counts).toHaveLength(3)
+    expect(counts[1]!.find(".hero__num").text()).toBe("3")
+    expect(counts[1]!.find(".hero__lbl").text()).toBe(i18n.global.t("profile.hero.followers"))
+    expect(counts[2]!.find(".hero__num").text()).toBe("4")
+    expect(counts[2]!.find(".hero__lbl").text()).toBe(i18n.global.t("profile.hero.following"))
+
+    expect(wrapper.text()).toContain(i18n.global.t("profile.states.lockedTitle"))
+    expect(wrapper.find("[role=tablist]").exists()).toBe(false)
+    expect(m.getFollowStatus).not.toHaveBeenCalled()
+    expect(m.getStats).not.toHaveBeenCalled()
+    expect(m.getUserReviews).not.toHaveBeenCalled()
+    expect(m.getUserBMOL).not.toHaveBeenCalled()
+    expect(m.getMyWatchLogs).not.toHaveBeenCalled()
+
+    const followBtns = wrapper.findAll("button").filter((b) => b.text().includes(i18n.global.t("profile.follow.logInToFollow")))
+    expect(followBtns.length).toBeGreaterThanOrEqual(1)
+    clickAfterRender(followBtns[0]!.element as HTMLElement)
+
+    expect(m.follow).not.toHaveBeenCalled()
+    expect(useAuthGate().isOpen.value).toBe(true)
+    expect(useAuthGate().reason.value).toBe("follow")
+    wrapper.unmount()
   })
 })

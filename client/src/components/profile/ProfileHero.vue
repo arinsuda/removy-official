@@ -40,7 +40,7 @@
           <span class="sr-only">{{ t("profile.follow.cancelRequest") }}</span>
         </AppButton>
         <AppButton v-else variant="primary" :loading="busy" @click="emit('follow')">
-          <UserPlus :size="14" aria-hidden="true" />{{ t("profile.follow.follow") }}
+          <UserPlus :size="14" aria-hidden="true" />{{ isGuest ? t("profile.follow.logInToFollow") : t("profile.follow.follow") }}
         </AppButton>
       </template>
     </div>
@@ -59,6 +59,7 @@ const props = defineProps<{
   user: UserProfile
   isOwner: boolean
   canFollow: boolean
+  isGuest?: boolean
   followState?: "pending" | "accepted"
   busy?: boolean
 }>()

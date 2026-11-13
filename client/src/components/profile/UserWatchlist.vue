@@ -10,6 +10,7 @@
         </TabIconButton>
       </template>
     </PosterTab>
+    <GuestCapNote v-if="capped" />
 
     <WatchLogModal v-if="logTarget" :media-id="logTarget.id" :media-type="logTarget.type" @close="logTarget = null" @logged="onLogged" />
     <ConfirmModal v-model="showModal" :list-type="listType" :item-name="selected?.media.title" @confirm="doRemove" @cancel="showModal = false" />
@@ -26,6 +27,7 @@ import ConfirmModal from "@/components/profile/components/ConfirmModal.vue"
 import WatchLogModal from "@/components/movie/WatchLogModal.vue"
 import { useAuthStore } from "@/stores/auth"
 import type { ListType } from "@/types"
+import GuestCapNote from "./tabs/GuestCapNote.vue"
 import PosterTab from "./tabs/PosterTab.vue"
 import TabIconButton from "./tabs/TabIconButton.vue"
 import { summaryToHomeMedia, type ProfileEntry } from "./tabs/profileMedia"
@@ -39,6 +41,7 @@ const isOwner = computed(() => auth.user?.id === props.userId)
 const entries = ref<ProfileEntry[]>([])
 const loading = ref(false)
 const loadError = ref(false)
+const capped = ref(false)
 
 const showModal = ref(false)
 const selected = ref<ProfileEntry | null>(null)
@@ -49,6 +52,7 @@ async function load() {
     loading.value = true
     loadError.value = false
     const response = await libraryApi.getVisibleUserLibrary(props.userId, { list_type: "watchlist" })
+    capped.value = response.data.has_more ?? false
     entries.value = response.data.items.map((item) => ({ id: item.id, media: summaryToHomeMedia(item.media), at: item.created_at }))
   } catch (err) {
     console.error("Fetch failed:", err)

@@ -28,7 +28,10 @@ func NewUserAccessPolicy(db *gorm.DB) UserAccessPolicy {
 }
 
 func (p *userAccessPolicy) CanViewProfileSection(ctx context.Context, viewerID, ownerID uint, section ProfileSection) (bool, error) {
-	if viewerID == ownerID {
+	if ownerID == 0 {
+		return false, ErrNotFound
+	}
+	if viewerID != 0 && viewerID == ownerID {
 		return true, nil
 	}
 
@@ -44,6 +47,9 @@ func (p *userAccessPolicy) CanViewProfileSection(ctx context.Context, viewerID, 
 	if !isPrivate {
 		return true, nil
 	}
+	if viewerID == 0 {
+		return false, nil
+	}
 
 	// If private, viewer must be an accepted follower
 	var count int64
@@ -58,7 +64,10 @@ func (p *userAccessPolicy) CanViewProfileSection(ctx context.Context, viewerID, 
 }
 
 func (p *userAccessPolicy) CanViewActivity(ctx context.Context, viewerID, actorID uint, activityType ActivityType, visibility ActivityVisibility) (bool, error) {
-	if viewerID == actorID {
+	if actorID == 0 {
+		return false, ErrNotFound
+	}
+	if viewerID != 0 && viewerID == actorID {
 		return true, nil
 	}
 
@@ -92,6 +101,9 @@ func (p *userAccessPolicy) CanViewActivity(ctx context.Context, viewerID, actorI
 	case VisibilityPrivate:
 		return false, nil
 	case VisibilityFollowers:
+		if viewerID == 0 {
+			return false, nil
+		}
 		var count int64
 		err = p.db.WithContext(ctx).Table("user_follows").
 			Where("follower_id = ? AND followee_id = ? AND status = 'accepted'", viewerID, actorID).
@@ -105,11 +117,14 @@ func (p *userAccessPolicy) CanViewActivity(ctx context.Context, viewerID, actorI
 	case VisibilityDefault:
 		// If account is private, default is followers-only. Otherwise public.
 		var isPrivate bool
-		err := p.db.WithContext(ctx).Table("users").Select("is_private").Where("id = ? AND is_active = true", actorID).Row().Scan(&isPrivate)
+		err := p.db.WithContext(ctx).Table("users").Select("is_private").Where("id = ? AND is_active = true AND deleted_at IS NULL", actorID).Row().Scan(&isPrivate)
 		if err != nil {
 			return false, err
 		}
 		if isPrivate {
+			if viewerID == 0 {
+				return false, nil
+			}
 			var count int64
 			err = p.db.WithContext(ctx).Table("user_follows").
 				Where("follower_id = ? AND followee_id = ? AND status = 'accepted'", viewerID, actorID).
@@ -129,7 +144,10 @@ func (p *userAccessPolicy) CanViewActivity(ctx context.Context, viewerID, actorI
 // (inactive owner -> ErrNotFound, locked private profile -> false); then the list's own
 // visibility, where "followers" needs an accepted follow.
 func (p *userAccessPolicy) CanViewList(ctx context.Context, viewerID, ownerID uint, visibility ListVisibility) (bool, error) {
-	if viewerID == ownerID {
+	if ownerID == 0 {
+		return false, ErrNotFound
+	}
+	if viewerID != 0 && viewerID == ownerID {
 		return true, nil
 	}
 	canView, err := p.CanViewProfileSection(ctx, viewerID, ownerID, SectionLibrary)
@@ -140,6 +158,9 @@ func (p *userAccessPolicy) CanViewList(ctx context.Context, viewerID, ownerID ui
 	case ListPublic:
 		return true, nil
 	case ListFollowers:
+		if viewerID == 0 {
+			return false, nil
+		}
 		var count int64
 		err = p.db.WithContext(ctx).Table("user_follows").
 			Where("follower_id = ? AND followee_id = ? AND status = 'accepted'", viewerID, ownerID).

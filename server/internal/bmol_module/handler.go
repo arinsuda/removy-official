@@ -40,9 +40,9 @@ func (h *Handler) AddItem(c fiber.Ctx) error {
 }
 
 func (h *Handler) GetUserBMOL(c fiber.Ctx) error {
-	claims := mw.GetClaims(c)
-	if claims == nil || claims.UserID == 0 {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	var viewerID uint
+	if claims := mw.GetClaims(c); claims != nil {
+		viewerID = claims.UserID
 	}
 	userID, err := parseUserID(c)
 	if err != nil {
@@ -55,7 +55,7 @@ func (h *Handler) GetUserBMOL(c fiber.Ctx) error {
 		mediaType = &mt
 	}
 
-	items, err := h.svc.GetUserBMOL(c.Context(), claims.UserID, userID, mediaType)
+	items, err := h.svc.GetUserBMOL(c.Context(), viewerID, userID, mediaType)
 	if err != nil {
 		return handleError(c, err)
 	}
@@ -125,9 +125,15 @@ func parseItemID(c fiber.Ctx) (uint, error) {
 	return uint(id), nil
 }
 
+// errMsgUserNotFound matches the other public profile endpoints, so a missing,
+// deleted or deactivated owner looks the same everywhere.
+const errMsgUserNotFound = "user not found"
+
 func handleError(c fiber.Ctx, err error) error {
 	switch {
-	case errors.Is(err, ErrNotFound), errors.Is(err, privacy_policy.ErrNotFound):
+	case errors.Is(err, privacy_policy.ErrNotFound):
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": errMsgUserNotFound})
+	case errors.Is(err, ErrNotFound):
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "item not found"})
 	case errors.Is(err, ErrForbidden):
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "forbidden"})

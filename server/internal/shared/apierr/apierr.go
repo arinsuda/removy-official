@@ -48,6 +48,10 @@ const (
 	ErrorCodeXHRRequired       ErrorCode = "XHR_HEADER_REQUIRED"
 	// ErrorCodeConfirmUsername is the wire code for a wrong confirm_username (distinct from ErrorCodeConfirmMismatch).
 	ErrorCodeConfirmUsername ErrorCode = "CONFIRM_MISMATCH"
+	// Email change (POST /users/:id/email): the client maps these to its own copy.
+	ErrorCodeEmailInvalid ErrorCode = "EMAIL_INVALID"
+	ErrorCodeEmailSame    ErrorCode = "EMAIL_SAME"
+	ErrorCodeEmailInUse   ErrorCode = "EMAIL_IN_USE"
 )
 
 type APIError struct {

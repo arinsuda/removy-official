@@ -29,7 +29,7 @@ func (r *repository) isPrivate(db *gorm.DB, userID uint) (bool, error) {
 	err := db.
 		Table("users").
 		Select("is_private").
-		Where("id = ? AND is_active = true", userID).
+		Where("id = ? AND is_active = true AND deleted_at IS NULL", userID).
 		Row().
 		Scan(&isPrivate)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -134,29 +134,6 @@ func (r *repository) RejectFollow(followerID, followeeID uint) error {
 	return nil
 }
 
-func (r *repository) canViewFollowList(requesterID, targetID uint) (bool, error) {
-	if requesterID == targetID {
-		return true, nil
-	}
-
-	isPrivate, err := r.isPrivate(r.db, targetID)
-	if err != nil {
-		return false, err
-	}
-	if !isPrivate {
-		return true, nil
-	}
-
-	var count int64
-	err = r.db.Model(&UserFollow{}).
-		Where("follower_id = ? AND followee_id = ? AND status = ?", requesterID, targetID, StatusAccepted).
-		Count(&count).Error
-	if err != nil {
-		return false, err
-	}
-	return count > 0, nil
-}
-
 func (r *repository) GetStatus(followerID, followeeID uint) (*UserFollow, error) {
 	var follow UserFollow
 	err := r.db.
@@ -184,7 +161,7 @@ func (r *repository) GetFollowers(userID uint) ([]listRow, error) {
 	err := r.db.
 		Table("user_follows uf").
 		Select("u.id, u.username, u.display_name, u.avatar_url, uf.status").
-		Joins("JOIN users u ON u.id = uf.follower_id AND u.is_active = true").
+		Joins("JOIN users u ON u.id = uf.follower_id AND u.is_active = true AND u.deleted_at IS NULL").
 		Where("uf.followee_id = ? AND uf.status = ?", userID, StatusAccepted).
 		Order("uf.created_at DESC").
 		Scan(&rows).Error
@@ -196,7 +173,7 @@ func (r *repository) GetFollowing(userID uint) ([]listRow, error) {
 	err := r.db.
 		Table("user_follows uf").
 		Select("u.id, u.username, u.display_name, u.avatar_url, uf.status").
-		Joins("JOIN users u ON u.id = uf.followee_id AND u.is_active = true").
+		Joins("JOIN users u ON u.id = uf.followee_id AND u.is_active = true AND u.deleted_at IS NULL").
 		Where("uf.follower_id = ? AND uf.status = ?", userID, StatusAccepted).
 		Order("uf.created_at DESC").
 		Scan(&rows).Error
@@ -208,7 +185,7 @@ func (r *repository) GetPendingRequests(userID uint) ([]listRow, error) {
 	err := r.db.
 		Table("user_follows uf").
 		Select("u.id, u.username, u.display_name, u.avatar_url, uf.status").
-		Joins("JOIN users u ON u.id = uf.follower_id AND u.is_active = true").
+		Joins("JOIN users u ON u.id = uf.follower_id AND u.is_active = true AND u.deleted_at IS NULL").
 		Where("uf.followee_id = ? AND uf.status = ?", userID, StatusPending).
 		Order("uf.created_at DESC").
 		Scan(&rows).Error

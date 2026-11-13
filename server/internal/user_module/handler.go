@@ -30,9 +30,12 @@ func (h *Handler) GetProfile(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid user id"})
 	}
 
-	claims := mw.GetClaims(c)
+	var requesterID uint
+	if claims := mw.GetClaims(c); claims != nil {
+		requesterID = claims.UserID
+	}
 
-	profile, err := h.svc.GetProfile(targetID, claims.UserID)
+	profile, err := h.svc.GetProfile(targetID, requesterID)
 	if err != nil {
 		return handleError(c, err)
 	}
@@ -273,11 +276,11 @@ func handleEmailChangeError(c fiber.Ctx, err error) error {
 	case errors.Is(err, storage.ErrInvalidImage):
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "avatar must be a JPEG, PNG, WebP or GIF image"})
 	case errors.Is(err, ErrInvalidEmailFormat):
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid email format"})
+		return apierr.WriteAPIError(c, fiber.StatusBadRequest, apierr.ErrorCodeEmailInvalid, "invalid email format")
 	case errors.Is(err, ErrEmailSameAsCurrent):
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "new email must be different from current email"})
+		return apierr.WriteAPIError(c, fiber.StatusBadRequest, apierr.ErrorCodeEmailSame, "new email must be different from current email")
 	case errors.Is(err, ErrEmailAlreadyInUse):
-		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "email already in use"})
+		return apierr.WriteAPIError(c, fiber.StatusConflict, apierr.ErrorCodeEmailInUse, "email already in use")
 	case errors.Is(err, ErrPendingEmailMissing):
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "pending new email missing"})
 	case errors.Is(err, ErrOTPNotFound):

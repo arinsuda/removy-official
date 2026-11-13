@@ -18,7 +18,7 @@ type UserSummary struct {
 	Username    string  `json:"username"`
 	DisplayName *string `json:"display_name"`
 	AvatarURL   *string `json:"avatar_url"`
-	Status      string  `json:"status"`
+	Status      string  `json:"status,omitempty"`
 }
 
 type RelationshipStatus struct {

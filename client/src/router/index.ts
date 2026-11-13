@@ -154,7 +154,7 @@ const router = createRouter({
           path: "users/:userId",
           name: "user-profile",
           component: () => import("@/views/user/UserProfileView.vue"),
-          meta: { titleKey: "navigation.profile" }
+          meta: { public: true, titleKey: "navigation.profile" }
         },
         {
           path: "settings",

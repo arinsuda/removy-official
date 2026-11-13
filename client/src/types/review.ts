@@ -13,9 +13,9 @@ export interface ReviewResponse {
   is_public?: boolean;
   like_count: number;
   comment_count: number;
-  is_liked: boolean;
+  is_liked?: boolean;
   helpful_count: number;
-  is_helpful_voted: boolean;
+  is_helpful_voted?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -63,6 +63,8 @@ export interface LikeItem {
 
 export interface LikesResponse {
   likes: LikeItem[];
+  /** True when a guest's list was cut at the server cap. */
+  has_more?: boolean;
 }
 
 export interface RatingBucket {

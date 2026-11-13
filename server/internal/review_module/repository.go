@@ -31,14 +31,15 @@ var (
 // Visibility: "all" (default) | "public" | "private"
 // DateFrom / DateTo: กรองตาม created_at (วันที่ user เขียนรีวิว), inclusive ทั้งสองด้าน
 type ReviewFilter struct {
-	Visibility   string
-	DateFrom     *time.Time
-	DateTo       *time.Time
-	Sort         string
-	RatingFilter string
-	Search       string
-	Page         int
-	PageSize     int
+	Visibility     string
+	OnlyPublicFlag bool
+	DateFrom       *time.Time
+	DateTo         *time.Time
+	Sort           string
+	RatingFilter   string
+	Search         string
+	Page           int
+	PageSize       int
 }
 
 func escapeLikePattern(s string) string {
@@ -73,6 +74,9 @@ func (r *repository) userReviewScope(userID uint, filter ReviewFilter) *gorm.DB 
 		q = q.Where("visibility = ?", "private")
 	case "followers":
 		q = q.Where("visibility = ?", "followers")
+	}
+	if filter.OnlyPublicFlag {
+		q = q.Where("is_public = true")
 	}
 
 	if filter.DateFrom != nil {

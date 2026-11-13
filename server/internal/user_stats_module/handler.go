@@ -25,11 +25,11 @@ func (h *Handler) GetUserStats(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid user id"})
 	}
 
-	claims := mw.GetClaims(c)
-	if claims == nil || claims.UserID == 0 {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	var viewerID uint
+	if claims := mw.GetClaims(c); claims != nil {
+		viewerID = claims.UserID
 	}
-	canView, err := h.policy.CanViewProfileSection(c.Context(), claims.UserID, uint(userID), privacy_policy.SectionLibrary)
+	canView, err := h.policy.CanViewProfileSection(c.Context(), viewerID, uint(userID), privacy_policy.SectionLibrary)
 	if err != nil {
 		if errors.Is(err, privacy_policy.ErrNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "user not found"})

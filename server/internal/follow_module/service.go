@@ -2,10 +2,12 @@ package follow_module
 
 import (
 	"context"
+	"errors"
 
 	achievementsmodule "github.com/arinsuda/movie-hub/internal/achievements_module"
 	"github.com/arinsuda/movie-hub/internal/feed_module"
 	notification_module "github.com/arinsuda/movie-hub/internal/notification_module"
+	"github.com/arinsuda/movie-hub/internal/privacy_policy"
 	"github.com/arinsuda/movie-hub/internal/shared"
 	"gorm.io/gorm"
 )
@@ -16,6 +18,7 @@ type Service struct {
 	achieveSvc achievementsmodule.Service
 	notifSvc   *notification_module.Service
 	feedSvc    feed_module.Service
+	policy     privacy_policy.UserAccessPolicy
 }
 
 func NewService(
@@ -23,6 +26,7 @@ func NewService(
 	achieve achievementsmodule.Service,
 	notif *notification_module.Service,
 	feed feed_module.Service,
+	policy privacy_policy.UserAccessPolicy,
 ) *Service {
 	return &Service{
 		repo:       newRepository(db),
@@ -30,6 +34,7 @@ func NewService(
 		achieveSvc: achieve,
 		notifSvc:   notif,
 		feedSvc:    feed,
+		policy:     policy,
 	}
 }
 
@@ -87,36 +92,42 @@ func (s *Service) RejectFollow(ctx context.Context, requesterID, followerID uint
 	return nil
 }
 
-func (s *Service) GetFollowers(ctx context.Context, requesterID, userID uint) ([]UserSummary, error) {
-	canView, err := s.repo.canViewFollowList(requesterID, userID)
+func (s *Service) canViewFollowList(ctx context.Context, requesterID, userID uint) error {
+	canView, err := s.policy.CanViewProfileSection(ctx, requesterID, userID, privacy_policy.SectionProfile)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, privacy_policy.ErrNotFound) {
+			return ErrUserNotFound
+		}
+		return err
 	}
 	if !canView {
-		return nil, ErrForbidden
+		return ErrForbidden
+	}
+	return nil
+}
+
+func (s *Service) GetFollowers(ctx context.Context, requesterID, userID uint) ([]UserSummary, error) {
+	if err := s.canViewFollowList(ctx, requesterID, userID); err != nil {
+		return nil, err
 	}
 
 	rows, err := s.repo.GetFollowers(userID)
 	if err != nil {
 		return nil, err
 	}
-	return toSummaryList(rows), nil
+	return toSummaryList(rows, requesterID != 0), nil
 }
 
 func (s *Service) GetFollowing(ctx context.Context, requesterID, userID uint) ([]UserSummary, error) {
-	canView, err := s.repo.canViewFollowList(requesterID, userID)
-	if err != nil {
+	if err := s.canViewFollowList(ctx, requesterID, userID); err != nil {
 		return nil, err
-	}
-	if !canView {
-		return nil, ErrForbidden
 	}
 
 	rows, err := s.repo.GetFollowing(userID)
 	if err != nil {
 		return nil, err
 	}
-	return toSummaryList(rows), nil
+	return toSummaryList(rows, requesterID != 0), nil
 }
 
 func (s *Service) GetPendingRequests(ctx context.Context, requesterID, userID uint) ([]UserSummary, error) {
@@ -127,7 +138,7 @@ func (s *Service) GetPendingRequests(ctx context.Context, requesterID, userID ui
 	if err != nil {
 		return nil, err
 	}
-	return toSummaryList(rows), nil
+	return toSummaryList(rows, true), nil
 }
 
 func (s *Service) GetRelationshipStatus(ctx context.Context, requesterID, targetID uint) (*RelationshipStatus, error) {
@@ -219,15 +230,19 @@ func (s *Service) GetFollowStats(ctx context.Context, requesterID, targetID uint
 	}, nil
 }
 
-func toSummaryList(rows []listRow) []UserSummary {
+func toSummaryList(rows []listRow, includeStatus bool) []UserSummary {
 	result := make([]UserSummary, len(rows))
 	for i, r := range rows {
+		status := ""
+		if includeStatus {
+			status = r.Status
+		}
 		result[i] = UserSummary{
 			ID:          r.ID,
 			Username:    r.Username,
 			DisplayName: r.DisplayName,
 			AvatarURL:   r.AvatarURL,
-			Status:      r.Status,
+			Status:      status,
 		}
 	}
 	return result

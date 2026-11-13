@@ -51,6 +51,9 @@ const (
 	ErrorCodePasswordNotSet    = apierr.ErrorCodePasswordNotSet
 	ErrorCodeInvalidBody       = apierr.ErrorCodeInvalidBody
 	ErrorCodeConfirmUsername   = apierr.ErrorCodeConfirmUsername
+	ErrorCodeEmailInvalid      = apierr.ErrorCodeEmailInvalid
+	ErrorCodeEmailSame         = apierr.ErrorCodeEmailSame
+	ErrorCodeEmailInUse        = apierr.ErrorCodeEmailInUse
 )
 
 func WriteAPIError(c fiber.Ctx, status int, code ErrorCode, message string) error {

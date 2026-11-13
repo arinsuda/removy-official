@@ -41,11 +41,13 @@ func (r *repository) Delete(userID uint, mediaID int, mediaType movie_module.Med
 	return result.Error
 }
 
-func (r *repository) FindByUser(userID uint) ([]MediaLike, error) {
+func (r *repository) FindByUser(userID uint, limit int) ([]MediaLike, error) {
 	var likes []MediaLike
-	err := r.db.Where("user_id = ?", userID).
-		Order("created_at DESC").
-		Find(&likes).Error
+	q := r.db.Where("user_id = ?", userID).Order("created_at DESC, id DESC")
+	if limit > 0 {
+		q = q.Limit(limit)
+	}
+	err := q.Find(&likes).Error
 	return likes, err
 }
 

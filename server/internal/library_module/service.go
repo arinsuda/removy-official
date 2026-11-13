@@ -140,18 +140,31 @@ func (s *Service) AddItem(ctx context.Context, userID uint, req AddItemRequest) 
 	return toOwnResponse(item), nil
 }
 
-func (s *Service) GetLibrary(ctx context.Context, userID, requesterID uint, listType *movie_module.ListType, mediaType *movie_module.MediaType) (any, error) {
+// GuestLibraryLimit caps how many library items a guest gets per request, which bounds the
+// per-item media lookups an unauthenticated caller can trigger.
+const GuestLibraryLimit = 100
+
+// GetLibrary returns the visible items and whether the list was cut at GuestLibraryLimit.
+func (s *Service) GetLibrary(ctx context.Context, userID, requesterID uint, listType *movie_module.ListType, mediaType *movie_module.MediaType) (any, bool, error) {
 	canView, err := s.policy.CanViewProfileSection(ctx, requesterID, userID, privacy_policy.SectionLibrary)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if !canView {
-		return nil, privacy_policy.ErrForbidden
+		return nil, false, privacy_policy.ErrForbidden
 	}
 
-	items, err := s.repo.FindByUser(userID, listType, mediaType)
+	limit := 0
+	if requesterID == 0 {
+		limit = GuestLibraryLimit + 1 // one extra row tells us whether more exist
+	}
+	items, err := s.repo.FindByUser(userID, listType, mediaType, limit)
 	if err != nil {
-		return nil, err
+		return nil, false, err
+	}
+	hasMore := limit > 0 && len(items) > GuestLibraryLimit
+	if hasMore {
+		items = items[:GuestLibraryLimit]
 	}
 
 	if userID == requesterID {
@@ -162,9 +175,9 @@ func (s *Service) GetLibrary(ctx context.Context, userID, requesterID uint, list
 			media[i] = &responses[i].Media
 		}
 		if err := shared.AttachRatings(ctx, s.db, media); err != nil {
-			return nil, err
+			return nil, false, err
 		}
-		return responses, nil
+		return responses, hasMore, nil
 	} else {
 		responses := make([]PublicLibraryItemResponse, len(items))
 		media := make([]*shared.MediaSummary, len(items))
@@ -173,9 +186,9 @@ func (s *Service) GetLibrary(ctx context.Context, userID, requesterID uint, list
 			media[i] = &responses[i].Media
 		}
 		if err := shared.AttachRatings(ctx, s.db, media); err != nil {
-			return nil, err
+			return nil, false, err
 		}
-		return responses, nil
+		return responses, hasMore, nil
 	}
 }
 

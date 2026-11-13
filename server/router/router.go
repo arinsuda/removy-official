@@ -84,32 +84,48 @@ func Register(ctx context.Context, app *fiber.App, db *gorm.DB, cfg *config.Conf
 	movieHandler := movie_module.New(ratingRepo, extRatings)
 	reviewHandler := review_module.New(db, mc, statsSvc, achieveModule.Service, notifSvc, feedModule.Service, policy)
 	statsHandler := media_stats_module.New(db)
-	RegisterPublicRoutes(api, mw.OptionalAuth, PublicReadLimiter(cfg.TrustedProxyHops), PublicSearchLimiter(cfg.TrustedProxyHops), movieHandler, reviewHandler, statsHandler)
+	userSvc, userHandler := user_module.New(db, mc, statsSvc, authSvc, passwordResetMailer, policy, cfg.Brevo)
+	libSvc, libHandler := library_module.New(db, statsSvc, achieveModule.Service, notifSvc, feedModule.Service, policy)
+	likeHandler := like_module.New(db, achieveModule.Service, notifSvc, feedModule.Service, policy)
+	bmolHandler := bmol_module.New(db, policy)
+	followHandler := follow_module.New(db, achieveModule.Service, notifSvc, feedModule.Service, policy)
+	RegisterPublicRoutes(api, mw.OptionalAuth, PublicReadLimiter(cfg.TrustedProxyHops), PublicSearchLimiter(cfg.TrustedProxyHops), PublicHandlers{
+		Movies:       movieHandler,
+		Reviews:      reviewHandler,
+		MediaStats:   statsHandler,
+		Users:        userHandler,
+		Achievements: achieveModule,
+		Library:      libHandler,
+		Likes:        likeHandler,
+		BMOL:         bmolHandler,
+		Follows:      followHandler,
+		DB:           db,
+		Policy:       policy,
+	})
 
 	protected := api.Group("/", mw.RequireAuth)
 
-	userSvc := user_module.RegisterRoutes(protected, db, mc, statsSvc, authSvc, passwordResetMailer, policy, cfg.Brevo)
+	user_module.RegisterRoutes(protected, userHandler)
 	authSvc.SetUserService(userSvc)
 	userSvc.SetSessionReissuer(authSvc)
 	userSvc.SetFrontendBaseURL(cfg.FrontendBaseURL)
 
-	achieveModule.RegisterRoutes(api, mw.RequireAuth)
+	achieveModule.RegisterRoutes(protected)
 	feedModule.RegisterRoutes(protected)
 
 	notification_module.RegisterRoutes(protected, notifSvc, notifHub)
 
-	follow_module.RegisterRoutes(api, db, achieveModule.Service, notifSvc, feedModule.Service)
+	follow_module.RegisterRoutes(protected, followHandler)
 	review_module.RegisterRoutes(protected, reviewHandler)
-	libSvc := library_module.RegisterRoutes(protected, db, statsSvc, achieveModule.Service, notifSvc, feedModule.Service, policy)
+	library_module.RegisterRoutes(protected, libHandler)
 	watch_log_module.RegisterRoutes(protected, db, feedModule.Service, libSvc, policy)
-	like_module.RegisterRoutes(protected, db, achieveModule.Service, notifSvc, feedModule.Service, policy)
-	bmol_module.RegisterRoutes(protected, db, policy)
+	like_module.RegisterRoutes(protected, likeHandler)
+	bmol_module.RegisterRoutes(protected, bmolHandler)
 	list_module.RegisterRoutes(protected, db, policy)
 
 	analytics_module.RegisterRoutes(protected, db)
 	movie_module.RegisterRoutes(protected, movieHandler)
 	media_stats_module.RegisterRoutes(protected, statsHandler)
-	user_stats_module.RegisterRoutes(protected, db, policy)
 	admin_module.RegisterRoutes(protected, db, notifHub, mc, mw.RequireCurrentAdmin(db))
 
 	// Background purge of accounts whose erasure grace period is over; stops with ctx.

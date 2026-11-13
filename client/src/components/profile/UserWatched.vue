@@ -61,6 +61,7 @@
         <div v-if="list.hasMore.value" class="uw__more">
           <AppButton variant="outline" @click="list.loadMore">{{ t("profile.tabContent.common.loadMore") }}</AppButton>
         </div>
+        <GuestCapNote v-else-if="capped" />
       </template>
     </template>
 
@@ -86,6 +87,7 @@ import AppErrorState from "@/components/ui/AppErrorState.vue"
 import SkeletonList from "@/components/ui/skeleton/SkeletonList.vue"
 import { useAuthStore } from "@/stores/auth"
 import type { ListType } from "@/types"
+import GuestCapNote from "./tabs/GuestCapNote.vue"
 import MediaGrid from "./tabs/MediaGrid.vue"
 import TabEmptyState from "./tabs/TabEmptyState.vue"
 import TabToolbar from "./tabs/TabToolbar.vue"
@@ -103,6 +105,7 @@ const auth = useAuthStore()
 const isOwner = computed(() => auth.user?.id === props.userId)
 
 const entries = ref<WatchedEntry[]>([])
+const capped = ref(false)
 const loading = ref(false)
 const loadError = ref(false)
 const view = useViewMode("watched", "list")
@@ -183,6 +186,7 @@ async function load() {
     loading.value = true
     loadError.value = false
     const [response, ratings] = await Promise.all([libraryApi.getVisibleUserLibrary(props.userId, { list_type: "watched" }), loadRatings()])
+    capped.value = response.data.has_more ?? false
     const raw: WatchedEntry[] = response.data.items
       .filter((item) => item.media)
       .map((item) => {

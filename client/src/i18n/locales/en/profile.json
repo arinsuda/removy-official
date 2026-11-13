@@ -90,6 +90,7 @@
   },
   "follow": {
     "follow": "Follow",
+    "logInToFollow": "Log in to follow",
     "following": "Following",
     "requested": "Requested",
     "cancelRequest": "Cancel follow request",
@@ -183,6 +184,7 @@
         "release": "Release date"
       },
       "loadMore": "Load more",
+      "guestCap": "Showing the most recent titles. Log in to see the full list.",
       "showing": "Showing {shown} of {total}",
       "noMatchTitle": "Nothing matches",
       "noMatchBody": "Try a different search or filter.",

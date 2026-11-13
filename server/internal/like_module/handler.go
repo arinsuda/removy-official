@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/arinsuda/movie-hub/internal/movie_module"
+	"github.com/arinsuda/movie-hub/internal/privacy_policy"
 	mw "github.com/arinsuda/movie-hub/middleware"
 	"github.com/gofiber/fiber/v3"
 )
@@ -28,12 +29,12 @@ func (h *Handler) GetLikes(c fiber.Ctx) error {
 		requesterID = claims.UserID
 	}
 
-	likes, err := h.svc.GetLikes(c.Context(), ownerID, requesterID)
+	likes, hasMore, err := h.svc.GetLikes(c.Context(), ownerID, requesterID)
 	if err != nil {
 		return handleError(c, err)
 	}
 
-	return c.JSON(fiber.Map{"likes": likes})
+	return c.JSON(fiber.Map{"likes": likes, "has_more": hasMore})
 }
 
 func (h *Handler) Like(c fiber.Ctx) error {
@@ -84,8 +85,12 @@ func parseMediaParams(c fiber.Ctx) (int, movie_module.MediaType, error) {
 	return mediaID, mediaType, nil
 }
 
+const errMsgUserNotFound = "user not found"
+
 func handleError(c fiber.Ctx, err error) error {
 	switch {
+	case errors.Is(err, privacy_policy.ErrNotFound):
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": errMsgUserNotFound})
 	case errors.Is(err, ErrAlreadyLiked):
 		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "already liked"})
 	case errors.Is(err, ErrNotLiked):

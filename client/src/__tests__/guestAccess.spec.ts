@@ -59,6 +59,7 @@ describe("route guard for guests", () => {
     "/actors/100",
     "/movies/603",
     "/tv/1399",
+    "/users/1",
     "/about-us",
     "/donate",
   ])("lets a guest open %s", async (path) => {
@@ -70,7 +71,6 @@ describe("route guard for guests", () => {
     "/feed",
     "/movies",
     "/tv",
-    "/users/1",
     "/users/1/library",
     "/users/1/achievements",
     "/notifications",

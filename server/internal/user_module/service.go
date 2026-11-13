@@ -88,20 +88,13 @@ func (s *Service) GetProfile(targetUserID, requesterID uint) (*UserProfileRespon
 	level := s.fetchLevel(targetUserID)
 	profile := toProfileResponse(user, reviewCount, followerCount, followingCount, level)
 
-	if requesterID != targetUserID {
-		// Email is account-identifying data; only the owner may read it.
-		profile.Email = ""
-		profile.VerifiedEmailAt = nil
-		profile.OnboardedAt = nil
-	}
+	redactProfileForViewer(profile, requesterID, targetUserID)
 
 	if user.IsPrivate && requesterID != targetUserID {
 		canView, err := s.policy.CanViewProfileSection(context.Background(), requesterID, targetUserID, privacy_policy.SectionProfile)
 		if err != nil || !canView {
 			profile.Bio = nil
 			profile.FavoriteGenres = nil
-			profile.Gender = ""
-			profile.DateOfBirth = nil
 		}
 	}
 
@@ -112,6 +105,19 @@ func (s *Service) GetProfile(targetUserID, requesterID uint) (*UserProfileRespon
 	}
 
 	return profile, nil
+}
+
+func redactProfileForViewer(profile *UserProfileResponse, requesterID, targetUserID uint) {
+	if requesterID == targetUserID {
+		return
+	}
+	// Owner-only account and personal fields are omitted for all non-owners (guests and signed-in strangers).
+	profile.Email = ""
+	profile.VerifiedEmailAt = nil
+	profile.DateOfBirth = nil
+	profile.Gender = ""
+	profile.Role = ""
+	profile.OnboardedAt = nil
 }
 
 func (s *Service) UpdateProfile(

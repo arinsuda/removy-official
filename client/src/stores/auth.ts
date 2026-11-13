@@ -225,6 +225,12 @@ export const useAuthStore = defineStore("auth", () => {
       if (myGen !== _generation) return
 
       const profile = meRes.data.user
+      if (profile.id !== userId || !profile.role) {
+        clearUser()
+        initError.value = "unauthenticated"
+        isInitialized.value = true
+        return
+      }
 
       setUser({
         ...profile,

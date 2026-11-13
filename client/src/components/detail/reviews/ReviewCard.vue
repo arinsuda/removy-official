@@ -22,11 +22,11 @@
     <p class="card__body">{{ review.body }}</p>
 
     <footer class="card__actions">
-      <button type="button" class="card__btn" :class="{ 'card__btn--on': review.is_liked }" :aria-pressed="review.is_liked" :disabled="likePending" @click="emit('like', review)">
+      <button type="button" class="card__btn" :class="{ 'card__btn--on': review.is_liked }" :aria-pressed="review.is_liked ?? false" :disabled="likePending" @click="emit('like', review)">
         <Heart :size="16" :fill="review.is_liked ? 'currentColor' : 'none'" aria-hidden="true" />
         <span>{{ review.like_count > 0 ? review.like_count : t("reviews.actions.like") }}</span>
       </button>
-      <button type="button" class="card__btn" :class="{ 'card__btn--on': review.is_helpful_voted }" :aria-pressed="review.is_helpful_voted" :disabled="helpfulPending" @click="emit('helpful', review)">
+      <button type="button" class="card__btn" :class="{ 'card__btn--on': review.is_helpful_voted }" :aria-pressed="review.is_helpful_voted ?? false" :disabled="helpfulPending" @click="emit('helpful', review)">
         <ThumbsUp :size="16" :fill="review.is_helpful_voted ? 'currentColor' : 'none'" aria-hidden="true" />
         <span>{{ t("reviews.actions.helpful") }}{{ review.helpful_count > 0 ? ` (${review.helpful_count})` : "" }}</span>
       </button>

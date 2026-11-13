@@ -255,9 +255,14 @@ func TestUserReviewsVisibilityRegression(t *testing.T) {
 		return res
 	}
 
-	// 1. Guest -> 401
-	if code, _ := e.do("GET", path, nil, ""); code != 401 {
-		t.Fatalf("guest GET %s: got %d, want 401", path, code)
+	// 1. Guest -> 200, sees only public review
+	code, guestOut := e.do("GET", path, nil, "")
+	if code != 200 {
+		t.Fatalf("guest GET %s: got %d, want 200", path, code)
+	}
+	guestBodies := bodiesOf(guestOut)
+	if len(guestBodies) != 1 || !guestBodies["pub-rev"] {
+		t.Fatalf("guest bodies = %v, want only pub-rev", guestBodies)
 	}
 
 	// 2. Owner -> 200, sees public + followers + private, and can filter by visibility=private

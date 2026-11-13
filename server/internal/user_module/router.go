@@ -19,8 +19,7 @@ const (
 	deleteFailWindow = 15 * time.Minute
 )
 
-func RegisterRoutes(
-	router fiber.Router,
+func New(
 	db *gorm.DB,
 	mc *storage.MinIOClient,
 	statsSvc StatsProvider,
@@ -28,12 +27,19 @@ func RegisterRoutes(
 	passwordResetMailer PasswordResetMailer,
 	policy privacy_policy.UserAccessPolicy,
 	brevoCfg config.BrevoConfig,
-) *Service {
+) (*Service, *Handler) {
 	mailer := NewBrevoMailer(brevoCfg)
 	svc := NewService(db, mc, statsSvc, mailer, emailVerifier, passwordResetMailer, policy)
 	svc.SetErasureMailer(mailerpkg.New(brevoCfg))
 	h := NewHandler(svc)
+	return svc, h
+}
 
+func RegisterPublicRoutes(router fiber.Router, h *Handler, guards ...fiber.Handler) {
+	mw.GetRoute(router, "/users/:userId<int>", h.GetProfile, guards...)
+}
+
+func RegisterRoutes(router fiber.Router, h *Handler) {
 	userKey := func(c fiber.Ctx) string {
 		claims := mw.GetClaims(c)
 		if claims == nil {
@@ -46,7 +52,6 @@ func RegisterRoutes(
 	selfRemovalLimit := ratelimit.NewFailedOnly(deleteFailMax, deleteFailWindow, userKey)
 
 	users := router.Group("/users")
-	users.Get("/:userId", h.GetProfile)
 	users.Patch("/:userId", h.UpdateProfile)
 	users.Delete("/:userId", selfRemovalLimit, h.DeleteUser)
 	users.Post("/me/erasure-request", requireJSON, selfRemovalLimit, h.RequestErasure)
@@ -54,6 +59,4 @@ func RegisterRoutes(
 	users.Post("/:userId/email", ratelimit.New(5, time.Hour, userKey), h.RequestEmailChange)
 	users.Put("/:userId/email", h.VerifyEmailChange)
 	users.Patch("/:userId/password", h.ChangePassword)
-
-	return svc
 }

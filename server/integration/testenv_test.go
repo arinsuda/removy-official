@@ -24,7 +24,9 @@ import (
 	"github.com/arinsuda/movie-hub/internal/auth_module"
 	"github.com/arinsuda/movie-hub/internal/bmol_module"
 	"github.com/arinsuda/movie-hub/internal/feed_module"
+	"github.com/arinsuda/movie-hub/internal/follow_module"
 	"github.com/arinsuda/movie-hub/internal/library_module"
+	"github.com/arinsuda/movie-hub/internal/like_module"
 	"github.com/arinsuda/movie-hub/internal/link_module"
 	"github.com/arinsuda/movie-hub/internal/list_module"
 	"github.com/arinsuda/movie-hub/internal/mailer"
@@ -33,7 +35,7 @@ import (
 	"github.com/arinsuda/movie-hub/internal/privacy_policy"
 	"github.com/arinsuda/movie-hub/internal/review_module"
 	"github.com/arinsuda/movie-hub/internal/user_module"
-	"github.com/arinsuda/movie-hub/internal/user_stats_module"
+	"github.com/arinsuda/movie-hub/internal/watch_log_module"
 	"github.com/arinsuda/movie-hub/middleware"
 	"github.com/arinsuda/movie-hub/router"
 	"github.com/gofiber/fiber/v3"
@@ -261,10 +263,30 @@ func newEnv(t *testing.T) *env {
 	mw := middleware.NewAuthMiddleware(e.cfg, db)
 	// Same order as router.Register: guest-readable routes first, then the auth group.
 	policy := privacy_policy.NewUserAccessPolicy(db)
+	achieve := achievementsmodule.New(db, policy)
 	movieH := movie_module.New(review_module.NewRatingStatsReader(db), nil)
 	reviewH := review_module.New(db, nil, nil, nil, nil, nil, policy)
 	statsH := media_stats_module.New(db)
-	router.RegisterPublicRoutes(api, mw.OptionalAuth, router.PublicReadLimiter(e.cfg.TrustedProxyHops), router.PublicSearchLimiter(e.cfg.TrustedProxyHops), movieH, reviewH, statsH)
+	userSvc, userH := user_module.New(db, nil, noStats{}, e.auth,
+		user_module.NewBrevoPasswordResetMailer(e.cfg.Brevo), policy, e.cfg.Brevo)
+	e.users = userSvc
+	libSvc, libH := library_module.New(db, nil, achieve.Service, nil, nil, policy)
+	likeH := like_module.New(db, achieve.Service, nil, nil, policy)
+	bmolH := bmol_module.New(db, policy)
+	followH := follow_module.New(db, achieve.Service, nil, nil, policy)
+	router.RegisterPublicRoutes(api, mw.OptionalAuth, router.PublicReadLimiter(e.cfg.TrustedProxyHops), router.PublicSearchLimiter(e.cfg.TrustedProxyHops), router.PublicHandlers{
+		Movies:       movieH,
+		Reviews:      reviewH,
+		MediaStats:   statsH,
+		Users:        userH,
+		Achievements: achieve,
+		Library:      libH,
+		Likes:        likeH,
+		BMOL:         bmolH,
+		Follows:      followH,
+		DB:           db,
+		Policy:       policy,
+	})
 
 	protected := api.Group("/", mw.RequireAuth)
 	movie_module.RegisterRoutes(protected, movieH)
@@ -273,17 +295,17 @@ func newEnv(t *testing.T) *env {
 	protected.Get("/ping", func(c fiber.Ctx) error {
 		return c.JSON(fiber.Map{"uid": middleware.GetClaims(c).UserID})
 	})
-	e.users = user_module.RegisterRoutes(protected, db, nil, noStats{}, e.auth,
-		user_module.NewBrevoPasswordResetMailer(e.cfg.Brevo), privacy_policy.NewUserAccessPolicy(db), e.cfg.Brevo)
+	user_module.RegisterRoutes(protected, userH)
 	e.auth.SetUserService(e.users)
 	e.users.SetSessionReissuer(e.auth)
 	e.users.SetFrontendBaseURL(e.cfg.FrontendBaseURL)
-	bmol_module.RegisterRoutes(protected, db, privacy_policy.NewUserAccessPolicy(db))
-	list_module.RegisterRoutes(protected, db, privacy_policy.NewUserAccessPolicy(db))
-	user_stats_module.RegisterRoutes(protected, db, privacy_policy.NewUserAccessPolicy(db))
-	achieve := achievementsmodule.New(db, privacy_policy.NewUserAccessPolicy(db))
-	achieve.RegisterRoutes(api, mw.RequireAuth)
-	library_module.RegisterRoutes(protected, db, nil, achieve.Service, nil, nil, privacy_policy.NewUserAccessPolicy(db))
+	bmol_module.RegisterRoutes(protected, bmolH)
+	list_module.RegisterRoutes(protected, db, policy)
+	achieve.RegisterRoutes(protected)
+	library_module.RegisterRoutes(protected, libH)
+	like_module.RegisterRoutes(protected, likeH)
+	follow_module.RegisterRoutes(protected, followH)
+	watch_log_module.RegisterRoutes(protected, db, nil, libSvc, policy)
 	admin_module.RegisterRoutes(protected, db, nil, nil, mw.RequireCurrentAdmin(db))
 	feed_module.New(db, nil, nil).RegisterRoutes(protected)
 	return e

@@ -164,7 +164,7 @@ describe("Session Bootstrap and Authorization", () => {
       } as Awaited<ReturnType<typeof authApi.refreshToken>>)
 
       vi.mocked(userApi.me).mockResolvedValueOnce({
-        data: { user: { id: 1, username: "validUser", favorite_genres: '["action"]' } },
+        data: { user: { id: 1, username: "validUser", role: "user", favorite_genres: '["action"]' } },
       } as Awaited<ReturnType<typeof userApi.me>>)
 
       const router = createTestRouter(authStore)
@@ -201,7 +201,7 @@ describe("Session Bootstrap and Authorization", () => {
         }),
       )
       vi.mocked(userApi.me).mockResolvedValue({
-        data: { user: { id: 1, username: "user", favorite_genres: '["action"]' } },
+        data: { user: { id: 1, username: "user", role: "user", favorite_genres: '["action"]' } },
       } as Awaited<ReturnType<typeof userApi.me>>)
 
       const router = createTestRouter(authStore)
@@ -283,7 +283,7 @@ describe("Session Bootstrap and Authorization", () => {
       } as Awaited<ReturnType<typeof authApi.refreshToken>>)
 
       vi.mocked(userApi.me).mockResolvedValueOnce({
-        data: { user: { id: 1, username: "retryUser" } },
+        data: { user: { id: 1, username: "retryUser", role: "user" } },
       } as Awaited<ReturnType<typeof userApi.me>>)
 
       const retryBtn = wrapper.find(".btn-retry")
@@ -319,7 +319,7 @@ describe("Session Bootstrap and Authorization", () => {
         }),
       )
       vi.mocked(userApi.me).mockResolvedValue({
-        data: { user: { id: 1, username: "test" } },
+        data: { user: { id: 1, username: "test", role: "user" } },
       } as Awaited<ReturnType<typeof userApi.me>>)
 
       const p1 = authStore.initialize()
@@ -420,7 +420,7 @@ describe("Session Bootstrap and Authorization", () => {
         },
       } as Awaited<ReturnType<typeof authApi.refreshToken>>)
       vi.mocked(userApi.me).mockResolvedValueOnce({
-        data: { user: { id: 2, username: "oauthUser" } },
+        data: { user: { id: 2, username: "oauthUser", role: "user" } },
       } as Awaited<ReturnType<typeof userApi.me>>)
 
       await authStore.initialize()
