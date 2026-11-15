@@ -32,7 +32,7 @@ const stubs = { MovieReviews: stub("MovieReviews"), HomeRail: stub("HomeRail"), 
 const data = (id: number, title: string): DetailData => ({
   id, type: "movie", title, englishTitle: null, tagline: "", overview: "Plot", year: "2010", runtimeMin: 100,
   seasonCount: null, episodeCount: null, status: null, genres: [], ratings: null, voteAverage: 0,
-  posterPath: null, backdropPath: null, homepage: "", facts: [], cast: [], crewHighlights: [], videos: [], tvSeasons: [], networks: [],
+  posterPath: null, backdropPath: null, homepage: "", facts: [], cast: [], crewHighlights: [], videos: [], tvSeasons: [], networks: [], awards: [],
 })
 
 function deferred<T>() {

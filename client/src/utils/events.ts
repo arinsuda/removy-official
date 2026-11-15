@@ -1,5 +1,5 @@
 import type { AdminEventBody, AppEvent, EventType, LocalizedText } from "@/types/event"
-import type { TmdbImageSize } from "@/utils/image"
+import { getTmdbImageUrl, type TmdbImageSize } from "@/utils/image"
 
 /** localStorage key prefix for "don't show again today"; the user id is appended. */
 export const EVENT_POPUP_HIDE_KEY_PREFIX = "popcorn_event_popup_hidden_"
@@ -25,6 +25,10 @@ export const EVENT_POPUP_PRIORITY_MIN = -100
 export const EVENT_POPUP_PRIORITY_MAX = 100
 /** TMDB poster width for nominee cards on the event detail page. */
 export const NOMINEE_POSTER_SIZE: TmdbImageSize = "w342"
+/** TMDB backdrop width for an event cover when the event has no uploaded image. */
+export const EVENT_COVER_SIZE: TmdbImageSize = "w780"
+/** TMDB poster width for winner cards on the awards page and the award badges. */
+export const AWARD_POSTER_SIZE: TmdbImageSize = "w342"
 const DAY_MS = 24 * 60 * 60 * 1000
 /** Default window for a new event in the admin form: starts now, lasts two weeks. */
 export const EVENT_DEFAULT_DURATION_MS = 14 * DAY_MS
@@ -40,21 +44,37 @@ function shiftMonth(year: number, month: number, delta: number): { year: number;
   return { year: Math.floor(index / MONTHS_PER_YEAR), month: (index % MONTHS_PER_YEAR) + 1 }
 }
 
-/** Default YYYY-MM period for the monthly voting round after the one active at `now` (Thailand time). */
-export function nextMonthlyPeriod(now: Date = new Date()): string {
-  const parts = new Intl.DateTimeFormat("en-CA", { // hardcode-ok: machine YYYY-MM parts
+/** Calendar year, month and day of `now` in the voting timezone (Thailand time). */
+function votingDateParts(now: Date): { year: number; month: number; day: number } {
+  const parts = new Intl.DateTimeFormat("en-CA", { // hardcode-ok: machine YYYY-MM-DD parts
     timeZone: VOTING_TIMEZONE,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   }).formatToParts(now)
-  const year = Number(parts.find((p) => p.type === "year")?.value ?? now.getUTCFullYear())
-  const month = Number(parts.find((p) => p.type === "month")?.value ?? now.getUTCMonth() + 1)
-  const day = Number(parts.find((p) => p.type === "day")?.value ?? now.getUTCDate())
-  // From the cutoff day on, the active round is already the following month, so the next one is two months ahead.
-  const monthsAhead = day >= VOTING_CUTOFF_DAY ? 2 : 1
+  return {
+    year: Number(parts.find((p) => p.type === "year")?.value ?? now.getUTCFullYear()),
+    month: Number(parts.find((p) => p.type === "month")?.value ?? now.getUTCMonth() + 1),
+    day: Number(parts.find((p) => p.type === "day")?.value ?? now.getUTCDate()),
+  }
+}
+
+/**
+ * Period (YYYY-MM) of the monthly round to create next, in Thailand time. A round is named by the
+ * month its voting starts (the 15th) and runs until the 15th of the following month.
+ */
+export function nextMonthlyPeriod(now: Date = new Date()): string {
+  const { year, month, day } = votingDateParts(now)
+  // Before the cutoff, the active round started last month, so the next one starts this month.
+  // From the cutoff on, the active round started this month, so the next one starts next month.
+  const monthsAhead = day >= VOTING_CUTOFF_DAY ? 1 : 0
   const next = shiftMonth(year, month, monthsAhead)
   return `${next.year}-${String(next.month).padStart(PAD_WIDTH, "0")}`
+}
+
+/** Bangkok calendar year of `now`, the default awards year. It is the calendar year, not the monthly round in progress. */
+export function currentVotingYear(now: Date = new Date()): number {
+  return votingDateParts(now).year
 }
 
 /** Pick the text for the UI locale, falling back to the other language. */
@@ -77,12 +97,26 @@ type RoundField = "title" | "body"
 
 const isBlankText = (text: LocalizedText) => !text.en.trim() && !text.th.trim()
 
-/** YYYY-MM period as a month name with year, e.g. "November 2026" or "พฤศจิกายน 2569". */
-function formatRoundMonth(period: string, locale: string): string {
-  const [year, month] = period.split("-").map(Number) as [number, number]
-  return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric", timeZone: VOTING_TIMEZONE }).format(
+/**
+ * Label for an award or round period in the current locale, e.g. "Nov 26" / "November 2026" for "2026-11"
+ * and "2026" / "2026" for a yearly period. Thai uses the Buddhist era, as Intl does for the th locale.
+ */
+export function formatAwardPeriod(period: string, locale: string, style: "short" | "long"): string {
+  const isMonthly = MONTHLY_PERIOD_RE.test(period)
+  const [year, month = 1] = period.split("-").map(Number) as [number, number | undefined]
+  const options: Intl.DateTimeFormatOptions = isMonthly
+    ? style === "short"
+      ? { month: "short", year: "2-digit" }
+      : { month: "long", year: "numeric" }
+    : { year: "numeric" }
+  return new Intl.DateTimeFormat(locale, { ...options, timeZone: VOTING_TIMEZONE }).format(
     new Date(Date.UTC(year, month - 1, 1)),
   )
+}
+
+/** YYYY-MM period as a month name with year, e.g. "November 2026" or "พฤศจิกายน 2569". */
+function formatRoundMonth(period: string, locale: string): string {
+  return formatAwardPeriod(period, locale, "long")
 }
 
 function formatClosing(iso: string, locale: string): string {
@@ -175,6 +209,11 @@ export function isValidLink(url: string): boolean {
   } catch {
     return false
   }
+}
+
+/** Cover image for an event card or banner: the uploaded image, else the TMDB backdrop of the nominee used for voting. */
+export function eventCoverUrl(ev: Pick<AppEvent, "image_url" | "cover_backdrop_path">): string | null {
+  return ev.image_url || getTmdbImageUrl(ev.cover_backdrop_path, EVENT_COVER_SIZE)
 }
 
 /** Format an ISO timestamp with `format`; empty string when the timestamp is invalid. */

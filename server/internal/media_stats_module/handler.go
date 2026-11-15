@@ -40,7 +40,8 @@ func (h *Handler) RecordView(c fiber.Ctx) error {
 	if err != nil {
 		return badRequest(c, err.Error())
 	}
-	if err := h.svc.RecordView(mediaID, mediaType); err != nil {
+	claims := mw.GetClaims(c)
+	if err := h.svc.RecordView(claims.UserID, mediaID, mediaType); err != nil {
 		return handleError(c, err)
 	}
 	return c.SendStatus(fiber.StatusNoContent)
@@ -103,4 +104,13 @@ func handleError(c fiber.Ctx, err error) error {
 
 func badRequest(c fiber.Ctx, msg string) error {
 	return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": msg})
+}
+
+// ValidateMediaParams rejects malformed ids before later middleware (such as the view rate
+// limiter) spends budget on a request the handler would refuse anyway.
+func ValidateMediaParams(c fiber.Ctx) error {
+	if _, _, err := parseMediaParams(c); err != nil {
+		return badRequest(c, err.Error())
+	}
+	return c.Next()
 }

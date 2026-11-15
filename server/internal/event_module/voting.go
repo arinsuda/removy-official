@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/arinsuda/movie-hub/config"
 	"github.com/arinsuda/movie-hub/internal/admin_module"
 	"github.com/arinsuda/movie-hub/internal/shared"
 	tmdbmodule "github.com/arinsuda/movie-hub/internal/tmdb_module"
@@ -438,25 +439,26 @@ func (s *Service) SetNominees(ctx context.Context, adminID, eventID uint, nomine
 // Monthly rounds
 // ---------------------------------------------------------------------------
 
-// MonthlyWindow returns the UTC voting window of monthly round `period` (YYYY-MM):
-// from 00:00 on votingCutoffDay of the previous month to 00:00 on votingCutoffDay of
-// `period`, both in votingTimeZone.
+// MonthlyWindow returns the UTC voting window of monthly round `period` (YYYY-MM): from 00:00 on
+// votingCutoffDay of `period` to 00:00 on votingCutoffDay of the following month, in config.AppTimeZone.
+// Round P is therefore open from the 15th of P until the 15th of P+1.
 func MonthlyWindow(period string) (time.Time, time.Time, error) {
-	month, err := time.ParseInLocation(monthlyPeriodLayout, period, votingLocation)
+	month, err := time.ParseInLocation(monthlyPeriodLayout, period, config.AppLocation)
 	if err != nil {
 		return time.Time{}, time.Time{}, err
 	}
-	endsAt := time.Date(month.Year(), month.Month(), votingCutoffDay, 0, 0, 0, 0, votingLocation)
-	startsAt := endsAt.AddDate(0, -1, 0)
+	startsAt := time.Date(month.Year(), month.Month(), votingCutoffDay, 0, 0, 0, 0, config.AppLocation)
+	endsAt := startsAt.AddDate(0, 1, 0)
 	return startsAt.UTC(), endsAt.UTC(), nil
 }
 
-// currentRoundMonth is the first day (in votingTimeZone) of the monthly round whose window contains t.
+// currentRoundMonth is the period (first day, in config.AppTimeZone) of the monthly round whose window
+// contains t. Before votingCutoffDay the window that contains t started in the previous month.
 func currentRoundMonth(t time.Time) time.Time {
-	local := t.In(votingLocation)
-	month := time.Date(local.Year(), local.Month(), 1, 0, 0, 0, 0, votingLocation)
-	if local.Day() >= votingCutoffDay {
-		month = month.AddDate(0, 1, 0)
+	local := t.In(config.AppLocation)
+	month := time.Date(local.Year(), local.Month(), 1, 0, 0, 0, 0, config.AppLocation)
+	if local.Day() < votingCutoffDay {
+		month = month.AddDate(0, -1, 0)
 	}
 	return month
 }
@@ -466,31 +468,40 @@ func CurrentMonthlyPeriod(t time.Time) string {
 	return currentRoundMonth(t).Format(monthlyPeriodLayout)
 }
 
-// NextMonthlyPeriod is the monthly round after CurrentMonthlyPeriod(t): the next one to open.
+// NextMonthlyPeriod is the round after CurrentMonthlyPeriod(t): the next one to open.
 func NextMonthlyPeriod(t time.Time) string {
 	return currentRoundMonth(t).AddDate(0, 1, 0).Format(monthlyPeriodLayout)
 }
 
-// communityScoreSQL ranks titles by activity from active, non-deleted accounts.
+// communityScoreSQL ranks titles by activity from active, non-deleted accounts. Views are counted per
+// day (media_view_days has one row per user, title and Bangkok day), so the day bounds are dates.
+// Weights are bound as DOUBLE PRECISION: a bare ? next to COUNT(*) is typed bigint and would
+// truncate fractional weights such as 0.1 to 0.
 const communityScoreSQL = `
 	SELECT media_id, SUM(score) AS score FROM (
-		SELECT r.media_id, COUNT(*) * ? AS score
+		SELECT r.media_id, COUNT(*) * CAST(? AS DOUBLE PRECISION) AS score
 		FROM reviews r JOIN users u ON u.id = r.user_id
 		WHERE r.media_type = ? AND r.deleted_at IS NULL AND r.created_at >= ? AND r.created_at < ?
 		  AND u.deleted_at IS NULL AND u.is_active
 		GROUP BY r.media_id
 		UNION ALL
-		SELECT l.media_id, COUNT(*) * ? AS score
+		SELECT l.media_id, COUNT(*) * CAST(? AS DOUBLE PRECISION) AS score
 		FROM library_items l JOIN users u ON u.id = l.user_id
 		WHERE l.media_type = ? AND l.deleted_at IS NULL AND l.created_at >= ? AND l.created_at < ?
 		  AND u.deleted_at IS NULL AND u.is_active
 		GROUP BY l.media_id
 		UNION ALL
-		SELECT m.media_id, COUNT(*) * ? AS score
+		SELECT m.media_id, COUNT(*) * CAST(? AS DOUBLE PRECISION) AS score
 		FROM media_likes m JOIN users u ON u.id = m.user_id
 		WHERE m.media_type = ? AND m.deleted_at IS NULL AND m.created_at >= ? AND m.created_at < ?
 		  AND u.deleted_at IS NULL AND u.is_active
 		GROUP BY m.media_id
+		UNION ALL
+		SELECT v.media_id, COUNT(*) * CAST(? AS DOUBLE PRECISION) AS score
+		FROM media_view_days v JOIN users u ON u.id = v.user_id
+		WHERE v.media_type = ? AND v.day >= ? AND v.day < ?
+		  AND u.deleted_at IS NULL AND u.is_active
+		GROUP BY v.media_id
 	) sub
 	GROUP BY media_id
 	ORDER BY score DESC, media_id ASC
@@ -521,12 +532,14 @@ func (s *Service) SuggestNominees(ctx context.Context, mediaType, period string)
 		return nil, invalid("period")
 	}
 	activityStart := startsAt.AddDate(0, -activityLookbackMonths, 0)
+	viewFrom, viewTo := config.LocalDay(activityStart), config.LocalDay(startsAt)
 
 	var community []communityScore
 	if err := s.db.WithContext(ctx).Raw(communityScoreSQL,
 		reviewScoreWeight, mediaType, activityStart, startsAt,
 		libraryScoreWeight, mediaType, activityStart, startsAt,
 		likeScoreWeight, mediaType, activityStart, startsAt,
+		viewScoreWeight, mediaType, viewFrom, viewTo,
 		communityCandidatePool,
 	).Scan(&community).Error; err != nil {
 		return nil, err

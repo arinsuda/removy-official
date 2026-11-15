@@ -45,6 +45,8 @@ type MovieDTO struct {
 type MovieDetailDTO struct {
 	tmdb.MovieDetail
 	Ratings MediaRatingsResponse `json:"ratings"`
+	// Awards is never nil (an empty list when the title has none).
+	Awards []shared.MediaAward `json:"awards"`
 }
 
 type TVSeriesDTO struct {
@@ -55,6 +57,8 @@ type TVSeriesDTO struct {
 type TVSeriesDetailDTO struct {
 	tmdb.TVSeriesDetail
 	Ratings MediaRatingsResponse `json:"ratings"`
+	// Awards is never nil (an empty list when the title has none).
+	Awards []shared.MediaAward `json:"awards"`
 }
 
 type PersonMovieCreditItemDTO struct {

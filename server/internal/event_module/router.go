@@ -17,6 +17,7 @@ func New(db *gorm.DB, mc *storage.MinIOClient) *Handler {
 
 func RegisterPublicRoutes(router fiber.Router, h *Handler, guards ...fiber.Handler) {
 	mw.GetRoute(router, "/events", h.ListPublic, guards...)
+	mw.GetRoute(router, "/events/awards", h.ListAwards, guards...)
 	mw.GetRoute(router, "/events/:id<int>", h.GetPublic, guards...)
 }
 

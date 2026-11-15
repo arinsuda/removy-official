@@ -1,6 +1,7 @@
 import type { RouteLocationRaw } from "vue-router"
 import { movieApi } from "@/api/api"
 import { fromMovie, fromSeries, type HomeMedia } from "@/components/home/homeMedia"
+import type { MediaAward } from "@/types/event"
 import type {
   Cast,
   Credits,
@@ -55,6 +56,8 @@ export interface DetailData {
   videos: Video[]
   tvSeasons: TVSeason[]
   networks: TVNetwork[]
+  /** POPCORN awards this title has won, newest first as the server sends them. */
+  awards: MediaAward[]
 }
 
 export interface DetailConfig {
@@ -143,6 +146,7 @@ export function adaptMovieDetail({ movie, credits, videos }: MovieDetailResponse
     videos: videos ?? movie.videos ?? [],
     tvSeasons: [],
     networks: [],
+    awards: movie.awards ?? [],
   }
 }
 
@@ -191,6 +195,7 @@ export function adaptTvDetail({ series, credits, videos }: TvDetailResponse): De
     // Season 0 is TMDB's "Specials"; keep it last.
     tvSeasons: [...(series.seasons ?? [])].sort((a, b) => (a.season_number || 99) - (b.season_number || 99)),
     networks,
+    awards: series.awards ?? [],
   }
 }
 

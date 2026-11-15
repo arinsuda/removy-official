@@ -4,6 +4,8 @@ import type {
   AdminEventBody,
   AdminEventListQuery,
   AppEvent,
+  AwardsQuery,
+  AwardsResponse,
   EventListQuery,
   EventListResponse,
   NomineeInput,
@@ -22,6 +24,8 @@ export const eventApi = {
 
   cancelVote: (eventId: number) =>
     api.delete<{ success: boolean }>(`/events/${eventId}/vote`),
+
+  getAwards: (params: AwardsQuery) => api.get<AwardsResponse>("/events/awards", { params }),
 }
 
 export const adminEventApi = {

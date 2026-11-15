@@ -31,6 +31,12 @@ func (r *repository) UpsertStat(mediaID int, mediaType movie_module.MediaType) e
 	return r.db.Clauses(clause.OnConflict{DoNothing: true}).Create(&stat).Error
 }
 
+// InsertViewDay records a view by userID on day (a Bangkok midnight). A repeat view that day is a no-op.
+func (r *repository) InsertViewDay(userID uint, mediaID int, mediaType movie_module.MediaType, day time.Time) error {
+	row := MediaViewDay{UserID: userID, MediaType: string(mediaType), MediaID: mediaID, Day: day}
+	return r.db.Omit(clause.Associations).Clauses(clause.OnConflict{DoNothing: true}).Create(&row).Error
+}
+
 func (r *repository) IncrementView(mediaID int, mediaType movie_module.MediaType) error {
 	result := r.db.Model(&MediaStat{}).
 		Where("media_id = ? AND media_type = ?", mediaID, mediaType).

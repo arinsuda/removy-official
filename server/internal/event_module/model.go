@@ -141,12 +141,13 @@ type EventAward struct {
 	Event     Event        `gorm:"foreignKey:EventID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	NomineeID uint         `gorm:"not null;index;uniqueIndex:idx_event_awards_event_nominee"`
 	Nominee   EventNominee `gorm:"foreignKey:NomineeID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	MediaID   int          `gorm:"not null;index"`
-	MediaType string       `gorm:"type:varchar(10);not null"`
-	AwardKind AwardKind    `gorm:"type:varchar(20);not null"`
-	Period    string       `gorm:"type:varchar(7);not null"` // "YYYY-MM" or "YYYY"
-	Votes     int          `gorm:"not null;default:0"`
-	CreatedAt time.Time    `gorm:"not null"`
+	// Title lookups (movie and TV detail pages) and the year filter of GET /events/awards use these indexes.
+	MediaID   int       `gorm:"not null;index:idx_event_awards_media,priority:2"`
+	MediaType string    `gorm:"type:varchar(10);not null;index:idx_event_awards_media,priority:1"`
+	AwardKind AwardKind `gorm:"type:varchar(20);not null"`
+	Period    string    `gorm:"type:varchar(7);not null;index:idx_event_awards_period"` // "YYYY-MM" or "YYYY"
+	Votes     int       `gorm:"not null;default:0"`
+	CreatedAt time.Time `gorm:"not null"`
 }
 
 func (EventAward) TableName() string { return "event_awards" }

@@ -29,6 +29,11 @@
           <ul v-if="data.genres.length" class="hero__genres">
             <li v-for="g in data.genres" :key="g.id">{{ g.name }}</li>
           </ul>
+          <ul v-if="data.awards.length" class="hero__awards" data-test="hero-awards">
+            <li v-for="award in data.awards" :key="`${award.kind}-${award.period}`">
+              <AwardBadge :award="award" />
+            </li>
+          </ul>
           <p v-if="data.tagline" class="hero__tagline">“{{ data.tagline }}”</p>
           <p v-if="data.crewHighlights.length" class="hero__crew">
             <span class="hero__crew-role">{{ t(`media.detail.crew.${data.crewHighlights[0]!.role}`) }}</span>
@@ -50,6 +55,7 @@ import { computed } from "vue"
 import { useI18n } from "vue-i18n"
 import { ArrowLeft, ImageOff, Play } from "lucide-vue-next"
 import AppButton from "@/components/ui/AppButton.vue"
+import AwardBadge from "@/components/events/AwardBadge.vue"
 import { useImageUrl } from "@/composables/useImageUrl"
 import { statusKey, type DetailData } from "./detailConfig"
 
@@ -100,6 +106,7 @@ const meta = computed(() => {
 .hero__meta { display: flex; flex-wrap: wrap; gap: 0.1rem 0.5rem; font-size: var(--text-small); color: var(--color-text-secondary); }
 .hero__genres { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0; padding: 0; list-style: none; }
 .hero__genres li { padding: 0.15rem 0.65rem; font-size: var(--text-caption); font-weight: 600; color: var(--color-text-primary); background: color-mix(in srgb, var(--color-surface-3) 80%, transparent); border: 1px solid var(--color-border-strong); border-radius: var(--radius-btn); }
+.hero__awards { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0; padding: 0; list-style: none; }
 .hero__tagline { display: none; font-size: var(--text-small); font-style: italic; color: var(--color-text-secondary); }
 .hero__crew { font-size: var(--text-small); color: var(--color-text-primary); }
 .hero__crew-role { margin-right: 0.35rem; color: var(--color-text-muted); }

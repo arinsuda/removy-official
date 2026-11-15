@@ -30,6 +30,8 @@ export interface AppEvent {
   title: LocalizedText
   body: LocalizedText
   image_url: string | null
+  /** TMDB backdrop of the leading nominee; used as the cover when there is no image_url. */
+  cover_backdrop_path?: string | null
   link_url: string | null
   starts_at: string
   ends_at: string
@@ -40,6 +42,38 @@ export interface AppEvent {
   my_vote_nominee_id?: number | null
   total_votes?: number | null
   is_finalized?: boolean
+}
+
+export type AwardKind = "monthly" | "yearly"
+export type AwardMediaType = "movie" | "tv"
+
+/** A won award as shown on a movie or TV detail page. */
+export interface MediaAward {
+  kind: AwardKind
+  /** "YYYY-MM" for monthly, "YYYY" for yearly. Co-winners share the same period. */
+  period: string
+}
+
+/** One winner of a finalized round, as listed on the awards page. */
+export interface EventAward extends MediaAward {
+  event_id: number
+  media_id: number
+  media_type: AwardMediaType
+  media_title: string
+  poster_path: string | null
+  backdrop_path: string | null
+  votes: number
+}
+
+export interface AwardsQuery {
+  media_type: AwardMediaType
+  year: number
+}
+
+export interface AwardsResponse {
+  awards: EventAward[]
+  /** Years that have at least one award for the requested media type. */
+  years: number[]
 }
 
 export interface AdminEvent extends AppEvent {

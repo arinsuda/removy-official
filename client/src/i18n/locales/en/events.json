@@ -66,6 +66,7 @@
     "close": "Close",
     "viewEvent": "Learn more"
   },
+  "awardsLink": "POPCORN Awards",
   "loadErrorDesc": "Something went wrong while loading events. Please try again.",
   "generated": {
     "title": {
@@ -76,8 +77,8 @@
     },
     "body": {
       "vote_monthly": {
-        "movie": "Vote for your favorite movie of {month}! Voting closes {closes} {tz}.",
-        "tv": "Vote for your favorite series of {month}! Voting closes {closes} {tz}."
+        "movie": "Vote for your favorite movie in the {month} round! Voting closes {closes} {tz}.",
+        "tv": "Vote for your favorite series in the {month} round! Voting closes {closes} {tz}."
       }
     },
     "timezone": "(Thailand time)"

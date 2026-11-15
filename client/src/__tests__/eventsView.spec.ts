@@ -44,6 +44,7 @@ describe("EventsView", () => {
       history: createMemoryHistory(),
       routes: [
         { path: "/events", name: "events", component: EventsView },
+        { path: "/events/awards", name: "event-awards", component: { template: "<div>Awards</div>" } },
         { path: "/events/:id", name: "event-detail", component: { template: "<div>Detail</div>" } },
         { path: "/movies", name: "movies", component: { template: "<div>Movies</div>" } },
       ],

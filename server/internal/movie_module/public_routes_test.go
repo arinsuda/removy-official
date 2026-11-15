@@ -57,7 +57,7 @@ func setupPublicTestApp(t *testing.T) *fiber.App {
 	app := fiber.New()
 	api := app.Group("/api")
 	mw := middleware.NewAuthMiddleware(&config.Config{JWT: config.JWTConfig{AccessSecret: "test-secret"}}, nil)
-	h := New(stubRatingStatsReader{}, nil)
+	h := New(stubRatingStatsReader{}, nil, stubAwardReader{})
 	RegisterPublicRoutes(api, h, func(c fiber.Ctx) error { return c.Next() }, mw.OptionalAuth)
 	protected := api.Group("/", mw.RequireAuth)
 	RegisterRoutes(protected, h)

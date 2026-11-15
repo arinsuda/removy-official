@@ -12,6 +12,10 @@
           :label="t('events.title')"
           :controls="false"
         />
+        <AppButton variant="outline" size="sm" :to="{ name: 'event-awards' }">
+          <Trophy :size="16" aria-hidden="true" />
+          {{ t("events.awardsLink") }}
+        </AppButton>
       </div>
     </header>
 
@@ -42,8 +46,8 @@
       >
         <div class="event-card__media">
           <img
-            v-if="item.image_url"
-            :src="item.image_url"
+            v-if="eventCoverUrl(item)"
+            :src="eventCoverUrl(item) ?? undefined"
             alt=""
             class="event-card__image"
             loading="lazy"
@@ -148,6 +152,7 @@ import {
   ChevronRight,
   ExternalLink,
   Megaphone,
+  Trophy,
 } from "lucide-vue-next"
 import AppButton from "@/components/ui/AppButton.vue"
 import AppCard from "@/components/ui/AppCard.vue"
@@ -160,6 +165,7 @@ import type { AppEvent, EventPagination, EventState } from "@/types/event"
 import {
   EVENTS_PAGE_SIZE,
   eventBody,
+  eventCoverUrl,
   eventTitle,
   isInternalLink,
 } from "@/utils/events"
@@ -252,6 +258,13 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.events-page__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 @media (min-width: 768px) {
