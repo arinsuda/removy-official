@@ -72,9 +72,6 @@ const hintText = (min: number) => i18n.global.t("admin.events.saveNomineesEmptyH
 const listResponse = (events: AdminEvent[]) =>
   ({ data: { events, pagination: { page: 1, limit: 20, total: events.length, total_pages: 1 } } }) as never
 
-const httpError = (status: number, code?: string) =>
-  Object.assign(new Error(`HTTP ${status}`), { isAxiosError: true, response: { status, data: { code } } })
-
 /** Modal content is teleported to body, so query the document rather than the wrapper. */
 const modalButton = (label: string) =>
   Array.from(document.body.querySelectorAll("button")).find((b) => b.textContent?.trim() === label) as
