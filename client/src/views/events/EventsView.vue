@@ -69,12 +69,12 @@
 
           <h2 class="event-card__title">
             <RouterLink :to="`/events/${item.id}`" class="event-card__title-link">
-              {{ localizedText(item.title, locale) }}
+              {{ eventTitle(item, t, locale) }}
             </RouterLink>
           </h2>
 
           <p class="event-card__description">
-            {{ localizedText(item.body, locale) }}
+            {{ eventBody(item, t, locale) }}
           </p>
 
           <div class="event-card__actions">
@@ -159,8 +159,9 @@ import { eventApi } from "@/api/endpoints/event"
 import type { AppEvent, EventPagination, EventState } from "@/types/event"
 import {
   EVENTS_PAGE_SIZE,
+  eventBody,
+  eventTitle,
   isInternalLink,
-  localizedText,
 } from "@/utils/events"
 
 const { t, d, locale } = useI18n()

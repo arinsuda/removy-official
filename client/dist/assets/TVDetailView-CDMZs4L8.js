@@ -1,0 +1,1 @@
+import{B as e,bt as t,g as n,m as r,o as i,w as a}from"./vue-router-a1vSNuEM.js";import{r as o,t as s}from"./DetailPage-BQ-r0MXh.js";var c=a({__name:`TVDetailView`,setup(a){let c=i(),l=r(()=>Number(c.params.id));return(r,i)=>(e(),n(s,{config:t(o),id:l.value},null,8,[`config`,`id`]))}});export{c as default};

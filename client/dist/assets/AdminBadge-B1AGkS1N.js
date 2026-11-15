@@ -1,0 +1,1 @@
+import{B as e,U as t,v as n,w as r,zt as i}from"./vue-router-a1vSNuEM.js";import{h as a}from"./index-Ctco1byi.js";var o=a(r({__name:`AdminBadge`,props:{tone:{default:`neutral`}},setup(r){return(a,o)=>(e(),n(`span`,{class:i([`admin-badge`,`admin-badge--${r.tone}`])},[t(a.$slots,`default`,{},void 0,!0)],2))}}),[[`__scopeId`,`data-v-8e60643e`]]);export{o as t};

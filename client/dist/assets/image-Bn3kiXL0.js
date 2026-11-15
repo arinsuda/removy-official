@@ -1,1 +1,0 @@
-function e(e,t=`w342`){return e?`https://image.tmdb.org/t/p/${t}${e}`:null}function t(t,n=`w342`){return e(t,n)??`/placeholder.jpg`}export{t as n,e as t};

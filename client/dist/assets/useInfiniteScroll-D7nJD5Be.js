@@ -1,0 +1,1 @@
+import{F as e,L as t,tt as n}from"./vue-router-a1vSNuEM.js";function r(r,i,a={}){let o=null;function s(){r.value&&!o&&(o=new IntersectionObserver(e=>{e[0]?.isIntersecting&&!a.disabled?.value&&i()},{rootMargin:a.rootMargin??`200px`}),o.observe(r.value))}t(s),n(r,e=>{e&&!o&&s()}),e(()=>{o?.disconnect(),o=null})}export{r as t};

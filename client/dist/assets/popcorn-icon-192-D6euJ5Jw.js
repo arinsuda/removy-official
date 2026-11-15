@@ -1,0 +1,1 @@
+var e=`/popcorn-icon-192.png`;export{e as t};

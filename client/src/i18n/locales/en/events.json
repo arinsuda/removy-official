@@ -17,10 +17,37 @@
   "detail": {
     "backToEvents": "Back to events",
     "announcement": "Announcement",
+    "vote_monthly": "Monthly Popular Vote",
+    "vote_yearly": "Yearly Popular Vote",
     "dates": "Event duration:",
     "link": "Learn more / Participate",
     "notFoundTitle": "Event not found",
     "notFoundDesc": "This event may have been removed or unpublished."
+  },
+  "voting": {
+    "title": "Nominees",
+    "subtitle": "Vote for your favorite title. One vote per member, editable until the poll closes.",
+    "secrecyNotice": "Vote counts are kept secret and will be revealed when voting ends on {date}.",
+    "votedNotice": "You voted for {title}.",
+    "vote": "Vote",
+    "voted": "Voted",
+    "changeVote": "Vote for this",
+    "cancelVote": "Cancel vote",
+    "cancelConfirm": "Are you sure you want to cancel your vote?",
+    "voteSuccess": "Your vote has been recorded!",
+    "cancelSuccess": "Your vote has been cancelled.",
+    "pastNotice": "Voting has ended. See the winners and final results below.",
+    "upcomingNotice": "Voting has not started yet. Opens on {date}.",
+    "winner": "Winner",
+    "coWinner": "Co-Winner",
+    "votesCount": "{votes} vote ({percent}) | {votes} votes ({percent})",
+    "totalVotes": "Total vote: {votes} | Total votes: {votes}",
+    "noVotes": "{votes} vote | {votes} votes",
+    "errors": {
+      "closed": "Voting has ended for this round.",
+      "notStarted": "Voting has not started yet.",
+      "nomineeNotFound": "Selected nominee was not found."
+    }
   },
   "empty": {
     "active": "No active events right now",
@@ -39,5 +66,20 @@
     "close": "Close",
     "viewEvent": "Learn more"
   },
-  "loadErrorDesc": "Something went wrong while loading events. Please try again."
+  "loadErrorDesc": "Something went wrong while loading events. Please try again.",
+  "generated": {
+    "title": {
+      "vote_monthly": {
+        "movie": "Popular Movie of the Month - {month}",
+        "tv": "Popular TV Series of the Month - {month}"
+      }
+    },
+    "body": {
+      "vote_monthly": {
+        "movie": "Vote for your favorite movie of {month}! Voting closes {closes} {tz}.",
+        "tv": "Vote for your favorite series of {month}! Voting closes {closes} {tz}."
+      }
+    },
+    "timezone": "(Thailand time)"
+  }
 }

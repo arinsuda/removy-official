@@ -135,8 +135,11 @@ func autoMigrate(db *gorm.DB) error {
 		&admin_module.AdminAuditLog{},
 		&watch_log_module.MediaWatchLog{},
 
-		// event_module: events, announcements, and future voting rounds
+		// event_module: events, announcements, and voting rounds
 		&event_module.Event{},
+		&event_module.EventNominee{},
+		&event_module.EventVote{},
+		&event_module.EventAward{},
 
 		// external_rating_module: cached IMDb / Rotten Tomatoes ratings (additive table)
 		&external_rating_module.ExternalRating{},
@@ -243,6 +246,15 @@ func runSQLMigrations(db *gorm.DB, cfg *config.Config) error {
 			return err
 		}
 		log.Printf("Migration applied: %s", m.name)
+	}
+
+	eventsUniqueIndexSQL := `
+		CREATE UNIQUE INDEX IF NOT EXISTS idx_events_type_media_period 
+		ON events(type, media_type, period) 
+		WHERE period IS NOT NULL AND deleted_at IS NULL;
+	`
+	if err := runMigrationWithHistory(db, "events_type_media_period_unique_v1", eventsUniqueIndexSQL); err != nil {
+		return err
 	}
 
 	privacyMigrationSQL := `

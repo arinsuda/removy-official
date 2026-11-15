@@ -55,6 +55,15 @@ const (
 	ErrorCodeEmailInvalid      = apierr.ErrorCodeEmailInvalid
 	ErrorCodeEmailSame         = apierr.ErrorCodeEmailSame
 	ErrorCodeEmailInUse        = apierr.ErrorCodeEmailInUse
+	ErrorCodeVotingClosed      = apierr.ErrorCodeVotingClosed
+	ErrorCodeVotingNotStarted  = apierr.ErrorCodeVotingNotStarted
+	ErrorCodeVotingNotEnded    = apierr.ErrorCodeVotingNotEnded
+	ErrorCodeVotingLocked      = apierr.ErrorCodeVotingLocked
+	ErrorCodeInvalidEventType  = apierr.ErrorCodeInvalidEventType
+	ErrorCodeNomineeNotFound   = apierr.ErrorCodeNomineeNotFound
+	ErrorCodeNotEnoughNominees = apierr.ErrorCodeNotEnoughNominees
+	ErrorCodeEventExists       = apierr.ErrorCodeEventExists
+	ErrorCodeEventNotPublished = apierr.ErrorCodeEventNotPublished
 )
 
 func WriteAPIError(c fiber.Ctx, status int, code ErrorCode, message string) error {

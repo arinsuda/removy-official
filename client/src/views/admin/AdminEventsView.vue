@@ -4,10 +4,16 @@
       :title="t('admin.events.title')"
       :subtitle="t('admin.events.subtitle')"
     >
-      <AppButton variant="primary" size="sm" @click="openCreateModal">
-        <Plus :size="16" aria-hidden="true" />
-        {{ t("admin.events.newEvent") }}
-      </AppButton>
+      <div class="admin-header-actions">
+        <AppButton variant="outline" size="sm" @click="openGenerateModal">
+          <Sparkles :size="16" aria-hidden="true" />
+          {{ t("admin.events.generateMonthly") }}
+        </AppButton>
+        <AppButton variant="primary" size="sm" @click="openCreateModal">
+          <Plus :size="16" aria-hidden="true" />
+          {{ t("admin.events.newEvent") }}
+        </AppButton>
+      </div>
     </AdminPageHeader>
 
     <AdminFilters>
@@ -47,10 +53,13 @@
             </div>
             <div class="event-title-info">
               <span class="event-title-primary">
-                {{ localizedText(ev.title, locale) }}
+                {{ eventTitle(ev, t, locale) }}
                 <span class="inline-id">#{{ ev.id }}</span>
+                <span v-if="ev.type !== 'announcement'" class="event-type-tag">
+                  {{ t(`admin.events.types.${ev.type}`) }}
+                </span>
               </span>
-              <span class="event-title-sub">
+              <span v-if="locale === 'th' ? ev.title.en : ev.title.th" class="event-title-sub">
                 {{ locale === "th" ? ev.title.en : ev.title.th }}
               </span>
             </div>
@@ -76,7 +85,7 @@
         </td>
         <td class="is-end">
           <AdminRowMenu
-            :label="t('admin.table.rowActions', { name: localizedText(ev.title, locale) })"
+            :label="t('admin.table.rowActions', { name: eventTitle(ev, t, locale) })"
             :items="getRowMenuItems(ev)"
             @select="(key) => onMenuAction(ev, key)"
           />
@@ -111,7 +120,7 @@
               type="text"
               class="form-input"
               :class="{ 'is-invalid': formErrors.title_en }"
-              :placeholder="t('admin.events.form.titleEnPlaceholder')"
+              :placeholder="generatedTitlePlaceholder('en') || t('admin.events.form.titleEnPlaceholder')"
               :maxlength="EVENT_TITLE_MAX"
               required
             />
@@ -130,7 +139,7 @@
               type="text"
               class="form-input"
               :class="{ 'is-invalid': formErrors.title_th }"
-              :placeholder="t('admin.events.form.titleThPlaceholder')"
+              :placeholder="generatedTitlePlaceholder('th') || t('admin.events.form.titleThPlaceholder')"
               :maxlength="EVENT_TITLE_MAX"
               required
             />
@@ -204,6 +213,7 @@
               type="datetime-local"
               class="form-input"
               :class="{ 'is-invalid': formErrors.starts_at }"
+              :disabled="isVotingLocked"
               required
             />
             <span v-if="formErrors.starts_at" class="form-error">
@@ -221,6 +231,7 @@
               type="datetime-local"
               class="form-input"
               :class="{ 'is-invalid': formErrors.ends_at }"
+              :disabled="isVotingLocked"
               required
             />
             <span v-if="formErrors.ends_at" class="form-error">
@@ -228,6 +239,9 @@
             </span>
           </div>
         </div>
+        <p v-if="isVotingLocked" class="form-hint">
+          {{ t("admin.events.lockedScheduleHint") }}
+        </p>
 
         <div class="form-row">
           <div class="form-field">
@@ -305,11 +319,170 @@
       :title="t('admin.events.deleteTitle')"
       :description="t('admin.events.deleteDesc')"
       :confirm-text="t('admin.events.deleteConfirm')"
-      :target-name="eventToDelete ? localizedText(eventToDelete.title, locale) : undefined"
+      :target-name="eventToDelete ? eventTitle(eventToDelete, t, locale) : undefined"
       :loading="deleting"
       @confirm="confirmDelete"
       @cancel="showDeleteModal = false"
     />
+
+    <!-- Generate Monthly Modal -->
+    <AppModal
+      v-model="showGenerateModal"
+      size="md"
+      :title="t('admin.events.generateMonthlyModalTitle')"
+    >
+      <form class="event-form" @submit.prevent="handleGenerateMonthly">
+        <div class="form-field">
+          <label class="form-label">{{ t("admin.events.mediaType") }}</label>
+          <div class="generate-radio-group">
+            <label class="generate-radio">
+              <input v-model="generateMediaType" type="radio" value="movie" />
+              <span>{{ t("admin.events.movie") }}</span>
+            </label>
+            <label class="generate-radio">
+              <input v-model="generateMediaType" type="radio" value="tv" />
+              <span>{{ t("admin.events.tv") }}</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label class="form-label" for="gen-period">{{ t("admin.events.period") }}</label>
+          <input
+            id="gen-period"
+            v-model="generatePeriod"
+            type="text"
+            class="form-input"
+            :placeholder="t('admin.events.periodPlaceholder')"
+            required
+          />
+        </div>
+
+        <div class="generate-preview-action">
+          <AppButton
+            variant="outline"
+            size="sm"
+            :loading="loadingSuggestions"
+            @click.prevent="loadSuggestions"
+          >
+            {{ t("admin.events.previewNominees") }}
+          </AppButton>
+        </div>
+
+        <div v-if="suggestedNominees.length" class="suggested-list">
+          <div
+            v-for="(nom, idx) in suggestedNominees"
+            :key="nom.media_id"
+            class="suggested-item"
+          >
+            <span class="suggested-item__idx">#{{ idx + 1 }}</span>
+            <div class="suggested-item__info">
+              <span class="suggested-item__title">{{ nom.media_title }}</span>
+              <span class="suggested-item__source">{{ formatSource(nom.source) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <AppButton variant="ghost" @click="showGenerateModal = false">
+            {{ t("admin.events.form.cancel") }}
+          </AppButton>
+          <AppButton variant="primary" type="submit" :loading="generating">
+            {{ t("admin.events.generateRound") }}
+          </AppButton>
+        </div>
+      </form>
+    </AppModal>
+
+    <!-- Finalize Confirm Modal -->
+    <AdminConfirmModal
+      v-model="showFinalizeModal"
+      :title="t('admin.events.finalizeTitle')"
+      :description="t('admin.events.finalizeDesc')"
+      :confirm-text="t('admin.events.finalize')"
+      :target-name="eventToFinalize ? eventTitle(eventToFinalize, t, locale) : undefined"
+      :loading="finalizing"
+      @confirm="confirmFinalize"
+      @cancel="showFinalizeModal = false"
+    />
+
+    <!-- Manage Nominees Modal -->
+    <AppModal
+      v-model="showNomineesModal"
+      size="md"
+      :title="t('admin.events.nomineesModalTitle', { title: nomineesEvent ? eventTitle(nomineesEvent, t, locale) : '' })"
+    >
+      <div class="event-form">
+        <div class="generate-preview-action">
+          <AppButton
+            variant="outline"
+            size="sm"
+            :loading="loadingNomineeSuggestions"
+            @click.prevent="loadNomineeSuggestionsForRound"
+          >
+            {{ t("admin.events.loadSuggestedNominees") }}
+          </AppButton>
+        </div>
+
+        <div v-if="editableNominees.length" class="suggested-list">
+          <div
+            v-for="(nom, idx) in editableNominees"
+            :key="nom.media_id"
+            class="suggested-item"
+          >
+            <span class="suggested-item__idx">#{{ idx + 1 }}</span>
+            <div class="suggested-item__info">
+              <span class="suggested-item__title">{{ nom.media_title }}</span>
+            </div>
+            <div class="suggested-item__actions">
+              <AppButton
+                variant="ghost"
+                size="sm"
+                icon-only
+                :aria-label="t('admin.events.moveUp')"
+                :disabled="idx === 0"
+                @click="moveNominee(idx, -1)"
+              >
+                <ArrowUp :size="14" />
+              </AppButton>
+              <AppButton
+                variant="ghost"
+                size="sm"
+                icon-only
+                :aria-label="t('admin.events.moveDown')"
+                :disabled="idx === editableNominees.length - 1"
+                @click="moveNominee(idx, 1)"
+              >
+                <ArrowDown :size="14" />
+              </AppButton>
+              <AppButton
+                variant="ghost"
+                size="sm"
+                icon-only
+                :aria-label="t('admin.events.removeNominee')"
+                @click="removeNomineeAt(idx)"
+              >
+                <Trash2 :size="14" />
+              </AppButton>
+            </div>
+          </div>
+        </div>
+        <p v-else class="form-hint">{{ t("admin.events.noNomineesYet") }}</p>
+
+        <div class="form-actions">
+          <AppButton variant="ghost" @click="showNomineesModal = false">
+            {{ t("admin.events.form.cancel") }}
+          </AppButton>
+          <AppButton
+            variant="primary"
+            :loading="savingNominees"
+            @click="saveNomineesForRound"
+          >
+            {{ t("admin.events.saveNominees") }}
+          </AppButton>
+        </div>
+      </div>
+    </AppModal>
   </AdminPage>
 </template>
 
@@ -318,12 +491,16 @@ import { computed, onMounted, ref, watch } from "vue"
 import { useI18n } from "vue-i18n"
 import { useRouter } from "vue-router"
 import {
+  ArrowDown,
+  ArrowUp,
   Eye,
   Image as ImageIcon,
   Megaphone,
   Pencil,
   Plus,
+  Sparkles,
   Trash2,
+  Trophy,
 } from "lucide-vue-next"
 import AdminBadge from "@/components/admin/AdminBadge.vue"
 import AdminConfirmModal from "@/components/admin/AdminConfirmModal.vue"
@@ -343,9 +520,14 @@ import type {
   AdminEventBody,
   EventPagination,
   EventStatus,
+  NomineeInput,
+  SuggestedNominee,
 } from "@/types/event"
 import {
   ADMIN_EVENTS_PAGE_SIZE,
+  eventTitle,
+  generatedRoundTitle,
+  nextMonthlyPeriod,
   EVENT_DEFAULT_DURATION_MS,
   EVENT_IMAGE_MAX_BYTES,
   EVENT_IMAGE_TYPES,
@@ -356,7 +538,6 @@ import {
   eventErrorKey,
   isoToLocalInput,
   localInputToIso,
-  localizedText,
   validateEventForm,
 } from "@/utils/events"
 
@@ -471,6 +652,22 @@ function getRowMenuItems(ev: AdminEvent): RowMenuItem[] {
     },
   ]
 
+  if (ev.type !== "announcement" && ev.state === "upcoming") {
+    items.push({
+      key: "edit-nominees",
+      label: t("admin.events.editNominees"),
+      icon: Sparkles,
+    })
+  }
+
+  if (ev.type !== "announcement" && ev.state === "past" && !ev.is_finalized) {
+    items.push({
+      key: "finalize",
+      label: t("admin.events.finalize"),
+      icon: Trophy,
+    })
+  }
+
   // Drafts and cancelled events are not served publicly, so there is no page to open.
   if (ev.status === "published") {
     items.unshift({ key: "view", label: t("events.card.viewDetails"), icon: Eye })
@@ -510,6 +707,13 @@ function onMenuAction(ev: AdminEvent, actionKey: string) {
     case "remove-image":
       void handleRemoveImage(ev)
       break
+    case "edit-nominees":
+      openNomineesModal(ev)
+      break
+    case "finalize":
+      eventToFinalize.value = ev
+      showFinalizeModal.value = true
+      break
     case "delete":
       eventToDelete.value = ev
       showDeleteModal.value = true
@@ -541,12 +745,23 @@ function openCreateModal() {
   showFormModal.value = true
 }
 
+const isVotingLocked = computed(() =>
+  Boolean(
+    editingEvent.value &&
+      editingEvent.value.type !== "announcement" &&
+      editingEvent.value.state !== "upcoming"
+  )
+)
+
 function openEditModal(ev: AdminEvent) {
   editingEvent.value = ev
   formStartsInput.value = isoToLocalInput(ev.starts_at)
   formEndsInput.value = isoToLocalInput(ev.ends_at)
 
   form.value = {
+    type: ev.type,
+    media_type: ev.media_type,
+    period: ev.period,
     title_en: ev.title.en,
     title_th: ev.title.th,
     body_en: ev.body.en,
@@ -563,8 +778,13 @@ function openEditModal(ev: AdminEvent) {
 }
 
 async function submitForm() {
-  form.value.starts_at = localInputToIso(formStartsInput.value)
-  form.value.ends_at = localInputToIso(formEndsInput.value)
+  if (isVotingLocked.value && editingEvent.value) {
+    form.value.starts_at = editingEvent.value.starts_at
+    form.value.ends_at = editingEvent.value.ends_at
+  } else {
+    form.value.starts_at = localInputToIso(formStartsInput.value)
+    form.value.ends_at = localInputToIso(formEndsInput.value)
+  }
 
   const errors = validateEventForm(form.value)
   formErrors.value = errors
@@ -641,6 +861,160 @@ async function confirmDelete() {
     toast.error(t(eventErrorKey(err)))
   } finally {
     deleting.value = false
+  }
+}
+
+const showGenerateModal = ref(false)
+const generateMediaType = ref<"movie" | "tv">("movie")
+const generatePeriod = ref("")
+const suggestedNominees = ref<SuggestedNominee[]>([])
+const loadingSuggestions = ref(false)
+const generating = ref(false)
+
+const showFinalizeModal = ref(false)
+const eventToFinalize = ref<AdminEvent | null>(null)
+const finalizing = ref(false)
+
+const showNomineesModal = ref(false)
+const nomineesEvent = ref<AdminEvent | null>(null)
+const editableNominees = ref<NomineeInput[]>([])
+const loadingNomineeSuggestions = ref(false)
+const savingNominees = ref(false)
+
+/** Placeholder for a blank title input on a monthly round: the copy the server would generate. */
+function generatedTitlePlaceholder(lang: "en" | "th"): string {
+  if (!editingEvent.value) return ""
+  return generatedRoundTitle(editingEvent.value, t, lang) ?? ""
+}
+
+function openGenerateModal() {
+  generateMediaType.value = "movie"
+  generatePeriod.value = nextMonthlyPeriod()
+  suggestedNominees.value = []
+  showGenerateModal.value = true
+}
+
+function openNomineesModal(ev: AdminEvent) {
+  nomineesEvent.value = ev
+  editableNominees.value = (ev.nominees ?? []).map((n, idx) => ({
+    id: n.id,
+    media_id: n.media_id,
+    media_type: n.media_type,
+    position: idx + 1,
+    media_title: n.media_title,
+    poster_path: n.poster_path ?? "",
+    backdrop_path: n.backdrop_path ?? "",
+    overview: n.overview ?? "",
+  }))
+  showNomineesModal.value = true
+}
+
+function moveNominee(idx: number, delta: -1 | 1) {
+  const target = idx + delta
+  if (target < 0 || target >= editableNominees.value.length) return
+  const list = [...editableNominees.value]
+  const [item] = list.splice(idx, 1)
+  if (!item) return
+  list.splice(target, 0, item)
+  editableNominees.value = list.map((n, i) => ({ ...n, position: i + 1 }))
+}
+
+function removeNomineeAt(idx: number) {
+  editableNominees.value = editableNominees.value
+    .filter((_, i) => i !== idx)
+    .map((n, i) => ({ ...n, position: i + 1 }))
+}
+
+async function loadNomineeSuggestionsForRound() {
+  if (!nomineesEvent.value) return
+  loadingNomineeSuggestions.value = true
+  try {
+    const mediaType = nomineesEvent.value.media_type ?? "movie"
+    const period = nomineesEvent.value.period ?? nextMonthlyPeriod()
+    const res = await adminEventApi.suggestNominees(mediaType, period)
+    editableNominees.value = res.data.nominees.map((s, idx) => ({
+      media_id: s.media_id,
+      media_type: s.media_type,
+      position: idx + 1,
+      media_title: s.media_title,
+      poster_path: s.poster_path,
+      backdrop_path: s.backdrop_path,
+      overview: s.overview,
+    }))
+  } catch (err) {
+    toast.error(t(eventErrorKey(err)))
+  } finally {
+    loadingNomineeSuggestions.value = false
+  }
+}
+
+async function saveNomineesForRound() {
+  if (!nomineesEvent.value) return
+  savingNominees.value = true
+  try {
+    await adminEventApi.setNominees(nomineesEvent.value.id, editableNominees.value)
+    toast.success(t("admin.events.nomineesSaved"))
+    showNomineesModal.value = false
+    void fetchEvents()
+  } catch (err) {
+    toast.error(t(eventErrorKey(err)))
+  } finally {
+    savingNominees.value = false
+  }
+}
+
+async function loadSuggestions() {
+  loadingSuggestions.value = true
+  try {
+    const res = await adminEventApi.suggestNominees(generateMediaType.value, generatePeriod.value)
+    suggestedNominees.value = res.data.nominees
+  } catch (err) {
+    toast.error(t(eventErrorKey(err)))
+  } finally {
+    loadingSuggestions.value = false
+  }
+}
+
+async function handleGenerateMonthly() {
+  generating.value = true
+  try {
+    await adminEventApi.generateMonthly(generateMediaType.value, generatePeriod.value)
+    toast.success(t("admin.events.generateSuccess"))
+    showGenerateModal.value = false
+    void fetchEvents()
+  } catch (err) {
+    toast.error(t(eventErrorKey(err)))
+  } finally {
+    generating.value = false
+  }
+}
+
+async function confirmFinalize() {
+  if (!eventToFinalize.value) return
+  finalizing.value = true
+  try {
+    await adminEventApi.finalize(eventToFinalize.value.id)
+    toast.success(t("admin.events.finalized"))
+    showFinalizeModal.value = false
+    eventToFinalize.value = null
+    void fetchEvents()
+  } catch (err) {
+    toast.error(t(eventErrorKey(err)))
+  } finally {
+    finalizing.value = false
+  }
+}
+
+function formatSource(source: string): string {
+  switch (source) {
+    case "community":
+      return t("admin.events.sourceCommunity")
+    case "release":
+      return t("admin.events.sourceRelease")
+    case "popular":
+      return t("admin.events.sourcePopular")
+    default:
+      return t("admin.events.sourceFallback")
   }
 }
 
@@ -809,5 +1183,107 @@ onMounted(() => {
   margin-top: 1rem;
   padding-top: 1rem;
   border-top: 1px solid var(--color-border);
+}
+
+.admin-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.event-type-tag {
+  display: inline-flex;
+  padding: 0.125rem 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface-3);
+  color: var(--color-text-secondary);
+  margin-left: 0.375rem;
+}
+
+.generate-radio-group {
+  display: flex;
+  gap: 1.5rem;
+  padding-top: 0.25rem;
+}
+
+.generate-radio {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: var(--text-small);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.generate-radio input {
+  accent-color: var(--color-brand);
+}
+
+.generate-preview-action {
+  margin: 0.5rem 0 1rem;
+}
+
+.suggested-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem;
+  background-color: var(--color-surface);
+}
+
+.suggested-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  background-color: var(--color-surface-2);
+  border-radius: var(--radius-sm);
+}
+
+.suggested-item__idx {
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.suggested-item__info {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.suggested-item__title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.suggested-item__source {
+  font-size: 0.6875rem;
+  color: var(--color-brand);
+  background-color: color-mix(in srgb, var(--color-brand) 12%, transparent);
+  padding: 0.125rem 0.375rem;
+  border-radius: var(--radius-sm);
+}
+
+.suggested-item__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.form-hint {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin: 0;
 }
 </style>

@@ -1,0 +1,1 @@
+import{c as e}from"./index-Ctco1byi.js";function t(){let t=e();return{toast:t.toast,success:t.toastSuccess,error:t.toastError,warning:t.toastWarning}}export{t};

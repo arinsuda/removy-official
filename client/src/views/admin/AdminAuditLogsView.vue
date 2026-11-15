@@ -67,7 +67,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch, type Component } from "vue"
 import { useI18n } from "vue-i18n"
-import { CalendarCog, CalendarPlus, CalendarX, Flame, MessageSquareOff, ScrollText, SearchX, Shield, Trash2, UserCheck, UserX } from "lucide-vue-next"
+import { CalendarCog, CalendarPlus, CalendarX, Flame, ListChecks, MessageSquareOff, ScrollText, SearchX, Shield, Trash2, Trophy, UserCheck, UserX } from "lucide-vue-next"
 import AdminBadge from "@/components/admin/AdminBadge.vue"
 import AdminFilters from "@/components/admin/AdminFilters.vue"
 import AdminPage from "@/components/admin/AdminPage.vue"
@@ -90,7 +90,7 @@ const targetTypeFilter = ref("all")
 const loadError = ref(false)
 const isFiltered = computed(() => actionFilter.value !== "all" || targetTypeFilter.value !== "all")
 
-const ACTIONS = ["USER_DEACTIVATED", "USER_REACTIVATED", "USER_ROLE_CHANGED", "USER_DELETED", "USER_ERASED", "USER_ERASURE_REQUESTED", "USER_ERASED_SCHEDULED", "REVIEW_DELETED", "EVENT_CREATED", "EVENT_UPDATED", "EVENT_DELETED"]
+const ACTIONS = ["USER_DEACTIVATED", "USER_REACTIVATED", "USER_ROLE_CHANGED", "USER_DELETED", "USER_ERASED", "USER_ERASURE_REQUESTED", "USER_ERASED_SCHEDULED", "REVIEW_DELETED", "EVENT_CREATED", "EVENT_UPDATED", "EVENT_DELETED", "EVENT_FINALIZED", "NOMINEES_UPDATED"]
 const actionOptions = computed(() => [
   { value: "all", label: t("admin.auditLogs.actionAll") },
   ...ACTIONS.map((a) => ({ value: a, label: t(`admin.auditLogs.action.${a}`) })),
@@ -114,6 +114,8 @@ const VISUALS: Record<string, { tone: "danger" | "warning" | "success" | "info";
   EVENT_CREATED: { tone: "success", icon: CalendarPlus },
   EVENT_UPDATED: { tone: "info", icon: CalendarCog },
   EVENT_DELETED: { tone: "danger", icon: CalendarX },
+  EVENT_FINALIZED: { tone: "success", icon: Trophy },
+  NOMINEES_UPDATED: { tone: "info", icon: ListChecks },
 }
 // Actions written without an admin: the account owner asked, or the purge worker ran.
 const ACTOR_LABELS: Record<string, string> = {

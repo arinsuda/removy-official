@@ -1,0 +1,1 @@
+import{ft as e}from"./vue-router-a1vSNuEM.js";import{t}from"./auth-DMX20rzl.js";var n=e(!1),r=e(`generic`);function i(){function e(){return t().isLoggedIn}function i(t=`generic`){return e()?!0:(r.value=t,n.value=!0,!1)}function a(){n.value=!1}return{isOpen:n,reason:r,requireAuth:i,close:a}}export{i as t};

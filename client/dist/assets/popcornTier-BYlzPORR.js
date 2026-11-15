@@ -1,0 +1,1 @@
+var e={fresh:2.5,hot:4};function t(e){return e&&Number.isFinite(e)?Math.round(e*10)/10:0}function n(n,r){let i=t(n);return!r||r<=0||i<=0?`none`:i<e.fresh?`stale`:i<e.hot?`fresh`:`hot`}export{t as n,n as t};

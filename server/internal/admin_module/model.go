@@ -18,6 +18,8 @@ const (
 	ActionEventCreated    AuditAction = "EVENT_CREATED"
 	ActionEventUpdated    AuditAction = "EVENT_UPDATED"
 	ActionEventDeleted    AuditAction = "EVENT_DELETED"
+	ActionEventFinalized  AuditAction = "EVENT_FINALIZED"
+	ActionNomineesUpdated AuditAction = "NOMINEES_UPDATED"
 )
 
 type AdminAuditLog struct {

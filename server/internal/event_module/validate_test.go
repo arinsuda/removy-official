@@ -186,3 +186,252 @@ func TestEventStateAt(t *testing.T) {
 		t.Errorf("expected past, got %s", ev.StateAt(now.Add(10*24*time.Hour)))
 	}
 }
+
+func TestEventInputNormalize_VotingRounds(t *testing.T) {
+	in := validTestInput()
+	in.Type = TypeVoteMonthly
+	mediaType := "movie"
+	period := "2026-11"
+	in.MediaType = &mediaType
+	in.Period = &period
+	in.Nominees = []NomineeInput{
+		{MediaID: 101, MediaType: "movie", MediaTitle: "Dune", Position: 1},
+		{MediaID: 102, MediaType: "movie", MediaTitle: "Oppenheimer", Position: 2},
+	}
+
+	if err := in.normalize(); err != nil {
+		t.Fatalf("expected valid monthly vote input, got: %v", err)
+	}
+
+	// Invalid media type
+	badMediaType := "anime"
+	in.MediaType = &badMediaType
+	if err := in.normalize(); err == nil || !strings.Contains(err.Error(), "media_type") {
+		t.Errorf("expected media_type error, got: %v", err)
+	}
+	in.MediaType = &mediaType
+
+	// Invalid monthly period
+	badPeriod := "2026-13"
+	in.Period = &badPeriod
+	if err := in.normalize(); err == nil || !strings.Contains(err.Error(), "period") {
+		t.Errorf("expected period error for month 13, got: %v", err)
+	}
+
+	badPeriod2 := "invalid-date"
+	in.Period = &badPeriod2
+	if err := in.normalize(); err == nil || !strings.Contains(err.Error(), "period") {
+		t.Errorf("expected period error, got: %v", err)
+	}
+	in.Period = &period
+
+	// Nominee validation
+	in.Nominees[0].MediaID = 0
+	if err := in.normalize(); err == nil || !strings.Contains(err.Error(), "nominees.media_id") {
+		t.Errorf("expected nominee media_id error, got: %v", err)
+	}
+	in.Nominees[0].MediaID = 101
+
+	in.Nominees[0].MediaTitle = ""
+	if err := in.normalize(); err == nil || !strings.Contains(err.Error(), "nominees.media_title") {
+		t.Errorf("expected nominee media_title error, got: %v", err)
+	}
+	in.Nominees[0].MediaTitle = "Dune"
+
+	// Duplicate nominee MediaID in same round fails
+	in.Nominees[1].MediaID = 101
+	if err := in.normalize(); err == nil || !strings.Contains(err.Error(), "nominees.media_id") {
+		t.Errorf("expected duplicate nominee media_id error, got: %v", err)
+	}
+	in.Nominees[1].MediaID = 102
+
+	// Nominee MediaType mismatch with event MediaType fails
+	in.Nominees[1].MediaType = "tv"
+	if err := in.normalize(); err == nil || !strings.Contains(err.Error(), "nominees.media_type") {
+		t.Errorf("expected nominee media_type mismatch error, got: %v", err)
+	}
+}
+
+func TestMonthlyWindow(t *testing.T) {
+	starts, ends, err := MonthlyWindow("2026-11")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	wantStarts := time.Date(2026, 10, votingCutoffDay, 0, 0, 0, 0, votingLocation).UTC()
+	wantEnds := time.Date(2026, 11, votingCutoffDay, 0, 0, 0, 0, votingLocation).UTC()
+	if !starts.Equal(wantStarts) {
+		t.Errorf("expected starts %v, got: %v", wantStarts, starts)
+	}
+	if !ends.Equal(wantEnds) {
+		t.Errorf("expected ends %v, got: %v", wantEnds, ends)
+	}
+
+	// January boundary (month roll back to previous year December)
+	startsJan, endsJan, err := MonthlyWindow("2026-01")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	wantStartsJan := time.Date(2025, 12, votingCutoffDay, 0, 0, 0, 0, votingLocation).UTC()
+	wantEndsJan := time.Date(2026, 1, votingCutoffDay, 0, 0, 0, 0, votingLocation).UTC()
+	if !startsJan.Equal(wantStartsJan) {
+		t.Errorf("expected starts %v, got: %v", wantStartsJan, startsJan)
+	}
+	if !endsJan.Equal(wantEndsJan) {
+		t.Errorf("expected ends %v, got: %v", wantEndsJan, endsJan)
+	}
+}
+
+func TestCurrentMonthlyPeriod(t *testing.T) {
+	// Before the 15th in Bangkok -> current calendar month
+	before := time.Date(2026, 5, 14, 23, 59, 0, 0, votingLocation)
+	if got := CurrentMonthlyPeriod(before); got != "2026-05" {
+		t.Errorf("expected 2026-05 before cutoff, got %s", got)
+	}
+	// On/after the 15th in Bangkok -> next calendar month
+	after := time.Date(2026, 5, 15, 0, 0, 0, 0, votingLocation)
+	if got := CurrentMonthlyPeriod(after); got != "2026-06" {
+		t.Errorf("expected 2026-06 on/after cutoff, got %s", got)
+	}
+	// December after the 15th rolls over to January of next year
+	decAfter := time.Date(2026, 12, 20, 12, 0, 0, 0, votingLocation)
+	if got := CurrentMonthlyPeriod(decAfter); got != "2027-01" {
+		t.Errorf("expected 2027-01 in late December, got %s", got)
+	}
+}
+
+func TestCheckVotingLock(t *testing.T) {
+	movie := "movie"
+	tv := "tv"
+	period := "2026-05"
+	otherPeriod := "2026-06"
+	starts := time.Date(2026, 4, 15, 0, 0, 0, 0, time.UTC)
+	ends := time.Date(2026, 5, 15, 0, 0, 0, 0, time.UTC)
+
+	ev := Event{
+		Type:      TypeVoteMonthly,
+		MediaType: &movie,
+		Period:    &period,
+		StartsAt:  starts,
+		EndsAt:    ends,
+	}
+
+	baseIn := EventInput{
+		Type:      TypeVoteMonthly,
+		MediaType: &movie,
+		Period:    &period,
+		TitleEN:   "Updated Title",
+		TitleTH:   "อัปเดตชื่อ",
+		StartsAt:  starts,
+		EndsAt:    ends,
+	}
+
+	// Before starts_at: changing nominees or period is allowed
+	inBefore := baseIn
+	inBefore.Period = &otherPeriod
+	inBefore.Nominees = []NomineeInput{{MediaID: 1, MediaType: "movie", MediaTitle: "A"}}
+	if err := checkVotingLock(&ev, inBefore, starts.Add(-time.Minute)); err != nil {
+		t.Errorf("expected edits before starts_at to be allowed, got: %v", err)
+	}
+
+	// Once active (now >= starts_at): title/body edits without touching structural fields are allowed
+	activeNow := starts.Add(time.Minute)
+	if err := checkVotingLock(&ev, baseIn, activeNow); err != nil {
+		t.Errorf("expected copy edit after starts_at to be allowed, got: %v", err)
+	}
+
+	// Once active: replacing nominees is rejected with ErrVotingLocked
+	inNoms := baseIn
+	inNoms.Nominees = []NomineeInput{{MediaID: 1, MediaType: "movie", MediaTitle: "A"}}
+	if err := checkVotingLock(&ev, inNoms, activeNow); err != ErrVotingLocked {
+		t.Errorf("expected ErrVotingLocked when editing nominees after open, got: %v", err)
+	}
+
+	// Once active: changing media_type, period, type, or ends_at is rejected
+	inMedia := baseIn
+	inMedia.MediaType = &tv
+	if err := checkVotingLock(&ev, inMedia, activeNow); err != ErrVotingLocked {
+		t.Errorf("expected ErrVotingLocked when changing media_type, got: %v", err)
+	}
+
+	inEnds := baseIn
+	inEnds.EndsAt = ends.Add(time.Hour)
+	if err := checkVotingLock(&ev, inEnds, activeNow); err != ErrVotingLocked {
+		t.Errorf("expected ErrVotingLocked when shifting ends_at, got: %v", err)
+	}
+}
+
+func TestEventInputNormalize_VotingRoundAllowsEmptyCopy(t *testing.T) {
+	mediaType := "movie"
+	period := "2026-11"
+	in := validTestInput()
+	in.Type = TypeVoteMonthly
+	in.MediaType = &mediaType
+	in.Period = &period
+	in.TitleEN, in.TitleTH, in.BodyEN, in.BodyTH = "", "", "", ""
+	if err := in.normalize(); err != nil {
+		t.Fatalf("expected blank voting round copy to be valid, got: %v", err)
+	}
+
+	// Length limits still apply to voting rounds.
+	in.TitleEN = strings.Repeat("A", maxTitleRunes+1)
+	if err := in.normalize(); err == nil || !strings.Contains(err.Error(), "title_en") {
+		t.Errorf("expected title_en length error for voting round, got: %v", err)
+	}
+}
+
+func TestEventInputNormalize_YearlyRoundRequiresTitles(t *testing.T) {
+	mediaType := "movie"
+	period := "2026"
+	in := validTestInput()
+	in.Type = TypeVoteYearly
+	in.MediaType = &mediaType
+	in.Period = &period
+	in.TitleEN = ""
+	if err := in.normalize(); err == nil || !strings.Contains(err.Error(), "title_en") {
+		t.Errorf("expected title_en required for yearly round, got: %v", err)
+	}
+}
+
+func TestEventInputNormalize_AnnouncementRequiresCopy(t *testing.T) {
+	in := validTestInput()
+	in.TitleEN = ""
+	if err := in.normalize(); err == nil || !strings.Contains(err.Error(), "title_en") {
+		t.Errorf("expected title_en required for announcement, got: %v", err)
+	}
+}
+
+func TestNextMonthlyPeriod(t *testing.T) {
+	cases := []struct {
+		name string
+		at   time.Time
+		want string
+	}{
+		{"bangkok day 14 late evening opens next month", time.Date(2026, 5, 14, 23, 59, 0, 0, votingLocation), "2026-06"},
+		{"bangkok day 15 midnight skips a month", time.Date(2026, 5, 15, 0, 0, 0, 0, votingLocation), "2026-07"},
+		{"utc 16:59 on day 14 is bangkok 23:59 on day 14", time.Date(2026, 5, 14, 16, 59, 59, 0, time.UTC), "2026-06"},
+		{"utc 17:00 on day 14 is bangkok 00:00 on day 15", time.Date(2026, 5, 14, 17, 0, 0, 0, time.UTC), "2026-07"},
+		{"december before cutoff rolls to january", time.Date(2026, 12, 14, 12, 0, 0, 0, votingLocation), "2027-01"},
+		{"december after cutoff rolls to february", time.Date(2026, 12, 20, 12, 0, 0, 0, votingLocation), "2027-02"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := NextMonthlyPeriod(tc.at); got != tc.want {
+				t.Errorf("NextMonthlyPeriod(%v) = %s, want %s", tc.at, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestWinningTallies(t *testing.T) {
+	if got := winningTallies(nil); len(got) != 0 {
+		t.Errorf("expected no winners without votes, got: %v", got)
+	}
+	if got := winningTallies([]voteTally{{NomineeID: 1, Votes: 0}}); len(got) != 0 {
+		t.Errorf("expected no winners when top tally is zero, got: %v", got)
+	}
+	tied := []voteTally{{NomineeID: 1, Votes: 3}, {NomineeID: 2, Votes: 3}, {NomineeID: 3, Votes: 1}}
+	got := winningTallies(tied)
+	if len(got) != 2 || got[0].NomineeID != 1 || got[1].NomineeID != 2 {
+		t.Errorf("expected co-winners 1 and 2, got: %v", got)
+	}
+}

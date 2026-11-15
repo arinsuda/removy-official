@@ -1,0 +1,1 @@
+function e(e,t){let n=t?.response?.status;console.error(e,n??`network`)}export{e as t};

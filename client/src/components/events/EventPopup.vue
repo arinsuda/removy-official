@@ -20,11 +20,11 @@
 
       <div class="event-popup__body">
         <h3 class="event-popup__title">
-          {{ localizedText(currentEvent.title, locale) }}
+          {{ eventTitle(currentEvent, t, locale) }}
         </h3>
 
         <p class="event-popup__description">
-          {{ localizedText(currentEvent.body, locale) }}
+          {{ eventBody(currentEvent, t, locale) }}
         </p>
 
         <div class="event-popup__action">
@@ -113,7 +113,7 @@ import AppModal from "@/components/ui/AppModal.vue"
 import { eventApi } from "@/api/endpoints/event"
 import type { AppEvent } from "@/types/event"
 import { useAuthStore } from "@/stores/auth"
-import { dismissPopup, isInternalLink, isPopupHidden, localizedText } from "@/utils/events"
+import { dismissPopup, eventBody, eventTitle, isInternalLink, isPopupHidden } from "@/utils/events"
 
 const { t, locale } = useI18n()
 const route = useRoute()

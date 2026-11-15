@@ -152,7 +152,9 @@
       "USER_ERASED_SCHEDULED": "Account erased by schedule",
       "EVENT_CREATED": "Event created",
       "EVENT_UPDATED": "Event updated",
-      "EVENT_DELETED": "Event deleted"
+      "EVENT_DELETED": "Event deleted",
+      "EVENT_FINALIZED": "Voting finalized",
+      "NOMINEES_UPDATED": "Nominees updated"
     }
   },
   "nav": {
@@ -239,6 +241,40 @@
     "subtitle": "Create and manage site-wide events, promotions, and announcements.",
     "newEvent": "New Event",
     "editEvent": "Edit Event",
+    "generateMonthly": "Generate Monthly Round",
+    "generateMonthlyModalTitle": "Generate Monthly Voting Round",
+    "mediaType": "Media Type",
+    "movie": "Movie",
+    "tv": "TV Series",
+    "period": "Period (YYYY-MM)",
+    "periodPlaceholder": "YYYY-MM",
+    "previewNominees": "Preview Nominees",
+    "generateRound": "Generate Round",
+    "generating": "Generating...",
+    "sourceCommunity": "Community Activity",
+    "sourceRelease": "New Release",
+    "sourcePopular": "Popular",
+    "sourceFallback": "Fallback",
+    "generateSuccess": "Voting round created as a draft. Review the nominees, then publish it.",
+    "finalize": "Finalize",
+    "finalizeTitle": "Finalize this voting round?",
+    "finalizeDesc": "Tally votes now and assign winner awards. Once finalized, the results become permanent.",
+    "finalized": "Voting round finalized",
+    "editNominees": "Manage Nominees",
+    "nomineesModalTitle": "Manage Nominees — {title}",
+    "nomineesSaved": "Nominees updated",
+    "loadSuggestedNominees": "Load Suggested Nominees",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "removeNominee": "Remove nominee",
+    "noNomineesYet": "No nominees in this round yet.",
+    "saveNominees": "Save Nominees",
+    "lockedScheduleHint": "Voting has opened; schedule and nominees are locked.",
+    "types": {
+      "announcement": "Announcement",
+      "vote_monthly": "Monthly Vote",
+      "vote_yearly": "Yearly Vote"
+    },
     "deleteTitle": "Delete this event?",
     "deleteDesc": "The event will be removed and hidden from all users immediately.",
     "deleteConfirm": "Delete event",
@@ -306,7 +342,13 @@
       "imageTooLarge": "Image is too large (max 5 MB).",
       "imageType": "Unsupported image format. Use JPEG, PNG, WebP, or GIF.",
       "invalidInput": "Please check the form for errors.",
-      "notFound": "Event not found."
+      "notFound": "Event not found.",
+      "eventExists": "A voting round already exists for this period.",
+      "votingLocked": "This voting round has already opened; schedule and nominees are locked.",
+      "votingNotEnded": "Cannot finalize before voting ends.",
+      "notPublished": "Only a published round can be finalized.",
+      "notEnoughNominees": "Not enough candidate titles found to generate a full round.",
+      "invalidType": "That event type isn't valid."
     }
   },
   "errors": {
