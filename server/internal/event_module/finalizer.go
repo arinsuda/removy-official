@@ -7,6 +7,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/arinsuda/movie-hub/monitoring"
 	"gorm.io/gorm"
 )
 
@@ -21,12 +22,13 @@ const (
 // opens its page. Each round is settled by finalizeTx in its own transaction, which locks the row
 // with FOR UPDATE, so several instances can run the worker safely.
 type Finalizer struct {
-	svc *Service
+	svc    *Service
+	report *monitoring.JobReporter
 }
 
 // NewFinalizer settles rounds only, so it needs no image store.
 func NewFinalizer(db *gorm.DB) *Finalizer {
-	return &Finalizer{svc: NewService(db, nil)}
+	return &Finalizer{svc: NewService(db, nil), report: monitoring.NewJobReporter(monitoring.JobRoundFinalizer)}
 }
 
 // Run settles rounds every finalizeInterval until ctx is cancelled.
@@ -48,11 +50,13 @@ func (f *Finalizer) tick(ctx context.Context) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("round finalize: recovered from panic: %v", r)
+			f.report.Error(monitoring.OpPanic, fmt.Errorf("panic: %v", r))
 		}
 	}()
 	settled, err := f.RunOnce(ctx)
 	if err != nil {
 		log.Printf("round finalize: %v", err)
+		f.report.Error(monitoring.OpRun, err)
 	}
 	if settled > 0 {
 		log.Printf("round finalize: settled=%d", settled)

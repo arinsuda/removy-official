@@ -4,6 +4,7 @@ import type {
   AdminEventBody,
   AdminEventListQuery,
   AppEvent,
+  AutoPublishInput,
   AwardsQuery,
   AwardsResponse,
   EventListQuery,
@@ -13,8 +14,9 @@ import type {
   SuggestedNominee,
 } from "@/types/event"
 
-/** Admin path that creates the yearly voting round; the monthly path is written inline below. */
-const GENERATE_YEARLY_PATH = "/admin/events/generate-yearly"
+const ADMIN_EVENTS_PATH = "/admin/events"
+const GENERATE_MONTHLY_PATH = `${ADMIN_EVENTS_PATH}/generate-monthly`
+const GENERATE_YEARLY_PATH = `${ADMIN_EVENTS_PATH}/generate-yearly`
 
 export const eventApi = {
   list: (params: EventListQuery) => api.get<EventListResponse>("/events", { params }),
@@ -33,13 +35,16 @@ export const eventApi = {
 }
 
 export const adminEventApi = {
-  list: (params: AdminEventListQuery) => api.get<EventListResponse<AdminEvent>>("/admin/events", { params }),
+  list: (params: AdminEventListQuery) => api.get<EventListResponse<AdminEvent>>(ADMIN_EVENTS_PATH, { params }),
 
-  create: (body: AdminEventBody) => api.post<{ event: AdminEvent }>("/admin/events", body),
+  create: (body: AdminEventBody) => api.post<{ event: AdminEvent }>(ADMIN_EVENTS_PATH, body),
 
-  update: (id: number, body: AdminEventBody) => api.put<{ event: AdminEvent }>(`/admin/events/${id}`, body),
+  update: (id: number, body: AdminEventBody) => api.put<{ event: AdminEvent }>(`${ADMIN_EVENTS_PATH}/${id}`, body),
 
-  remove: (id: number) => api.delete(`/admin/events/${id}`),
+  remove: (id: number) => api.delete(`${ADMIN_EVENTS_PATH}/${id}`),
+
+  setAutoPublish: (id: number, enabled: boolean) =>
+    api.patch<{ event: AdminEvent }>(`${ADMIN_EVENTS_PATH}/${id}`, { auto_publish: enabled } satisfies AutoPublishInput),
 
   uploadImage: (id: number, file: File) => {
     const form = new FormData()
@@ -59,11 +64,7 @@ export const adminEventApi = {
       params: { media_type: mediaType, period },
     }),
 
-  generateMonthly: (mediaType = "movie", period = "") =>
-    api.post<{ event: AdminEvent }>("/admin/events/generate-monthly", {
-      media_type: mediaType,
-      period,
-    }),
+  generateMonthly: (body: GenerateRoundInput) => api.post<{ event: AdminEvent }>(GENERATE_MONTHLY_PATH, body),
 
   generateYearlyRound: (body: GenerateRoundInput) => api.post<{ event: AdminEvent }>(GENERATE_YEARLY_PATH, body),
 }

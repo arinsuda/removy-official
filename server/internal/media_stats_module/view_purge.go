@@ -2,10 +2,12 @@ package media_stats_module
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
 	"github.com/arinsuda/movie-hub/config"
+	"github.com/arinsuda/movie-hub/monitoring"
 	"gorm.io/gorm"
 )
 
@@ -21,12 +23,13 @@ const (
 
 // ViewPurger deletes media_view_days rows older than MediaViewRetention.
 type ViewPurger struct {
-	db  *gorm.DB
-	now func() time.Time
+	db     *gorm.DB
+	now    func() time.Time
+	report *monitoring.JobReporter
 }
 
 func NewViewPurger(db *gorm.DB) *ViewPurger {
-	return &ViewPurger{db: db, now: time.Now}
+	return &ViewPurger{db: db, now: time.Now, report: monitoring.NewJobReporter(monitoring.JobViewPurger)}
 }
 
 // Run purges every viewPurgeInterval until ctx is cancelled.
@@ -48,11 +51,13 @@ func (p *ViewPurger) tick(ctx context.Context) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("view purge: recovered from panic: %v", r)
+			p.report.Error(monitoring.OpPanic, fmt.Errorf("panic: %v", r))
 		}
 	}()
 	deleted, err := p.RunOnce(ctx)
 	if err != nil {
 		log.Printf("view purge: %v", err)
+		p.report.Error(monitoring.OpRun, err)
 		return
 	}
 	if deleted > 0 {

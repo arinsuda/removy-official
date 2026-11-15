@@ -39,6 +39,7 @@ async function openModal() {
 }
 
 const periodInput = () => document.body.querySelector<HTMLInputElement>("#gen-period")!
+const lateCheckbox = () => document.body.querySelector<HTMLInputElement>('input[name="generate-late-start"]')
 const kindRadio = (value: string) =>
   document.body.querySelector<HTMLInputElement>(`input[name="generate-round-kind"][value="${value}"]`)!
 const mediaRadio = (value: string) =>
@@ -107,7 +108,7 @@ describe("AdminGenerateRoundModal", () => {
     submit()
     await flushPromises()
 
-    expect(api.generateYearlyRound).toHaveBeenCalledWith({ media_type: "tv", period: "2026" })
+    expect(api.generateYearlyRound).toHaveBeenCalledWith({ media_type: "tv", period: "2026", late_start: false })
     expect(api.generateMonthly).not.toHaveBeenCalled()
     expect(toastSuccess).toHaveBeenCalledWith(tr("admin.events.generateSuccess"))
   })
@@ -117,8 +118,42 @@ describe("AdminGenerateRoundModal", () => {
     submit()
     await flushPromises()
 
-    expect(api.generateMonthly).toHaveBeenCalledWith("movie", "2026-12")
+    expect(api.generateMonthly).toHaveBeenCalledWith({ media_type: "movie", period: "2026-12", late_start: false })
     expect(api.generateYearlyRound).not.toHaveBeenCalled()
+  })
+
+  it("offers a late start of the current monthly round and sends it with the current period", async () => {
+    await openModal()
+    expect(lateCheckbox()).not.toBeNull()
+
+    await choose(lateCheckbox()!)
+    expect(periodInput().value).toBe("2026-11")
+
+    submit()
+    await flushPromises()
+
+    expect(api.generateMonthly).toHaveBeenCalledWith({ media_type: "movie", period: "2026-11", late_start: true })
+  })
+
+  it("hides the late start once too little of the current window is left", async () => {
+    // Dec 12 2026 12:00 in Thailand: the round closes Dec 15, less than 72 hours after the late start.
+    vi.setSystemTime(new Date("2026-12-12T05:00:00Z"))
+    await openModal()
+
+    expect(lateCheckbox()).toBeNull()
+  })
+
+  it("maps VOTING_WINDOW_TOO_SHORT to a readable toast", async () => {
+    api.generateMonthly.mockRejectedValueOnce({
+      response: { status: 409, data: { code: "VOTING_WINDOW_TOO_SHORT" } },
+    })
+    await openModal()
+    await choose(lateCheckbox()!)
+
+    submit()
+    await flushPromises()
+
+    expect(toastError).toHaveBeenCalledWith(tr("admin.events.errors.votingWindowTooShort"))
   })
 
   it("maps MONTHLY_ROUNDS_PENDING to a readable toast", async () => {

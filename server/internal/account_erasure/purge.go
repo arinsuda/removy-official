@@ -12,6 +12,7 @@ import (
 	"github.com/arinsuda/movie-hub/internal/identity_policy"
 	"github.com/arinsuda/movie-hub/internal/shared/storage"
 	"github.com/arinsuda/movie-hub/internal/user_module"
+	"github.com/arinsuda/movie-hub/monitoring"
 	"gorm.io/gorm"
 )
 
@@ -43,10 +44,19 @@ type Purger struct {
 	db    *gorm.DB
 	store Storage // nil: avatars are left behind and the audit row stays storage_cleanup "pending"
 	now   func() time.Time
+	// report sends deduped failures to Sentry. Reported errors are fixed sentinels: ids and storage
+	// keys stay in the logs.
+	report *monitoring.JobReporter
 }
 
+var (
+	errReportUserErase     = errors.New("account erasure failed")
+	errReportRecordCleanup = errors.New("recording avatar cleanup failed")
+	errReportStorage       = errors.New("avatar storage cleanup failed")
+)
+
 func NewPurger(db *gorm.DB, store Storage) *Purger {
-	return &Purger{db: db, store: store, now: time.Now}
+	return &Purger{db: db, store: store, now: time.Now, report: monitoring.NewJobReporter(monitoring.JobAccountPurger)}
 }
 
 // Run ticks every config.ErasurePurgeInterval until ctx is cancelled.
@@ -68,12 +78,14 @@ func (p *Purger) tick(ctx context.Context) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("erasure purge: recovered from panic: %v", r)
+			p.report.Error(monitoring.OpPanic, fmt.Errorf("panic: %v", r))
 		}
 	}()
 	erased, err := p.RunOnce(ctx)
 	retried := p.RetryCleanups(ctx)
 	if err != nil {
 		log.Printf("erasure purge: %v", err)
+		p.report.Error(monitoring.OpRun, err)
 	}
 	log.Printf("erasure purge: tick erased=%d cleanup_retried=%d", erased, retried)
 }
@@ -97,6 +109,7 @@ func (p *Purger) RunOnce(ctx context.Context) (erased int, err error) {
 		if err != nil {
 			// No PII: the id only.
 			log.Printf("erasure purge: user %d: %v", id, err)
+			p.report.Error(monitoring.OpUserErase, errReportUserErase)
 			continue
 		}
 		if ok {
@@ -117,6 +130,7 @@ func (p *Purger) RetryCleanups(ctx context.Context) int {
 		WHERE action = ? AND meta_data->>? = ? ORDER BY id LIMIT ?`,
 		ActionUserErasedScheduled, metaCleanup, cleanupPending, config.ErasureCleanupRetryBatch).Scan(&rows).Error; err != nil {
 		log.Printf("erasure purge: list pending cleanups: %v", err)
+		p.report.Error(monitoring.OpRun, err)
 		return 0
 	}
 	done := 0
@@ -222,6 +236,7 @@ func (p *Purger) cleanup(userID, auditID uint, res Result) bool {
 	if err := p.db.Exec(`UPDATE admin_audit_logs SET meta_data = jsonb_set(meta_data, ARRAY[?], to_jsonb(?::text))
 		WHERE id = ? AND action = ?`, metaCleanup, cleanupDone, auditID, ActionUserErasedScheduled).Error; err != nil {
 		log.Printf("erasure purge: user %d: record cleanup failed: %v", userID, err)
+		p.report.Error(monitoring.OpRecordCleanup, errReportRecordCleanup)
 		return false
 	}
 	return true
@@ -232,6 +247,7 @@ func (p *Purger) storageCall(del func(context.Context, string) error, key string
 	defer cancel()
 	if err := del(ctx, key); err != nil {
 		log.Printf("erasure purge: storage cleanup of %q failed: %v", key, err)
+		p.report.Error(monitoring.OpStorageCleanup, errReportStorage)
 		return false
 	}
 	return true

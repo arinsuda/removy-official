@@ -73,6 +73,7 @@
           <AdminBadge :tone="statusBadgeTone(ev.status)">
             {{ t(`admin.events.status.${ev.status}`) }}
           </AdminBadge>
+          <AdminAutoPublishToggle :event="ev" @changed="fetchEvents" />
         </td>
         <td class="cell-dates">
           <time :datetime="ev.starts_at">{{ formatDate(ev.starts_at) }}</time>
@@ -176,6 +177,7 @@ import {
   Trash2,
   Trophy,
 } from "lucide-vue-next"
+import AdminAutoPublishToggle from "@/components/admin/events/AdminAutoPublishToggle.vue"
 import AdminBadge from "@/components/admin/AdminBadge.vue"
 import AdminConfirmModal from "@/components/admin/AdminConfirmModal.vue"
 import AdminEventFormModal from "@/components/admin/events/AdminEventFormModal.vue"
