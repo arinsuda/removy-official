@@ -7,9 +7,9 @@
     @close="handleDismiss"
   >
     <div v-if="currentEvent" class="event-popup__content">
-      <div v-if="currentEvent.image_url" class="event-popup__banner">
+      <div v-if="eventCoverUrl(currentEvent)" class="event-popup__banner">
         <img
-          :src="currentEvent.image_url"
+          :src="eventCoverUrl(currentEvent) ?? undefined"
           alt=""
           class="event-popup__image"
         />
@@ -113,7 +113,14 @@ import AppModal from "@/components/ui/AppModal.vue"
 import { eventApi } from "@/api/endpoints/event"
 import type { AppEvent } from "@/types/event"
 import { useAuthStore } from "@/stores/auth"
-import { dismissPopup, eventBody, eventTitle, isInternalLink, isPopupHidden } from "@/utils/events"
+import {
+  dismissPopup,
+  eventBody,
+  eventCoverUrl,
+  eventTitle,
+  isInternalLink,
+  isPopupHidden,
+} from "@/utils/events"
 
 const { t, locale } = useI18n()
 const route = useRoute()

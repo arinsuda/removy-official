@@ -4,16 +4,18 @@ import (
 	"math"
 	"time"
 
+	"github.com/arinsuda/movie-hub/config"
 	"github.com/arinsuda/movie-hub/internal/movie_module"
 	"gorm.io/gorm"
 )
 
 type Service struct {
 	repo *repository
+	now  func() time.Time
 }
 
 func NewService(db *gorm.DB) *Service {
-	return &Service{repo: newRepository(db)}
+	return &Service{repo: newRepository(db), now: time.Now}
 }
 
 // GetStats รวม stats จากหลาย source
@@ -78,9 +80,13 @@ func (s *Service) GetStats(mediaID int, mediaType movie_module.MediaType, reques
 	}, nil
 }
 
-// RecordView บันทึกการเข้าชม
-func (s *Service) RecordView(mediaID int, mediaType movie_module.MediaType) error {
+// RecordView บันทึกการเข้าชม: the total always goes up, while the per-day row that feeds voting
+// is written once per user, title and Bangkok day.
+func (s *Service) RecordView(userID uint, mediaID int, mediaType movie_module.MediaType) error {
 	if err := s.repo.UpsertStat(mediaID, mediaType); err != nil {
+		return err
+	}
+	if err := s.repo.InsertViewDay(userID, mediaID, mediaType, config.LocalDay(s.now())); err != nil {
 		return err
 	}
 	return s.repo.IncrementView(mediaID, mediaType)

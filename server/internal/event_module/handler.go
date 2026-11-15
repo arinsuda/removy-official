@@ -7,7 +7,9 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
+	"github.com/arinsuda/movie-hub/config"
 	"github.com/arinsuda/movie-hub/internal/shared"
 	mw "github.com/arinsuda/movie-hub/middleware"
 	"github.com/gofiber/fiber/v3"
@@ -89,6 +91,29 @@ func (h *Handler) GetPublic(c fiber.Ctx) error {
 		return handleError(c, err)
 	}
 	return c.JSON(fiber.Map{"event": ev})
+}
+
+// ListAwards serves GET /events/awards?media_type=movie|tv&year=YYYY. Both filters are optional;
+// the year defaults to the current year in config.AppTimeZone.
+func (h *Handler) ListAwards(c fiber.Ctx) error {
+	mediaType := c.Query("media_type")
+	if mediaType != "" && !validMediaType(mediaType) {
+		return handleError(c, invalid("media_type"))
+	}
+	year := time.Now().In(config.AppLocation).Year()
+	if raw := c.Query("year"); raw != "" {
+		parsed, err := strconv.Atoi(raw)
+		if err != nil || parsed < minAwardYear || parsed > maxAwardYear {
+			return handleError(c, invalid("year"))
+		}
+		year = parsed
+	}
+
+	awards, years, err := h.svc.ListAwards(c.Context(), mediaType, year)
+	if err != nil {
+		return handleError(c, err)
+	}
+	return c.JSON(fiber.Map{"awards": awards, "years": years})
 }
 
 func (h *Handler) Vote(c fiber.Ctx) error {

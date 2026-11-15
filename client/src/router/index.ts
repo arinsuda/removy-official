@@ -145,6 +145,12 @@ const router = createRouter({
           meta: { public: true, titleKey: "navigation.events" }
         },
         {
+          path: "events/awards",
+          name: "event-awards",
+          component: () => import("@/views/events/AwardsView.vue"),
+          meta: { public: true, titleKey: "awards.title" }
+        },
+        {
           path: "events/:id(\\d+)",
           name: "event-detail",
           component: () => import("@/views/events/EventDetailView.vue"),

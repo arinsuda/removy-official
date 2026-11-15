@@ -8,9 +8,10 @@ import (
 )
 
 // New builds the handler shared by RegisterPublicRoutes and RegisterRoutes.
-func New(ratingRepo shared.RatingStatsReader, ext *external.Service) *Handler {
+func New(ratingRepo shared.RatingStatsReader, ext *external.Service, awards shared.AwardReader) *Handler {
 	svc := NewMovieService(ratingRepo)
 	svc.SetExternalRatings(ext)
+	svc.SetAwardReader(awards)
 	return NewHandler(svc)
 }
 

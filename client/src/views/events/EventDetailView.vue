@@ -30,9 +30,9 @@
     />
 
     <article v-else-if="event" class="event-detail">
-      <div v-if="event.image_url" class="event-detail__banner">
+      <div v-if="eventCoverUrl(event)" class="event-detail__banner">
         <img
-          :src="event.image_url"
+          :src="eventCoverUrl(event) ?? undefined"
           alt=""
           class="event-detail__banner-img"
         />
@@ -117,6 +117,7 @@ import type { AppEvent } from "@/types/event"
 import {
   HTTP_NOT_FOUND,
   eventBody,
+  eventCoverUrl,
   eventTitle,
   formatEventDay,
   isInternalLink,

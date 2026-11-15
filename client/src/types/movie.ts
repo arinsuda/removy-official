@@ -1,4 +1,5 @@
 import type { MediaType, ListType } from "./common"
+import type { MediaAward } from "./event"
 
 export interface Genre {
   id: number
@@ -48,6 +49,7 @@ export interface MovieDetail extends Movie {
   homepage: string
   genres: Genre[]
   videos?: Video[]
+  awards?: MediaAward[]
 }
 
 export interface TVSeries {
@@ -74,6 +76,7 @@ export interface TVSeriesDetail extends TVSeries {
   tagline: string
   homepage: string
   genres: Genre[]
+  awards?: MediaAward[]
   seasons?: TVSeason[]
   last_air_date?: string
   episode_run_time?: number[]

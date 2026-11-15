@@ -2,8 +2,6 @@ package event_module
 
 import (
 	"time"
-	// Embeds the IANA database so votingLocation resolves on hosts without zoneinfo.
-	_ "time/tzdata"
 )
 
 // Voting round rules. Change them here; nothing else hard-codes these values.
@@ -26,19 +24,18 @@ const (
 	VoteRateMax    = 30
 	VoteRateWindow = time.Minute
 
-	// Community score = reviews*w + library adds*w + likes*w over the lookback window.
+	// Community score = reviews*w + library adds*w + likes*w + view days*w over the lookback window.
+	// A view counts once per user, title and day, so one habitual viewer cannot dominate a title.
 	reviewScoreWeight  = 5.0
 	libraryScoreWeight = 3.0
 	likeScoreWeight    = 2.0
+	viewScoreWeight    = 0.1
 
-	// votingCutoffDay is the day of month a monthly round closes (and the next opens),
-	// at 00:00 in votingTimeZone.
+	// votingCutoffDay is the day of month a monthly round opens (and the previous one closes),
+	// at 00:00 in config.AppTimeZone.
 	votingCutoffDay = 15
 	// activityLookbackMonths: nominees reflect activity in the month before voting opens.
 	activityLookbackMonths = 1
-	// votingTimeZone is where round boundaries fall on local midnight (Thailand).
-	votingTimeZone = "Asia/Bangkok"
-
 	// generatedPopupPriority places auto-generated rounds above routine announcements.
 	generatedPopupPriority = 10
 
@@ -65,14 +62,3 @@ const (
 	SourceRelease   NomineeSource = "release"
 	SourcePopular   NomineeSource = "popular"
 )
-
-// votingLocation is loaded once; tzdata is embedded so this cannot fail at runtime.
-var votingLocation = mustLoadLocation(votingTimeZone)
-
-func mustLoadLocation(name string) *time.Location {
-	loc, err := time.LoadLocation(name)
-	if err != nil {
-		panic("event_module: cannot load time zone " + name + ": " + err.Error())
-	}
-	return loc
-}

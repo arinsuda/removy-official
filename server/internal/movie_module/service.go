@@ -3,6 +3,7 @@ package movie_module
 import (
 	"context"
 	"fmt"
+	"log"
 
 	external "github.com/arinsuda/movie-hub/internal/external_rating_module"
 	"github.com/arinsuda/movie-hub/internal/shared"
@@ -12,6 +13,7 @@ import (
 type MovieService struct {
 	ratingRepo shared.RatingStatsReader
 	external   *external.Service
+	awards     shared.AwardReader
 
 	providers      *providersCache
 	fetchProviders func(kind string, id int, region string) (*tmdb.WatchProviders, error)
@@ -19,6 +21,27 @@ type MovieService struct {
 
 // SetExternalRatings enables IMDb and Rotten Tomatoes on detail responses.
 func (s *MovieService) SetExternalRatings(ext *external.Service) { s.external = ext }
+
+// SetAwardReader adds the award history to detail responses. Without it every title reads as no awards.
+func (s *MovieService) SetAwardReader(awards shared.AwardReader) { s.awards = awards }
+
+// awardsFor returns the title's awards. A failed read is logged and shows as none, so a secondary
+// block never breaks the detail page.
+func (s *MovieService) awardsFor(ctx context.Context, id int, mediaType shared.MediaType) []shared.MediaAward {
+	none := []shared.MediaAward{}
+	if s.awards == nil {
+		return none
+	}
+	byKey, err := s.awards.AwardsFor(ctx, []shared.MediaIdentity{{ID: id, Type: mediaType}})
+	if err != nil {
+		log.Printf("movie_module: awards for %s %d: %v", mediaType, id, err)
+		return none
+	}
+	if awards := byKey[shared.MediaKey{ID: id, Type: mediaType}]; len(awards) > 0 {
+		return awards
+	}
+	return none
+}
 
 func NewMovieService(repo shared.RatingStatsReader) *MovieService {
 	return &MovieService{ratingRepo: repo, providers: newProvidersCache(), fetchProviders: tmdb.GetWatchProviders}
@@ -82,7 +105,7 @@ func (s *MovieService) GetMovieByID(ctx context.Context, id int) (*MovieDetailDT
 	if s.external.Enabled() {
 		ratings = ratings.WithExternal(s.external.Get(ctx, string(shared.MediaTypeMovie), id, detail.IMDbID))
 	}
-	return &MovieDetailDTO{MovieDetail: *detail, Ratings: ratings}, nil
+	return &MovieDetailDTO{MovieDetail: *detail, Ratings: ratings, Awards: s.awardsFor(ctx, id, shared.MediaTypeMovie)}, nil
 }
 
 func (s *MovieService) enrichMovies(ctx context.Context, res *tmdb.PaginatedResult[tmdb.Movie]) (*tmdb.PaginatedResult[MovieDTO], error) {
@@ -248,7 +271,7 @@ func (s *MovieService) GetSeriesByID(ctx context.Context, id int) (*TVSeriesDeta
 	if s.external.Enabled() {
 		ratings = ratings.WithExternal(s.external.Get(ctx, string(shared.MediaTypeTV), id, ""))
 	}
-	return &TVSeriesDetailDTO{TVSeriesDetail: *detail, Ratings: ratings}, nil
+	return &TVSeriesDetailDTO{TVSeriesDetail: *detail, Ratings: ratings, Awards: s.awardsFor(ctx, id, shared.MediaTypeTV)}, nil
 }
 
 // SeriesIMDbResolver looks up a title's IMDb id through TMDB external_ids

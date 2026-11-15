@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import type { AdminEvent, AdminEventBody, LocalizedText } from "@/types/event"
 import {
+  currentVotingYear,
   dismissPopup,
   EVENT_BODY_MAX,
   EVENT_TITLE_MAX,
@@ -242,22 +243,29 @@ describe("events utils", () => {
   })
 
   describe("nextMonthlyPeriod", () => {
-    it("picks the round after the active one, rolling over on the 15th in Thailand time", () => {
-      // May 14, 2026 19:00 BKK -> active 2026-05 -> next 2026-06
-      expect(nextMonthlyPeriod(new Date("2026-05-14T12:00:00Z"))).toBe("2026-06")
-      // May 14, 2026 23:59 BKK -> still 2026-05 active -> next 2026-06
-      expect(nextMonthlyPeriod(new Date("2026-05-14T16:59:00Z"))).toBe("2026-06")
-      // May 15, 2026 00:00 BKK -> active 2026-06 -> next 2026-07
-      expect(nextMonthlyPeriod(new Date("2026-05-14T17:00:00Z"))).toBe("2026-07")
-      // May 15, 2026 01:00 BKK -> active 2026-06 -> next 2026-07
-      expect(nextMonthlyPeriod(new Date("2026-05-14T18:00:00Z"))).toBe("2026-07")
+    it("names a round by the month its voting starts (the 15th), in Thailand time", () => {
+      // May 14, 2026 19:00 BKK -> the 2026-05 round starts on the 15th, so it is next
+      expect(nextMonthlyPeriod(new Date("2026-05-14T12:00:00Z"))).toBe("2026-05")
+      // May 14, 2026 23:59 BKK -> still 2026-05 next
+      expect(nextMonthlyPeriod(new Date("2026-05-14T16:59:00Z"))).toBe("2026-05")
+      // May 15, 2026 00:00 BKK -> 2026-05 is active, 2026-06 is next
+      expect(nextMonthlyPeriod(new Date("2026-05-14T17:00:00Z"))).toBe("2026-06")
+      // May 15, 2026 01:00 BKK -> 2026-05 is active, 2026-06 is next
+      expect(nextMonthlyPeriod(new Date("2026-05-14T18:00:00Z"))).toBe("2026-06")
     })
 
     it("rolls the year over", () => {
-      // Dec 14, 2026 BKK -> active 2026-12 -> next 2027-01
-      expect(nextMonthlyPeriod(new Date("2026-12-14T12:00:00Z"))).toBe("2027-01")
-      // Dec 15, 2026 BKK -> active 2027-01 -> next 2027-02
-      expect(nextMonthlyPeriod(new Date("2026-12-15T12:00:00Z"))).toBe("2027-02")
+      // Nov 15, 2026 BKK -> 2026-11 is active, 2026-12 is next
+      expect(nextMonthlyPeriod(new Date("2026-11-15T12:00:00Z"))).toBe("2026-12")
+      // Dec 14, 2026 BKK -> 2026-12 starts on the 15th, so it is next
+      expect(nextMonthlyPeriod(new Date("2026-12-14T12:00:00Z"))).toBe("2026-12")
+      // Dec 15, 2026 BKK -> 2026-12 is active, 2027-01 is next
+      expect(nextMonthlyPeriod(new Date("2026-12-15T12:00:00Z"))).toBe("2027-01")
+    })
+
+    it("reports the calendar year of the active round for the awards default", () => {
+      expect(currentVotingYear(new Date("2026-12-31T12:00:00Z"))).toBe(2026)
+      expect(currentVotingYear(new Date("2027-01-01T12:00:00Z"))).toBe(2027)
     })
   })
 

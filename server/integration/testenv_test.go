@@ -265,7 +265,7 @@ func newEnv(t *testing.T) *env {
 	// Same order as router.Register: guest-readable routes first, then the auth group.
 	policy := privacy_policy.NewUserAccessPolicy(db)
 	achieve := achievementsmodule.New(db, policy)
-	movieH := movie_module.New(review_module.NewRatingStatsReader(db), nil)
+	movieH := movie_module.New(review_module.NewRatingStatsReader(db), nil, event_module.NewAwardReader(db))
 	reviewH := review_module.New(db, nil, nil, nil, nil, nil, policy)
 	statsH := media_stats_module.New(db)
 	userSvc, userH := user_module.New(db, nil, noStats{}, e.auth,

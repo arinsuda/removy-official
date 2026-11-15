@@ -120,6 +120,7 @@ func autoMigrate(db *gorm.DB) error {
 
 		&like_module.MediaLike{},
 		&media_stats_module.MediaStat{},
+		&media_stats_module.MediaViewDay{},
 		&noti.Notification{},
 
 		&achievementsmodule.Achievement{},
@@ -504,6 +505,13 @@ func runSQLMigrations(db *gorm.DB, cfg *config.Config) error {
 
 	if err := runSchemaMigrationTx(db, "20261112_users_erasure_due_at", cfg.DB.MigrationLockTimeoutMs, cfg.DB.MigrationStatementTimeoutMs, func(tx *gorm.DB) error {
 		return tx.Exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS erasure_due_at timestamptz").Error
+	}); err != nil {
+		return err
+	}
+
+	// Realign monthly rounds written before the period rule (period = month the window opens) was enforced.
+	if err := runSchemaMigrationTx(db, "20261115_event_period_start_month", cfg.DB.MigrationLockTimeoutMs, cfg.DB.MigrationStatementTimeoutMs, func(tx *gorm.DB) error {
+		return migrate.BackfillEventPeriodsToStartMonth(tx, config.AppTimeZone)
 	}); err != nil {
 		return err
 	}

@@ -133,9 +133,15 @@ func (s *Service) ListPublic(ctx context.Context, state EventState, page, limit 
 	if err := q.Order(stateOrder(state)).Limit(limit).Offset((page - 1) * limit).Find(&rows).Error; err != nil {
 		return nil, Pagination{}, err
 	}
+	covers, err := s.coverBackdrops(ctx, rows)
+	if err != nil {
+		return nil, Pagination{}, err
+	}
 	out := make([]EventResponse, 0, len(rows))
 	for i := range rows {
-		out = append(out, s.toResponse(ctx, &rows[i], now))
+		resp := s.toResponse(ctx, &rows[i], now)
+		resp.CoverBackdropPath = optional(covers[rows[i].ID])
+		out = append(out, resp)
 	}
 	return out, newPagination(page, limit, total), nil
 }
@@ -162,6 +168,11 @@ func (s *Service) GetPublic(ctx context.Context, id uint, viewerID uint) (EventR
 	}
 
 	resp := s.toResponse(ctx, &ev, now)
+	covers, err := s.coverBackdrops(ctx, []Event{ev})
+	if err != nil {
+		return EventResponse{}, err
+	}
+	resp.CoverBackdropPath = optional(covers[ev.ID])
 	if !ev.Type.IsVoting() {
 		return resp, nil
 	}
@@ -230,9 +241,15 @@ func (s *Service) Popup(ctx context.Context) ([]EventResponse, error) {
 	if err != nil {
 		return nil, err
 	}
+	covers, err := s.coverBackdrops(ctx, rows)
+	if err != nil {
+		return nil, err
+	}
 	out := make([]EventResponse, 0, len(rows))
 	for i := range rows {
-		out = append(out, s.toResponse(ctx, &rows[i], now))
+		resp := s.toResponse(ctx, &rows[i], now)
+		resp.CoverBackdropPath = optional(covers[rows[i].ID])
+		out = append(out, resp)
 	}
 	return out, nil
 }
@@ -509,6 +526,37 @@ func (s *Service) toResponse(ctx context.Context, ev *Event, now time.Time) Even
 		State:         ev.StateAt(now),
 		IsFinalized:   ev.IsFinalized,
 	}
+}
+
+// coverBackdrops returns, for each voting round in rows without a banner, the backdrop of its first
+// nominee (by position) that has one. Rounds with a banner or no backdrop are absent. One query.
+func (s *Service) coverBackdrops(ctx context.Context, rows []Event) (map[uint]string, error) {
+	ids := make([]uint, 0, len(rows))
+	for i := range rows {
+		if rows[i].Type.IsVoting() && rows[i].ImageKey == "" {
+			ids = append(ids, rows[i].ID)
+		}
+	}
+	out := make(map[uint]string, len(ids))
+	if len(ids) == 0 {
+		return out, nil
+	}
+	var covers []struct {
+		EventID      uint
+		BackdropPath string
+	}
+	err := s.db.WithContext(ctx).Model(&EventNominee{}).
+		Select("DISTINCT ON (event_id) event_id, backdrop_path").
+		Where("event_id IN ? AND backdrop_path <> ''", ids).
+		Order("event_id, position, id").
+		Scan(&covers).Error
+	if err != nil {
+		return nil, err
+	}
+	for _, c := range covers {
+		out[c.EventID] = c.BackdropPath
+	}
+	return out, nil
 }
 
 func (s *Service) toAdminResponse(ctx context.Context, ev *Event, nominees []EventNominee, now time.Time) AdminEventResponse {

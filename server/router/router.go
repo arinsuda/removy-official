@@ -82,7 +82,7 @@ func Register(ctx context.Context, app *fiber.App, db *gorm.DB, cfg *config.Conf
 	ratingRepo := review_module.NewRatingStatsReader(db)
 	extRatings := external_rating_module.NewService(
 		external_rating_module.NewGormStore(db), cfg.OMDb.APIKey, movie_module.SeriesIMDbResolver)
-	movieHandler := movie_module.New(ratingRepo, extRatings)
+	movieHandler := movie_module.New(ratingRepo, extRatings, event_module.NewAwardReader(db))
 	reviewHandler := review_module.New(db, mc, statsSvc, achieveModule.Service, notifSvc, feedModule.Service, policy)
 	statsHandler := media_stats_module.New(db)
 	userSvc, userHandler := user_module.New(db, mc, statsSvc, authSvc, passwordResetMailer, policy, cfg.Brevo)
@@ -136,6 +136,9 @@ func Register(ctx context.Context, app *fiber.App, db *gorm.DB, cfg *config.Conf
 
 	// Background purge of accounts whose erasure grace period is over; stops with ctx.
 	go account_erasure.NewPurger(db, mc).Run(ctx)
+	go media_stats_module.NewViewPurger(db).Run(ctx)
+	// Settles ended voting rounds that no one opened; each round locks its own row.
+	go event_module.NewFinalizer(db).Run(ctx)
 
 	return notifHub
 }

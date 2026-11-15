@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/arinsuda/movie-hub/config"
 )
 
 func validTestInput() EventInput {
@@ -328,12 +330,13 @@ func TestCheckPublishable(t *testing.T) {
 }
 
 func TestMonthlyWindow(t *testing.T) {
+	// Round P runs from 15 P 00:00 to 15 P+1 00:00 Asia/Bangkok (14 P 17:00 UTC to 14 P+1 17:00 UTC).
 	starts, ends, err := MonthlyWindow("2026-11")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	wantStarts := time.Date(2026, 10, votingCutoffDay, 0, 0, 0, 0, votingLocation).UTC()
-	wantEnds := time.Date(2026, 11, votingCutoffDay, 0, 0, 0, 0, votingLocation).UTC()
+	wantStarts := time.Date(2026, 11, 14, 17, 0, 0, 0, time.UTC)
+	wantEnds := time.Date(2026, 12, 14, 17, 0, 0, 0, time.UTC)
 	if !starts.Equal(wantStarts) {
 		t.Errorf("expected starts %v, got: %v", wantStarts, starts)
 	}
@@ -341,36 +344,34 @@ func TestMonthlyWindow(t *testing.T) {
 		t.Errorf("expected ends %v, got: %v", wantEnds, ends)
 	}
 
-	// January boundary (month roll back to previous year December)
-	startsJan, endsJan, err := MonthlyWindow("2026-01")
+	// Year boundary: the round of December runs into January.
+	startsDec, endsDec, err := MonthlyWindow("2026-12")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	wantStartsJan := time.Date(2025, 12, votingCutoffDay, 0, 0, 0, 0, votingLocation).UTC()
-	wantEndsJan := time.Date(2026, 1, votingCutoffDay, 0, 0, 0, 0, votingLocation).UTC()
-	if !startsJan.Equal(wantStartsJan) {
-		t.Errorf("expected starts %v, got: %v", wantStartsJan, startsJan)
+	if want := time.Date(2026, 12, 14, 17, 0, 0, 0, time.UTC); !startsDec.Equal(want) {
+		t.Errorf("expected starts %v, got: %v", want, startsDec)
 	}
-	if !endsJan.Equal(wantEndsJan) {
-		t.Errorf("expected ends %v, got: %v", wantEndsJan, endsJan)
+	if want := time.Date(2027, 1, 14, 17, 0, 0, 0, time.UTC); !endsDec.Equal(want) {
+		t.Errorf("expected ends %v, got: %v", want, endsDec)
 	}
 }
 
 func TestCurrentMonthlyPeriod(t *testing.T) {
-	// Before the 15th in Bangkok -> current calendar month
-	before := time.Date(2026, 5, 14, 23, 59, 0, 0, votingLocation)
-	if got := CurrentMonthlyPeriod(before); got != "2026-05" {
-		t.Errorf("expected 2026-05 before cutoff, got %s", got)
+	// 14 May in Bangkok is still inside the round that opened on 15 April.
+	beforeCutoff := time.Date(2026, 5, 14, 23, 59, 0, 0, config.AppLocation)
+	if got := CurrentMonthlyPeriod(beforeCutoff); got != "2026-04" {
+		t.Errorf("expected 2026-04 on 14 May, got %s", got)
 	}
-	// On/after the 15th in Bangkok -> next calendar month
-	after := time.Date(2026, 5, 15, 0, 0, 0, 0, votingLocation)
-	if got := CurrentMonthlyPeriod(after); got != "2026-06" {
-		t.Errorf("expected 2026-06 on/after cutoff, got %s", got)
+	// 15 May in Bangkok opens the 2026-05 round.
+	onCutoff := time.Date(2026, 5, 15, 0, 0, 0, 0, config.AppLocation)
+	if got := CurrentMonthlyPeriod(onCutoff); got != "2026-05" {
+		t.Errorf("expected 2026-05 on 15 May, got %s", got)
 	}
-	// December after the 15th rolls over to January of next year
-	decAfter := time.Date(2026, 12, 20, 12, 0, 0, 0, votingLocation)
-	if got := CurrentMonthlyPeriod(decAfter); got != "2027-01" {
-		t.Errorf("expected 2027-01 in late December, got %s", got)
+	// 10 January 2027 is still inside the December 2026 round.
+	january := time.Date(2027, 1, 10, 12, 0, 0, 0, config.AppLocation)
+	if got := CurrentMonthlyPeriod(january); got != "2026-12" {
+		t.Errorf("expected 2026-12 on 10 January 2027, got %s", got)
 	}
 }
 
@@ -481,12 +482,13 @@ func TestNextMonthlyPeriod(t *testing.T) {
 		at   time.Time
 		want string
 	}{
-		{"bangkok day 14 late evening opens next month", time.Date(2026, 5, 14, 23, 59, 0, 0, votingLocation), "2026-06"},
-		{"bangkok day 15 midnight skips a month", time.Date(2026, 5, 15, 0, 0, 0, 0, votingLocation), "2026-07"},
-		{"utc 16:59 on day 14 is bangkok 23:59 on day 14", time.Date(2026, 5, 14, 16, 59, 59, 0, time.UTC), "2026-06"},
-		{"utc 17:00 on day 14 is bangkok 00:00 on day 15", time.Date(2026, 5, 14, 17, 0, 0, 0, time.UTC), "2026-07"},
-		{"december before cutoff rolls to january", time.Date(2026, 12, 14, 12, 0, 0, 0, votingLocation), "2027-01"},
-		{"december after cutoff rolls to february", time.Date(2026, 12, 20, 12, 0, 0, 0, votingLocation), "2027-02"},
+		{"bangkok day 14 late evening: next round is the one opening on the 15th", time.Date(2026, 5, 14, 23, 59, 0, 0, config.AppLocation), "2026-05"},
+		{"bangkok day 15 midnight: the round opened, next is the following month", time.Date(2026, 5, 15, 0, 0, 0, 0, config.AppLocation), "2026-06"},
+		{"utc 16:59 on day 14 is bangkok 23:59 on day 14", time.Date(2026, 5, 14, 16, 59, 59, 0, time.UTC), "2026-05"},
+		{"utc 17:00 on day 14 is bangkok 00:00 on day 15", time.Date(2026, 5, 14, 17, 0, 0, 0, time.UTC), "2026-06"},
+		{"15 November 2026 opens round 2026-11, next is 2026-12", time.Date(2026, 11, 15, 0, 0, 0, 0, config.AppLocation), "2026-12"},
+		{"december before cutoff: current round is November", time.Date(2026, 12, 14, 12, 0, 0, 0, config.AppLocation), "2026-12"},
+		{"december after cutoff rolls to january", time.Date(2026, 12, 20, 12, 0, 0, 0, config.AppLocation), "2027-01"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

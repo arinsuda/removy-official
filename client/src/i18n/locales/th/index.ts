@@ -24,6 +24,7 @@ import visibility from "./visibility.json";
 import browse from "./browse.json";
 import upcoming from "./upcoming.json";
 import events from "./events.json";
+import awards from "./awards.json";
 
 export default {
   common,
@@ -52,4 +53,5 @@ export default {
   browse,
   upcoming,
   events,
+  awards,
 };

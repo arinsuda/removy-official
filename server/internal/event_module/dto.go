@@ -26,23 +26,25 @@ type NomineeResponse struct {
 
 // EventResponse is the public shape. Admin-only fields are in AdminEventResponse.
 type EventResponse struct {
-	ID              uint              `json:"id"`
-	Type            EventType         `json:"type"`
-	MediaType       *string           `json:"media_type"`
-	Period          *string           `json:"period"`
-	Title           LocalizedText     `json:"title"`
-	Body            LocalizedText     `json:"body"`
-	ImageURL        *string           `json:"image_url"`
-	LinkURL         *string           `json:"link_url"`
-	StartsAt        time.Time         `json:"starts_at"`
-	EndsAt          time.Time         `json:"ends_at"`
-	ShowPopup       bool              `json:"show_popup"`
-	PopupPriority   int               `json:"popup_priority"`
-	State           EventState        `json:"state"`
-	Nominees        []NomineeResponse `json:"nominees,omitempty"`
-	MyVoteNomineeID *uint             `json:"my_vote_nominee_id,omitempty"`
-	TotalVotes      *int              `json:"total_votes,omitempty"`
-	IsFinalized     bool              `json:"is_finalized"`
+	ID        uint          `json:"id"`
+	Type      EventType     `json:"type"`
+	MediaType *string       `json:"media_type"`
+	Period    *string       `json:"period"`
+	Title     LocalizedText `json:"title"`
+	Body      LocalizedText `json:"body"`
+	ImageURL  *string       `json:"image_url"`
+	LinkURL   *string       `json:"link_url"`
+	// CoverBackdropPath is the first nominee backdrop of a voting round without a banner (TMDB path).
+	CoverBackdropPath *string           `json:"cover_backdrop_path"`
+	StartsAt          time.Time         `json:"starts_at"`
+	EndsAt            time.Time         `json:"ends_at"`
+	ShowPopup         bool              `json:"show_popup"`
+	PopupPriority     int               `json:"popup_priority"`
+	State             EventState        `json:"state"`
+	Nominees          []NomineeResponse `json:"nominees,omitempty"`
+	MyVoteNomineeID   *uint             `json:"my_vote_nominee_id,omitempty"`
+	TotalVotes        *int              `json:"total_votes,omitempty"`
+	IsFinalized       bool              `json:"is_finalized"`
 }
 
 type AdminEventResponse struct {
@@ -50,6 +52,19 @@ type AdminEventResponse struct {
 	Status    EventStatus `json:"status"`
 	CreatedAt time.Time   `json:"created_at"`
 	UpdatedAt time.Time   `json:"updated_at"`
+}
+
+// AwardResponse is one winner in GET /events/awards.
+type AwardResponse struct {
+	EventID      uint    `json:"event_id"`
+	Kind         string  `json:"kind"`
+	Period       string  `json:"period"`
+	MediaID      int     `json:"media_id"`
+	MediaType    string  `json:"media_type"`
+	MediaTitle   string  `json:"media_title"`
+	PosterPath   *string `json:"poster_path"`
+	BackdropPath *string `json:"backdrop_path"`
+	Votes        int     `json:"votes"`
 }
 
 type Pagination struct {

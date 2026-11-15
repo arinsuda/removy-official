@@ -1,0 +1,26 @@
+{
+  "title": "POPCORN Awards",
+  "subtitle": "Winners of the monthly and yearly popular votes on POPCORN.",
+  "filters": {
+    "label": "Filter awards",
+    "movie": "Movies",
+    "tv": "TV Series",
+    "year": "Year"
+  },
+  "group": {
+    "monthly": "Monthly winners · {period}",
+    "yearly": "Yearly winners · {period}"
+  },
+  "card": {
+    "coWinner": "Co-Winner",
+    "votes": "{count} vote | {count} votes"
+  },
+  "badge": {
+    "label": "POPCORN award, {period}"
+  },
+  "empty": {
+    "title": "No awards yet",
+    "description": "Winners appear here once a popular vote is finalized."
+  },
+  "loadErrorDesc": "Something went wrong while loading awards. Please try again."
+}
