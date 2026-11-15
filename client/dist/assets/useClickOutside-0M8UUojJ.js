@@ -1,1 +1,0 @@
-import{D as e,k as t}from"./runtime-core.esm-bundler-Ba9tTF4t.js";function n(n,r){function i(e){n.value&&!n.value.contains(e.target)&&r()}t(()=>document.addEventListener(`click`,i,!0)),e(()=>document.removeEventListener(`click`,i,!0))}export{n as t};

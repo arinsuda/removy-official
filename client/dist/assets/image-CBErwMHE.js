@@ -1,0 +1,1 @@
+function e(e,t=`w342`){return e?`https://image.tmdb.org/t/p/${t}${e}`:null}export{e as t};

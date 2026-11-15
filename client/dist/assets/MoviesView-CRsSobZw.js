@@ -1,0 +1,1 @@
+import{B as e,bt as t,g as n,w as r}from"./vue-router-a1vSNuEM.js";import{t as i}from"./BrowsePage-BfpmV3y1.js";import{r as a}from"./browseConfig-BPy_psjw.js";var o=r({__name:`MoviesView`,setup(r){return(r,o)=>(e(),n(i,{config:t(a)},null,8,[`config`]))}});export{o as default};

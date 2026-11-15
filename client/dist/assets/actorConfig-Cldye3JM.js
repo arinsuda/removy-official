@@ -1,0 +1,1 @@
+var e=`https://image.tmdb.org/t/p/w500`,t=`https://www.imdb.com/name/`,n=[`acting`,`crew`],r=[`popular`,`newest`,`oldest`],i=[`all`,`movie`,`tv`],a=[`grid`,`timeline`],o=[`Acting`,`Directing`,`Writing`,`Production`,`Sound`,`Camera`,`Editing`,`Art`,`Crew`,`Costume & Make-Up`,`Visual Effects`,`Lighting`,`Creator`];export{a,r as i,i as n,t as o,n as r,o as s,e as t};

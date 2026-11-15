@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://removy-official.pages.dev/sitemap.xml

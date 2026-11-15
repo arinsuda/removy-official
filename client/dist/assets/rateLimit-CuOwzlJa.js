@@ -1,0 +1,1 @@
+function e(e){let t=e?.response;return t?.status===429||t?.data?.code===`RATE_LIMITED`}export{e as t};

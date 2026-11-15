@@ -1,0 +1,1 @@
+var e=e=>e.replace(/[.*+?^${}()|[\]\\]/g,`\\$&`);function t(t,n){let r=n.trim().split(/\s+/).filter(Boolean);if(!t||r.length===0)return[{text:t,match:!1}];let i=RegExp(`(${r.map(e).join(`|`)})`,`gi`);return t.split(i).map((e,t)=>({text:e,match:t%2==1})).filter(e=>e.text!==``)}export{t};

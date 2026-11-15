@@ -1,0 +1,1 @@
+import{F as e,L as t}from"./vue-router-a1vSNuEM.js";function n(n,r){function i(e){n.value&&!n.value.contains(e.target)&&r()}t(()=>document.addEventListener(`click`,i,!0)),e(()=>document.removeEventListener(`click`,i,!0))}export{n as t};

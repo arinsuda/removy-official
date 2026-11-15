@@ -1,0 +1,1 @@
+import{B as e,U as t,v as n}from"./vue-router-a1vSNuEM.js";import{h as r}from"./index-Ctco1byi.js";var i={},a=[`aria-label`];function o(r,i){return e(),n(`div`,{role:`status`,"aria-busy":`true`,"aria-label":r.$t(`common.loading`)},[t(r.$slots,`default`)],8,a)}var s=r(i,[[`render`,o]]);export{s as t};
