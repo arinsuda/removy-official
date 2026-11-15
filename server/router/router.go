@@ -139,6 +139,8 @@ func Register(ctx context.Context, app *fiber.App, db *gorm.DB, cfg *config.Conf
 	go media_stats_module.NewViewPurger(db).Run(ctx)
 	// Settles ended voting rounds that no one opened; each round locks its own row.
 	go event_module.NewFinalizer(db).Run(ctx)
+	// Creates the next monthly and yearly rounds as drafts and publishes the auto-generated ones.
+	go event_module.NewRoundScheduler(db).Run(ctx)
 
 	return notifHub
 }

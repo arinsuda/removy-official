@@ -7,7 +7,7 @@
       <div class="admin-header-actions">
         <AppButton variant="outline" size="sm" @click="openGenerateModal">
           <Sparkles :size="16" aria-hidden="true" />
-          {{ t("admin.events.generateMonthly") }}
+          {{ t("admin.events.generateRound") }}
         </AppButton>
         <AppButton variant="primary" size="sm" @click="openCreateModal">
           <Plus :size="16" aria-hidden="true" />
@@ -23,6 +23,7 @@
         :options="statusOptions"
       />
     </AdminFilters>
+    <p v-if="hasAutoDrafts" class="auto-hint">{{ t("admin.events.autoHint") }}</p>
 
     <AdminTable
       :columns="columns"
@@ -58,6 +59,9 @@
                 <span v-if="ev.type !== 'announcement'" class="event-type-tag">
                   {{ t(`admin.events.types.${ev.type}`) }}
                 </span>
+                <AdminBadge v-if="ev.auto_generated" tone="info" :title="t('admin.events.autoHint')">
+                  {{ t("admin.events.autoChip") }}
+                </AdminBadge>
               </span>
               <span v-if="locale === 'th' ? ev.title.en : ev.title.th" class="event-title-sub">
                 {{ locale === "th" ? ev.title.en : ev.title.th }}
@@ -270,6 +274,9 @@ const statusOptions = computed(() => [
   { value: "published", label: t("admin.events.status.published") },
   { value: "cancelled", label: t("admin.events.status.cancelled") },
 ])
+
+/** Auto drafts publish on their own, so the page explains that while any are listed. */
+const hasAutoDrafts = computed(() => events.value.some((ev) => ev.auto_generated && ev.status === "draft"))
 
 function statusBadgeTone(status: EventStatus): "neutral" | "success" | "danger" {
   switch (status) {
@@ -651,6 +658,11 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.auto-hint {
+  font-size: var(--text-caption);
+  color: var(--color-text-muted);
 }
 
 .event-type-tag {

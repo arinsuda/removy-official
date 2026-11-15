@@ -6,8 +6,8 @@ import { useRealI18n } from "./helpers/realI18n"
 const i18n = useRealI18n()
 const wrappers: VueWrapper[] = []
 
-function badge(period: string, kind: "monthly" | "yearly" = "monthly") {
-  const w = mount(AwardBadge, { props: { award: { kind, period } }, global: { plugins: [i18n] } })
+function badge(period: string, kind: "monthly" | "yearly" = "monthly", size: "sm" | "md" = "md") {
+  const w = mount(AwardBadge, { props: { award: { kind, period }, size }, global: { plugins: [i18n] } })
   wrappers.push(w)
   return w
 }
@@ -28,10 +28,15 @@ describe("AwardBadge", () => {
     expect(w.attributes("title")).toBe("POPCORN award, November 2026")
   })
 
-  it("shows only the year for a yearly award", () => {
+  it("shows only the year for a yearly award, with a yearly label", () => {
     const w = badge("2026", "yearly")
     expect(w.text()).toContain("2026")
-    expect(w.attributes("aria-label")).toBe("POPCORN award, 2026")
+    expect(w.attributes("aria-label")).toBe("POPCORN yearly award, 2026")
+  })
+
+  it("renders the compact variant for poster corners", () => {
+    expect(badge("2026-11", "monthly", "sm").classes()).toContain("award-badge--sm")
+    expect(badge("2026-11").classes()).toContain("award-badge--md")
   })
 
   it("labels the badge in Thai when the locale is th", () => {

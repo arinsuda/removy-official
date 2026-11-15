@@ -53,15 +53,16 @@ const (
 	ErrorCodeEmailSame    ErrorCode = "EMAIL_SAME"
 	ErrorCodeEmailInUse   ErrorCode = "EMAIL_IN_USE"
 	// Event and voting error codes
-	ErrorCodeVotingClosed      ErrorCode = "VOTING_CLOSED"
-	ErrorCodeVotingNotStarted  ErrorCode = "VOTING_NOT_STARTED"
-	ErrorCodeVotingNotEnded    ErrorCode = "VOTING_NOT_ENDED"
-	ErrorCodeVotingLocked      ErrorCode = "VOTING_LOCKED"
-	ErrorCodeInvalidEventType  ErrorCode = "INVALID_EVENT_TYPE"
-	ErrorCodeNomineeNotFound   ErrorCode = "NOMINEE_NOT_FOUND"
-	ErrorCodeNotEnoughNominees ErrorCode = "NOT_ENOUGH_NOMINEES"
-	ErrorCodeEventExists       ErrorCode = "EVENT_ALREADY_EXISTS"
-	ErrorCodeEventNotPublished ErrorCode = "EVENT_NOT_PUBLISHED"
+	ErrorCodeVotingClosed         ErrorCode = "VOTING_CLOSED"
+	ErrorCodeVotingNotStarted     ErrorCode = "VOTING_NOT_STARTED"
+	ErrorCodeVotingNotEnded       ErrorCode = "VOTING_NOT_ENDED"
+	ErrorCodeVotingLocked         ErrorCode = "VOTING_LOCKED"
+	ErrorCodeInvalidEventType     ErrorCode = "INVALID_EVENT_TYPE"
+	ErrorCodeNomineeNotFound      ErrorCode = "NOMINEE_NOT_FOUND"
+	ErrorCodeNotEnoughNominees    ErrorCode = "NOT_ENOUGH_NOMINEES"
+	ErrorCodeEventExists          ErrorCode = "EVENT_ALREADY_EXISTS"
+	ErrorCodeEventNotPublished    ErrorCode = "EVENT_NOT_PUBLISHED"
+	ErrorCodeMonthlyRoundsPending ErrorCode = "MONTHLY_ROUNDS_PENDING"
 )
 
 type APIError struct {

@@ -72,9 +72,9 @@ func (in *EventInput) normalize() error {
 	in.BodyTH = strings.TrimSpace(in.BodyTH)
 	in.LinkURL = strings.TrimSpace(in.LinkURL)
 
-	// Generated monthly rounds may be saved without copy (the copy is filled in at display time);
-	// every other kind, including yearly rounds, needs titles.
-	requireTitles := in.Type != TypeVoteMonthly
+	// Generated voting rounds may be saved without copy (the copy is filled in at display time);
+	// announcements need titles.
+	requireTitles := !in.Type.IsVoting()
 	if (requireTitles && in.TitleEN == "") || utf8.RuneCountInString(in.TitleEN) > maxTitleRunes {
 		return invalid("title_en")
 	}

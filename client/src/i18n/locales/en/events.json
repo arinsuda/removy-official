@@ -73,12 +73,20 @@
       "vote_monthly": {
         "movie": "Popular Movie of the Month - {month}",
         "tv": "Popular TV Series of the Month - {month}"
+      },
+      "vote_yearly": {
+        "movie": "Popular Movie of the Year - {year}",
+        "tv": "Popular TV Series of the Year - {year}"
       }
     },
     "body": {
       "vote_monthly": {
         "movie": "Vote for your favorite movie in the {month} round! Voting closes {closes} {tz}.",
         "tv": "Vote for your favorite series in the {month} round! Voting closes {closes} {tz}."
+      },
+      "vote_yearly": {
+        "movie": "Vote for the most popular movie of {year}! Voting closes {closes} {tz}.",
+        "tv": "Vote for the most popular series of {year}! Voting closes {closes} {tz}."
       }
     },
     "timezone": "(Thailand time)"

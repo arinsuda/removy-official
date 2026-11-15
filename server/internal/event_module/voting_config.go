@@ -39,6 +39,24 @@ const (
 	// generatedPopupPriority places auto-generated rounds above routine announcements.
 	generatedPopupPriority = 10
 
+	// Yearly round Y (the year awarded) opens 16 January of Y+1 and closes 15 February of Y+1 at
+	// 00:00 in config.AppTimeZone, after December's monthly round (closes 15 January) has settled.
+	yearlyStartMonth = time.January
+	yearlyStartDay   = 16
+	yearlyEndMonth   = time.February
+	yearlyEndDay     = 15
+
+	// autoGenerateLead is how long before a round opens the scheduler creates its draft.
+	autoGenerateLead = 72 * time.Hour
+	// autoRoundInterval is how often the scheduler looks for rounds to create and publish.
+	autoRoundInterval = 5 * time.Minute
+	// autoPublishLead is how long before a round opens the scheduler publishes its auto draft.
+	autoPublishLead = autoRoundInterval
+	// autoRoundLockPrefix namespaces the advisory lock that serializes auto round creation.
+	autoRoundLockPrefix = "event_auto_round"
+	// autoRoundBatch caps drafts published per tick.
+	autoRoundBatch = 50
+
 	monthlyPeriodLayout = "2006-01"
 	yearlyPeriodLayout  = "2006"
 

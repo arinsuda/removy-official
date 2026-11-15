@@ -16,7 +16,8 @@
     "votes": "{count} โหวต"
   },
   "badge": {
-    "label": "รางวัล POPCORN ประจำ {period}"
+    "label": "รางวัล POPCORN ประจำ {period}",
+    "labelYearly": "รางวัล POPCORN ประจำปี {period}"
   },
   "empty": {
     "title": "ยังไม่มีรางวัล",

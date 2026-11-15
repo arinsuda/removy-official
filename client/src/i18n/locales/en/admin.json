@@ -154,7 +154,9 @@
       "EVENT_UPDATED": "Event updated",
       "EVENT_DELETED": "Event deleted",
       "EVENT_FINALIZED": "Voting finalized",
-      "NOMINEES_UPDATED": "Nominees updated"
+      "NOMINEES_UPDATED": "Nominees updated",
+      "EVENT_AUTO_GENERATED": "Round generated automatically",
+      "EVENT_AUTO_PUBLISHED": "Round published automatically"
     }
   },
   "nav": {
@@ -241,8 +243,6 @@
     "subtitle": "Create and manage site-wide events, promotions, and announcements.",
     "newEvent": "New Event",
     "editEvent": "Edit Event",
-    "generateMonthly": "Generate Monthly Round",
-    "generateMonthlyModalTitle": "Generate Monthly Voting Round",
     "mediaType": "Media Type",
     "movie": "Movie",
     "tv": "TV Series",
@@ -350,8 +350,17 @@
       "notEnoughNominees": "Not enough candidate titles found to generate a full round.",
       "publishNeedsNominees": "A published round needs at least {min} nominees.",
       "invalidType": "That event type isn't valid.",
-      "periodInvalid": "Period must be a month in YYYY-MM format, for example 2026-11."
-    }
+      "periodInvalid": "Period must be a month in YYYY-MM format, for example 2026-11.",
+      "monthlyRoundsPending": "Finalize every monthly round of this year before generating the yearly round.",
+      "yearlyPeriodInvalid": "Year must have four digits, for example 2026."
+    },
+    "generateRoundModalTitle": "Generate Voting Round",
+    "yearlyPeriod": "Year (YYYY)",
+    "yearlyPeriodPlaceholder": "YYYY",
+    "yearlyNomineesHint": "Nominees are the monthly winners of this year. The round is created as a draft.",
+    "autoChip": "Auto",
+    "autoHint": "Auto-generated drafts publish on their own unless you cancel or delete them.",
+    "roundKind": "Round Type"
   },
   "errors": {
     "finalAdmin": "You can't demote, deactivate or delete the last active admin.",

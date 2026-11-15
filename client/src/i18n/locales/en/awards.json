@@ -16,7 +16,8 @@
     "votes": "{count} vote | {count} votes"
   },
   "badge": {
-    "label": "POPCORN award, {period}"
+    "label": "POPCORN award, {period}",
+    "labelYearly": "POPCORN yearly award, {period}"
   },
   "empty": {
     "title": "No awards yet",

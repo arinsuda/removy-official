@@ -53,4 +53,5 @@ func RegisterAdminRoutes(adminGroup fiber.Router, h *Handler) {
 	events.Put("/:id<int>/nominees", h.SetNominees)
 	events.Get("/suggest-nominees", h.SuggestNominees)
 	events.Post("/generate-monthly", h.GenerateMonthly)
+	events.Post("/generate-yearly", h.GenerateYearly)
 }

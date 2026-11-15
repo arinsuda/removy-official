@@ -65,6 +65,12 @@ export interface EventAward extends MediaAward {
   votes: number
 }
 
+/** Admin request to create the next voting round of one kind; yearly rounds take a YYYY period. */
+export interface GenerateRoundInput {
+  media_type: AwardMediaType
+  period?: string
+}
+
 export interface AwardsQuery {
   media_type: AwardMediaType
   year: number
@@ -78,6 +84,8 @@ export interface AwardsResponse {
 
 export interface AdminEvent extends AppEvent {
   status: EventStatus
+  /** Created by the scheduler; publishes on its own unless cancelled or deleted. */
+  auto_generated: boolean
   created_at: string
   updated_at: string
 }

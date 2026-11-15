@@ -8,9 +8,13 @@ import type {
   AwardsResponse,
   EventListQuery,
   EventListResponse,
+  GenerateRoundInput,
   NomineeInput,
   SuggestedNominee,
 } from "@/types/event"
+
+/** Admin path that creates the yearly voting round; the monthly path is written inline below. */
+const GENERATE_YEARLY_PATH = "/admin/events/generate-yearly"
 
 export const eventApi = {
   list: (params: EventListQuery) => api.get<EventListResponse>("/events", { params }),
@@ -60,4 +64,6 @@ export const adminEventApi = {
       media_type: mediaType,
       period,
     }),
+
+  generateYearlyRound: (body: GenerateRoundInput) => api.post<{ event: AdminEvent }>(GENERATE_YEARLY_PATH, body),
 }

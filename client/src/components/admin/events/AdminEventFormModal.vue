@@ -8,7 +8,7 @@
       <div class="form-row">
         <div class="form-field">
           <label class="form-label" for="event-title-en">
-            {{ t("admin.events.form.titleEn") }} *
+            {{ t("admin.events.form.titleEn") }}<template v-if="titlesRequired"> *</template>
           </label>
           <input
             id="event-title-en"
@@ -18,7 +18,7 @@
             :class="{ 'is-invalid': errors.title_en }"
             :placeholder="generatedTitlePlaceholder(editing, 'en') || t('admin.events.form.titleEnPlaceholder')"
             :maxlength="EVENT_TITLE_MAX"
-            required
+            :required="titlesRequired"
           />
           <span v-if="errors.title_en" class="form-error">
             {{ t(errors.title_en) }}
@@ -27,7 +27,7 @@
 
         <div class="form-field">
           <label class="form-label" for="event-title-th">
-            {{ t("admin.events.form.titleTh") }} *
+            {{ t("admin.events.form.titleTh") }}<template v-if="titlesRequired"> *</template>
           </label>
           <input
             id="event-title-th"
@@ -37,7 +37,7 @@
             :class="{ 'is-invalid': errors.title_th }"
             :placeholder="generatedTitlePlaceholder(editing, 'th') || t('admin.events.form.titleThPlaceholder')"
             :maxlength="EVENT_TITLE_MAX"
-            required
+            :required="titlesRequired"
           />
           <span v-if="errors.title_th" class="form-error">
             {{ t(errors.title_th) }}
@@ -201,6 +201,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue"
 import { useI18n } from "vue-i18n"
 import AppButton from "@/components/ui/AppButton.vue"
 import AppModal from "@/components/ui/AppModal.vue"
@@ -211,6 +212,7 @@ import {
   EVENT_TITLE_MAX,
   type EventFormErrors,
   generatedRoundTitle,
+  isGeneratedRoundType,
 } from "@/utils/events"
 import "./adminEventForm.css"
 
@@ -231,6 +233,9 @@ const startsInput = defineModel<string>("startsInput", { required: true })
 const endsInput = defineModel<string>("endsInput", { required: true })
 
 const { t } = useI18n()
+
+/** Generated voting rounds may leave both titles blank; every other event needs them. */
+const titlesRequired = computed(() => !isGeneratedRoundType(form.value.type))
 
 /** Placeholder for a blank title input on a monthly round: the copy the server would generate. */
 function generatedTitlePlaceholder(editing: AdminEvent | null, lang: "en" | "th"): string {

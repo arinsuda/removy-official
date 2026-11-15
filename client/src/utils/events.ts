@@ -19,6 +19,8 @@ export const EVENT_LINK_MAX = 500
 export const EVENT_LINK_FORBIDDEN_RE = /[\s\\]/
 /** Monthly round period (YYYY-MM), mirrors server monthlyPeriodRe. */
 export const MONTHLY_PERIOD_RE = /^\d{4}-(0[1-9]|1[0-2])$/
+/** Yearly round period (YYYY), mirrors server yearlyPeriodRe. */
+export const YEARLY_PERIOD_RE = /^\d{4}$/
 /** Fewest nominees a voting round may be saved or published with; mirrors server minNomineesToPublish. */
 export const EVENT_MIN_NOMINEES_TO_PUBLISH = 2
 export const EVENT_POPUP_PRIORITY_MIN = -100
@@ -36,6 +38,9 @@ export const EVENT_DEFAULT_DURATION_MS = 14 * DAY_MS
 export const VOTING_CUTOFF_DAY = 15
 export const VOTING_TIMEZONE = "Asia/Bangkok"
 const MONTHS_PER_YEAR = 12
+/** A yearly round for year Y opens on 16 January of Y+1 and closes on 15 February (Thailand time). */
+const YEARLY_WINDOW_START_MONTH = 1
+const YEARLY_WINDOW_START_DAY = 16
 const PAD_WIDTH = 2
 
 /** Shift a calendar month by `delta` months, crossing year boundaries. */
@@ -72,6 +77,17 @@ export function nextMonthlyPeriod(now: Date = new Date()): string {
   return `${next.year}-${String(next.month).padStart(PAD_WIDTH, "0")}`
 }
 
+/**
+ * Period (YYYY) of the yearly round to create next, in Thailand time. Until the 16th of January the
+ * round for the previous year is still to open; from that day on, the next round is this year's.
+ */
+export function nextYearlyPeriod(now: Date = new Date()): string {
+  const { year, month, day } = votingDateParts(now)
+  const windowStarted =
+    month > YEARLY_WINDOW_START_MONTH || (month === YEARLY_WINDOW_START_MONTH && day >= YEARLY_WINDOW_START_DAY)
+  return String(windowStarted ? year : year - 1)
+}
+
 /** Bangkok calendar year of `now`, the default awards year. It is the calendar year, not the monthly round in progress. */
 export function currentVotingYear(now: Date = new Date()): number {
   return votingDateParts(now).year
@@ -91,9 +107,13 @@ export type EventTranslate = (key: string, named: Record<string, string>, option
 /** Fields the round copy reads; AppEvent and AdminEvent satisfy it. */
 export type RoundCopySource = Pick<AppEvent, "type" | "media_type" | "period" | "ends_at" | "title" | "body">
 
-/** Only monthly rounds are generated; yearly rounds always use admin text. */
-const GENERATED_ROUND_TYPE: EventType = "vote_monthly"
+/** Voting rounds whose copy is generated from i18n when the admin leaves both languages blank. */
+const GENERATED_ROUND_TYPES: ReadonlySet<EventType> = new Set<EventType>(["vote_monthly", "vote_yearly"])
 type RoundField = "title" | "body"
+
+export function isGeneratedRoundType(type: EventType | null | undefined): boolean {
+  return !!type && GENERATED_ROUND_TYPES.has(type)
+}
 
 const isBlankText = (text: LocalizedText) => !text.en.trim() && !text.th.trim()
 
@@ -114,11 +134,6 @@ export function formatAwardPeriod(period: string, locale: string, style: "short"
   )
 }
 
-/** YYYY-MM period as a month name with year, e.g. "November 2026" or "พฤศจิกายน 2569". */
-function formatRoundMonth(period: string, locale: string): string {
-  return formatAwardPeriod(period, locale, "long")
-}
-
 function formatClosing(iso: string, locale: string): string {
   return new Intl.DateTimeFormat(locale, {
     dateStyle: "medium",
@@ -127,17 +142,21 @@ function formatClosing(iso: string, locale: string): string {
   }).format(new Date(iso))
 }
 
-/** Generated copy for a monthly round in `locale`, ignoring any admin text; null for other events. */
+/**
+ * Generated copy for a voting round in `locale`, ignoring any admin text; null for other events.
+ * Monthly copy names the month ({month}), yearly copy names the year ({year}).
+ */
 function roundCopy(ev: RoundCopySource, field: RoundField, t: EventTranslate, locale: string): string | null {
-  if (ev.type !== GENERATED_ROUND_TYPE || !ev.media_type || !ev.period) return null
+  if (!isGeneratedRoundType(ev.type) || !ev.media_type || !ev.period) return null
   const key = `events.generated.${field}.${ev.type}.${ev.media_type}`
-  const month = formatRoundMonth(ev.period, locale)
-  if (field === "title") return t(key, { month }, { locale })
+  const period = formatAwardPeriod(ev.period, locale, "long")
+  const named: Record<string, string> = ev.type === "vote_yearly" ? { year: period } : { month: period }
+  if (field === "title") return t(key, named, { locale })
   const tz = t("events.generated.timezone", {}, { locale })
-  return t(key, { month, closes: formatClosing(ev.ends_at, locale), tz }, { locale })
+  return t(key, { ...named, closes: formatClosing(ev.ends_at, locale), tz }, { locale })
 }
 
-/** Generated title for a monthly round in `locale`; also the admin form placeholder. */
+/** Generated title for a voting round in `locale`; also the admin form placeholder. */
 export function generatedRoundTitle(ev: RoundCopySource, t: EventTranslate, locale: string): string | null {
   return roundCopy(ev, "title", t, locale)
 }
@@ -226,6 +245,10 @@ export function isValidMonthlyPeriod(period: string): boolean {
   return MONTHLY_PERIOD_RE.test(period)
 }
 
+export function isValidYearlyPeriod(period: string): boolean {
+  return YEARLY_PERIOD_RE.test(period)
+}
+
 /** ISO string -> value for <input type="datetime-local"> in local time. */
 export function isoToLocalInput(iso: string | null | undefined): string {
   if (!iso) return ""
@@ -251,8 +274,8 @@ const runes = (s: string) => [...s].length
 /** Client-side mirror of the server validation; values are i18n keys. */
 export function validateEventForm(body: AdminEventBody): EventFormErrors {
   const errors: EventFormErrors = {}
-  // Generated monthly rounds may leave titles blank; the generated copy fills them in.
-  const titleRequired = body.type !== GENERATED_ROUND_TYPE
+  // Generated voting rounds may leave titles blank; the generated copy fills them in.
+  const titleRequired = !isGeneratedRoundType(body.type)
   for (const f of ["title_en", "title_th"] as const) {
     const v = body[f].trim()
     if (!v) {
@@ -280,6 +303,7 @@ export function eventErrorKey(err: unknown): string {
   if (res?.status === 413) return "admin.events.errors.imageTooLarge"
   if (code === "UNSUPPORTED_MEDIA_TYPE" || res?.status === 415) return "admin.events.errors.imageType"
   if (code === "EVENT_ALREADY_EXISTS") return "admin.events.errors.eventExists"
+  if (code === "MONTHLY_ROUNDS_PENDING") return "admin.events.errors.monthlyRoundsPending"
   if (code === "VOTING_LOCKED") return "admin.events.errors.votingLocked"
   if (code === "EVENT_NOT_PUBLISHED") return "admin.events.errors.notPublished"
   if (code === "VOTING_NOT_ENDED") return "admin.events.errors.votingNotEnded"

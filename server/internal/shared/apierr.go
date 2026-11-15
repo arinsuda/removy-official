@@ -64,6 +64,8 @@ const (
 	ErrorCodeNotEnoughNominees = apierr.ErrorCodeNotEnoughNominees
 	ErrorCodeEventExists       = apierr.ErrorCodeEventExists
 	ErrorCodeEventNotPublished = apierr.ErrorCodeEventNotPublished
+
+	ErrorCodeMonthlyRoundsPending = apierr.ErrorCodeMonthlyRoundsPending
 )
 
 func WriteAPIError(c fiber.Ctx, status int, code ErrorCode, message string) error {

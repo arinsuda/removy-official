@@ -28,6 +28,7 @@
         <span v-if="tmdb" class="tmdb-pill" :aria-label="t('media.rating.tmdbScore', { score: tmdb })">
           <span aria-hidden="true">TMDB {{ tmdb }}</span> <!-- hardcode-ok: brand name -->
         </span>
+        <AwardBadge v-if="award" class="award-slot" :award="award" size="sm" />
       </div>
       <div class="poster-info">
         <h3 class="poster-title">
@@ -105,10 +106,12 @@ import { computed, ref, useTemplateRef } from "vue"
 import { useI18n } from "vue-i18n"
 import { MoreHorizontal } from "lucide-vue-next"
 import AppModal from "@/components/ui/AppModal.vue"
+import AwardBadge from "@/components/events/AwardBadge.vue"
 import PopcornScoreBadge from "@/components/movie/PopcornScoreBadge.vue"
 import PopupCard from "@/components/movie/PopupCard.vue"
 import { popcornTier } from "@/components/movie/popcornTier"
 import { highlightParts } from "@/components/search/highlight"
+import { topAward } from "@/utils/awards"
 import { POPUP_EDGE, POPUP_WIDTH, useHomePopup } from "@/composables/useHomePopup"
 import { detailRoute, posterSrc, posterSrcset, type HomeMedia } from "./homeMedia"
 
@@ -151,6 +154,8 @@ const tmdb = computed(() => {
   const v = src ? (src.available ? src.average : 0) : props.item.vote_average
   return v && v > 0 ? v.toFixed(1) : null
 })
+/** One award per poster: the newest yearly win, else the newest monthly one. */
+const award = computed(() => topAward(props.item.awards))
 const tier = computed(() => {
   const p = props.item.ratings?.popcorn
   return popcornTier(p?.average, p?.count)
@@ -243,6 +248,11 @@ const tier = computed(() => {
   font-weight: 600;
   line-height: 1.4;
   white-space: nowrap;
+}
+.award-slot {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
 }
 .poster-fallback {
   display: flex;
