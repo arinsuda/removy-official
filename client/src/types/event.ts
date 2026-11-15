@@ -65,10 +65,21 @@ export interface EventAward extends MediaAward {
   votes: number
 }
 
-/** Admin request to create the next voting round of one kind; yearly rounds take a YYYY period. */
+export type RoundKind = "monthly" | "yearly"
+
+/**
+ * Admin request to create a voting round; yearly rounds take a YYYY period. `late_start` opens the
+ * current round now (only when its official window contains now and enough of it is left).
+ */
 export interface GenerateRoundInput {
   media_type: AwardMediaType
   period?: string
+  late_start?: boolean
+}
+
+/** Body of PATCH /admin/events/:id; turns the scheduler's automatic publishing on or off. */
+export interface AutoPublishInput {
+  auto_publish: boolean
 }
 
 export interface AwardsQuery {
@@ -86,6 +97,8 @@ export interface AdminEvent extends AppEvent {
   status: EventStatus
   /** Created by the scheduler; publishes on its own unless cancelled or deleted. */
   auto_generated: boolean
+  /** Scheduler publishes this voting draft when its window opens; off keeps it for manual review. */
+  auto_publish: boolean
   created_at: string
   updated_at: string
 }

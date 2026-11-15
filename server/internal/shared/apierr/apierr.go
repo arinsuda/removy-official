@@ -63,6 +63,8 @@ const (
 	ErrorCodeEventExists          ErrorCode = "EVENT_ALREADY_EXISTS"
 	ErrorCodeEventNotPublished    ErrorCode = "EVENT_NOT_PUBLISHED"
 	ErrorCodeMonthlyRoundsPending ErrorCode = "MONTHLY_ROUNDS_PENDING"
+	ErrorCodeEventNotDraft        ErrorCode = "EVENT_NOT_DRAFT"
+	ErrorCodeVotingWindowTooShort ErrorCode = "VOTING_WINDOW_TOO_SHORT"
 )
 
 type APIError struct {

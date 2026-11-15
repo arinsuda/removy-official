@@ -1,4 +1,4 @@
-import type { AdminEventBody, AppEvent, EventType, LocalizedText } from "@/types/event"
+import type { AdminEventBody, AppEvent, EventType, LocalizedText, RoundKind } from "@/types/event"
 import { getTmdbImageUrl, type TmdbImageSize } from "@/utils/image"
 
 /** localStorage key prefix for "don't show again today"; the user id is appended. */
@@ -31,7 +31,17 @@ export const NOMINEE_POSTER_SIZE: TmdbImageSize = "w342"
 export const EVENT_COVER_SIZE: TmdbImageSize = "w780"
 /** TMDB poster width for winner cards on the awards page and the award badges. */
 export const AWARD_POSTER_SIZE: TmdbImageSize = "w342"
-const DAY_MS = 24 * 60 * 60 * 1000
+const MINUTE_MS = 60 * 1000
+const HOUR_MS = 60 * MINUTE_MS
+const DAY_MS = 24 * HOUR_MS
+/** Late start opens this many minutes after now; mirrors server lateStartLead. */
+export const LATE_START_LEAD_MINUTES = 60
+/** A late start is offered only while the official window keeps this many hours; mirrors server lateStartMinWindow. */
+export const LATE_START_MIN_WINDOW_HOURS = 72
+export const LATE_START_LEAD_MS = LATE_START_LEAD_MINUTES * MINUTE_MS
+export const LATE_START_MIN_WINDOW_MS = LATE_START_MIN_WINDOW_HOURS * HOUR_MS
+/** Thailand has no daylight saving time, so Asia/Bangkok is a fixed UTC+7 offset. */
+const VOTING_UTC_OFFSET_MS = 7 * HOUR_MS
 /** Default window for a new event in the admin form: starts now, lasts two weeks. */
 export const EVENT_DEFAULT_DURATION_MS = 14 * DAY_MS
 /** Day of month (Thailand time) on which monthly voting rounds roll over to the next month. */
@@ -41,7 +51,26 @@ const MONTHS_PER_YEAR = 12
 /** A yearly round for year Y opens on 16 January of Y+1 and closes on 15 February (Thailand time). */
 const YEARLY_WINDOW_START_MONTH = 1
 const YEARLY_WINDOW_START_DAY = 16
+/** The yearly window closes at 00:00 on 15 February (exclusive), Thailand time. */
+const YEARLY_WINDOW_END_MONTH = 2
+const YEARLY_WINDOW_END_DAY = 15
 const PAD_WIDTH = 2
+
+/** Monthly period "YYYY-MM" for a calendar year and month. */
+function formatMonthPeriod(year: number, month: number): string {
+  return `${year}-${String(month).padStart(PAD_WIDTH, "0")}`
+}
+
+/** Instant of 00:00 on `day` of the given month in Thailand time. */
+function bangkokMidnight(year: number, month: number, day: number): Date {
+  return new Date(Date.UTC(year, month - 1, day) - VOTING_UTC_OFFSET_MS)
+}
+
+/** A voting round's period and the instant its official window closes. */
+interface CurrentRound {
+  period: string
+  endsAt: Date
+}
 
 /** Shift a calendar month by `delta` months, crossing year boundaries. */
 function shiftMonth(year: number, month: number, delta: number): { year: number; month: number } {
@@ -74,7 +103,7 @@ export function nextMonthlyPeriod(now: Date = new Date()): string {
   // From the cutoff on, the active round started this month, so the next one starts next month.
   const monthsAhead = day >= VOTING_CUTOFF_DAY ? 1 : 0
   const next = shiftMonth(year, month, monthsAhead)
-  return `${next.year}-${String(next.month).padStart(PAD_WIDTH, "0")}`
+  return formatMonthPeriod(next.year, next.month)
 }
 
 /**
@@ -86,6 +115,57 @@ export function nextYearlyPeriod(now: Date = new Date()): string {
   const windowStarted =
     month > YEARLY_WINDOW_START_MONTH || (month === YEARLY_WINDOW_START_MONTH && day >= YEARLY_WINDOW_START_DAY)
   return String(windowStarted ? year : year - 1)
+}
+
+/** Monthly round whose window contains `now`: round P is open from the 15th of P until the 15th of P+1. */
+function currentMonthlyRound(now: Date): CurrentRound {
+  const { year, month, day } = votingDateParts(now)
+  const start = shiftMonth(year, month, day >= VOTING_CUTOFF_DAY ? 0 : -1)
+  const end = shiftMonth(start.year, start.month, 1)
+  return {
+    period: formatMonthPeriod(start.year, start.month),
+    endsAt: bangkokMidnight(end.year, end.month, VOTING_CUTOFF_DAY),
+  }
+}
+
+/** Yearly round whose window (16 January to 15 February, Thailand time) contains `now`, or null. */
+function currentYearlyRound(now: Date): CurrentRound | null {
+  const { year, month, day } = votingDateParts(now)
+  const inWindow =
+    (month === YEARLY_WINDOW_START_MONTH && day >= YEARLY_WINDOW_START_DAY) ||
+    (month === YEARLY_WINDOW_END_MONTH && day < YEARLY_WINDOW_END_DAY)
+  if (!inWindow) return null
+  // The window opens in January of Y+1 for round Y, so the round is always the previous year's.
+  return {
+    period: String(year - 1),
+    endsAt: bangkokMidnight(year, YEARLY_WINDOW_END_MONTH, YEARLY_WINDOW_END_DAY),
+  }
+}
+
+/** Period (YYYY-MM) of the monthly round open at `now`; monthly windows are back to back, so always set. */
+export function currentMonthlyPeriod(now: Date = new Date()): string {
+  return currentMonthlyRound(now).period
+}
+
+/** Period (YYYY) of the yearly round open at `now`, or null outside its window. */
+export function currentYearlyPeriod(now: Date = new Date()): string | null {
+  return currentYearlyRound(now)?.period ?? null
+}
+
+/** Period of the round of `kind` whose official window contains `now`, or null when none is open. */
+export function currentRoundPeriod(kind: RoundKind, now: Date = new Date()): string | null {
+  return kind === "monthly" ? currentMonthlyPeriod(now) : currentYearlyPeriod(now)
+}
+
+/**
+ * True when the current round of `kind` can start late. A late start opens LATE_START_LEAD_MS from now
+ * and keeps the official end, so at least LATE_START_MIN_WINDOW_MS must remain. Mirrors server rules.
+ */
+export function canStartLate(kind: RoundKind, now: Date = new Date()): boolean {
+  const round = kind === "monthly" ? currentMonthlyRound(now) : currentYearlyRound(now)
+  if (!round) return false
+  const startsAt = Math.floor(now.getTime() / MINUTE_MS) * MINUTE_MS + LATE_START_LEAD_MS
+  return round.endsAt.getTime() - startsAt >= LATE_START_MIN_WINDOW_MS
 }
 
 /** Bangkok calendar year of `now`, the default awards year. It is the calendar year, not the monthly round in progress. */
@@ -310,6 +390,7 @@ export function eventErrorKey(err: unknown): string {
   if (code === "NOT_ENOUGH_NOMINEES") return "admin.events.errors.notEnoughNominees"
   if (code === "INVALID_INPUT") return "admin.events.errors.invalidInput"
   if (code === "INVALID_EVENT_TYPE") return "admin.events.errors.invalidType"
+  if (code === "VOTING_WINDOW_TOO_SHORT") return "admin.events.errors.votingWindowTooShort"
   if (code === "NOT_FOUND" || res?.status === 404) return "admin.events.errors.notFound"
   if (code === "INVALID_ID") return "admin.events.errors.notFound"
   if (res?.status === 401 || res?.status === 403) return "admin.errors.forbidden"
@@ -324,6 +405,14 @@ export function publishErrorKey(err: unknown): string {
   if ((err as ErrShape)?.response?.data?.code === "NOT_ENOUGH_NOMINEES") {
     return "admin.events.errors.publishNeedsNominees"
   }
+  return eventErrorKey(err)
+}
+
+/** Map a failed auto publish toggle to an i18n key; other failures fall back to the generic event mapping. */
+export function autoPublishErrorKey(err: unknown): string {
+  const code = (err as ErrShape)?.response?.data?.code
+  if (code === "EVENT_NOT_DRAFT") return "admin.events.errors.notDraft"
+  if (code === "VOTING_CLOSED") return "admin.events.errors.votingClosed"
   return eventErrorKey(err)
 }
 

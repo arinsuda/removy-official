@@ -156,7 +156,8 @@
       "EVENT_FINALIZED": "Voting finalized",
       "NOMINEES_UPDATED": "Nominees updated",
       "EVENT_AUTO_GENERATED": "Round generated automatically",
-      "EVENT_AUTO_PUBLISHED": "Round published automatically"
+      "EVENT_AUTO_PUBLISHED": "Round published automatically",
+      "EVENT_AUTO_PUBLISH_CHANGED": "Auto publish changed"
     }
   },
   "nav": {
@@ -352,15 +353,25 @@
       "invalidType": "That event type isn't valid.",
       "periodInvalid": "Period must be a month in YYYY-MM format, for example 2026-11.",
       "monthlyRoundsPending": "Finalize every monthly round of this year before generating the yearly round.",
-      "yearlyPeriodInvalid": "Year must have four digits, for example 2026."
+      "yearlyPeriodInvalid": "Year must have four digits, for example 2026.",
+      "votingWindowTooShort": "Too little of this round is left to start it late. Pick the next round instead.",
+      "notDraft": "Only a draft round can change auto publish.",
+      "votingClosed": "Voting has already closed, so this round can no longer be published automatically."
     },
     "generateRoundModalTitle": "Generate Voting Round",
     "yearlyPeriod": "Year (YYYY)",
     "yearlyPeriodPlaceholder": "YYYY",
     "yearlyNomineesHint": "Nominees are the monthly winners of this year. The round is created as a draft.",
     "autoChip": "Auto",
-    "autoHint": "Auto-generated drafts publish on their own unless you cancel or delete them.",
-    "roundKind": "Round Type"
+    "autoHint": "Auto-generated drafts publish on their own only while Auto publish is on. Turn it off to review a draft first.",
+    "roundKind": "Round Type",
+    "lateStartLabel": "Start the current round now",
+    "lateStartHint": "Opens {minutes} minutes from now and still closes on the official date. Offered only while at least {hours} hours of the window remain.",
+    "autoPublish": {
+      "label": "Auto publish",
+      "hint": "Publish this round on its own when its window opens",
+      "saved": "Auto publish setting saved."
+    }
   },
   "errors": {
     "finalAdmin": "You can't demote, deactivate or delete the last active admin.",

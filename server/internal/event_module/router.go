@@ -46,6 +46,7 @@ func RegisterAdminRoutes(adminGroup fiber.Router, h *Handler) {
 	events.Get("", h.ListAdmin)
 	events.Post("", h.Create)
 	events.Put("/:id<int>", h.Update)
+	events.Patch("/:id<int>", h.SetAutoPublish)
 	events.Delete("/:id<int>", h.Delete)
 	events.Post("/:id<int>/image", h.SetImage)
 	events.Delete("/:id<int>/image", h.RemoveImage)

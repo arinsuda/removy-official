@@ -44,6 +44,14 @@
         </span>
       </div>
 
+      <div v-if="lateAvailable" class="late-start">
+        <label class="generate-radio">
+          <input v-model="lateStart" type="checkbox" name="generate-late-start" />
+          <span>{{ t("admin.events.lateStartLabel") }}</span>
+        </label>
+        <p class="form-hint">{{ t("admin.events.lateStartHint", { minutes: LATE_START_LEAD_MINUTES, hours: LATE_START_MIN_WINDOW_HOURS }) }}</p>
+      </div>
+
       <template v-if="isMonthly">
         <div class="generate-preview-action">
           <AppButton
@@ -87,18 +95,21 @@ import AppButton from "@/components/ui/AppButton.vue"
 import AppModal from "@/components/ui/AppModal.vue"
 import { useToast } from "@/composables/useToast"
 import { adminEventApi } from "@/api/endpoints/event"
-import type { SuggestedNominee } from "@/types/event"
+import type { RoundKind, SuggestedNominee } from "@/types/event"
 import {
+  canStartLate,
+  currentRoundPeriod,
   eventErrorKey,
   isValidMonthlyPeriod,
   isValidYearlyPeriod,
+  LATE_START_LEAD_MINUTES,
+  LATE_START_MIN_WINDOW_HOURS,
   nextMonthlyPeriod,
   nextYearlyPeriod,
 } from "@/utils/events"
 import "./adminEventForm.css"
 
 type GenerateMediaType = "movie" | "tv"
-type RoundKind = "monthly" | "yearly"
 
 /** Round kinds offered in the modal; labels reuse the event type names. */
 const KIND_OPTIONS: { value: RoundKind; labelKey: string }[] = [
@@ -125,6 +136,9 @@ const periodInvalid = ref(false)
 const suggestions = ref<SuggestedNominee[]>([])
 const loadingSuggestions = ref(false)
 const generating = ref(false)
+/** Start the current round now instead of waiting for its window; only offered when enough of the window is left. */
+const lateStart = ref(false)
+const lateAvailable = ref(false)
 
 const isMonthly = computed(() => kind.value === "monthly")
 const periodLabelKey = computed(() => (isMonthly.value ? "admin.events.period" : "admin.events.yearlyPeriod"))
@@ -135,12 +149,21 @@ const periodErrorKey = computed(() =>
   isMonthly.value ? "admin.events.errors.periodInvalid" : "admin.events.errors.yearlyPeriodInvalid",
 )
 
-/** Resets the period to the next round of the current kind and clears the field and preview state. */
+/** Resets the period to the next round of the current kind and clears the field, late start and preview state. */
 function resetForKind() {
+  lateStart.value = false
+  lateAvailable.value = canStartLate(kind.value)
   period.value = DEFAULT_PERIOD[kind.value]()
   periodInvalid.value = false
   suggestions.value = []
 }
+
+// A late start targets the current round, so the period switches between the current and the next round.
+watch(lateStart, (on) => {
+  period.value = (on && currentRoundPeriod(kind.value)) || DEFAULT_PERIOD[kind.value]()
+  periodInvalid.value = false
+  suggestions.value = []
+})
 
 // Each opening starts from the next monthly round's defaults.
 watch(open, (isOpen) => {
@@ -187,10 +210,11 @@ async function loadSuggestions() {
 }
 
 async function requestRound() {
+  const body = { media_type: mediaType.value, period: period.value, late_start: lateStart.value }
   if (isMonthly.value) {
-    await adminEventApi.generateMonthly(mediaType.value, period.value)
+    await adminEventApi.generateMonthly(body)
   } else {
-    await adminEventApi.generateYearlyRound({ media_type: mediaType.value, period: period.value })
+    await adminEventApi.generateYearlyRound(body)
   }
 }
 

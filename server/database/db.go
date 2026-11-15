@@ -515,6 +515,16 @@ func runSQLMigrations(db *gorm.DB, cfg *config.Config) error {
 		return err
 	}
 
+	// auto_publish splits "worker created it" from "worker may publish it"; existing auto drafts keep publishing.
+	if err := runSchemaMigrationTx(db, "20261117_events_auto_publish", cfg.DB.MigrationLockTimeoutMs, cfg.DB.MigrationStatementTimeoutMs, func(tx *gorm.DB) error {
+		if err := tx.Exec("ALTER TABLE events ADD COLUMN IF NOT EXISTS auto_publish boolean NOT NULL DEFAULT false").Error; err != nil {
+			return err
+		}
+		return migrate.BackfillEventAutoPublish(tx)
+	}); err != nil {
+		return err
+	}
+
 	// Realign monthly rounds written before the period rule (period = month the window opens) was enforced.
 	if err := runSchemaMigrationTx(db, "20261115_event_period_start_month", cfg.DB.MigrationLockTimeoutMs, cfg.DB.MigrationStatementTimeoutMs, func(tx *gorm.DB) error {
 		return migrate.BackfillEventPeriodsToStartMonth(tx, config.AppTimeZone)

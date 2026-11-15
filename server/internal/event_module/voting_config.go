@@ -52,6 +52,10 @@ const (
 	autoRoundInterval = 5 * time.Minute
 	// autoPublishLead is how long before a round opens the scheduler publishes its auto draft.
 	autoPublishLead = autoRoundInterval
+	// lateStartLead is how far ahead of now a late-started round opens, so nominees stay editable
+	// until it opens. lateStartMinWindow is the shortest voting window a late start may leave.
+	lateStartLead      = time.Hour
+	lateStartMinWindow = 72 * time.Hour
 	// autoRoundLockPrefix namespaces the advisory lock that serializes auto round creation.
 	autoRoundLockPrefix = "event_auto_round"
 	// autoRoundBatch caps drafts published per tick.

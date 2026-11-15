@@ -90,7 +90,7 @@ const targetTypeFilter = ref("all")
 const loadError = ref(false)
 const isFiltered = computed(() => actionFilter.value !== "all" || targetTypeFilter.value !== "all")
 
-const ACTIONS = ["USER_DEACTIVATED", "USER_REACTIVATED", "USER_ROLE_CHANGED", "USER_DELETED", "USER_ERASED", "USER_ERASURE_REQUESTED", "USER_ERASED_SCHEDULED", "REVIEW_DELETED", "EVENT_CREATED", "EVENT_UPDATED", "EVENT_DELETED", "EVENT_FINALIZED", "NOMINEES_UPDATED", "EVENT_AUTO_GENERATED", "EVENT_AUTO_PUBLISHED"]
+const ACTIONS = ["USER_DEACTIVATED", "USER_REACTIVATED", "USER_ROLE_CHANGED", "USER_DELETED", "USER_ERASED", "USER_ERASURE_REQUESTED", "USER_ERASED_SCHEDULED", "REVIEW_DELETED", "EVENT_CREATED", "EVENT_UPDATED", "EVENT_DELETED", "EVENT_FINALIZED", "NOMINEES_UPDATED", "EVENT_AUTO_GENERATED", "EVENT_AUTO_PUBLISHED", "EVENT_AUTO_PUBLISH_CHANGED"]
 const actionOptions = computed(() => [
   { value: "all", label: t("admin.auditLogs.actionAll") },
   ...ACTIONS.map((a) => ({ value: a, label: t(`admin.auditLogs.action.${a}`) })),
@@ -118,6 +118,7 @@ const VISUALS: Record<string, { tone: "danger" | "warning" | "success" | "info";
   NOMINEES_UPDATED: { tone: "info", icon: ListChecks },
   EVENT_AUTO_GENERATED: { tone: "info", icon: Sparkles },
   EVENT_AUTO_PUBLISHED: { tone: "success", icon: CalendarCheck },
+  EVENT_AUTO_PUBLISH_CHANGED: { tone: "info", icon: CalendarCog },
 }
 // Actions written without an admin: the account owner asked, or the purge worker ran.
 const ACTOR_LABELS: Record<string, string> = {

@@ -39,6 +39,8 @@ const (
 	msgEventExists       = "voting round already exists for this period"
 	msgNotEnoughNominees = "not enough nominee candidates found"
 	msgMonthlyPending    = "monthly rounds of this year are not settled yet"
+	msgEventNotDraft     = "event must be a draft"
+	msgWindowTooShort    = "too little voting time is left for a late start"
 	msgInternal          = "internal server error"
 
 	defaultPageParam = "1"
@@ -236,7 +238,7 @@ func (h *Handler) GenerateMonthly(c fiber.Ctx) error {
 		body.Period = NextMonthlyPeriod(h.svc.now())
 	}
 
-	ev, err := h.svc.GenerateMonthlyVote(c.Context(), claims.UserID, body.MediaType, body.Period)
+	ev, err := h.svc.GenerateMonthlyVote(c.Context(), claims.UserID, body.MediaType, body.Period, body.LateStart)
 	if err != nil {
 		return handleError(c, err)
 	}
@@ -258,7 +260,7 @@ func (h *Handler) GenerateYearly(c fiber.Ctx) error {
 		body.Period = NextYearlyPeriod(h.svc.now())
 	}
 
-	ev, err := h.svc.GenerateYearlyVote(c.Context(), claims.UserID, body.MediaType, body.Period)
+	ev, err := h.svc.GenerateYearlyVote(c.Context(), claims.UserID, body.MediaType, body.Period, body.LateStart)
 	if err != nil {
 		return handleError(c, err)
 	}
@@ -332,6 +334,30 @@ func (h *Handler) Update(c fiber.Ctx) error {
 	}
 
 	ev, err := h.svc.Update(c.Context(), claims.UserID, id, in)
+	if err != nil {
+		return handleError(c, err)
+	}
+	return c.JSON(fiber.Map{"event": ev})
+}
+
+// SetAutoPublish toggles whether the worker may publish a draft voting round.
+func (h *Handler) SetAutoPublish(c fiber.Ctx) error {
+	claims := mw.GetClaims(c)
+	if claims == nil || claims.UserID == 0 {
+		return shared.WriteAPIError(c, fiber.StatusUnauthorized, shared.ErrorCodeUnauthorized, msgUnauthorized)
+	}
+
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return badID(c, msgInvalidEventID)
+	}
+
+	var in AutoPublishInput
+	if err := c.Bind().JSON(&in); err != nil || in.AutoPublish == nil {
+		return badRequest(c, msgInvalidBody)
+	}
+
+	ev, err := h.svc.SetAutoPublish(c.Context(), claims.UserID, id, *in.AutoPublish)
 	if err != nil {
 		return handleError(c, err)
 	}
@@ -455,6 +481,10 @@ func handleError(c fiber.Ctx, err error) error {
 		return shared.WriteAPIError(c, fiber.StatusConflict, shared.ErrorCodeEventNotPublished, msgEventNotPublished)
 	case errors.Is(err, ErrMonthlyRoundsPending):
 		return shared.WriteAPIError(c, fiber.StatusConflict, shared.ErrorCodeMonthlyRoundsPending, msgMonthlyPending)
+	case errors.Is(err, ErrEventNotDraft):
+		return shared.WriteAPIError(c, fiber.StatusConflict, shared.ErrorCodeEventNotDraft, msgEventNotDraft)
+	case errors.Is(err, ErrVotingWindowTooShort):
+		return shared.WriteAPIError(c, fiber.StatusConflict, shared.ErrorCodeVotingWindowTooShort, msgWindowTooShort)
 	case errors.Is(err, ErrNotEnoughNominees):
 		return shared.WriteAPIError(c, fiber.StatusUnprocessableEntity, shared.ErrorCodeNotEnoughNominees, msgNotEnoughNominees)
 	case errors.Is(err, ErrImageTooLarge):

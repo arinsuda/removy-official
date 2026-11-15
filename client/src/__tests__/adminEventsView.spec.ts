@@ -179,7 +179,7 @@ describe("AdminEventsView", () => {
     submit()
     await flushPromises()
 
-    expect(api.generateMonthly).toHaveBeenCalledWith("tv", "2026-11")
+    expect(api.generateMonthly).toHaveBeenCalledWith({ media_type: "tv", period: "2026-11", late_start: false })
     await vi.waitFor(() => expect(api.list).toHaveBeenCalledTimes(2))
   })
 
