@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest"
-import type { AdminEventBody, LocalizedText } from "@/types/event"
+import type { AdminEvent, AdminEventBody, LocalizedText } from "@/types/event"
 import {
   dismissPopup,
   EVENT_BODY_MAX,
   EVENT_TITLE_MAX,
+  type EventTranslate,
+  eventBody,
   eventErrorKey,
+  eventTitle,
+  nextMonthlyPeriod,
   isInternalLink,
   isPopupHidden,
   isValidLink,
@@ -13,6 +17,7 @@ import {
   localizedText,
   localInputToIso,
   validateEventForm,
+  voteErrorKey,
 } from "@/utils/events"
 
 describe("events utils", () => {
@@ -184,6 +189,167 @@ describe("events utils", () => {
 
     it("maps NOT_FOUND", () => {
       expect(eventErrorKey({ response: { status: 404 } })).toBe("admin.events.errors.notFound")
+    })
+
+    it("maps voting and generation error codes", () => {
+      expect(
+        eventErrorKey({ response: { status: 409, data: { code: "EVENT_ALREADY_EXISTS" } } }),
+      ).toBe("admin.events.errors.eventExists")
+      expect(
+        eventErrorKey({ response: { status: 409, data: { code: "VOTING_LOCKED" } } }),
+      ).toBe("admin.events.errors.votingLocked")
+      expect(
+        eventErrorKey({ response: { status: 409, data: { code: "EVENT_NOT_PUBLISHED" } } }),
+      ).toBe("admin.events.errors.notPublished")
+      expect(
+        eventErrorKey({ response: { status: 409, data: { code: "VOTING_NOT_ENDED" } } }),
+      ).toBe("admin.events.errors.votingNotEnded")
+      expect(
+        eventErrorKey({ response: { status: 422, data: { code: "NOT_ENOUGH_NOMINEES" } } }),
+      ).toBe("admin.events.errors.notEnoughNominees")
+    })
+  })
+
+  describe("voteErrorKey", () => {
+    it("maps voting error codes to i18n keys", () => {
+      expect(voteErrorKey({ response: { data: { code: "VOTING_CLOSED" } } })).toBe(
+        "events.voting.errors.closed",
+      )
+      expect(voteErrorKey({ response: { data: { code: "VOTING_NOT_STARTED" } } })).toBe(
+        "events.voting.errors.notStarted",
+      )
+      expect(voteErrorKey({ response: { data: { code: "NOMINEE_NOT_FOUND" } } })).toBe(
+        "events.voting.errors.nomineeNotFound",
+      )
+      expect(voteErrorKey({})).toBe("common.error")
+    })
+  })
+
+  describe("nextMonthlyPeriod", () => {
+    it("picks the round after the active one, rolling over on the 15th in Thailand time", () => {
+      // May 14, 2026 19:00 BKK -> active 2026-05 -> next 2026-06
+      expect(nextMonthlyPeriod(new Date("2026-05-14T12:00:00Z"))).toBe("2026-06")
+      // May 14, 2026 23:59 BKK -> still 2026-05 active -> next 2026-06
+      expect(nextMonthlyPeriod(new Date("2026-05-14T16:59:00Z"))).toBe("2026-06")
+      // May 15, 2026 00:00 BKK -> active 2026-06 -> next 2026-07
+      expect(nextMonthlyPeriod(new Date("2026-05-14T17:00:00Z"))).toBe("2026-07")
+      // May 15, 2026 01:00 BKK -> active 2026-06 -> next 2026-07
+      expect(nextMonthlyPeriod(new Date("2026-05-14T18:00:00Z"))).toBe("2026-07")
+    })
+
+    it("rolls the year over", () => {
+      // Dec 14, 2026 BKK -> active 2026-12 -> next 2027-01
+      expect(nextMonthlyPeriod(new Date("2026-12-14T12:00:00Z"))).toBe("2027-01")
+      // Dec 15, 2026 BKK -> active 2027-01 -> next 2027-02
+      expect(nextMonthlyPeriod(new Date("2026-12-15T12:00:00Z"))).toBe("2027-02")
+    })
+  })
+
+  describe("eventTitle and eventBody", () => {
+    const messages: Record<string, Record<string, string>> = {
+      en: {
+        "events.generated.title.vote_monthly.movie": "Popular Movie of the Month - {month}",
+        "events.generated.body.vote_monthly.movie":
+          "Vote for your favorite movie of {month}! Voting closes {closes} {tz}.",
+        "events.generated.timezone": "(Thailand time)",
+      },
+      th: {
+        "events.generated.title.vote_monthly.movie": "ภาพยนตร์ยอดนิยมประจำเดือน - {month}",
+        "events.generated.body.vote_monthly.movie":
+          "ร่วมโหวตภาพยนตร์ยอดนิยมประจำเดือน{month}! ปิดโหวต {closes} {tz}",
+        "events.generated.timezone": "(เวลาประเทศไทย)",
+      },
+    }
+    // Fake translator: looks the key up per locale and fills {named} placeholders.
+    const t: EventTranslate = (key, named, { locale }) =>
+      (messages[locale]?.[key] ?? key).replace(/\{(\w+)\}/g, (_, name: string) => named[name] ?? "")
+
+    const monthly = (overrides: Partial<AdminEvent> = {}): AdminEvent =>
+      ({
+        id: 1,
+        type: "vote_monthly",
+        media_type: "movie",
+        period: "2026-11",
+        title: { en: "", th: "" },
+        body: { en: "", th: "" },
+        image_url: null,
+        link_url: null,
+        starts_at: "2026-10-15T00:00:00Z",
+        ends_at: "2026-11-15T00:00:00Z",
+        show_popup: false,
+        popup_priority: 0,
+        state: "active",
+        status: "published",
+        created_at: "",
+        updated_at: "",
+        ...overrides,
+      }) as AdminEvent
+
+    it("uses generated monthly copy in English when both admin titles are blank", () => {
+      expect(eventTitle(monthly(), t, "en")).toBe("Popular Movie of the Month - November 2026")
+    })
+
+    it("uses generated monthly copy in Thai, with the Buddhist-era year", () => {
+      const title = eventTitle(monthly(), t, "th")
+      expect(title).toContain("ภาพยนตร์ยอดนิยมประจำเดือน - ")
+      expect(title).toContain("พฤศจิกายน")
+      expect(title).toContain("2569")
+    })
+
+    it("fills the body with the closing time and timezone label", () => {
+      const body = eventBody(monthly(), t, "en")
+      expect(body).toMatch(/^Vote for your favorite movie of November 2026! Voting closes .+ \(Thailand time\)\.$/)
+    })
+
+    it("lets admin text win over generated copy", () => {
+      const ev = monthly({ title: { en: "Custom title", th: "" } })
+      expect(eventTitle(ev, t, "en")).toBe("Custom title")
+      expect(eventTitle(ev, t, "th")).toBe("Custom title")
+    })
+
+    it("falls back to the other language when the admin text is missing in this locale", () => {
+      const ev = monthly({ title: { en: "", th: "ชื่อภาษาไทย" } })
+      expect(eventTitle(ev, t, "en")).toBe("ชื่อภาษาไทย")
+    })
+
+    it("returns empty text for a blank announcement", () => {
+      const ev = monthly({ type: "announcement", media_type: null, period: null })
+      expect(eventTitle(ev, t, "en")).toBe("")
+      expect(eventBody(ev, t, "th")).toBe("")
+    })
+  })
+
+  describe("validateEventForm for voting rounds", () => {
+    const votingForm: AdminEventBody = {
+      type: "vote_monthly",
+      media_type: "movie",
+      period: "2026-11",
+      title_en: "",
+      title_th: "",
+      body_en: "",
+      body_th: "",
+      link_url: "",
+      starts_at: "2026-10-15T00:00:00Z",
+      ends_at: "2026-11-15T00:00:00Z",
+      show_popup: false,
+      popup_priority: 0,
+      status: "draft",
+    }
+
+    it("accepts blank titles for voting rounds", () => {
+      expect(validateEventForm(votingForm)).toEqual({})
+    })
+
+    it("still requires titles for announcements", () => {
+      expect(validateEventForm({ ...votingForm, type: "announcement", period: null }).title_en).toBe(
+        "admin.events.errors.titleRequired",
+      )
+    })
+
+    it("still requires titles for yearly rounds", () => {
+      const errors = validateEventForm({ ...votingForm, type: "vote_yearly", period: "2026" })
+      expect(errors.title_en).toBe("admin.events.errors.titleRequired")
+      expect(errors.title_th).toBe("admin.events.errors.titleRequired")
     })
   })
 })

@@ -14,20 +14,29 @@ import (
 
 // Developer-facing error text. The client shows its own translation keyed by the error code.
 const (
-	msgInvalidState   = "invalid state: must be 'active', 'upcoming', or 'past'"
-	msgInvalidStatus  = "invalid status: must be 'draft', 'published', or 'cancelled'"
-	msgUnauthorized   = "unauthorized"
-	msgInvalidEventID = "invalid event id"
-	msgInvalidBody    = "invalid request body"
-	msgMissingImage   = "missing image file"
-	msgImageTooLarge  = "image too large (max 5 MB)"
-	msgReadImage      = "cannot read image file"
-	msgInspectImage   = "cannot inspect image"
-	msgRewindImage    = "cannot rewind image"
-	msgImageType      = "unsupported image type: must be JPEG, PNG, WebP, or GIF"
-	msgInvalidInput   = "invalid input"
-	msgEventNotFound  = "event not found"
-	msgInternal       = "internal server error"
+	msgInvalidState      = "invalid state: must be 'active', 'upcoming', or 'past'"
+	msgInvalidStatus     = "invalid status: must be 'draft', 'published', or 'cancelled'"
+	msgUnauthorized      = "unauthorized"
+	msgInvalidEventID    = "invalid event id"
+	msgInvalidBody       = "invalid request body"
+	msgMissingImage      = "missing image file"
+	msgImageTooLarge     = "image too large (max 5 MB)"
+	msgReadImage         = "cannot read image file"
+	msgInspectImage      = "cannot inspect image"
+	msgRewindImage       = "cannot rewind image"
+	msgImageType         = "unsupported image type: must be JPEG, PNG, WebP, or GIF"
+	msgInvalidInput      = "invalid input"
+	msgEventNotFound     = "event not found"
+	msgNomineeNotFound   = "nominee not found for this event"
+	msgVotingClosed      = "voting has ended for this event"
+	msgVotingNotStarted  = "voting has not started yet"
+	msgVotingNotEnded    = "voting has not ended yet"
+	msgEventNotPublished = "event must be published before it can be finalized"
+	msgVotingLocked      = "voting round is locked after it opens"
+	msgInvalidEventType  = "event is not a voting round"
+	msgEventExists       = "voting round already exists for this period"
+	msgNotEnoughNominees = "not enough nominee candidates found"
+	msgInternal          = "internal server error"
 
 	defaultPageParam = "1"
 	// imageSniffBytes is how much of an upload http.DetectContentType reads.
@@ -67,11 +76,142 @@ func (h *Handler) GetPublic(c fiber.Ctx) error {
 		return badID(c, msgInvalidEventID)
 	}
 
-	ev, err := h.svc.GetPublic(c.Context(), id)
+	var viewerID uint
+	if claims := mw.GetClaims(c); claims != nil {
+		viewerID = claims.UserID
+	}
+
+	ev, err := h.svc.GetPublic(c.Context(), id, viewerID)
 	if err != nil {
 		return handleError(c, err)
 	}
 	return c.JSON(fiber.Map{"event": ev})
+}
+
+func (h *Handler) Vote(c fiber.Ctx) error {
+	claims := mw.GetClaims(c)
+	if claims == nil || claims.UserID == 0 {
+		return shared.WriteAPIError(c, fiber.StatusUnauthorized, shared.ErrorCodeUnauthorized, msgUnauthorized)
+	}
+
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return badID(c, msgInvalidEventID)
+	}
+
+	var in VoteInput
+	if err := c.Bind().JSON(&in); err != nil || in.NomineeID == 0 {
+		return badRequest(c, msgInvalidBody)
+	}
+
+	if err := h.svc.Vote(c.Context(), claims.UserID, id, in.NomineeID); err != nil {
+		return handleError(c, err)
+	}
+	return c.JSON(fiber.Map{"success": true, "nominee_id": in.NomineeID})
+}
+
+func (h *Handler) CancelVote(c fiber.Ctx) error {
+	claims := mw.GetClaims(c)
+	if claims == nil || claims.UserID == 0 {
+		return shared.WriteAPIError(c, fiber.StatusUnauthorized, shared.ErrorCodeUnauthorized, msgUnauthorized)
+	}
+
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return badID(c, msgInvalidEventID)
+	}
+
+	if err := h.svc.CancelVote(c.Context(), claims.UserID, id); err != nil {
+		return handleError(c, err)
+	}
+	return c.JSON(fiber.Map{"success": true})
+}
+
+func (h *Handler) Finalize(c fiber.Ctx) error {
+	claims := mw.GetClaims(c)
+	if claims == nil || claims.UserID == 0 {
+		return shared.WriteAPIError(c, fiber.StatusUnauthorized, shared.ErrorCodeUnauthorized, msgUnauthorized)
+	}
+
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return badID(c, msgInvalidEventID)
+	}
+
+	if err := h.svc.Finalize(c.Context(), claims.UserID, id); err != nil {
+		return handleError(c, err)
+	}
+	return c.JSON(fiber.Map{"success": true})
+}
+
+func (h *Handler) SetNominees(c fiber.Ctx) error {
+	claims := mw.GetClaims(c)
+	if claims == nil || claims.UserID == 0 {
+		return shared.WriteAPIError(c, fiber.StatusUnauthorized, shared.ErrorCodeUnauthorized, msgUnauthorized)
+	}
+
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return badID(c, msgInvalidEventID)
+	}
+
+	var body struct {
+		Nominees []NomineeInput `json:"nominees"`
+	}
+	if err := c.Bind().JSON(&body); err != nil {
+		return badRequest(c, msgInvalidBody)
+	}
+
+	rows, err := h.svc.SetNominees(c.Context(), claims.UserID, id, body.Nominees)
+	if err != nil {
+		return handleError(c, err)
+	}
+	nominees := make([]NomineeResponse, 0, len(rows))
+	for i := range rows {
+		nominees = append(nominees, toNomineeResponse(&rows[i]))
+	}
+	return c.JSON(fiber.Map{"success": true, "nominees": nominees})
+}
+
+func (h *Handler) SuggestNominees(c fiber.Ctx) error {
+	mediaType := c.Query("media_type", string(shared.MediaTypeMovie))
+	period := c.Query("period", "")
+	if period == "" {
+		period = NextMonthlyPeriod(h.svc.now())
+	}
+
+	nominees, err := h.svc.SuggestNominees(c.Context(), mediaType, period)
+	if err != nil {
+		return handleError(c, err)
+	}
+	return c.JSON(fiber.Map{"nominees": nominees})
+}
+
+func (h *Handler) GenerateMonthly(c fiber.Ctx) error {
+	claims := mw.GetClaims(c)
+	if claims == nil || claims.UserID == 0 {
+		return shared.WriteAPIError(c, fiber.StatusUnauthorized, shared.ErrorCodeUnauthorized, msgUnauthorized)
+	}
+
+	var body GenerateMonthlyInput
+	if err := c.Bind().JSON(&body); err != nil && len(c.Body()) > 0 {
+		return badRequest(c, msgInvalidBody)
+	}
+	if body.MediaType == "" {
+		body.MediaType = c.Query("media_type", string(shared.MediaTypeMovie))
+	}
+	if body.Period == "" {
+		body.Period = c.Query("period", "")
+	}
+	if body.Period == "" {
+		body.Period = NextMonthlyPeriod(h.svc.now())
+	}
+
+	ev, err := h.svc.GenerateMonthlyVote(c.Context(), claims.UserID, body.MediaType, body.Period)
+	if err != nil {
+		return handleError(c, err)
+	}
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"event": ev})
 }
 
 func (h *Handler) Popup(c fiber.Ctx) error {
@@ -246,6 +386,24 @@ func handleError(c fiber.Ctx, err error) error {
 		return shared.WriteAPIError(c, fiber.StatusBadRequest, shared.ErrorCodeInvalidInput, msgInvalidInput)
 	case errors.Is(err, ErrNotFound):
 		return shared.WriteAPIError(c, fiber.StatusNotFound, shared.ErrorCodeNotFound, msgEventNotFound)
+	case errors.Is(err, ErrNomineeNotFound):
+		return shared.WriteAPIError(c, fiber.StatusNotFound, shared.ErrorCodeNomineeNotFound, msgNomineeNotFound)
+	case errors.Is(err, ErrVotingClosed):
+		return shared.WriteAPIError(c, fiber.StatusConflict, shared.ErrorCodeVotingClosed, msgVotingClosed)
+	case errors.Is(err, ErrVotingNotStarted):
+		return shared.WriteAPIError(c, fiber.StatusConflict, shared.ErrorCodeVotingNotStarted, msgVotingNotStarted)
+	case errors.Is(err, ErrVotingNotEnded):
+		return shared.WriteAPIError(c, fiber.StatusConflict, shared.ErrorCodeVotingNotEnded, msgVotingNotEnded)
+	case errors.Is(err, ErrVotingLocked):
+		return shared.WriteAPIError(c, fiber.StatusConflict, shared.ErrorCodeVotingLocked, msgVotingLocked)
+	case errors.Is(err, ErrInvalidEventType):
+		return shared.WriteAPIError(c, fiber.StatusBadRequest, shared.ErrorCodeInvalidEventType, msgInvalidEventType)
+	case errors.Is(err, ErrEventExists):
+		return shared.WriteAPIError(c, fiber.StatusConflict, shared.ErrorCodeEventExists, msgEventExists)
+	case errors.Is(err, ErrEventNotPublished):
+		return shared.WriteAPIError(c, fiber.StatusConflict, shared.ErrorCodeEventNotPublished, msgEventNotPublished)
+	case errors.Is(err, ErrNotEnoughNominees):
+		return shared.WriteAPIError(c, fiber.StatusUnprocessableEntity, shared.ErrorCodeNotEnoughNominees, msgNotEnoughNominees)
 	case errors.Is(err, ErrImageTooLarge):
 		return shared.WriteAPIError(c, fiber.StatusRequestEntityTooLarge, shared.ErrorCodeInvalidInput, msgImageTooLarge)
 	default:

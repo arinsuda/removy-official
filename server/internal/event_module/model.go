@@ -15,6 +15,14 @@ const (
 	TypeVoteYearly   EventType = "vote_yearly"
 )
 
+func (t EventType) Valid() bool {
+	return t == TypeAnnouncement || t == TypeVoteMonthly || t == TypeVoteYearly
+}
+
+func (t EventType) IsVoting() bool {
+	return t == TypeVoteMonthly || t == TypeVoteYearly
+}
+
 type EventStatus string
 
 const (
@@ -67,10 +75,13 @@ type Event struct {
 	ShowPopup     bool        `gorm:"not null;default:false"`
 	PopupPriority int         `gorm:"not null;default:0"`
 	Status        EventStatus `gorm:"type:varchar(20);not null;default:'draft';index"`
+	IsFinalized   bool        `gorm:"not null;default:false"`
 
 	// CreatedBy becomes NULL when the admin is hard-deleted; the event outlives them.
 	CreatedBy *uint       `gorm:"index"`
 	Creator   *users.User `gorm:"foreignKey:CreatedBy;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+
+	Nominees []EventNominee `gorm:"foreignKey:EventID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 
 func (Event) TableName() string { return "events" }
@@ -86,3 +97,56 @@ func (e *Event) StateAt(now time.Time) EventState {
 		return StatePast
 	}
 }
+
+// EventNominee represents a candidate title in a voting round.
+type EventNominee struct {
+	ID           uint      `gorm:"primarykey"`
+	CreatedAt    time.Time `gorm:"not null"`
+	UpdatedAt    time.Time `gorm:"not null"`
+	EventID      uint      `gorm:"not null;index"`
+	Event        Event     `gorm:"foreignKey:EventID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	MediaID      int       `gorm:"not null;index"`
+	MediaType    string    `gorm:"type:varchar(10);not null"`
+	Position     int       `gorm:"not null;default:0"`
+	MediaTitle   string    `gorm:"type:varchar(255);not null"`
+	PosterPath   string    `gorm:"type:varchar(255);not null;default:''"`
+	BackdropPath string    `gorm:"type:varchar(255);not null;default:''"`
+	Overview     string    `gorm:"type:text;not null;default:''"`
+	// FinalVotes is the settled tally, written once when the round finalizes (nil while open).
+	// Results are read from here, so later changes to voters cannot alter a closed round.
+	FinalVotes *int `gorm:"column:final_votes"`
+}
+
+func (EventNominee) TableName() string { return "event_nominees" }
+
+// EventVote represents a single user's vote in an event.
+// Unique constraint on (event_id, user_id) guarantees 1 vote per user per event.
+type EventVote struct {
+	EventID   uint         `gorm:"primaryKey"`
+	UserID    uint         `gorm:"primaryKey;not null"`
+	User      users.User   `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	NomineeID uint         `gorm:"not null;index"`
+	Nominee   EventNominee `gorm:"foreignKey:NomineeID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	CreatedAt time.Time    `gorm:"not null"`
+	UpdatedAt time.Time    `gorm:"not null"`
+}
+
+func (EventVote) TableName() string { return "event_votes" }
+
+// EventAward stores finalized winners of a voting round.
+type EventAward struct {
+	ID uint `gorm:"primarykey"`
+	// The unique (event_id, nominee_id) index stops a racing finalize from writing a second award set.
+	EventID   uint         `gorm:"not null;uniqueIndex:idx_event_awards_event_nominee"`
+	Event     Event        `gorm:"foreignKey:EventID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	NomineeID uint         `gorm:"not null;index;uniqueIndex:idx_event_awards_event_nominee"`
+	Nominee   EventNominee `gorm:"foreignKey:NomineeID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	MediaID   int          `gorm:"not null;index"`
+	MediaType string       `gorm:"type:varchar(10);not null"`
+	AwardKind AwardKind    `gorm:"type:varchar(20);not null"`
+	Period    string       `gorm:"type:varchar(7);not null"` // "YYYY-MM" or "YYYY"
+	Votes     int          `gorm:"not null;default:0"`
+	CreatedAt time.Time    `gorm:"not null"`
+}
+
+func (EventAward) TableName() string { return "event_awards" }

@@ -28,8 +28,23 @@ const (
 )
 
 var (
-	ErrNotFound      = errors.New("event not found")
-	ErrImageTooLarge = errors.New("image too large")
+	ErrNotFound         = errors.New("event not found")
+	ErrImageTooLarge    = errors.New("image too large")
+	ErrVotingClosed     = errors.New("voting closed")
+	ErrVotingNotStarted = errors.New("voting not started")
+	ErrInvalidEventType = errors.New("invalid event type")
+	ErrNomineeNotFound  = errors.New("nominee not found")
+	ErrEventExists      = errors.New("event already exists")
+	// ErrVotingLocked: the round has opened, so its type, window and nominees are frozen.
+	ErrVotingLocked = errors.New("voting round is locked")
+	// ErrVotingNotEnded: finalization was requested before ends_at.
+	ErrVotingNotEnded = errors.New("voting has not ended")
+	// ErrNotEnoughNominees: suggestions could not fill a round with real titles.
+	ErrNotEnoughNominees = errors.New("not enough nominee candidates")
+	// ErrVotingNotSettled: an ended round is still unfinalized after settlement (should not happen).
+	ErrVotingNotSettled = errors.New("voting round not settled")
+	// ErrEventNotPublished: only a published round can be finalized (drafts and cancelled rounds cannot).
+	ErrEventNotPublished = errors.New("event is not published")
 )
 
 var allowedImageTypes = map[string]string{
@@ -125,7 +140,7 @@ func (s *Service) ListPublic(ctx context.Context, state EventState, page, limit 
 	return out, newPagination(page, limit, total), nil
 }
 
-func (s *Service) GetPublic(ctx context.Context, id uint) (EventResponse, error) {
+func (s *Service) GetPublic(ctx context.Context, id uint, viewerID uint) (EventResponse, error) {
 	var ev Event
 	err := s.db.WithContext(ctx).Scopes(publishedScope).First(&ev, id).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -134,7 +149,74 @@ func (s *Service) GetPublic(ctx context.Context, id uint) (EventResponse, error)
 	if err != nil {
 		return EventResponse{}, err
 	}
-	return s.toResponse(ctx, &ev, s.now().UTC()), nil
+	now := s.now().UTC()
+
+	// Lazy finalization: the first read after ends_at settles the round.
+	if ev.Type.IsVoting() && ev.StateAt(now) == StatePast && !ev.IsFinalized {
+		if err := s.finalizeTx(ctx, 0, ev.ID); err != nil {
+			return EventResponse{}, err
+		}
+		if err := s.db.WithContext(ctx).First(&ev, id).Error; err != nil {
+			return EventResponse{}, err
+		}
+	}
+
+	resp := s.toResponse(ctx, &ev, now)
+	if !ev.Type.IsVoting() {
+		return resp, nil
+	}
+
+	nominees, err := s.loadNominees(ctx, ev.ID)
+	if err != nil {
+		return EventResponse{}, err
+	}
+	if viewerID > 0 {
+		var myVote EventVote
+		err := s.db.WithContext(ctx).Where("event_id = ? AND user_id = ?", id, viewerID).First(&myVote).Error
+		switch {
+		case err == nil:
+			resp.MyVoteNomineeID = &myVote.NomineeID
+		case !errors.Is(err, gorm.ErrRecordNotFound):
+			return EventResponse{}, err
+		}
+	}
+
+	// Secrecy: counts and winners exist in the response only once voting has ended.
+	if ev.StateAt(now) != StatePast {
+		resp.Nominees = make([]NomineeResponse, 0, len(nominees))
+		for i := range nominees {
+			resp.Nominees = append(resp.Nominees, toNomineeResponse(&nominees[i]))
+		}
+		return resp, nil
+	}
+
+	// Results come from the settled snapshot, never from live votes.
+	if !ev.IsFinalized {
+		return EventResponse{}, ErrVotingNotSettled
+	}
+	totalVotes := 0
+	for i := range nominees {
+		totalVotes += finalVotes(nominees[i])
+	}
+	var winnerIDs []uint
+	if err := s.db.WithContext(ctx).Model(&EventAward{}).Where("event_id = ?", id).Pluck("nominee_id", &winnerIDs).Error; err != nil {
+		return EventResponse{}, err
+	}
+	winners := make(map[uint]bool, len(winnerIDs))
+	for _, wid := range winnerIDs {
+		winners[wid] = true
+	}
+
+	resp.TotalVotes = &totalVotes
+	resp.Nominees = make([]NomineeResponse, 0, len(nominees))
+	for i := range nominees {
+		n := toNomineeResponse(&nominees[i])
+		count := finalVotes(nominees[i])
+		pct := votePercentage(count, totalVotes)
+		n.VoteCount, n.Percentage, n.IsWinner = &count, &pct, winners[nominees[i].ID]
+		resp.Nominees = append(resp.Nominees, n)
+	}
+	return resp, nil
 }
 
 // Popup returns the active published events flagged for the login popup.
@@ -169,10 +251,18 @@ func (s *Service) ListAdmin(ctx context.Context, status EventStatus, page, limit
 	if err := q.Order("starts_at DESC, id DESC").Limit(limit).Offset((page - 1) * limit).Find(&rows).Error; err != nil {
 		return nil, Pagination{}, err
 	}
+	ids := make([]uint, 0, len(rows))
+	for i := range rows {
+		ids = append(ids, rows[i].ID)
+	}
+	byEvent, err := s.loadNomineesFor(ctx, ids)
+	if err != nil {
+		return nil, Pagination{}, err
+	}
 	now := s.now().UTC()
 	out := make([]AdminEventResponse, 0, len(rows))
 	for i := range rows {
-		out = append(out, s.toAdminResponse(ctx, &rows[i], now))
+		out = append(out, s.toAdminResponse(ctx, &rows[i], byEvent[rows[i].ID], now))
 	}
 	return out, newPagination(page, limit, total), nil
 }
@@ -181,18 +271,31 @@ func (s *Service) Create(ctx context.Context, adminID uint, in EventInput) (Admi
 	if err := in.normalize(); err != nil {
 		return AdminEventResponse{}, err
 	}
-	ev := Event{Type: TypeAnnouncement, CreatedBy: &adminID}
+	var creator *uint
+	if adminID > 0 {
+		creator = &adminID
+	}
+	ev := Event{CreatedBy: creator}
 	applyInput(&ev, in)
+	now := s.now().UTC()
+	var nominees []EventNominee
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&ev).Error; err != nil {
+			return mapEventUniqueErr(err)
+		}
+		var err error
+		if nominees, err = replaceNominees(tx, ev.ID, in.Nominees, now); err != nil {
 			return err
 		}
-		return writeAudit(tx, adminID, admin_module.ActionEventCreated, ev.ID, map[string]any{"status": ev.Status})
+		if adminID > 0 {
+			return writeAudit(tx, adminID, admin_module.ActionEventCreated, ev.ID, map[string]any{"status": ev.Status, "type": ev.Type})
+		}
+		return nil
 	})
 	if err != nil {
 		return AdminEventResponse{}, err
 	}
-	return s.toAdminResponse(ctx, &ev, s.now().UTC()), nil
+	return s.toAdminResponse(ctx, &ev, nominees, now), nil
 }
 
 func (s *Service) Update(ctx context.Context, adminID, id uint, in EventInput) (AdminEventResponse, error) {
@@ -200,14 +303,36 @@ func (s *Service) Update(ctx context.Context, adminID, id uint, in EventInput) (
 		return AdminEventResponse{}, err
 	}
 	var ev Event
+	var nominees []EventNominee
+	var now time.Time
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := lockEvent(tx, id, &ev); err != nil {
 			return err
 		}
+		// Read the clock after the row lock, so a round that opened while we waited is refused.
+		now = s.now().UTC()
+		if err := checkVotingLock(&ev, in, now); err != nil {
+			return err
+		}
 		prev := ev.Status
+		prevType, prevMediaType := ev.Type, ev.MediaType
 		applyInput(&ev, in)
-		// Write only form columns: image_key and created_* are owned by other paths.
 		if err := tx.Model(&ev).Select(eventFormColumns).Updates(&ev).Error; err != nil {
+			return mapEventUniqueErr(err)
+		}
+		var err error
+		switch {
+		case in.Nominees != nil:
+			if err := checkNoVotes(tx, id); err != nil {
+				return err
+			}
+			nominees, err = replaceNominees(tx, id, in.Nominees, now)
+		case in.Type != prevType || !equalStringPtr(in.MediaType, prevMediaType):
+			nominees, err = revalidateNominees(tx, id, in, now)
+		default:
+			nominees, err = loadNomineesTx(tx, id)
+		}
+		if err != nil {
 			return err
 		}
 		return writeAudit(tx, adminID, admin_module.ActionEventUpdated, ev.ID, map[string]any{"from_status": prev, "status": ev.Status})
@@ -215,7 +340,7 @@ func (s *Service) Update(ctx context.Context, adminID, id uint, in EventInput) (
 	if err != nil {
 		return AdminEventResponse{}, err
 	}
-	return s.toAdminResponse(ctx, &ev, s.now().UTC()), nil
+	return s.toAdminResponse(ctx, &ev, nominees, now), nil
 }
 
 // Delete soft-deletes the event. Its banner object is kept so the row stays restorable.
@@ -250,7 +375,7 @@ func (s *Service) SetImage(ctx context.Context, adminID, id uint, file io.ReadSe
 		return AdminEventResponse{}, err
 	}
 	s.deleteObject(ctx, oldKey)
-	return s.toAdminResponse(ctx, &ev, s.now().UTC()), nil
+	return s.adminResponseFor(ctx, &ev)
 }
 
 func (s *Service) RemoveImage(ctx context.Context, adminID, id uint) (AdminEventResponse, error) {
@@ -259,7 +384,7 @@ func (s *Service) RemoveImage(ctx context.Context, adminID, id uint) (AdminEvent
 		return AdminEventResponse{}, err
 	}
 	s.deleteObject(ctx, oldKey)
-	return s.toAdminResponse(ctx, &ev, s.now().UTC()), nil
+	return s.adminResponseFor(ctx, &ev)
 }
 
 func (s *Service) swapImage(ctx context.Context, adminID, id uint, key string) (Event, string, error) {
@@ -299,6 +424,7 @@ func (s *Service) find(ctx context.Context, id uint) (Event, error) {
 
 // eventFormColumns are the fields an admin edit may change (see applyInput).
 var eventFormColumns = []string{
+	"Type", "MediaType", "Period",
 	"TitleEN", "TitleTH", "BodyEN", "BodyTH", "LinkURL",
 	"StartsAt", "EndsAt", "ShowPopup", "PopupPriority", "Status", "UpdatedAt",
 }
@@ -312,6 +438,9 @@ func lockEvent(tx *gorm.DB, id uint, ev *Event) error {
 }
 
 func applyInput(ev *Event, in EventInput) {
+	ev.Type = in.Type
+	ev.MediaType = in.MediaType
+	ev.Period = in.Period
 	ev.TitleEN, ev.TitleTH = in.TitleEN, in.TitleTH
 	ev.BodyEN, ev.BodyTH = in.BodyEN, in.BodyTH
 	ev.LinkURL = in.LinkURL
@@ -368,14 +497,29 @@ func (s *Service) toResponse(ctx context.Context, ev *Event, now time.Time) Even
 		ShowPopup:     ev.ShowPopup,
 		PopupPriority: ev.PopupPriority,
 		State:         ev.StateAt(now),
+		IsFinalized:   ev.IsFinalized,
 	}
 }
 
-func (s *Service) toAdminResponse(ctx context.Context, ev *Event, now time.Time) AdminEventResponse {
+func (s *Service) toAdminResponse(ctx context.Context, ev *Event, nominees []EventNominee, now time.Time) AdminEventResponse {
+	resp := s.toResponse(ctx, ev, now)
+	resp.Nominees = make([]NomineeResponse, 0, len(nominees))
+	for i := range nominees {
+		resp.Nominees = append(resp.Nominees, toNomineeResponse(&nominees[i]))
+	}
 	return AdminEventResponse{
-		EventResponse: s.toResponse(ctx, ev, now),
+		EventResponse: resp,
 		Status:        ev.Status,
 		CreatedAt:     ev.CreatedAt,
 		UpdatedAt:     ev.UpdatedAt,
 	}
+}
+
+// adminResponseFor builds the admin shape for one event, loading its nominees.
+func (s *Service) adminResponseFor(ctx context.Context, ev *Event) (AdminEventResponse, error) {
+	nominees, err := s.loadNominees(ctx, ev.ID)
+	if err != nil {
+		return AdminEventResponse{}, err
+	}
+	return s.toAdminResponse(ctx, ev, nominees, s.now().UTC()), nil
 }

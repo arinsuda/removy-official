@@ -7,6 +7,21 @@ export interface LocalizedText {
   th: string
 }
 
+export interface Nominee {
+  id: number
+  event_id: number
+  media_id: number
+  media_type: "movie" | "tv"
+  position: number
+  media_title: string
+  poster_path?: string | null
+  backdrop_path?: string | null
+  overview?: string | null
+  vote_count?: number
+  percentage?: number
+  is_winner: boolean
+}
+
 export interface AppEvent {
   id: number
   type: EventType
@@ -21,12 +36,38 @@ export interface AppEvent {
   show_popup: boolean
   popup_priority: number
   state: EventState
+  nominees?: Nominee[]
+  my_vote_nominee_id?: number | null
+  total_votes?: number | null
+  is_finalized?: boolean
 }
 
 export interface AdminEvent extends AppEvent {
   status: EventStatus
   created_at: string
   updated_at: string
+}
+
+export interface NomineeInput {
+  id?: number
+  media_id: number
+  media_type: "movie" | "tv"
+  position?: number
+  media_title: string
+  poster_path?: string
+  backdrop_path?: string
+  overview?: string
+}
+
+export interface SuggestedNominee {
+  media_id: number
+  media_type: "movie" | "tv"
+  media_title: string
+  poster_path: string
+  backdrop_path: string
+  overview: string
+  score: number
+  source: string
 }
 
 export interface EventPagination {
@@ -54,6 +95,9 @@ export interface AdminEventListQuery {
 }
 
 export interface AdminEventBody {
+  type?: EventType
+  media_type?: "movie" | "tv" | null
+  period?: string | null
   title_en: string
   title_th: string
   body_en: string
@@ -64,4 +108,5 @@ export interface AdminEventBody {
   show_popup: boolean
   popup_priority: number
   status: EventStatus
+  nominees?: NomineeInput[]
 }

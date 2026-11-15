@@ -6,6 +6,8 @@ import type {
   AppEvent,
   EventListQuery,
   EventListResponse,
+  NomineeInput,
+  SuggestedNominee,
 } from "@/types/event"
 
 export const eventApi = {
@@ -14,6 +16,12 @@ export const eventApi = {
   get: (id: number) => api.get<{ event: AppEvent }>(`/events/${id}`),
 
   popup: () => api.get<{ events: AppEvent[] }>("/events/popup"),
+
+  vote: (eventId: number, nomineeId: number) =>
+    api.put<{ success: boolean; nominee_id: number }>(`/events/${eventId}/vote`, { nominee_id: nomineeId }),
+
+  cancelVote: (eventId: number) =>
+    api.delete<{ success: boolean }>(`/events/${eventId}/vote`),
 }
 
 export const adminEventApi = {
@@ -32,4 +40,20 @@ export const adminEventApi = {
   },
 
   removeImage: (id: number) => api.delete<{ event: AdminEvent }>(`/admin/events/${id}/image`),
+
+  finalize: (id: number) => api.post<{ success: boolean }>(`/admin/events/${id}/finalize`),
+
+  setNominees: (id: number, nominees: NomineeInput[]) =>
+    api.put<{ success: boolean }>(`/admin/events/${id}/nominees`, { nominees }),
+
+  suggestNominees: (mediaType = "movie", period = "") =>
+    api.get<{ nominees: SuggestedNominee[] }>("/admin/events/suggest-nominees", {
+      params: { media_type: mediaType, period },
+    }),
+
+  generateMonthly: (mediaType = "movie", period = "") =>
+    api.post<{ event: AdminEvent }>("/admin/events/generate-monthly", {
+      media_type: mediaType,
+      period,
+    }),
 }
