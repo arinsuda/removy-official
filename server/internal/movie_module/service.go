@@ -43,6 +43,33 @@ func (s *MovieService) awardsFor(ctx context.Context, id int, mediaType shared.M
 	return none
 }
 
+// batchAwards loads the awards of many titles with one query. A nil reader or a failed read is
+// logged and shows as none, so a secondary block never breaks a list.
+func (s *MovieService) batchAwards(ctx context.Context, t shared.MediaType, ids []int) map[shared.MediaKey][]shared.MediaAward {
+	if s.awards == nil || len(ids) == 0 {
+		return nil
+	}
+	seen := make(map[int]struct{}, len(ids))
+	identities := make([]shared.MediaIdentity, 0, len(ids))
+	for _, id := range ids {
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		identities = append(identities, shared.MediaIdentity{ID: id, Type: t})
+	}
+	byKey, err := s.awards.AwardsFor(ctx, identities)
+	if err != nil {
+		log.Printf("movie_module: batch awards for %s: %v", t, err)
+		return nil
+	}
+	return byKey
+}
+
+func awardsOf(m map[shared.MediaKey][]shared.MediaAward, id int, t shared.MediaType) []shared.MediaAward {
+	return m[shared.MediaKey{ID: id, Type: t}]
+}
+
 func NewMovieService(repo shared.RatingStatsReader) *MovieService {
 	return &MovieService{ratingRepo: repo, providers: newProvidersCache(), fetchProviders: tmdb.GetWatchProviders}
 }
@@ -128,12 +155,14 @@ func (s *MovieService) enrichMovies(ctx context.Context, res *tmdb.PaginatedResu
 		return nil, err
 	}
 
+	awards := s.batchAwards(ctx, shared.MediaTypeMovie, mediaIDs(ids))
 	dtos := make([]MovieDTO, len(res.Results))
 	for i, m := range res.Results {
 		key := shared.MediaKey{ID: m.ID, Type: shared.MediaTypeMovie}
 		dtos[i] = MovieDTO{
 			Movie:   m,
 			Ratings: NewMediaRatingsResponse(ratings[key], m.VoteAverage, m.VoteCount),
+			Awards:  awards[key],
 		}
 	}
 
@@ -159,6 +188,14 @@ func (s *MovieService) batchRatings(ctx context.Context, t shared.MediaType, ids
 	return s.ratingRepo.GetBatchMediaRatings(ctx, identities)
 }
 
+func mediaIDs(ids []shared.MediaIdentity) []int {
+	out := make([]int, len(ids))
+	for i, id := range ids {
+		out[i] = id.ID
+	}
+	return out
+}
+
 func movieRatings(m map[shared.MediaKey]shared.RatingStats, mv tmdb.Movie) MediaRatingsResponse {
 	return NewMediaRatingsResponse(m[shared.MediaKey{ID: mv.ID, Type: shared.MediaTypeMovie}], mv.VoteAverage, mv.VoteCount)
 }
@@ -182,8 +219,9 @@ func (s *MovieService) enrichSeries(ctx context.Context, res *tmdb.PaginatedResu
 	if err != nil {
 		return nil, err
 	}
+	awards := s.batchAwards(ctx, shared.MediaTypeTV, ids)
 	for _, t := range res.Results {
-		out.Results = append(out.Results, TVSeriesDTO{TVSeries: t, Ratings: tvRatings(ratings, t)})
+		out.Results = append(out.Results, TVSeriesDTO{TVSeries: t, Ratings: tvRatings(ratings, t), Awards: awardsOf(awards, t.ID, shared.MediaTypeTV)})
 	}
 	return out, nil
 }
@@ -302,12 +340,13 @@ func (s *MovieService) GetPersonMovieCredits(ctx context.Context, personID int) 
 	if err != nil {
 		return nil, err
 	}
+	awards := s.batchAwards(ctx, shared.MediaTypeMovie, ids)
 	out := &PersonMovieCreditsDTO{Cast: []PersonMovieCreditItemDTO{}, Crew: []MovieDTO{}}
 	for _, c := range res.Cast {
-		out.Cast = append(out.Cast, PersonMovieCreditItemDTO{PersonMovieCreditItem: c, Ratings: movieRatings(ratings, c.Movie)})
+		out.Cast = append(out.Cast, PersonMovieCreditItemDTO{PersonMovieCreditItem: c, Ratings: movieRatings(ratings, c.Movie), Awards: awardsOf(awards, c.ID, shared.MediaTypeMovie)})
 	}
 	for _, c := range res.Crew {
-		out.Crew = append(out.Crew, MovieDTO{Movie: c, Ratings: movieRatings(ratings, c)})
+		out.Crew = append(out.Crew, MovieDTO{Movie: c, Ratings: movieRatings(ratings, c), Awards: awardsOf(awards, c.ID, shared.MediaTypeMovie)})
 	}
 	return out, nil
 }
@@ -328,12 +367,13 @@ func (s *MovieService) GetPersonTVCredits(ctx context.Context, personID int) (*P
 	if err != nil {
 		return nil, err
 	}
+	awards := s.batchAwards(ctx, shared.MediaTypeTV, ids)
 	out := &PersonTVCreditsDTO{Cast: []PersonTVCreditItemDTO{}, Crew: []TVSeriesDTO{}}
 	for _, c := range res.Cast {
-		out.Cast = append(out.Cast, PersonTVCreditItemDTO{PersonTVCreditItem: c, Ratings: tvRatings(ratings, c.TVSeries)})
+		out.Cast = append(out.Cast, PersonTVCreditItemDTO{PersonTVCreditItem: c, Ratings: tvRatings(ratings, c.TVSeries), Awards: awardsOf(awards, c.ID, shared.MediaTypeTV)})
 	}
 	for _, c := range res.Crew {
-		out.Crew = append(out.Crew, TVSeriesDTO{TVSeries: c, Ratings: tvRatings(ratings, c)})
+		out.Crew = append(out.Crew, TVSeriesDTO{TVSeries: c, Ratings: tvRatings(ratings, c), Awards: awardsOf(awards, c.ID, shared.MediaTypeTV)})
 	}
 	return out, nil
 }

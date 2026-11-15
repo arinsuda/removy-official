@@ -370,10 +370,8 @@ describe("events utils", () => {
       )
     })
 
-    it("still requires titles for yearly rounds", () => {
-      const errors = validateEventForm({ ...votingForm, type: "vote_yearly", period: "2026" })
-      expect(errors.title_en).toBe("admin.events.errors.titleRequired")
-      expect(errors.title_th).toBe("admin.events.errors.titleRequired")
+    it("accepts blank titles for yearly rounds too", () => {
+      expect(validateEventForm({ ...votingForm, type: "vote_yearly", period: "2026" })).toEqual({})
     })
   })
 })

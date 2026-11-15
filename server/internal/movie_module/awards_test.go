@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/arinsuda/movie-hub/internal/shared"
+	tmdb "github.com/arinsuda/movie-hub/internal/tmdb_module"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -45,4 +46,45 @@ func TestAwardsForNeverReturnsNil(t *testing.T) {
 			assert.Equal(t, tc.want, got)
 		})
 	}
+}
+
+// countingAwardReader records how often AwardsFor ran and answers from a fixed map.
+type countingAwardReader struct {
+	calls  *int
+	awards map[shared.MediaKey][]shared.MediaAward
+	err    error
+}
+
+func (c countingAwardReader) AwardsFor(context.Context, []shared.MediaIdentity) (map[shared.MediaKey][]shared.MediaAward, error) {
+	*c.calls++
+	return c.awards, c.err
+}
+
+func TestBatchAwardsReadsOncePerPageAndToleratesErrors(t *testing.T) {
+	ctx := context.Background()
+	won := []shared.MediaAward{{Kind: "yearly", Period: "2026"}}
+	byKey := map[shared.MediaKey][]shared.MediaAward{{ID: 2, Type: shared.MediaTypeTV}: won}
+
+	calls := 0
+	svc := NewMovieService(stubRatingStatsReader{})
+	svc.SetAwardReader(countingAwardReader{calls: &calls, awards: byKey})
+	res, err := svc.enrichSeries(ctx, &tmdb.PaginatedResult[tmdb.TVSeries]{
+		Results: []tmdb.TVSeries{{ID: 1}, {ID: 2}, {ID: 3}},
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, 1, calls)
+	assert.Empty(t, res.Results[0].Awards)
+	assert.Equal(t, won, res.Results[1].Awards)
+
+	calls = 0
+	svc.SetAwardReader(countingAwardReader{calls: &calls, err: errors.New("db down")})
+	res, err = svc.enrichSeries(ctx, &tmdb.PaginatedResult[tmdb.TVSeries]{Results: []tmdb.TVSeries{{ID: 2}}})
+	assert.NoError(t, err)
+	assert.Equal(t, 1, calls)
+	assert.Empty(t, res.Results[0].Awards)
+
+	svc.SetAwardReader(nil)
+	res, err = svc.enrichSeries(ctx, &tmdb.PaginatedResult[tmdb.TVSeries]{Results: []tmdb.TVSeries{{ID: 2}}})
+	assert.NoError(t, err)
+	assert.Empty(t, res.Results[0].Awards)
 }

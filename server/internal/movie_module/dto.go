@@ -40,6 +40,8 @@ type MediaRatingsResponse struct {
 type MovieDTO struct {
 	tmdb.Movie
 	Ratings MediaRatingsResponse `json:"ratings"`
+	// Awards lists the title's awards; omitted when it has none.
+	Awards []shared.MediaAward `json:"awards,omitempty"`
 }
 
 type MovieDetailDTO struct {
@@ -52,6 +54,8 @@ type MovieDetailDTO struct {
 type TVSeriesDTO struct {
 	tmdb.TVSeries
 	Ratings MediaRatingsResponse `json:"ratings"`
+	// Awards lists the title's awards; omitted when it has none.
+	Awards []shared.MediaAward `json:"awards,omitempty"`
 }
 
 type TVSeriesDetailDTO struct {
@@ -64,6 +68,8 @@ type TVSeriesDetailDTO struct {
 type PersonMovieCreditItemDTO struct {
 	tmdb.PersonMovieCreditItem
 	Ratings MediaRatingsResponse `json:"ratings"`
+	// Awards lists the title's awards; omitted when it has none.
+	Awards []shared.MediaAward `json:"awards,omitempty"`
 }
 
 type PersonMovieCreditsDTO struct {
@@ -74,6 +80,8 @@ type PersonMovieCreditsDTO struct {
 type PersonTVCreditItemDTO struct {
 	tmdb.PersonTVCreditItem
 	Ratings MediaRatingsResponse `json:"ratings"`
+	// Awards lists the title's awards; omitted when it has none.
+	Awards []shared.MediaAward `json:"awards,omitempty"`
 }
 
 type PersonTVCreditsDTO struct {

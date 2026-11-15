@@ -37,6 +37,8 @@ export interface Movie {
   genre_ids: number[]
   adult: boolean
   ratings?: MediaRatings
+  /** Awards this title won; list items and detail both carry them. */
+  awards?: MediaAward[]
 }
 
 export interface MovieDetail extends Movie {
@@ -49,7 +51,6 @@ export interface MovieDetail extends Movie {
   homepage: string
   genres: Genre[]
   videos?: Video[]
-  awards?: MediaAward[]
 }
 
 export interface TVSeries {
@@ -66,6 +67,7 @@ export interface TVSeries {
   genre_ids: number[]
   adult: boolean
   ratings?: MediaRatings
+  awards?: MediaAward[]
 }
 
 export interface TVSeriesDetail extends TVSeries {
@@ -76,7 +78,6 @@ export interface TVSeriesDetail extends TVSeries {
   tagline: string
   homepage: string
   genres: Genre[]
-  awards?: MediaAward[]
   seasons?: TVSeason[]
   last_air_date?: string
   episode_run_time?: number[]

@@ -17,6 +17,7 @@ vi.mock("@/api/endpoints/event", () => ({
     uploadImage: vi.fn(),
     removeImage: vi.fn(),
     generateMonthly: vi.fn(),
+    generateYearlyRound: vi.fn(),
     suggestNominees: vi.fn(),
     setNominees: vi.fn(),
     finalize: vi.fn(),
@@ -150,14 +151,14 @@ describe("AdminEventsView", () => {
     api.generateMonthly.mockResolvedValueOnce({} as never)
 
     const wrapper = await mountView()
-    const generateBtn = wrapper.findAll("button").find((b) => b.text() === tr("admin.events.generateMonthly"))
+    const generateBtn = wrapper.findAll("button").find((b) => b.text() === tr("admin.events.generateRound"))
     expect(generateBtn).toBeDefined()
     clickAfterRender(generateBtn!.element as HTMLElement)
     await flushPromises()
 
     // Media type radios sit in a fieldset with a legend.
-    const legend = document.body.querySelector("fieldset legend")
-    expect(legend?.textContent?.trim()).toBe(tr("admin.events.mediaType"))
+    const legends = Array.from(document.body.querySelectorAll("fieldset legend")).map((el) => el.textContent?.trim())
+    expect(legends).toContain(tr("admin.events.mediaType"))
     const radios = () => Array.from(document.body.querySelectorAll<HTMLInputElement>('input[name="generate-media-type"]'))
     expect(radios()).toHaveLength(2)
 

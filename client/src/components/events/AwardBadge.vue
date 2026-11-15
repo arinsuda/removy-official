@@ -1,5 +1,5 @@
 <template>
-  <span class="award-badge" role="img" :aria-label="label" :title="label">
+  <span class="award-badge" :class="`award-badge--${size}`" role="img" :aria-label="label" :title="label">
     <span aria-hidden="true">🏆</span>
     <span aria-hidden="true">{{ shortPeriod }}</span>
   </span>
@@ -11,13 +11,16 @@ import { useI18n } from "vue-i18n"
 import type { MediaAward } from "@/types/event"
 import { formatAwardPeriod } from "@/utils/events"
 
-const props = defineProps<{ award: MediaAward }>()
+const props = withDefaults(defineProps<{ award: MediaAward; size?: "sm" | "md" }>(), { size: "md" })
 const { t, locale } = useI18n()
 
 const shortPeriod = computed(() => formatAwardPeriod(props.award.period, locale.value, "short"))
-const label = computed(() =>
-  t("awards.badge.label", { period: formatAwardPeriod(props.award.period, locale.value, "long") }),
-)
+const label = computed(() => {
+  const period = formatAwardPeriod(props.award.period, locale.value, "long")
+  return props.award.kind === "yearly"
+    ? t("awards.badge.labelYearly", { period })
+    : t("awards.badge.label", { period })
+})
 </script>
 
 <style scoped>
@@ -33,5 +36,10 @@ const label = computed(() =>
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-btn);
   white-space: nowrap;
+}
+
+/* Compact variant for poster corners. */
+.award-badge--sm {
+  padding: 0.1rem 0.4rem;
 }
 </style>

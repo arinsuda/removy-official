@@ -1,5 +1,6 @@
 import type { RouteLocationRaw } from "vue-router"
 import type { Movie, TVSeries } from "@/types"
+import type { MediaAward } from "@/types/event"
 import type { MediaRatings } from "@/types/movie"
 
 export type HomeMediaType = "movie" | "tv"
@@ -18,6 +19,7 @@ export interface HomeMedia {
   overview: string
   vote_average: number
   ratings?: MediaRatings
+  awards?: MediaAward[]
   source: Movie | TVSeries
 }
 
@@ -33,6 +35,7 @@ export function fromMovie(m: Movie): HomeMedia {
     overview: m.overview,
     vote_average: m.vote_average,
     ratings: m.ratings,
+    awards: m.awards,
     source: m,
   }
 }
@@ -49,6 +52,7 @@ export function fromSeries(s: TVSeries): HomeMedia {
     overview: s.overview,
     vote_average: s.vote_average,
     ratings: s.ratings,
+    awards: s.awards,
     source: s,
   }
 }

@@ -750,8 +750,8 @@ func TestEventsFinalizeRefusesDraftRound(t *testing.T) {
 	}
 }
 
-// A yearly round is not generated copy-less: a blank title is refused.
-func TestEventsYearlyRoundRequiresTitle(t *testing.T) {
+// Yearly rounds, like monthly ones, may be saved without copy: the client renders it from i18n.
+func TestEventsYearlyRoundAllowsBlankTitle(t *testing.T) {
 	e := newEnv(t)
 	e.seedAdmin("admin@x.test", "pw-admin")
 	adminTok := e.loginPair("admin@x.test", "pw-admin").AccessToken
@@ -770,11 +770,8 @@ func TestEventsYearlyRoundRequiresTitle(t *testing.T) {
 		"status":         "draft",
 	}
 	code, res := e.do("POST", "/api/admin/events", body, adminTok)
-	if code != 400 || res["code"] != "INVALID_INPUT" {
-		t.Fatalf("expected 400 INVALID_INPUT for a blank yearly title, got %d: %v", code, res)
-	}
-	if msg, _ := res["error"].(string); !strings.Contains(msg, "title_en") {
-		t.Errorf("expected the error to name title_en, got %q", msg)
+	if code != 201 {
+		t.Fatalf("expected 201 for a blank yearly title, got %d: %v", code, res)
 	}
 }
 

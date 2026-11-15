@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
-import type { EventAward } from "@/types/event"
-import { groupAwards } from "@/utils/awards"
+import type { EventAward, MediaAward } from "@/types/event"
+import { groupAwards, topAward } from "@/utils/awards"
 import { EVENT_COVER_SIZE, eventCoverUrl, formatAwardPeriod } from "@/utils/events"
 
 const award = (over: Partial<EventAward>): EventAward => ({
@@ -77,5 +77,38 @@ describe("eventCoverUrl", () => {
 
   it("returns null when there is neither image", () => {
     expect(eventCoverUrl({ image_url: null, cover_backdrop_path: null })).toBeNull()
+  })
+})
+
+describe("topAward", () => {
+  it("returns null when the title has no awards", () => {
+    expect(topAward(undefined)).toBeNull()
+    expect(topAward([])).toBeNull()
+  })
+
+  it("prefers the newest yearly award over any monthly one", () => {
+    const awards: MediaAward[] = [
+      { kind: "monthly", period: "2027-01" },
+      { kind: "yearly", period: "2025" },
+      { kind: "yearly", period: "2026" },
+    ]
+    expect(topAward(awards)).toEqual({ kind: "yearly", period: "2026" })
+  })
+
+  it("falls back to the newest monthly award when there is no yearly one", () => {
+    const awards: MediaAward[] = [
+      { kind: "monthly", period: "2026-03" },
+      { kind: "monthly", period: "2026-11" },
+    ]
+    expect(topAward(awards)).toEqual({ kind: "monthly", period: "2026-11" })
+  })
+
+  it("does not reorder the array it is given", () => {
+    const awards: MediaAward[] = [
+      { kind: "monthly", period: "2026-03" },
+      { kind: "monthly", period: "2026-11" },
+    ]
+    topAward(awards)
+    expect(awards[0]?.period).toBe("2026-03")
   })
 })

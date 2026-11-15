@@ -38,6 +38,7 @@ const (
 	msgInvalidEventType  = "event is not a voting round"
 	msgEventExists       = "voting round already exists for this period"
 	msgNotEnoughNominees = "not enough nominee candidates found"
+	msgMonthlyPending    = "monthly rounds of this year are not settled yet"
 	msgInternal          = "internal server error"
 
 	defaultPageParam = "1"
@@ -242,6 +243,28 @@ func (h *Handler) GenerateMonthly(c fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"event": ev})
 }
 
+// GenerateYearly creates the yearly round of `period` (default: the next one to open) as a draft.
+func (h *Handler) GenerateYearly(c fiber.Ctx) error {
+	claims := mw.GetClaims(c)
+	if claims == nil || claims.UserID == 0 {
+		return shared.WriteAPIError(c, fiber.StatusUnauthorized, shared.ErrorCodeUnauthorized, msgUnauthorized)
+	}
+
+	var body GenerateYearlyInput
+	if err := c.Bind().JSON(&body); err != nil && len(c.Body()) > 0 {
+		return badRequest(c, msgInvalidBody)
+	}
+	if body.Period == "" {
+		body.Period = NextYearlyPeriod(h.svc.now())
+	}
+
+	ev, err := h.svc.GenerateYearlyVote(c.Context(), claims.UserID, body.MediaType, body.Period)
+	if err != nil {
+		return handleError(c, err)
+	}
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"event": ev})
+}
+
 func (h *Handler) Popup(c fiber.Ctx) error {
 	claims := mw.GetClaims(c)
 	if claims == nil || claims.UserID == 0 {
@@ -430,6 +453,8 @@ func handleError(c fiber.Ctx, err error) error {
 		return shared.WriteAPIError(c, fiber.StatusConflict, shared.ErrorCodeEventExists, msgEventExists)
 	case errors.Is(err, ErrEventNotPublished):
 		return shared.WriteAPIError(c, fiber.StatusConflict, shared.ErrorCodeEventNotPublished, msgEventNotPublished)
+	case errors.Is(err, ErrMonthlyRoundsPending):
+		return shared.WriteAPIError(c, fiber.StatusConflict, shared.ErrorCodeMonthlyRoundsPending, msgMonthlyPending)
 	case errors.Is(err, ErrNotEnoughNominees):
 		return shared.WriteAPIError(c, fiber.StatusUnprocessableEntity, shared.ErrorCodeNotEnoughNominees, msgNotEnoughNominees)
 	case errors.Is(err, ErrImageTooLarge):
