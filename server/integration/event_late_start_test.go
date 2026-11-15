@@ -126,6 +126,11 @@ func TestLateStartGenerateYearly(t *testing.T) {
 	e := newEnv(t)
 	adminID := e.seedAdmin("late4@x.test", "pw-admin")
 	now := bkk(2027, time.January, 20, 10, 30).Add(45 * time.Second)
+	monthly := seedFinishedRound(t, e.db, event_module.TypeVoteMonthly, "movie", "2026-03")
+	for i, mediaID := range []int{100, 200} {
+		n := seedNominee(t, e.db, monthly, "movie", i+1, mediaID, "", "")
+		seedAward(t, e.db, monthly, n, mediaID, "movie", event_module.AwardKindMonthly, "2026-03", 4)
+	}
 
 	ev, err := clockSvc(e.db, now).GenerateYearlyVote(context.Background(), adminID, "movie", "2026", true)
 	if err != nil {

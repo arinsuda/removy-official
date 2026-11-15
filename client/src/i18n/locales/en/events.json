@@ -38,6 +38,7 @@
     "cancelSuccess": "Your vote has been cancelled.",
     "pastNotice": "Voting has ended. See the winners and final results below.",
     "upcomingNotice": "Voting has not started yet. Opens on {date}.",
+    "accountTooNew": "Accounts must be at least {days} days old to vote. You can vote from {date}.",
     "winner": "Winner",
     "coWinner": "Co-Winner",
     "votesCount": "{votes} vote ({percent}) | {votes} votes ({percent})",
@@ -46,7 +47,8 @@
     "errors": {
       "closed": "Voting has ended for this round.",
       "notStarted": "Voting has not started yet.",
-      "nomineeNotFound": "Selected nominee was not found."
+      "nomineeNotFound": "Selected nominee was not found.",
+      "accountTooNew": "Your account is too new to vote yet."
     }
   },
   "empty": {

@@ -22,13 +22,14 @@ const (
 	JobViewPurger     = "view_purger"
 
 	// Operation names (Sentry tag "op"), shared so the dedupe key and fingerprint stay stable.
-	OpPanic            = "panic"
-	OpRun              = "run"
-	OpTooFewNominees   = "too_few_nominees"
-	OpLateRoundDrafted = "late_round_drafted"
-	OpUserErase        = "user_erase"
-	OpRecordCleanup    = "record_cleanup"
-	OpStorageCleanup   = "storage_cleanup"
+	OpPanic                = "panic"
+	OpRun                  = "run"
+	OpTooFewNominees       = "too_few_nominees"
+	OpTooFewYearlyNominees = "too_few_yearly_nominees"
+	OpLateRoundDrafted     = "late_round_drafted"
+	OpUserErase            = "user_erase"
+	OpRecordCleanup        = "record_cleanup"
+	OpStorageCleanup       = "storage_cleanup"
 
 	tagJob           = "job"
 	tagOp            = "op"

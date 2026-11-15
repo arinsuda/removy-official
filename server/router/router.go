@@ -90,7 +90,7 @@ func Register(ctx context.Context, app *fiber.App, db *gorm.DB, cfg *config.Conf
 	likeHandler := like_module.New(db, achieveModule.Service, notifSvc, feedModule.Service, policy)
 	bmolHandler := bmol_module.New(db, policy)
 	followHandler := follow_module.New(db, achieveModule.Service, notifSvc, feedModule.Service, policy)
-	eventHandler := event_module.New(db, mc)
+	eventHandler := event_module.New(db, mc, notifHub)
 	RegisterPublicRoutes(api, mw.OptionalAuth, PublicReadLimiter(cfg.TrustedProxyHops), PublicSearchLimiter(cfg.TrustedProxyHops), PublicHandlers{
 		Movies:       movieHandler,
 		Reviews:      reviewHandler,
@@ -138,7 +138,7 @@ func Register(ctx context.Context, app *fiber.App, db *gorm.DB, cfg *config.Conf
 	go account_erasure.NewPurger(db, mc).Run(ctx)
 	go media_stats_module.NewViewPurger(db).Run(ctx)
 	// Settles ended voting rounds that no one opened; each round locks its own row.
-	go event_module.NewFinalizer(db).Run(ctx)
+	go event_module.NewFinalizer(db, notifHub).Run(ctx)
 	// Creates the next monthly and yearly rounds as drafts and publishes the auto-generated ones.
 	go event_module.NewRoundScheduler(db).Run(ctx)
 

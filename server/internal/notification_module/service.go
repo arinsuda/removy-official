@@ -274,18 +274,7 @@ func (s *Service) PushFollowingLikedMedia(ctx context.Context, actorID uint, med
 }
 
 func (s *Service) toResponse(n Notification) NotificationResponse {
-	resp := NotificationResponse{
-		ID:        n.ID,
-		Type:      n.Type,
-		Category:  n.Category,
-		Message:   n.Message,
-		Params:    n.Params,
-		IsRead:    n.IsRead,
-		ReadAt:    n.ReadAt,
-		TargetID:  n.TargetID,
-		TargetRef: n.TargetRef,
-		CreatedAt: n.CreatedAt,
-	}
+	resp := baseResponse(n)
 
 	if n.ActorID != nil {
 		if actor, _, _, _, err := s.userProvider.FindByID(*n.ActorID); err == nil {
@@ -299,6 +288,22 @@ func (s *Service) toResponse(n Notification) NotificationResponse {
 	}
 
 	return resp
+}
+
+// baseResponse maps a row to its response without resolving the actor.
+func baseResponse(n Notification) NotificationResponse {
+	return NotificationResponse{
+		ID:        n.ID,
+		Type:      n.Type,
+		Category:  n.Category,
+		Message:   n.Message,
+		Params:    n.Params,
+		IsRead:    n.IsRead,
+		ReadAt:    n.ReadAt,
+		TargetID:  n.TargetID,
+		TargetRef: n.TargetRef,
+		CreatedAt: n.CreatedAt,
+	}
 }
 
 func ptr[T any](v T) *T { return &v }

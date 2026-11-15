@@ -27,8 +27,10 @@ type Finalizer struct {
 }
 
 // NewFinalizer settles rounds only, so it needs no image store.
-func NewFinalizer(db *gorm.DB) *Finalizer {
-	return &Finalizer{svc: NewService(db, nil), report: monitoring.NewJobReporter(monitoring.JobRoundFinalizer)}
+func NewFinalizer(db *gorm.DB, emitter NotificationEmitter) *Finalizer {
+	svc := NewService(db, nil)
+	svc.SetEmitter(emitter)
+	return &Finalizer{svc: svc, report: monitoring.NewJobReporter(monitoring.JobRoundFinalizer)}
 }
 
 // Run settles rounds every finalizeInterval until ctx is cancelled.

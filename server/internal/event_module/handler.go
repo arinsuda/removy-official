@@ -41,6 +41,9 @@ const (
 	msgMonthlyPending    = "monthly rounds of this year are not settled yet"
 	msgEventNotDraft     = "event must be a draft"
 	msgWindowTooShort    = "too little voting time is left for a late start"
+	msgTooFewYearly      = "too few monthly winners for a yearly round"
+	msgNotDeletable      = "voting round with votes or results cannot be deleted"
+	msgAccountTooNew     = "account is too new to vote"
 	msgInternal          = "internal server error"
 
 	defaultPageParam = "1"
@@ -456,7 +459,15 @@ func parseIDParam(c fiber.Ctx, param string) (uint, error) {
 
 func handleError(c fiber.Ctx, err error) error {
 	var valErr *ValidationError
+	var tooNew *AccountTooNewError
 	switch {
+	case errors.As(err, &tooNew):
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"code":                 shared.ErrorCodeAccountTooNew,
+			"error":                msgAccountTooNew,
+			"eligible_at":          tooNew.EligibleAt,
+			"min_account_age_days": MinVoterAccountAgeDays,
+		})
 	case errors.As(err, &valErr):
 		return shared.WriteAPIError(c, fiber.StatusBadRequest, shared.ErrorCodeInvalidInput, valErr.Error())
 	case errors.Is(err, ErrInvalidInput):
@@ -485,6 +496,10 @@ func handleError(c fiber.Ctx, err error) error {
 		return shared.WriteAPIError(c, fiber.StatusConflict, shared.ErrorCodeEventNotDraft, msgEventNotDraft)
 	case errors.Is(err, ErrVotingWindowTooShort):
 		return shared.WriteAPIError(c, fiber.StatusConflict, shared.ErrorCodeVotingWindowTooShort, msgWindowTooShort)
+	case errors.Is(err, ErrTooFewYearlyNominees):
+		return shared.WriteAPIError(c, fiber.StatusConflict, shared.ErrorCodeTooFewYearlyNominees, msgTooFewYearly)
+	case errors.Is(err, ErrEventNotDeletable):
+		return shared.WriteAPIError(c, fiber.StatusConflict, shared.ErrorCodeEventNotDeletable, msgNotDeletable)
 	case errors.Is(err, ErrNotEnoughNominees):
 		return shared.WriteAPIError(c, fiber.StatusUnprocessableEntity, shared.ErrorCodeNotEnoughNominees, msgNotEnoughNominees)
 	case errors.Is(err, ErrImageTooLarge):

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/arinsuda/movie-hub/internal/admin_module"
+	notification_module "github.com/arinsuda/movie-hub/internal/notification_module"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
@@ -51,6 +52,10 @@ var (
 	ErrEventNotDraft = errors.New("event is not a draft")
 	// ErrVotingWindowTooShort: a late start would leave less than lateStartMinWindow of voting.
 	ErrVotingWindowTooShort = errors.New("voting window too short")
+	// ErrTooFewYearlyNominees: a yearly round would have fewer than minNomineesToPublish monthly winners.
+	ErrTooFewYearlyNominees = errors.New("too few yearly nominees")
+	// ErrEventNotDeletable: a voting round that is finalized or has votes keeps its results.
+	ErrEventNotDeletable = errors.New("event cannot be deleted")
 )
 
 var allowedImageTypes = map[string]string{
@@ -74,11 +79,20 @@ type ImageStore interface {
 	DeleteObject(ctx context.Context, objectKey string) error
 }
 
-type Service struct {
-	db    *gorm.DB
-	store ImageStore
-	now   func() time.Time
+// NotificationEmitter pushes committed notifications to connected clients (notification_module.Hub).
+type NotificationEmitter interface {
+	EmitCreated(ns []notification_module.Notification)
 }
+
+type Service struct {
+	db      *gorm.DB
+	store   ImageStore
+	now     func() time.Time
+	emitter NotificationEmitter
+}
+
+// SetEmitter enables socket pushes for result notifications; without it they are stored only.
+func (s *Service) SetEmitter(e NotificationEmitter) { s.emitter = e }
 
 func NewService(db *gorm.DB, store ImageStore) *Service {
 	return &Service{db: db, store: store, now: time.Now}
@@ -195,8 +209,16 @@ func (s *Service) GetPublic(ctx context.Context, id uint, viewerID uint) (EventR
 		return EventResponse{}, err
 	}
 	if viewerID > 0 {
+		eligibleAt, ok, err := voterEligibleAt(s.db.WithContext(ctx), viewerID)
+		if err != nil {
+			return EventResponse{}, err
+		}
+		// Only while the viewer could still gain the vote right inside this round.
+		if ok && now.Before(eligibleAt) && ev.StateAt(now) != StatePast && eligibleAt.Before(ev.EndsAt) {
+			resp.VoteEligibleAt = &eligibleAt
+		}
 		var myVote EventVote
-		err := s.db.WithContext(ctx).Where("event_id = ? AND user_id = ?", id, viewerID).First(&myVote).Error
+		err = s.db.WithContext(ctx).Where("event_id = ? AND user_id = ?", id, viewerID).First(&myVote).Error
 		switch {
 		case err == nil:
 			resp.MyVoteNomineeID = &myVote.NomineeID
@@ -289,10 +311,14 @@ func (s *Service) ListAdmin(ctx context.Context, status EventStatus, page, limit
 	if err != nil {
 		return nil, Pagination{}, err
 	}
+	voted, err := votedEventIDs(s.db.WithContext(ctx), ids)
+	if err != nil {
+		return nil, Pagination{}, err
+	}
 	now := s.now().UTC()
 	out := make([]AdminEventResponse, 0, len(rows))
 	for i := range rows {
-		out = append(out, s.toAdminResponse(ctx, &rows[i], byEvent[rows[i].ID], now))
+		out = append(out, s.toAdminResponse(ctx, &rows[i], byEvent[rows[i].ID], voted[rows[i].ID], now))
 	}
 	return out, newPagination(page, limit, total), nil
 }
@@ -341,7 +367,7 @@ func (s *Service) Create(ctx context.Context, adminID uint, in EventInput) (Admi
 	if err != nil {
 		return AdminEventResponse{}, err
 	}
-	return s.toAdminResponse(ctx, &ev, nominees, now), nil
+	return s.toAdminResponse(ctx, &ev, nominees, false, now), nil
 }
 
 // lockAutoRound serializes scheduler instances on one (type, media_type, period) and repeats the
@@ -419,7 +445,11 @@ func (s *Service) Update(ctx context.Context, adminID, id uint, in EventInput) (
 	if err != nil {
 		return AdminEventResponse{}, err
 	}
-	return s.toAdminResponse(ctx, &ev, nominees, now), nil
+	voted, err := hasVotes(s.db.WithContext(ctx), ev.ID)
+	if err != nil {
+		return AdminEventResponse{}, err
+	}
+	return s.toAdminResponse(ctx, &ev, nominees, voted, now), nil
 }
 
 // SetAutoPublish turns worker publishing of a draft voting round on or off. The row is locked first
@@ -461,6 +491,15 @@ func (s *Service) Delete(ctx context.Context, adminID, id uint) error {
 		var ev Event
 		if err := lockEvent(tx, id, &ev); err != nil {
 			return err
+		}
+		if ev.Type.IsVoting() {
+			voted, err := hasVotes(tx, ev.ID)
+			if err != nil {
+				return err
+			}
+			if ev.IsFinalized || voted {
+				return ErrEventNotDeletable
+			}
 		}
 		if err := tx.Delete(&ev).Error; err != nil {
 			return err
@@ -654,7 +693,7 @@ func (s *Service) coverBackdrops(ctx context.Context, rows []Event) (map[uint]st
 	return out, nil
 }
 
-func (s *Service) toAdminResponse(ctx context.Context, ev *Event, nominees []EventNominee, now time.Time) AdminEventResponse {
+func (s *Service) toAdminResponse(ctx context.Context, ev *Event, nominees []EventNominee, voted bool, now time.Time) AdminEventResponse {
 	resp := s.toResponse(ctx, ev, now)
 	resp.Nominees = make([]NomineeResponse, 0, len(nominees))
 	for i := range nominees {
@@ -665,6 +704,7 @@ func (s *Service) toAdminResponse(ctx context.Context, ev *Event, nominees []Eve
 		Status:        ev.Status,
 		AutoGenerated: ev.AutoGenerated,
 		AutoPublish:   ev.AutoPublish,
+		HasVotes:      voted,
 		CreatedAt:     ev.CreatedAt,
 		UpdatedAt:     ev.UpdatedAt,
 	}
@@ -676,5 +716,9 @@ func (s *Service) adminResponseFor(ctx context.Context, ev *Event) (AdminEventRe
 	if err != nil {
 		return AdminEventResponse{}, err
 	}
-	return s.toAdminResponse(ctx, ev, nominees, s.now().UTC()), nil
+	voted, err := hasVotes(s.db.WithContext(ctx), ev.ID)
+	if err != nil {
+		return AdminEventResponse{}, err
+	}
+	return s.toAdminResponse(ctx, ev, nominees, voted, s.now().UTC()), nil
 }

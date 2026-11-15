@@ -24,6 +24,11 @@
       <span>{{ t("events.voting.upcomingNotice", { date: formatDay(event.starts_at) }) }}</span>
     </div>
 
+    <div v-if="accountTooNewText" class="event-voting__notice event-voting__notice--info" role="status">
+      <Clock :size="16" aria-hidden="true" />
+      <span>{{ accountTooNewText }}</span>
+    </div>
+
     <!-- Active Vote Banner: show who the user voted for with option to cancel -->
     <div v-if="event.state === 'active' && event.my_vote_nominee_id" class="event-voting__voted-banner">
       <div class="event-voting__voted-text">
@@ -49,7 +54,7 @@
         :is-voted="event.my_vote_nominee_id === nominee.id"
         :has-vote="Boolean(event.my_vote_nominee_id)"
         :voting="votingId === nominee.id"
-        :disabled="voteBusy"
+        :disabled="voteLocked"
         :co-winner="isTieWinner"
         @vote="handleVote"
       />
@@ -84,10 +89,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, useId } from "vue"
+import { computed, onBeforeUnmount, ref, useId, watch } from "vue"
 import { isAxiosError } from "axios"
 import { useI18n } from "vue-i18n"
-import { Calendar, Check, Lock, Trophy } from "lucide-vue-next"
+import { Calendar, Check, Clock, Lock, Trophy } from "lucide-vue-next"
 import AppButton from "@/components/ui/AppButton.vue"
 import AppModal from "@/components/ui/AppModal.vue"
 import EventNomineeCard from "@/components/events/EventNomineeCard.vue"
@@ -95,9 +100,17 @@ import { useAuthGate } from "@/composables/useAuthGate"
 import { useToast } from "@/composables/useToast"
 import { eventApi } from "@/api/endpoints/event"
 import type { AppEvent } from "@/types/event"
-import { formatEventDay, voteErrorKey } from "@/utils/events"
+import {
+  formatEventDay,
+  formatVotingDateTime,
+  VOTER_MIN_ACCOUNT_AGE_DAYS,
+  voteErrorKey,
+} from "@/utils/events"
 
 const props = defineProps<{ event: AppEvent }>()
+
+/** Vote errors after which the event must be refetched (voting closed, or the account gained no vote right yet). */
+const REFETCH_VOTE_CODES: readonly string[] = ["VOTING_CLOSED", "ACCOUNT_TOO_NEW"]
 
 const emit = defineEmits<{
   /** The vote was rejected because voting closed; the parent should refetch the event. */
@@ -106,7 +119,7 @@ const emit = defineEmits<{
   "vote-change": [nomineeId: number | null]
 }>()
 
-const { t, d, n } = useI18n()
+const { t, d, n, locale } = useI18n()
 const toast = useToast()
 const { requireAuth } = useAuthGate()
 const cancelDescId = useId()
@@ -118,6 +131,53 @@ const cancellingVote = ref(false)
 const cancelConfirmOpen = ref(false)
 // One vote request at a time: any in-flight vote or cancel locks every vote control.
 const voteBusy = computed(() => votingId.value !== null || cancellingVote.value)
+
+/** Longest delay setTimeout accepts (2^31 - 1 ms); a later eligibility re-arms once this fires. */
+const MAX_TIMER_DELAY_MS = 2_147_483_647
+
+const now = ref(Date.now())
+let eligibleTimer: ReturnType<typeof setTimeout> | null = null
+
+function clearEligibleTimer() {
+  if (eligibleTimer !== null) clearTimeout(eligibleTimer)
+  eligibleTimer = null
+}
+
+/** Set only while the viewer's account is too new to vote in a round that has not closed. */
+const voteEligibleAt = computed(() => {
+  const iso = props.event.vote_eligible_at
+  if (!iso || props.event.state === "past") return null
+  return Date.parse(iso) > now.value ? iso : null
+})
+
+/** Arms one timer for `iso`; a wait beyond the timer limit is split and re-armed when it fires. */
+function armEligibleTimer(iso: string) {
+  clearEligibleTimer()
+  now.value = Date.now()
+  const wait = Date.parse(iso) - now.value
+  if (!(wait > 0)) return
+  eligibleTimer = setTimeout(() => {
+    eligibleTimer = null
+    armEligibleTimer(iso)
+  }, Math.min(wait, MAX_TIMER_DELAY_MS))
+}
+
+// The lock lifts when the account becomes eligible, without a refetch or polling.
+watch(
+  () => props.event.vote_eligible_at,
+  (iso) => (iso ? armEligibleTimer(iso) : clearEligibleTimer()),
+  { immediate: true },
+)
+onBeforeUnmount(clearEligibleTimer)
+const voteLocked = computed(() => voteBusy.value || voteEligibleAt.value !== null)
+const accountTooNewText = computed(() => {
+  const iso = voteEligibleAt.value
+  if (!iso) return ""
+  return t("events.voting.accountTooNew", {
+    days: VOTER_MIN_ACCOUNT_AGE_DAYS,
+    date: formatVotingDateTime(iso, locale.value),
+  })
+})
 
 const votedNomineeTitle = computed(() => {
   const votedId = props.event.my_vote_nominee_id
@@ -136,7 +196,7 @@ function formatDay(iso: string): string {
 }
 
 async function handleVote(nomineeId: number) {
-  if (voteBusy.value) return
+  if (voteLocked.value) return
   if (!requireAuth("generic")) return
 
   votingId.value = nomineeId
@@ -146,7 +206,8 @@ async function handleVote(nomineeId: number) {
     toast.success(t("events.voting.voteSuccess"))
   } catch (err) {
     toast.error(t(voteErrorKey(err)))
-    if (isAxiosError(err) && err.response?.data?.code === "VOTING_CLOSED") emit("refresh")
+    const code = isAxiosError(err) ? err.response?.data?.code : undefined
+    if (code && REFETCH_VOTE_CODES.includes(code)) emit("refresh")
   } finally {
     votingId.value = null
   }

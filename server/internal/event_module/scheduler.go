@@ -169,6 +169,13 @@ func (r *RoundScheduler) generateNext(ctx context.Context, now time.Time, kind E
 			r.report.Warn(monitoring.OpTooFewNominees)
 		}
 		return false, nil
+	case errors.Is(err, ErrTooFewYearlyNominees):
+		if !now.Before(startsAt.Add(-autoRoundInterval)) && now.Before(startsAt.Add(autoRoundInterval)) {
+			log.Printf("round scheduler: %s %s round %s not generated: fewer than %d monthly winners",
+				kind, mediaType, period, minNomineesToPublish)
+			r.report.Warn(monitoring.OpTooFewYearlyNominees)
+		}
+		return false, nil
 	case errors.Is(err, ErrEventExists), errors.Is(err, ErrMonthlyRoundsPending):
 		return false, nil
 	}
@@ -191,7 +198,8 @@ func (r *RoundScheduler) catchUpCurrent(ctx context.Context, now time.Time, kind
 		r.report.Warn(monitoring.OpLateRoundDrafted)
 		return true, nil
 	case errors.Is(err, ErrEventExists), errors.Is(err, ErrMonthlyRoundsPending),
-		errors.Is(err, ErrVotingWindowTooShort), errors.Is(err, ErrNotEnoughNominees):
+		errors.Is(err, ErrVotingWindowTooShort), errors.Is(err, ErrNotEnoughNominees),
+		errors.Is(err, ErrTooFewYearlyNominees):
 		return false, nil
 	}
 	return false, err

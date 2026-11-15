@@ -42,6 +42,8 @@ export interface AppEvent {
   my_vote_nominee_id?: number | null
   total_votes?: number | null
   is_finalized?: boolean
+  /** Viewer only: RFC3339 time when a too-new account may vote; set while it is still in the future. */
+  vote_eligible_at?: string | null
 }
 
 export type AwardKind = "monthly" | "yearly"
@@ -99,6 +101,8 @@ export interface AdminEvent extends AppEvent {
   auto_generated: boolean
   /** Scheduler publishes this voting draft when its window opens; off keeps it for manual review. */
   auto_publish: boolean
+  /** Whether the round has any votes; set on admin list pages. Voting rounds with votes cannot be deleted. */
+  has_votes?: boolean
   created_at: string
   updated_at: string
 }

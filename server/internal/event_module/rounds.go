@@ -193,8 +193,8 @@ func (s *Service) generateMonthly(ctx context.Context, adminID uint, mediaType, 
 }
 
 // GenerateYearlyVote creates the yearly round of `period` (YYYY, the year awarded) as a draft whose
-// nominees are that year's monthly winners. It may have fewer than minNomineesToPublish nominees
-// (the admin can edit the draft). invalid("period") if the round already opened; ErrEventExists if it
+// nominees are that year's monthly winners. ErrTooFewYearlyNominees when there are fewer than
+// minNomineesToPublish of them (no row is created). invalid("period") if the round already opened; ErrEventExists if it
 // exists; ErrMonthlyRoundsPending while a published monthly round of the year is unsettled.
 func (s *Service) GenerateYearlyVote(ctx context.Context, adminID uint, mediaType, period string, lateStart bool) (AdminEventResponse, error) {
 	return s.generateYearly(ctx, adminID, mediaType, period, genOpts{lateStart: lateStart})
@@ -214,7 +214,16 @@ func (s *Service) generateYearly(ctx context.Context, adminID uint, mediaType, p
 	spec := roundSpec{eventType: TypeVoteYearly, mediaType: mediaType, period: period, startsAt: startsAt, endsAt: endsAt}
 	return s.generateRound(ctx, adminID, spec, opts,
 		func(ctx context.Context) error { return s.checkMonthlySettled(ctx, mediaType, period) },
-		func(ctx context.Context) ([]NomineeInput, error) { return s.yearlyNominees(ctx, mediaType, period) })
+		func(ctx context.Context) ([]NomineeInput, error) {
+			nominees, err := s.yearlyNominees(ctx, mediaType, period)
+			if err != nil {
+				return nil, err
+			}
+			if len(nominees) < minNomineesToPublish {
+				return nil, ErrTooFewYearlyNominees
+			}
+			return nominees, nil
+		})
 }
 
 // checkMonthlySettled refuses a yearly round while a published, non-deleted monthly round of the same

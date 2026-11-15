@@ -10,8 +10,9 @@ import (
 	"gorm.io/gorm"
 )
 
-func New(db *gorm.DB, mc *storage.MinIOClient) *Handler {
+func New(db *gorm.DB, mc *storage.MinIOClient, emitter NotificationEmitter) *Handler {
 	svc := NewService(db, mc)
+	svc.SetEmitter(emitter)
 	return NewHandler(svc)
 }
 

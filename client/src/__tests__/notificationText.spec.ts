@@ -25,6 +25,7 @@ const ALL_TYPES: NotificationType[] = [
   "achievement_unlocked",
   "email_verified",
   "password_changed",
+  "event_results",
 ]
 
 const g = i18n.global
@@ -51,6 +52,7 @@ describe("formatNotification", () => {
       ...ALL_TYPES.map((t) => `notifications.types.${t}`),
       "notifications.someone",
       "notifications.untitled",
+      "notifications.titles.event_results",
     ])
   })
 
@@ -102,10 +104,32 @@ describe("formatNotification", () => {
   })
 })
 
+describe("event_results notifications", () => {
+  const results = (params: AppNotification["params"]) =>
+    make({ type: "event_results", category: "system", actor: null, target_ref: "event", target_id: 7, params })
+
+  it("names the round from the params, in the current language", () => {
+    const n = results({ event_type: "vote_monthly", media_type: "movie", period: "2026-11" })
+    expect(fmt(n)).toContain("Popular Movie of the Month - November 2026")
+    g.locale.value = "th"
+    expect(fmt(n)).toContain("ประกาศผล")
+  })
+
+  it("falls back to the title when the params are malformed", () => {
+    expect(fmt(results({ event_type: "vote_monthly", media_type: "movie", period: "bad" }))).toBe(
+      g.t("notifications.titles.event_results"),
+    )
+  })
+})
+
 describe("getNotificationActionUrl", () => {
   it("routes tv and review targets to the title page", () => {
     expect(getNotificationActionUrl(make({ target_ref: "tv", target_id: 5 }))).toBe("/tv/5")
     expect(getNotificationActionUrl(make({ target_ref: "review", target_id: 9, params: { media_id: 603, media_type: "tv" } }))).toBe("/tv/603")
     expect(getNotificationActionUrl(make({ target_ref: "review", target_id: 9, params: null }))).toBeNull()
+  })
+
+  it("routes event results to the event page", () => {
+    expect(getNotificationActionUrl(make({ target_ref: "event", target_id: 7, actor: null }))).toBe("/events/7")
   })
 })

@@ -68,6 +68,9 @@ const (
 	ErrorCodeMonthlyRoundsPending = apierr.ErrorCodeMonthlyRoundsPending
 	ErrorCodeEventNotDraft        = apierr.ErrorCodeEventNotDraft
 	ErrorCodeVotingWindowTooShort = apierr.ErrorCodeVotingWindowTooShort
+	ErrorCodeTooFewYearlyNominees = apierr.ErrorCodeTooFewYearlyNominees
+	ErrorCodeAccountTooNew        = apierr.ErrorCodeAccountTooNew
+	ErrorCodeEventNotDeletable    = apierr.ErrorCodeEventNotDeletable
 )
 
 func WriteAPIError(c fiber.Ctx, status int, code ErrorCode, message string) error {
