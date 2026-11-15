@@ -287,6 +287,9 @@ func (s *Service) Create(ctx context.Context, adminID uint, in EventInput) (Admi
 		if nominees, err = replaceNominees(tx, ev.ID, in.Nominees, now); err != nil {
 			return err
 		}
+		if err := checkPublishable(&ev, len(nominees)); err != nil {
+			return err
+		}
 		if adminID > 0 {
 			return writeAudit(tx, adminID, admin_module.ActionEventCreated, ev.ID, map[string]any{"status": ev.Status, "type": ev.Type})
 		}
@@ -334,6 +337,13 @@ func (s *Service) Update(ctx context.Context, adminID, id uint, in EventInput) (
 		}
 		if err != nil {
 			return err
+		}
+		// Re-check only when the publish state or the nominee set changes, so unrelated edits to a
+		// published round (copy, window) are not blocked by a legacy round that has fewer titles.
+		if prev != StatusPublished || in.Nominees != nil || in.Type != prevType || !equalStringPtr(in.MediaType, prevMediaType) {
+			if err := checkPublishable(&ev, len(nominees)); err != nil {
+				return err
+			}
 		}
 		return writeAudit(tx, adminID, admin_module.ActionEventUpdated, ev.ID, map[string]any{"from_status": prev, "status": ev.Status})
 	})

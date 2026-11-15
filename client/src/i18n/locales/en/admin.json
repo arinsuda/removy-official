@@ -267,8 +267,8 @@
     "moveUp": "Move up",
     "moveDown": "Move down",
     "removeNominee": "Remove nominee",
-    "noNomineesYet": "No nominees in this round yet.",
     "saveNominees": "Save Nominees",
+    "saveNomineesEmptyHint": "Add at least {min} nominee before saving. | Add at least {min} nominees before saving.",
     "lockedScheduleHint": "Voting has opened; schedule and nominees are locked.",
     "types": {
       "announcement": "Announcement",
@@ -348,7 +348,9 @@
       "votingNotEnded": "Cannot finalize before voting ends.",
       "notPublished": "Only a published round can be finalized.",
       "notEnoughNominees": "Not enough candidate titles found to generate a full round.",
-      "invalidType": "That event type isn't valid."
+      "publishNeedsNominees": "A published round needs at least {min} nominees.",
+      "invalidType": "That event type isn't valid.",
+      "periodInvalid": "Period must be a month in YYYY-MM format, for example 2026-11."
     }
   },
   "errors": {

@@ -13,6 +13,14 @@ export const EVENT_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "imag
 export const EVENTS_PAGE_SIZE = 12
 export const ADMIN_EVENTS_PAGE_SIZE = 20
 export const HTTP_NOT_FOUND = 404
+/** Byte cap on link_url, mirrors server maxLinkURLLength. */
+export const EVENT_LINK_MAX = 500
+/** Whitespace and backslashes are rejected in link_url, mirrors server validLinkURL. */
+export const EVENT_LINK_FORBIDDEN_RE = /[\s\\]/
+/** Monthly round period (YYYY-MM), mirrors server monthlyPeriodRe. */
+export const MONTHLY_PERIOD_RE = /^\d{4}-(0[1-9]|1[0-2])$/
+/** Fewest nominees a voting round may be saved or published with; mirrors server minNomineesToPublish. */
+export const EVENT_MIN_NOMINEES_TO_PUBLISH = 2
 export const EVENT_POPUP_PRIORITY_MIN = -100
 export const EVENT_POPUP_PRIORITY_MAX = 100
 /** TMDB poster width for nominee cards on the event detail page. */
@@ -156,8 +164,10 @@ export function isInternalLink(url: string | null | undefined): boolean {
   return !!url && url.startsWith("/") && !url.startsWith("//")
 }
 
+/** Mirrors server validLinkURL: a bounded, whitespace- and backslash-free path or http(s) URL. */
 export function isValidLink(url: string): boolean {
   if (!url) return true
+  if (new TextEncoder().encode(url).length > EVENT_LINK_MAX || EVENT_LINK_FORBIDDEN_RE.test(url)) return false
   if (isInternalLink(url)) return true
   try {
     const u = new URL(url)
@@ -165,6 +175,16 @@ export function isValidLink(url: string): boolean {
   } catch {
     return false
   }
+}
+
+/** Format an ISO timestamp with `format`; empty string when the timestamp is invalid. */
+export function formatEventDay(iso: string, format: (date: Date) => string): string {
+  const date = new Date(iso)
+  return Number.isNaN(date.getTime()) ? "" : format(date)
+}
+
+export function isValidMonthlyPeriod(period: string): boolean {
+  return MONTHLY_PERIOD_RE.test(period)
 }
 
 /** ISO string -> value for <input type="datetime-local"> in local time. */
@@ -231,6 +251,17 @@ export function eventErrorKey(err: unknown): string {
   if (code === "INVALID_ID") return "admin.events.errors.notFound"
   if (res?.status === 401 || res?.status === 403) return "admin.errors.forbidden"
   return "admin.errors.generic"
+}
+
+/**
+ * Map a failed publish (event create/update or nominee save): NOT_ENOUGH_NOMINEES here means a
+ * published round is short of titles, which reads differently from generating a round.
+ */
+export function publishErrorKey(err: unknown): string {
+  if ((err as ErrShape)?.response?.data?.code === "NOT_ENOUGH_NOMINEES") {
+    return "admin.events.errors.publishNeedsNominees"
+  }
+  return eventErrorKey(err)
 }
 
 /** Map a user voting API failure to an i18n key. */

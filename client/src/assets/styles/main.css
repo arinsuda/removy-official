@@ -136,6 +136,9 @@
   --shadow-sheet: -16px 0 48px rgb(0 0 0 / 0.5);
   --shadow-popup: 0 24px 70px rgb(0 0 0 / 0.85);
   --shadow-raised: 0 8px 24px rgb(0 0 0 / 0.4);
+  /* Selected-state ring and winner glow on event nominee cards. */
+  --shadow-ring-brand: 0 0 0 1px var(--color-brand);
+  --shadow-glow-rating: 0 0 12px color-mix(in srgb, var(--color-rating) 30%, transparent);
 }
 
 /* The datepicker hard-codes z-index 99999, which would sit under an AppModal. */

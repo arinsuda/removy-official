@@ -1,6 +1,9 @@
 package event_module
 
 import (
+	"strconv"
+
+	"github.com/arinsuda/movie-hub/internal/shared/ratelimit"
 	"github.com/arinsuda/movie-hub/internal/shared/storage"
 	mw "github.com/arinsuda/movie-hub/middleware"
 	"github.com/gofiber/fiber/v3"
@@ -18,22 +21,35 @@ func RegisterPublicRoutes(router fiber.Router, h *Handler, guards ...fiber.Handl
 }
 
 func RegisterRoutes(router fiber.Router, h *Handler) {
+	voteKey := func(c fiber.Ctx) string {
+		claims := mw.GetClaims(c)
+		if claims == nil {
+			return ""
+		}
+		return "event-vote:" + strconv.FormatUint(uint64(claims.UserID), 10)
+	}
+	// One limiter for both vote routes: casting and withdrawing count together.
+	voteLimit := ratelimit.New(VoteRateMax, VoteRateWindow, voteKey)
+
 	events := router.Group("/events")
 	events.Get("/popup", h.Popup)
-	events.Put("/:id<int>/vote", h.Vote)
-	events.Delete("/:id<int>/vote", h.CancelVote)
+	events.Put("/:id<int>/vote", voteLimit, h.Vote)
+	events.Delete("/:id<int>/vote", voteLimit, h.CancelVote)
 }
 
-func RegisterAdminRoutes(router fiber.Router, h *Handler, requireAdmin fiber.Handler) {
-	admin := router.Group("/admin/events", requireAdmin)
-	admin.Get("", h.ListAdmin)
-	admin.Post("", h.Create)
-	admin.Put("/:id<int>", h.Update)
-	admin.Delete("/:id<int>", h.Delete)
-	admin.Post("/:id<int>/image", h.SetImage)
-	admin.Delete("/:id<int>/image", h.RemoveImage)
-	admin.Post("/:id<int>/finalize", h.Finalize)
-	admin.Put("/:id<int>/nominees", h.SetNominees)
-	admin.Get("/suggest-nominees", h.SuggestNominees)
-	admin.Post("/generate-monthly", h.GenerateMonthly)
+// RegisterAdminRoutes mounts the event admin routes on the guarded /admin group returned by
+// admin_module.RegisterRoutes, so every route here inherits RequireCurrentAdmin. Paths are
+// relative to that group (final paths: /api/admin/events/*).
+func RegisterAdminRoutes(adminGroup fiber.Router, h *Handler) {
+	events := adminGroup.Group("/events")
+	events.Get("", h.ListAdmin)
+	events.Post("", h.Create)
+	events.Put("/:id<int>", h.Update)
+	events.Delete("/:id<int>", h.Delete)
+	events.Post("/:id<int>/image", h.SetImage)
+	events.Delete("/:id<int>/image", h.RemoveImage)
+	events.Post("/:id<int>/finalize", h.Finalize)
+	events.Put("/:id<int>/nominees", h.SetNominees)
+	events.Get("/suggest-nominees", h.SuggestNominees)
+	events.Post("/generate-monthly", h.GenerateMonthly)
 }

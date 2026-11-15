@@ -310,8 +310,8 @@ func newEnv(t *testing.T) *env {
 	follow_module.RegisterRoutes(protected, followH)
 	event_module.RegisterRoutes(protected, eventH)
 	watch_log_module.RegisterRoutes(protected, db, nil, libSvc, policy)
-	admin_module.RegisterRoutes(protected, db, nil, nil, mw.RequireCurrentAdmin(db))
-	event_module.RegisterAdminRoutes(protected, eventH, mw.RequireCurrentAdmin(db))
+	adminGroup := admin_module.RegisterRoutes(protected, db, nil, nil, mw.RequireCurrentAdmin(db))
+	event_module.RegisterAdminRoutes(adminGroup, eventH)
 	feed_module.New(db, nil, nil).RegisterRoutes(protected)
 	return e
 }

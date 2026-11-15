@@ -15,8 +15,11 @@ const (
 	maxBodyRunes        = 2000
 	maxLinkURLLength    = 500
 	maxNomineeTitleRune = 255
-	minPopupPriority    = -100
-	maxPopupPriority    = 100
+	// maxNomineePathLength matches the varchar(255) poster/backdrop columns.
+	maxNomineePathLength    = 255
+	maxNomineeOverviewRunes = 2000
+	minPopupPriority        = -100
+	maxPopupPriority        = 100
 )
 
 var (
@@ -132,6 +135,18 @@ func validLinkURL(v string) bool {
 	return u.Scheme == "https" || u.Scheme == "http"
 }
 
+// validImagePath accepts "" or a TMDB-style relative path ("/abc.jpg"). A leading "/" rules out
+// schemes, and "//" rules out protocol-relative hosts; whitespace and backslashes are refused.
+func validImagePath(v string) bool {
+	if v == "" {
+		return true
+	}
+	if len(v) > maxNomineePathLength || !strings.HasPrefix(v, "/") || strings.HasPrefix(v, "//") {
+		return false
+	}
+	return !strings.ContainsAny(v, " \t\r\n\\")
+}
+
 func validMediaType(v string) bool {
 	return v == string(shared.MediaTypeMovie) || v == string(shared.MediaTypeTV)
 }
@@ -155,6 +170,16 @@ func normalizeNominees(noms []NomineeInput, mediaType string) error {
 		}
 		if nom.MediaTitle == "" || utf8.RuneCountInString(nom.MediaTitle) > maxNomineeTitleRune {
 			return invalid("nominees.media_title")
+		}
+		if !validImagePath(nom.PosterPath) {
+			return invalid("nominees.poster_path")
+		}
+		if !validImagePath(nom.BackdropPath) {
+			return invalid("nominees.backdrop_path")
+		}
+		nom.Overview = strings.TrimSpace(nom.Overview)
+		if utf8.RuneCountInString(nom.Overview) > maxNomineeOverviewRunes {
+			return invalid("nominees.overview")
 		}
 		if nom.Position <= 0 {
 			nom.Position = i + 1

@@ -777,3 +777,153 @@ func TestEventsYearlyRoundRequiresTitle(t *testing.T) {
 		t.Errorf("expected the error to name title_en, got %q", msg)
 	}
 }
+
+// movieNominee is one admin-supplied candidate for a movie round.
+func movieNominee(mediaID int, title string) map[string]any {
+	return map[string]any{"media_id": mediaID, "media_type": "movie", "media_title": title}
+}
+
+// TestEventsPublishRequiresTwoNominees: a voting round with fewer than two titles can be saved as a
+// draft but not published, on create or on update.
+func TestEventsPublishRequiresTwoNominees(t *testing.T) {
+	e := newEnv(t)
+	e.seedAdmin("admin@x.test", "pw-admin")
+	adminTok := e.loginPair("admin@x.test", "pw-admin").AccessToken
+
+	now := time.Now().UTC()
+	period := event_module.NextMonthlyPeriod(now.AddDate(0, 3, 0))
+	// Future window: once a round opens, its nominees are locked and the final publish would be refused.
+	starts, ends := now.Add(48*time.Hour), now.Add(72*time.Hour)
+
+	draft := roundBody(period, starts, ends, "draft")
+	draft["nominees"] = []any{movieNominee(901, "Lone Pick")}
+	code, res := e.do("POST", "/api/admin/events", draft, adminTok)
+	if code != 201 {
+		t.Fatalf("draft with one nominee should save, got %d: %v", code, res)
+	}
+	eventID := uint(res["event"].(map[string]any)["id"].(float64))
+
+	// A second period: the draft already holds this one (type, media type, period is unique).
+	otherPeriod := event_module.NextMonthlyPeriod(now.AddDate(0, 5, 0))
+	published := roundBody(otherPeriod, starts, ends, "published")
+	published["nominees"] = []any{movieNominee(901, "Lone Pick")}
+	code, res = e.do("POST", "/api/admin/events", published, adminTok)
+	if code != 422 || res["code"] != "NOT_ENOUGH_NOMINEES" {
+		t.Fatalf("create published with one nominee: want 422 NOT_ENOUGH_NOMINEES, got %d: %v", code, res)
+	}
+
+	code, res = e.do("PUT", fmt.Sprintf("/api/admin/events/%d", eventID), roundBody(period, starts, ends, "published"), adminTok)
+	if code != 422 || res["code"] != "NOT_ENOUGH_NOMINEES" {
+		t.Fatalf("publish with one stored nominee: want 422 NOT_ENOUGH_NOMINEES, got %d: %v", code, res)
+	}
+
+	// The refused publish rolled back: the round is still a draft.
+	var status string
+	if err := e.db.Raw("SELECT status FROM events WHERE id = ?", eventID).Scan(&status).Error; err != nil {
+		t.Fatal(err)
+	}
+	if status != "draft" {
+		t.Fatalf("status after refused publish = %q, want draft", status)
+	}
+
+	twoNominees := roundBody(period, starts, ends, "published")
+	twoNominees["nominees"] = []any{movieNominee(901, "Lone Pick"), movieNominee(902, "Second Pick")}
+	code, res = e.do("PUT", fmt.Sprintf("/api/admin/events/%d", eventID), twoNominees, adminTok)
+	if code != 200 {
+		t.Fatalf("publish with two nominees should succeed, got %d: %v", code, res)
+	}
+}
+
+// TestEventsSetNomineesKeepsPublishedRoundPublishable: a published upcoming round cannot be cut
+// below two titles through the nominees endpoint, and the refused edit leaves the nominees intact.
+func TestEventsSetNomineesKeepsPublishedRoundPublishable(t *testing.T) {
+	e := newEnv(t)
+	e.seedAdmin("admin@x.test", "pw-admin")
+	adminTok := e.loginPair("admin@x.test", "pw-admin").AccessToken
+
+	now := time.Now().UTC()
+	period := event_module.NextMonthlyPeriod(now.AddDate(0, 3, 0))
+	starts, ends := now.Add(48*time.Hour), now.Add(72*time.Hour)
+
+	published := roundBody(period, starts, ends, "published")
+	published["nominees"] = []any{movieNominee(911, "Pick A"), movieNominee(912, "Pick B")}
+	code, res := e.do("POST", "/api/admin/events", published, adminTok)
+	if code != 201 {
+		t.Fatalf("publish with two nominees should succeed, got %d: %v", code, res)
+	}
+	eventID := uint(res["event"].(map[string]any)["id"].(float64))
+
+	code, res = e.do("PUT", fmt.Sprintf("/api/admin/events/%d/nominees", eventID),
+		map[string]any{"nominees": []any{movieNominee(911, "Pick A")}}, adminTok)
+	if code != 422 || res["code"] != "NOT_ENOUGH_NOMINEES" {
+		t.Fatalf("set one nominee on published round: want 422 NOT_ENOUGH_NOMINEES, got %d: %v", code, res)
+	}
+
+	var count int64
+	if err := e.db.Raw("SELECT COUNT(*) FROM event_nominees WHERE event_id = ?", eventID).Scan(&count).Error; err != nil {
+		t.Fatal(err)
+	}
+	if count != 2 {
+		t.Fatalf("nominee count after refused edit = %d, want 2 (rolled back)", count)
+	}
+}
+
+// TestEventsMediaTypeChangeRevalidatesNominees: switching a round's media type while its stored
+// nominees are the other type is refused with 400, and nothing changes.
+func TestEventsMediaTypeChangeRevalidatesNominees(t *testing.T) {
+	e := newEnv(t)
+	e.seedAdmin("admin@x.test", "pw-admin")
+	adminTok := e.loginPair("admin@x.test", "pw-admin").AccessToken
+
+	// A window that has not started: an open round is locked and refuses any type or media change first.
+	now := time.Now().UTC()
+	period := event_module.NextMonthlyPeriod(now.AddDate(0, 4, 0))
+	starts, ends := now.Add(48*time.Hour), now.Add(72*time.Hour)
+	body := roundBody(period, starts, ends, "draft")
+	body["nominees"] = []any{movieNominee(911, "Movie A"), movieNominee(912, "Movie B")}
+	code, res := e.do("POST", "/api/admin/events", body, adminTok)
+	if code != 201 {
+		t.Fatalf("create movie round failed (%d): %v", code, res)
+	}
+	eventID := uint(res["event"].(map[string]any)["id"].(float64))
+
+	switched := roundBody(period, starts, ends, "draft")
+	switched["media_type"] = "tv"
+	code, res = e.do("PUT", fmt.Sprintf("/api/admin/events/%d", eventID), switched, adminTok)
+	if code != 400 || res["code"] != "INVALID_INPUT" {
+		t.Fatalf("media_type change over movie nominees: want 400 INVALID_INPUT, got %d: %v", code, res)
+	}
+
+	var mediaType string
+	if err := e.db.Raw("SELECT media_type FROM events WHERE id = ?", eventID).Scan(&mediaType).Error; err != nil {
+		t.Fatal(err)
+	}
+	if mediaType != "movie" {
+		t.Fatalf("media_type after refused update = %q, want movie", mediaType)
+	}
+}
+
+// TestEventsVoteRateLimit: one user may cast at most VoteRateMax votes per window; the next is 429.
+func TestEventsVoteRateLimit(t *testing.T) {
+	e := newEnv(t)
+	e.seedAdmin("admin@x.test", "pw-admin")
+	adminTok := e.loginPair("admin@x.test", "pw-admin").AccessToken
+	eventID, nominees := openVotingRound(t, e, adminTok)
+	_, voterTok := newVoter(t, e, "rate-voter@x.test")
+
+	for i := 1; i <= event_module.VoteRateMax; i++ {
+		if code, res := vote(e, eventID, nominees[0], voterTok); code != 200 {
+			t.Fatalf("vote %d of %d should pass, got %d: %v", i, event_module.VoteRateMax, code, res)
+		}
+	}
+	code, res := vote(e, eventID, nominees[0], voterTok)
+	if code != 429 || res["code"] != "RATE_LIMITED" {
+		t.Fatalf("vote over the budget: want 429 RATE_LIMITED, got %d: %v", code, res)
+	}
+
+	// The budget is per user: another voter is unaffected.
+	_, otherTok := newVoter(t, e, "rate-other@x.test")
+	if code, res := vote(e, eventID, nominees[0], otherTok); code != 200 {
+		t.Fatalf("second user should not share the budget, got %d: %v", code, res)
+	}
+}

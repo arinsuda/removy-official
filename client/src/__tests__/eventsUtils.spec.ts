@@ -9,6 +9,7 @@ import {
   eventErrorKey,
   eventTitle,
   nextMonthlyPeriod,
+  publishErrorKey,
   isInternalLink,
   isPopupHidden,
   isValidLink,
@@ -207,6 +208,21 @@ describe("events utils", () => {
       expect(
         eventErrorKey({ response: { status: 422, data: { code: "NOT_ENOUGH_NOMINEES" } } }),
       ).toBe("admin.events.errors.notEnoughNominees")
+    })
+  })
+
+  describe("publishErrorKey", () => {
+    it("maps NOT_ENOUGH_NOMINEES on a publish to the publish-specific message", () => {
+      expect(
+        publishErrorKey({ response: { status: 422, data: { code: "NOT_ENOUGH_NOMINEES" } } }),
+      ).toBe("admin.events.errors.publishNeedsNominees")
+    })
+
+    it("defers to eventErrorKey for every other code", () => {
+      expect(
+        publishErrorKey({ response: { status: 409, data: { code: "VOTING_LOCKED" } } }),
+      ).toBe("admin.events.errors.votingLocked")
+      expect(publishErrorKey(new Error("network"))).toBe("admin.errors.generic")
     })
   })
 

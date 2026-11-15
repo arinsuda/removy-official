@@ -188,7 +188,11 @@ const pagination = ref<EventPagination | null>(null)
 const loading = ref(false)
 const error = ref(false)
 
+// Tab and page can change faster than responses arrive; only the newest request may write state.
+let latestRequest = 0
+
 async function fetchEvents() {
+  const request = ++latestRequest
   loading.value = true
   error.value = false
   try {
@@ -197,12 +201,13 @@ async function fetchEvents() {
       page: page.value,
       limit: EVENTS_PAGE_SIZE,
     })
+    if (request !== latestRequest) return
     events.value = res.data.events
     pagination.value = res.data.pagination
   } catch {
-    error.value = true
+    if (request === latestRequest) error.value = true
   } finally {
-    loading.value = false
+    if (request === latestRequest) loading.value = false
   }
 }
 

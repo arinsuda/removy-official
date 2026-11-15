@@ -1,6 +1,7 @@
 package event_module
 
 import (
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -249,6 +250,80 @@ func TestEventInputNormalize_VotingRounds(t *testing.T) {
 	in.Nominees[1].MediaType = "tv"
 	if err := in.normalize(); err == nil || !strings.Contains(err.Error(), "nominees.media_type") {
 		t.Errorf("expected nominee media_type mismatch error, got: %v", err)
+	}
+}
+
+func TestNormalizeNominees_ImageAndOverviewFields(t *testing.T) {
+	tooLongPath := "/" + strings.Repeat("a", maxNomineePathLength)
+	tooLongOverview := strings.Repeat("ก", maxNomineeOverviewRunes+1)
+	cases := []struct {
+		name      string
+		poster    string
+		backdrop  string
+		overview  string
+		wantField string
+	}{
+		{name: "empty paths and overview are allowed", wantField: ""},
+		{name: "relative TMDB path", poster: "/abc.jpg", backdrop: "/def.jpg", overview: "Plot", wantField: ""},
+		{name: "poster with scheme", poster: "https://evil.test/x.jpg", wantField: "nominees.poster_path"},
+		{name: "poster protocol-relative", poster: "//evil.test/x.jpg", wantField: "nominees.poster_path"},
+		{name: "poster without leading slash", poster: "abc.jpg", wantField: "nominees.poster_path"},
+		{name: "poster with whitespace", poster: "/a b.jpg", wantField: "nominees.poster_path"},
+		{name: "poster with backslash", poster: "/a\\b.jpg", wantField: "nominees.poster_path"},
+		{name: "poster over length cap", poster: tooLongPath, wantField: "nominees.poster_path"},
+		{name: "backdrop with scheme", backdrop: "javascript:alert(1)", wantField: "nominees.backdrop_path"},
+		{name: "backdrop protocol-relative", backdrop: "//evil.test/b.jpg", wantField: "nominees.backdrop_path"},
+		{name: "backdrop over length cap", backdrop: tooLongPath, wantField: "nominees.backdrop_path"},
+		{name: "overview over rune cap", overview: tooLongOverview, wantField: "nominees.overview"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			noms := []NomineeInput{{
+				MediaID: 1, MediaType: "movie", MediaTitle: "Dune",
+				PosterPath: tc.poster, BackdropPath: tc.backdrop, Overview: tc.overview,
+			}}
+			err := normalizeNominees(noms, "movie")
+			if tc.wantField == "" {
+				if err != nil {
+					t.Fatalf("expected valid nominee, got: %v", err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), tc.wantField) {
+				t.Fatalf("expected %s error, got: %v", tc.wantField, err)
+			}
+			if !errors.Is(err, ErrInvalidInput) {
+				t.Errorf("expected ErrInvalidInput wrapping, got: %v", err)
+			}
+		})
+	}
+}
+
+func TestCheckPublishable(t *testing.T) {
+	cases := []struct {
+		name    string
+		status  EventStatus
+		evType  EventType
+		count   int
+		wantErr bool
+	}{
+		{name: "published voting round with two nominees", status: StatusPublished, evType: TypeVoteMonthly, count: 2},
+		{name: "published voting round with one nominee", status: StatusPublished, evType: TypeVoteMonthly, count: 1, wantErr: true},
+		{name: "published voting round with none", status: StatusPublished, evType: TypeVoteYearly, count: 0, wantErr: true},
+		{name: "draft round may have one nominee", status: StatusDraft, evType: TypeVoteMonthly, count: 1},
+		{name: "cancelled round may have none", status: StatusCancelled, evType: TypeVoteMonthly, count: 0},
+		{name: "published announcement needs no nominees", status: StatusPublished, evType: TypeAnnouncement, count: 0},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := checkPublishable(&Event{Status: tc.status, Type: tc.evType}, tc.count)
+			if tc.wantErr && !errors.Is(err, ErrNotEnoughNominees) {
+				t.Fatalf("expected ErrNotEnoughNominees, got: %v", err)
+			}
+			if !tc.wantErr && err != nil {
+				t.Fatalf("expected no error, got: %v", err)
+			}
+		})
 	}
 }
 

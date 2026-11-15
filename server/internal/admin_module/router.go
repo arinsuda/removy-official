@@ -7,7 +7,10 @@ import (
 	"gorm.io/gorm"
 )
 
-func RegisterRoutes(router fiber.Router, db *gorm.DB, hub *notification_module.Hub, mc *storage.MinIOClient, requireAdmin fiber.Handler) {
+// RegisterRoutes mounts the admin routes under /admin guarded by requireAdmin and returns that
+// guarded group. Modules that add admin routes (event_module.RegisterAdminRoutes) register them on
+// the returned group so they inherit the guard structurally, not by mount order.
+func RegisterRoutes(router fiber.Router, db *gorm.DB, hub *notification_module.Hub, mc *storage.MinIOClient, requireAdmin fiber.Handler) fiber.Router {
 	repo := NewRepository(db)
 	svc := NewService(repo, hub, mc)
 	h := NewHandler(svc)
@@ -24,4 +27,6 @@ func RegisterRoutes(router fiber.Router, db *gorm.DB, hub *notification_module.H
 	admin.Get("/reviews", h.ListReviews)
 	admin.Delete("/reviews/:reviewId", h.DeleteReview)
 	admin.Get("/audit-logs", h.ListAuditLogs)
+
+	return admin
 }
