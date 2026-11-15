@@ -18,6 +18,13 @@ const (
 	communityCandidatePool = 10
 	// maxNomineesPerRound bounds an admin-edited nominee list.
 	maxNomineesPerRound = 20
+	// minNomineesToPublish is the fewest titles a voting round needs before it can be published.
+	minNomineesToPublish = 2
+
+	// VoteRateMax and VoteRateWindow bound how often one signed-in user may cast or withdraw a vote.
+	// Votes are idempotent upserts, so the budget only stops scripted churn.
+	VoteRateMax    = 30
+	VoteRateWindow = time.Minute
 
 	// Community score = reviews*w + library adds*w + likes*w over the lookback window.
 	reviewScoreWeight  = 5.0

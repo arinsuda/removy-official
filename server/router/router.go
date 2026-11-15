@@ -130,8 +130,9 @@ func Register(ctx context.Context, app *fiber.App, db *gorm.DB, cfg *config.Conf
 	analytics_module.RegisterRoutes(protected, db)
 	movie_module.RegisterRoutes(protected, movieHandler)
 	media_stats_module.RegisterRoutes(protected, statsHandler)
-	admin_module.RegisterRoutes(protected, db, notifHub, mc, mw.RequireCurrentAdmin(db))
-	event_module.RegisterAdminRoutes(protected, eventHandler, mw.RequireCurrentAdmin(db))
+	// The returned group carries RequireCurrentAdmin; event admin routes must hang off it.
+	adminGroup := admin_module.RegisterRoutes(protected, db, notifHub, mc, mw.RequireCurrentAdmin(db))
+	event_module.RegisterAdminRoutes(adminGroup, eventHandler)
 
 	// Background purge of accounts whose erasure grace period is over; stops with ctx.
 	go account_erasure.NewPurger(db, mc).Run(ctx)

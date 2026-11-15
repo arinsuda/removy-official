@@ -2,6 +2,7 @@ package event_module
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -20,7 +21,6 @@ const (
 	msgInvalidEventID    = "invalid event id"
 	msgInvalidBody       = "invalid request body"
 	msgMissingImage      = "missing image file"
-	msgImageTooLarge     = "image too large (max 5 MB)"
 	msgReadImage         = "cannot read image file"
 	msgInspectImage      = "cannot inspect image"
 	msgRewindImage       = "cannot rewind image"
@@ -42,6 +42,9 @@ const (
 	// imageSniffBytes is how much of an upload http.DetectContentType reads.
 	imageSniffBytes = 512
 )
+
+// msgImageTooLarge is derived from MaxImageBytes so the text cannot drift from the real limit.
+var msgImageTooLarge = fmt.Sprintf("image too large (max %d bytes)", MaxImageBytes)
 
 type Handler struct {
 	svc *Service

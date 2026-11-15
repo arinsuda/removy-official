@@ -41,8 +41,33 @@ const makeEvent = (over: Partial<AppEvent> = {}): AppEvent => ({
 })
 
 // The view branches on axios error status, so the fake carries the same shape.
-const httpError = (status: number) =>
-  Object.assign(new Error(`HTTP ${status}`), { isAxiosError: true, response: { status } })
+const httpError = (status: number, code?: string) =>
+  Object.assign(new Error(`HTTP ${status}`), { isAxiosError: true, response: { status, data: { code } } })
+
+/** Active monthly round with two nominees; the viewer's vote is `myVote`. */
+const votingEvent = (myVote: number | null = null) =>
+  makeEvent({
+    id: 8,
+    type: "vote_monthly",
+    state: "active",
+    my_vote_nominee_id: myVote,
+    nominees: [
+      { id: 30, event_id: 8, media_id: 301, media_type: "movie", position: 1, media_title: "Alpha", is_winner: false },
+      { id: 31, event_id: 8, media_id: 302, media_type: "movie", position: 2, media_title: "Beta", is_winner: false },
+    ],
+  })
+
+/** A promise the test settles by hand, to control response order. */
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((r) => {
+    resolve = r
+  })
+  return { promise, resolve }
+}
+
+/** Buttons inside the teleported confirm dialog, which sits on document.body. */
+const confirmButtons = () => Array.from(document.body.querySelectorAll<HTMLButtonElement>(".event-voting__confirm-actions button"))
 
 async function mountAt(path: string, pinia = createPinia()) {
   const router = createRouter({
@@ -106,6 +131,23 @@ describe("EventDetailView", () => {
     await vi.waitFor(() => expect(api.get).toHaveBeenCalledTimes(2))
     await flushPromises()
     expect(wrapper.find("time").exists()).toBe(true)
+  })
+
+  it("ignores a slow response for the previous route id", async () => {
+    const first = deferred<{ data: { event: AppEvent } }>()
+    const second = deferred<{ data: { event: AppEvent } }>()
+    api.get.mockReturnValueOnce(first.promise as never).mockReturnValueOnce(second.promise as never)
+
+    const { wrapper, router } = await mountAt("/events/1")
+    await router.push("/events/2")
+
+    second.resolve({ data: { event: makeEvent({ id: 2, title: { en: "Newest event", th: "Newest event" } }) } })
+    await flushPromises()
+    first.resolve({ data: { event: makeEvent({ id: 1, title: { en: "Stale event", th: "Stale event" } }) } })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain("Newest event")
+    expect(wrapper.text()).not.toContain("Stale event")
   })
 
   it("refetches when the route id changes", async () => {
@@ -239,5 +281,99 @@ describe("EventDetailView", () => {
     expect(wrapper.text()).toContain("Total votes: 150")
     expect(wrapper.text()).toContain("100 votes (67%)")
     expect(wrapper.text()).toContain("50 votes (33%)")
+  })
+
+  it("casts a vote and shows it as the current vote", async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useAuthStore().user = { id: 7 } as never
+    api.vote.mockResolvedValueOnce({} as never)
+    api.get.mockResolvedValueOnce({ data: { event: votingEvent() } } as never)
+
+    const { wrapper } = await mountAt("/events/8", pinia)
+    clickAfterRender(wrapper.findAll(".event-nominee-card__actions button")[0]!.element as HTMLElement)
+    await flushPromises()
+
+    expect(api.vote).toHaveBeenCalledWith(8, 30)
+    expect(wrapper.find(".event-nominee-card__voted-btn").exists()).toBe(true)
+    expect(wrapper.find(".event-voting__voted-banner").exists()).toBe(true)
+    expect(api.get).toHaveBeenCalledTimes(1)
+  })
+
+  it("refetches the event when a vote is rejected because voting closed", async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useAuthStore().user = { id: 7 } as never
+    api.vote.mockRejectedValueOnce(httpError(409, "VOTING_CLOSED"))
+    api.get
+      .mockResolvedValueOnce({ data: { event: votingEvent() } } as never)
+      .mockResolvedValueOnce({ data: { event: votingEvent() } } as never)
+
+    const { wrapper } = await mountAt("/events/8", pinia)
+    clickAfterRender(wrapper.findAll(".event-nominee-card__actions button")[0]!.element as HTMLElement)
+    await flushPromises()
+
+    expect(api.vote).toHaveBeenCalledWith(8, 30)
+    await vi.waitFor(() => expect(api.get).toHaveBeenCalledTimes(2))
+    expect(wrapper.find(".event-nominee-card__voted-btn").exists()).toBe(false)
+  })
+
+  it("cancels the current vote only after confirming in the dialog", async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useAuthStore().user = { id: 7 } as never
+    api.cancelVote.mockResolvedValueOnce({} as never)
+    api.get.mockResolvedValueOnce({ data: { event: votingEvent(30) } } as never)
+
+    const { wrapper } = await mountAt("/events/8", pinia)
+    clickAfterRender(wrapper.find(".event-voting__voted-banner button").element as HTMLElement)
+    await flushPromises()
+
+    expect(api.cancelVote).not.toHaveBeenCalled()
+    expect(document.body.querySelector(".event-voting__confirm-text")?.textContent?.trim()).toBe(
+      i18n.global.t("events.voting.cancelConfirm"),
+    )
+
+    clickAfterRender(confirmButtons()[1]!)
+    await flushPromises()
+
+    expect(api.cancelVote).toHaveBeenCalledWith(8)
+    expect(wrapper.find(".event-voting__voted-banner").exists()).toBe(false)
+  })
+
+  it("keeps the vote when the cancel dialog is dismissed", async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useAuthStore().user = { id: 7 } as never
+    api.get.mockResolvedValueOnce({ data: { event: votingEvent(30) } } as never)
+
+    const { wrapper } = await mountAt("/events/8", pinia)
+    clickAfterRender(wrapper.find(".event-voting__voted-banner button").element as HTMLElement)
+    await flushPromises()
+
+    clickAfterRender(confirmButtons()[0]!)
+    await flushPromises()
+
+    expect(api.cancelVote).not.toHaveBeenCalled()
+    expect(wrapper.find(".event-voting__voted-banner").exists()).toBe(true)
+  })
+
+  it("keeps the vote and reports the error when cancelling fails", async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useAuthStore().user = { id: 7 } as never
+    api.cancelVote.mockRejectedValueOnce(httpError(500))
+    api.get.mockResolvedValueOnce({ data: { event: votingEvent(30) } } as never)
+
+    const { wrapper } = await mountAt("/events/8", pinia)
+    clickAfterRender(wrapper.find(".event-voting__voted-banner button").element as HTMLElement)
+    await flushPromises()
+    clickAfterRender(confirmButtons()[1]!)
+    await flushPromises()
+
+    expect(api.cancelVote).toHaveBeenCalledWith(8)
+    expect(wrapper.find(".event-voting__voted-banner").exists()).toBe(true)
+    expect(confirmButtons()).toHaveLength(0)
+    expect(api.get).toHaveBeenCalledTimes(1)
   })
 })

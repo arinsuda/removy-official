@@ -118,6 +118,15 @@ func revalidateNominees(tx *gorm.DB, eventID uint, in EventInput, now time.Time)
 	return existing, nil
 }
 
+// checkPublishable refuses a published voting round with fewer than minNomineesToPublish titles.
+// Drafts may be saved with any number of nominees.
+func checkPublishable(ev *Event, nomineeCount int) error {
+	if ev.Status == StatusPublished && ev.Type.IsVoting() && nomineeCount < minNomineesToPublish {
+		return ErrNotEnoughNominees
+	}
+	return nil
+}
+
 func toNomineeResponse(n *EventNominee) NomineeResponse {
 	return NomineeResponse{
 		ID:           n.ID,
@@ -414,6 +423,10 @@ func (s *Service) SetNominees(ctx context.Context, adminID, eventID uint, nomine
 		}
 		var err error
 		if rows, err = replaceNominees(tx, eventID, nominees, now); err != nil {
+			return err
+		}
+		// A published round must keep enough titles even when only its nominees change.
+		if err := checkPublishable(&ev, len(rows)); err != nil {
 			return err
 		}
 		return writeAudit(tx, adminID, admin_module.ActionNomineesUpdated, eventID, map[string]any{"count": len(rows)})
