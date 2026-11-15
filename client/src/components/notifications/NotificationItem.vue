@@ -73,7 +73,7 @@ const title = computed(() => {
   const key = notificationTitleKey(props.notification.type)
   return te(key) ? t(key) : t("notifications.title")
 })
-const message = computed(() => formatNotification(props.notification, { t, te, n }))
+const message = computed(() => formatNotification(props.notification, { t, te, n, locale }))
 const relativeTime = computed(() => formatRelativeTime(props.notification.created_at, locale.value))
 
 const isRequest = computed(() => props.notification.type === "follow_requested" && !!props.notification.actor)

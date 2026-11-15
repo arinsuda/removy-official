@@ -33,6 +33,8 @@ const (
 	NotifEmailVerified   NotificationType = "email_verified"
 	NotifPasswordChanged NotificationType = "password_changed"
 
+	NotifEventResults NotificationType = "event_results"
+
 	NotifFollowRequested NotificationType = "follow_requested"
 	NotifFollowAccepted  NotificationType = "follow_accepted"
 )
@@ -68,6 +70,7 @@ var categoryByType = map[NotificationType]NotificationCategory{
 
 	NotifEmailVerified:   CategorySystem,
 	NotifPasswordChanged: CategorySystem,
+	NotifEventResults:    CategorySystem,
 }
 
 type Notification struct {
@@ -85,4 +88,22 @@ type Notification struct {
 	Params *NotificationParams `gorm:"-:migration;type:jsonb;column:params"`
 	IsRead bool                `gorm:"default:false;index"`
 	ReadAt *time.Time
+}
+
+// EventResultNotifications builds one event_results notification per user for a finished voting
+// round. The row carries the round's id and kind only: no copy, titles, winners or vote choice.
+func EventResultNotifications(userIDs []uint, eventID uint, p NotificationParams) []Notification {
+	ns := make([]Notification, 0, len(userIDs))
+	for _, uid := range userIDs {
+		params := p
+		ns = append(ns, Notification{
+			UserID:    uid,
+			Type:      NotifEventResults,
+			Category:  categoryByType[NotifEventResults],
+			TargetID:  &eventID,
+			TargetRef: ptr("event"),
+			Params:    &params,
+		})
+	}
+	return ns
 }

@@ -233,9 +233,9 @@ func TestRoundSchedulerYearlyWaitsForMonthlyAndDedupes(t *testing.T) {
 	if len(ids) != 2 || ids[0] != 100 || ids[1] != 200 {
 		t.Fatalf("want nominees [100 200] (deduped, most wins first), got %v", ids)
 	}
-	// TV had no monthly rounds: the round exists with no nominees, so it stays a draft.
-	if n := roundCount(e, "vote_yearly", "tv", "2026"); n != 1 {
-		t.Errorf("want an empty yearly tv draft, got %d rows", n)
+	// TV had no monthly winners: too few nominees, so no row is created.
+	if n := roundCount(e, "vote_yearly", "tv", "2026"); n != 0 {
+		t.Errorf("want no yearly tv round, got %d rows", n)
 	}
 }
 
@@ -262,7 +262,7 @@ func TestYearlyFinalizeAwardsKindYearlyTiesAndNoVotes(t *testing.T) {
 	}
 	tv, _, _ := yearly("tv")
 
-	if settled, err := event_module.NewFinalizer(e.db).RunOnce(context.Background()); err != nil || settled != 2 {
+	if settled, err := event_module.NewFinalizer(e.db, nil).RunOnce(context.Background()); err != nil || settled != 2 {
 		t.Fatalf("want 2 rounds settled, got %d, %v", settled, err)
 	}
 	if n := e.count(`SELECT COUNT(*) FROM event_awards WHERE event_id = ? AND award_kind = 'yearly' AND period = '2026'`, movie); n != 2 {
@@ -280,6 +280,21 @@ func TestGenerateYearlyEndpoint(t *testing.T) {
 	period := event_module.NextYearlyPeriod(time.Now())
 
 	code, out := e.do("POST", "/api/admin/events/generate-yearly", map[string]any{"media_type": "movie"}, tok)
+	if code != 409 || out["code"] != "TOO_FEW_YEARLY_NOMINEES" {
+		t.Fatalf("no monthly winners: want 409 TOO_FEW_YEARLY_NOMINEES, got %d: %v", code, out)
+	}
+	if n := roundCount(e, "vote_yearly", "movie", period); n != 0 {
+		t.Fatalf("a refused yearly round must not leave a row, got %d", n)
+	}
+	monthly := seedEvent(t, e.db, event_module.Event{
+		Type: event_module.TypeVoteMonthly, MediaType: strRef("movie"), Period: strRef(period + "-03"),
+		StartsAt: time.Now().UTC(), EndsAt: time.Now().UTC().AddDate(0, 1, 0), Status: event_module.StatusPublished, IsFinalized: true,
+	})
+	for i, mediaID := range []int{100, 200} {
+		n := seedNominee(t, e.db, monthly, "movie", i+1, mediaID, "", "")
+		seedAward(t, e.db, monthly, n, mediaID, "movie", event_module.AwardKindMonthly, period+"-03", 4)
+	}
+	code, out = e.do("POST", "/api/admin/events/generate-yearly", map[string]any{"media_type": "movie"}, tok)
 	if code != 201 {
 		t.Fatalf("want 201, got %d: %v", code, out)
 	}

@@ -210,6 +210,14 @@ func (h *Hub) EmitNew(userID uint, n NotificationResponse) {
 	_ = h.io.To(roomFor(userID)).Emit("notification:new", n)
 }
 
+// EmitCreated pushes freshly stored notifications without resolving actors (system notifications
+// have none). Call it only after the rows committed.
+func (h *Hub) EmitCreated(ns []Notification) {
+	for _, n := range ns {
+		h.EmitNew(n.UserID, baseResponse(n))
+	}
+}
+
 func (h *Hub) EmitRead(userID uint, ids []uint) {
 	_ = h.io.To(roomFor(userID)).Emit("notification:read", map[string]any{"ids": ids})
 }

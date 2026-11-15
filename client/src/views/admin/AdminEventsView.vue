@@ -165,6 +165,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue"
+import { isAxiosError } from "axios"
 import { useI18n } from "vue-i18n"
 import { useRouter } from "vue-router"
 import {
@@ -208,6 +209,7 @@ import {
   EVENT_MIN_NOMINEES_TO_PUBLISH,
   eventErrorKey,
   eventTitle,
+  isDeleteBlocked,
   isoToLocalInput,
   localInputToIso,
   publishErrorKey,
@@ -372,11 +374,14 @@ function getRowMenuItems(ev: AdminEvent): RowMenuItem[] {
     })
   }
 
+  const deleteBlocked = isDeleteBlocked(ev)
   items.push({
     key: "delete",
     label: t("common.delete"),
     icon: Trash2,
     tone: "danger",
+    disabled: deleteBlocked,
+    hint: deleteBlocked ? t("admin.events.deleteBlocked") : undefined,
   })
 
   return items
@@ -549,6 +554,8 @@ async function confirmDelete() {
     void fetchEvents()
   } catch (err) {
     toast.error(t(eventErrorKey(err)))
+    // Votes arrived since the list loaded: refresh so has_votes is current.
+    if (isAxiosError(err) && err.response?.data?.code === "EVENT_NOT_DELETABLE") void fetchEvents()
   } finally {
     deleting.value = false
   }

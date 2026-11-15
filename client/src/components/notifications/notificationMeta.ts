@@ -28,6 +28,7 @@ const ICONS: Partial<Record<NotificationType, Component>> = {
   review_marked_helpful: ThumbsUp,
   following_marked_helpful: ThumbsUp,
   achievement_unlocked: Trophy,
+  event_results: Trophy,
   movie_now_playing: Clapperboard,
   welcome: PartyPopper,
 }

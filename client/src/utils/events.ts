@@ -1,4 +1,12 @@
-import type { AdminEventBody, AppEvent, EventType, LocalizedText, RoundKind } from "@/types/event"
+import type {
+  AdminEvent,
+  AdminEventBody,
+  AppEvent,
+  AwardMediaType,
+  EventType,
+  LocalizedText,
+  RoundKind,
+} from "@/types/event"
 import { getTmdbImageUrl, type TmdbImageSize } from "@/utils/image"
 
 /** localStorage key prefix for "don't show again today"; the user id is appended. */
@@ -23,6 +31,8 @@ export const MONTHLY_PERIOD_RE = /^\d{4}-(0[1-9]|1[0-2])$/
 export const YEARLY_PERIOD_RE = /^\d{4}$/
 /** Fewest nominees a voting round may be saved or published with; mirrors server minNomineesToPublish. */
 export const EVENT_MIN_NOMINEES_TO_PUBLISH = 2
+/** Account age (days) before a user may vote; mirrors server MinVoterAccountAge. */
+export const VOTER_MIN_ACCOUNT_AGE_DAYS = 7
 export const EVENT_POPUP_PRIORITY_MIN = -100
 export const EVENT_POPUP_PRIORITY_MAX = 100
 /** TMDB poster width for nominee cards on the event detail page. */
@@ -214,12 +224,30 @@ export function formatAwardPeriod(period: string, locale: string, style: "short"
   )
 }
 
-function formatClosing(iso: string, locale: string): string {
+/** Date and time of an instant in the voting timezone, e.g. "Nov 26, 2026, 12:00 AM" (locale-aware). */
+export function formatVotingDateTime(iso: string, locale: string): string {
   return new Intl.DateTimeFormat(locale, {
     dateStyle: "medium",
     timeStyle: "short",
     timeZone: VOTING_TIMEZONE,
   }).format(new Date(iso))
+}
+
+/** Named period params for generated copy: {year} for a yearly round, {month} for a monthly one. */
+function periodParams(type: EventType, period: string, locale: string): Record<string, string> {
+  const label = formatAwardPeriod(period, locale, "long")
+  return type === "vote_yearly" ? { year: label } : { month: label }
+}
+
+/** Generated title of a round, e.g. "Popular Movie of the Month - November 2026". */
+function roundTitleText(
+  type: EventType,
+  mediaType: AwardMediaType,
+  period: string,
+  t: EventTranslate,
+  locale: string,
+): string {
+  return t(`events.generated.title.${type}.${mediaType}`, periodParams(type, period, locale), { locale })
 }
 
 /**
@@ -228,12 +256,28 @@ function formatClosing(iso: string, locale: string): string {
  */
 function roundCopy(ev: RoundCopySource, field: RoundField, t: EventTranslate, locale: string): string | null {
   if (!isGeneratedRoundType(ev.type) || !ev.media_type || !ev.period) return null
-  const key = `events.generated.${field}.${ev.type}.${ev.media_type}`
-  const period = formatAwardPeriod(ev.period, locale, "long")
-  const named: Record<string, string> = ev.type === "vote_yearly" ? { year: period } : { month: period }
-  if (field === "title") return t(key, named, { locale })
+  if (field === "title") return roundTitleText(ev.type, ev.media_type, ev.period, t, locale)
+  const key = `events.generated.body.${ev.type}.${ev.media_type}`
   const tz = t("events.generated.timezone", {}, { locale })
-  return t(key, { ...named, closes: formatClosing(ev.ends_at, locale), tz }, { locale })
+  const closes = formatVotingDateTime(ev.ends_at, locale)
+  return t(key, { ...periodParams(ev.type, ev.period, locale), closes, tz }, { locale })
+}
+
+/**
+ * Round title for a notification's params (`event_type`, `media_type`, `period`), in `locale`.
+ * Null when any part is missing or malformed, so the caller can fall back to generic text.
+ */
+export function roundTitleFromParams(
+  params: { event_type?: string; media_type?: string; period?: string },
+  t: EventTranslate,
+  locale: string,
+): string | null {
+  const { event_type: type, media_type: mediaType, period } = params
+  if (type !== "vote_monthly" && type !== "vote_yearly") return null
+  if (mediaType !== "movie" && mediaType !== "tv") return null
+  if (!period) return null
+  const valid = type === "vote_yearly" ? isValidYearlyPeriod(period) : isValidMonthlyPeriod(period)
+  return valid ? roundTitleText(type, mediaType, period, t, locale) : null
 }
 
 /** Generated title for a voting round in `locale`; also the admin form placeholder. */
@@ -393,6 +437,8 @@ export function eventErrorKey(err: unknown): string {
   if (code === "VOTING_WINDOW_TOO_SHORT") return "admin.events.errors.votingWindowTooShort"
   if (code === "NOT_FOUND" || res?.status === 404) return "admin.events.errors.notFound"
   if (code === "INVALID_ID") return "admin.events.errors.notFound"
+  if (code === "EVENT_NOT_DELETABLE") return "admin.events.errors.notDeletable"
+  if (code === "TOO_FEW_YEARLY_NOMINEES") return "admin.events.errors.tooFewYearlyNominees"
   if (res?.status === 401 || res?.status === 403) return "admin.errors.forbidden"
   return "admin.errors.generic"
 }
@@ -406,6 +452,11 @@ export function publishErrorKey(err: unknown): string {
     return "admin.events.errors.publishNeedsNominees"
   }
   return eventErrorKey(err)
+}
+
+/** A voting round can be deleted only while it has no votes and is not finalized (server rule). */
+export function isDeleteBlocked(ev: Pick<AdminEvent, "type" | "is_finalized" | "has_votes">): boolean {
+  return isGeneratedRoundType(ev.type) && (!!ev.is_finalized || !!ev.has_votes)
 }
 
 /** Map a failed auto publish toggle to an i18n key; other failures fall back to the generic event mapping. */
@@ -422,5 +473,6 @@ export function voteErrorKey(err: unknown): string {
   if (code === "VOTING_CLOSED") return "events.voting.errors.closed"
   if (code === "VOTING_NOT_STARTED") return "events.voting.errors.notStarted"
   if (code === "NOMINEE_NOT_FOUND") return "events.voting.errors.nomineeNotFound"
+  if (code === "ACCOUNT_TOO_NEW") return "events.voting.errors.accountTooNew"
   return "common.error"
 }

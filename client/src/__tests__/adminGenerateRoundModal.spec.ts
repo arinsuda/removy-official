@@ -169,3 +169,18 @@ describe("AdminGenerateRoundModal", () => {
     expect(toastError).toHaveBeenCalledWith(tr("admin.events.errors.monthlyRoundsPending"))
   })
 })
+
+describe("AdminGenerateRoundModal yearly nominee shortfall", () => {
+  it("maps TOO_FEW_YEARLY_NOMINEES to a readable toast", async () => {
+    api.generateYearlyRound.mockRejectedValueOnce({
+      response: { status: 409, data: { code: "TOO_FEW_YEARLY_NOMINEES" } },
+    })
+    await openModal()
+    await choose(kindRadio("yearly"))
+
+    submit()
+    await flushPromises()
+
+    expect(toastError).toHaveBeenCalledWith(tr("admin.events.errors.tooFewYearlyNominees"))
+  })
+})

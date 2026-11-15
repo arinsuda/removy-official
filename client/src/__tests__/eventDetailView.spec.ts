@@ -7,6 +7,7 @@ import { eventApi } from "@/api/endpoints/event"
 import { useAuthStore } from "@/stores/auth"
 import type { AppEvent } from "@/types/event"
 import { clickAfterRender } from "./helpers/waitForEnabled"
+import { formatVotingDateTime, VOTER_MIN_ACCOUNT_AGE_DAYS } from "@/utils/events"
 import { useRealI18n } from "./helpers/realI18n"
 
 vi.mock("@/api/endpoints/event", () => ({
@@ -375,5 +376,74 @@ describe("EventDetailView", () => {
     expect(wrapper.find(".event-voting__voted-banner").exists()).toBe(true)
     expect(confirmButtons()).toHaveLength(0)
     expect(api.get).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe("EventDetailView account age gate", () => {
+  const FUTURE_ELIGIBLE = "2999-01-01T00:00:00.000Z"
+  const PAST_ELIGIBLE = "2000-01-01T00:00:00.000Z"
+
+  afterEach(() => {
+    wrappers.forEach((w) => w.unmount())
+    wrappers.length = 0
+    vi.clearAllMocks()
+  })
+
+  it("locks voting and explains the wait while the account is too new", async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useAuthStore().user = { id: 7 } as never
+    api.get.mockResolvedValueOnce({ data: { event: { ...votingEvent(), vote_eligible_at: FUTURE_ELIGIBLE } } } as never)
+
+    const { wrapper } = await mountAt("/events/8", pinia)
+
+    const notice = i18n.global.t("events.voting.accountTooNew", {
+      days: VOTER_MIN_ACCOUNT_AGE_DAYS,
+      date: formatVotingDateTime(FUTURE_ELIGIBLE, i18n.global.locale.value),
+    })
+    expect(wrapper.text()).toContain(notice)
+    const voteButton = wrapper.find(".event-nominee-card__actions button").element as HTMLButtonElement
+    expect(voteButton.disabled).toBe(true)
+  })
+
+  it("keeps voting open once the eligibility time has passed", async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useAuthStore().user = { id: 7 } as never
+    api.get.mockResolvedValueOnce({ data: { event: { ...votingEvent(), vote_eligible_at: PAST_ELIGIBLE } } } as never)
+
+    const { wrapper } = await mountAt("/events/8", pinia)
+
+    expect(wrapper.text()).not.toContain(
+      i18n.global.t("events.voting.accountTooNew", {
+        days: VOTER_MIN_ACCOUNT_AGE_DAYS,
+        date: formatVotingDateTime(PAST_ELIGIBLE, i18n.global.locale.value),
+      }),
+    )
+    const voteButton = wrapper.find(".event-nominee-card__actions button").element as HTMLButtonElement
+    expect(voteButton.disabled).toBe(false)
+  })
+
+  it("refetches the event when the server rejects a vote as too new", async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useAuthStore().user = { id: 7 } as never
+    api.vote.mockRejectedValueOnce(httpError(403, "ACCOUNT_TOO_NEW"))
+    api.get
+      .mockResolvedValueOnce({ data: { event: votingEvent() } } as never)
+      .mockResolvedValueOnce({ data: { event: { ...votingEvent(), vote_eligible_at: FUTURE_ELIGIBLE } } } as never)
+
+    const { wrapper } = await mountAt("/events/8", pinia)
+    clickAfterRender(wrapper.findAll(".event-nominee-card__actions button")[0]!.element as HTMLElement)
+    await flushPromises()
+
+    await vi.waitFor(() => expect(api.get).toHaveBeenCalledTimes(2))
+    await flushPromises()
+    expect(wrapper.text()).toContain(
+      i18n.global.t("events.voting.accountTooNew", {
+        days: VOTER_MIN_ACCOUNT_AGE_DAYS,
+        date: formatVotingDateTime(FUTURE_ELIGIBLE, i18n.global.locale.value),
+      }),
+    )
   })
 })

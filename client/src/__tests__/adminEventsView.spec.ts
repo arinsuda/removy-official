@@ -326,3 +326,68 @@ describe("AdminEventsView", () => {
     await vi.waitFor(() => expect(api.list).toHaveBeenCalledTimes(2))
   })
 })
+
+describe("AdminEventsView delete guard", () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  afterEach(() => {
+    wrappers.forEach((w) => w.unmount())
+    wrappers.length = 0
+    document.body.innerHTML = ""
+    vi.clearAllMocks()
+  })
+
+  it("disables delete for a finalized voting round and explains why", async () => {
+    api.list.mockResolvedValue(
+      listResponse([
+        makeAdminEvent({
+          id: 4,
+          type: "vote_monthly",
+          media_type: "movie",
+          period: "2026-10",
+          state: "past",
+          is_finalized: true,
+          has_votes: true,
+          nominees: [nominee(1, 101, "Alpha")],
+        }),
+      ]),
+    )
+
+    const wrapper = await mountView()
+    await wrapper.find('button[aria-haspopup="menu"]').trigger("click")
+    const del = Array.from(document.body.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')).find(
+      (el) => el.textContent?.trim() === tr("common.delete"),
+    )
+
+    expect(del?.disabled).toBe(true)
+    expect(del?.title).toBe(tr("admin.events.deleteBlocked"))
+  })
+
+  it("refetches the list when delete is refused because votes arrived", async () => {
+    api.list.mockResolvedValue(
+      listResponse([
+        makeAdminEvent({ id: 4, type: "vote_monthly", media_type: "movie", period: "2026-10", state: "upcoming" }),
+      ]),
+    )
+    api.remove.mockRejectedValueOnce(
+      Object.assign(new Error("HTTP 409"), {
+        isAxiosError: true,
+        response: { status: 409, data: { code: "EVENT_NOT_DELETABLE" } },
+      }),
+    )
+
+    const wrapper = await mountView()
+    await wrapper.find('button[aria-haspopup="menu"]').trigger("click")
+    const del = Array.from(document.body.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')).find(
+      (el) => el.textContent?.trim() === tr("common.delete"),
+    )
+    await clickAfterRender(del!)
+    await flushPromises()
+    await clickAfterRender(modalButton(tr("admin.events.deleteConfirm"))!)
+
+    await vi.waitFor(() => expect(api.remove).toHaveBeenCalledTimes(1))
+    await vi.waitFor(() => expect(api.list).toHaveBeenCalledTimes(2))
+  })
+})

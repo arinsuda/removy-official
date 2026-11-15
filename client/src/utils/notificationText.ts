@@ -1,11 +1,14 @@
 import { nameKey } from "@/components/achievement/text"
 import { notificationTitleKey, type AppNotification } from "@/types/notification"
+import { roundTitleFromParams } from "@/utils/events"
 
 /** The slice of vue-i18n the resolver needs; works with the composer and `i18n.global`. */
 export interface NotificationI18n {
   t: (key: string, named?: Record<string, unknown>) => string
   te: (key: string) => boolean
   n: (value: number) => string
+  /** Current UI locale; a ref from the composer or `i18n.global` satisfies it. */
+  locale: { readonly value: string }
 }
 
 const TYPE_KEY_PREFIX = "notifications.types."
@@ -50,7 +53,7 @@ export function notificationActorName(n: AppNotification): string {
  * 3) the title key, then the generic title.
  */
 export function formatNotification(n: AppNotification, i18n: NotificationI18n): string {
-  const { t, te, n: num } = i18n
+  const { t, te, n: num, locale } = i18n
   const key = `${TYPE_KEY_PREFIX}${n.type}`
   const params = n.params ?? {}
 
@@ -72,6 +75,11 @@ export function formatNotification(n: AppNotification, i18n: NotificationI18n): 
       named.name = localized || params.name || ""
       named.exp = num(params.exp ?? 0)
       complete = !!named.name
+    }
+    if (n.type === "event_results") {
+      const round = roundTitleFromParams(params, t, locale.value)
+      if (round) named.round = round
+      complete = !!round
     }
     if (complete) return t(key, named)
   }

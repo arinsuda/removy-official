@@ -60,7 +60,8 @@
     "password_changed": "Password changed",
     "welcome": "Welcome",
     "follow_requested": "New follow request",
-    "follow_accepted": "Follow request accepted"
+    "follow_accepted": "Follow request accepted",
+    "event_results": "Voting results are in"
   },
   "someone": "Someone",
   "untitled": "a title",
@@ -82,6 +83,7 @@
     "movie_now_playing": "\"{title}\" is now playing, time to watch!",
     "achievement_unlocked": "Achievement unlocked: {name} (+{exp} EXP)",
     "email_verified": "Your email has been verified",
-    "password_changed": "Your password was changed. If this wasn't you, please contact support immediately."
+    "password_changed": "Your password was changed. If this wasn't you, please contact support immediately.",
+    "event_results": "The results for {round} are in. See who won on POPCORN!"
   }
 }

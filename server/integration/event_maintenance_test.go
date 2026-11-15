@@ -141,7 +141,7 @@ func TestEventFinalizerSettlesEndedRoundsWithoutVisit(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	settled, err := event_module.NewFinalizer(e.db).RunOnce(ctx)
+	settled, err := event_module.NewFinalizer(e.db, nil).RunOnce(ctx)
 	if err != nil {
 		t.Fatalf("finalize pass: %v", err)
 	}
@@ -161,7 +161,7 @@ func TestEventFinalizerSettlesEndedRoundsWithoutVisit(t *testing.T) {
 		t.Error("soft-deleted round must not be finalized")
 	}
 
-	if settled, err := event_module.NewFinalizer(e.db).RunOnce(ctx); err != nil || settled != 0 {
+	if settled, err := event_module.NewFinalizer(e.db, nil).RunOnce(ctx); err != nil || settled != 0 {
 		t.Fatalf("second pass: want 0 settled and no error, got %d, %v", settled, err)
 	}
 }

@@ -17,6 +17,9 @@ type NotificationParams struct {
 	TargetCount int    `json:"target_count,omitempty"`
 	Exp         int    `json:"exp,omitempty"`
 	Name        string `json:"name,omitempty"`
+	// EventType and Period describe a finished voting round (with MediaType); no titles or winners.
+	EventType string `json:"event_type,omitempty"`
+	Period    string `json:"period,omitempty"`
 }
 
 // Value stores nil as SQL NULL and anything else as jsonb.

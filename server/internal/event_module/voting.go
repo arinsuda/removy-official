@@ -7,6 +7,7 @@ import (
 
 	"github.com/arinsuda/movie-hub/config"
 	"github.com/arinsuda/movie-hub/internal/admin_module"
+	notification_module "github.com/arinsuda/movie-hub/internal/notification_module"
 	"github.com/arinsuda/movie-hub/internal/shared"
 	tmdbmodule "github.com/arinsuda/movie-hub/internal/tmdb_module"
 	"gorm.io/gorm"
@@ -84,11 +85,34 @@ func replaceNominees(tx *gorm.DB, eventID uint, in []NomineeInput, now time.Time
 	return rows, nil
 }
 
+// votedEventIDs returns which of eventIDs have at least one vote (one query).
+func votedEventIDs(db *gorm.DB, eventIDs []uint) (map[uint]bool, error) {
+	out := make(map[uint]bool, len(eventIDs))
+	if len(eventIDs) == 0 {
+		return out, nil
+	}
+	var ids []uint
+	if err := db.Raw("SELECT DISTINCT event_id FROM event_votes WHERE event_id IN ?", eventIDs).Scan(&ids).Error; err != nil {
+		return nil, err
+	}
+	for _, id := range ids {
+		out[id] = true
+	}
+	return out, nil
+}
+
+// hasVotes reports whether anyone has voted in the round.
+func hasVotes(tx *gorm.DB, eventID uint) (bool, error) {
+	var voted bool
+	err := tx.Raw("SELECT EXISTS(SELECT 1 FROM event_votes WHERE event_id = ?)", eventID).Row().Scan(&voted)
+	return voted, err
+}
+
 // checkNoVotes refuses a nominee change once anyone has voted: replacing or deleting a
 // nominee cascades to its votes and awards.
 func checkNoVotes(tx *gorm.DB, eventID uint) error {
-	var voted bool
-	if err := tx.Raw("SELECT EXISTS(SELECT 1 FROM event_votes WHERE event_id = ?)", eventID).Row().Scan(&voted); err != nil {
+	voted, err := hasVotes(tx, eventID)
+	if err != nil {
 		return err
 	}
 	if voted {
@@ -271,6 +295,9 @@ func (s *Service) Vote(ctx context.Context, userID, eventID, nomineeID uint) err
 		if err != nil {
 			return err
 		}
+		if err := checkVoterAge(tx, userID, now); err != nil {
+			return err
+		}
 		var exists int64
 		if err := tx.Model(&EventNominee{}).Where("id = ? AND event_id = ?", nomineeID, eventID).Count(&exists).Error; err != nil {
 			return err
@@ -284,6 +311,34 @@ func (s *Service) Vote(ctx context.Context, userID, eventID, nomineeID uint) err
 			DoUpdates: clause.AssignmentColumns([]string{"nominee_id", "updated_at"}),
 		}).Create(&vote).Error
 	})
+}
+
+// AccountTooNewError: the voter's account is younger than MinVoterAccountAge.
+type AccountTooNewError struct{ EligibleAt time.Time }
+
+func (e *AccountTooNewError) Error() string { return "account too new to vote" }
+
+// voterEligibleAt returns when the user's account may start voting. ok=false: the user does not
+// exist (or is soft-deleted), so no eligibility applies.
+func voterEligibleAt(db *gorm.DB, userID uint) (time.Time, bool, error) {
+	var createdAt time.Time
+	res := db.Raw("SELECT created_at FROM users WHERE id = ? AND deleted_at IS NULL", userID).Scan(&createdAt)
+	if res.Error != nil || res.RowsAffected == 0 {
+		return time.Time{}, false, res.Error
+	}
+	return createdAt.Add(MinVoterAccountAge).UTC(), true, nil
+}
+
+// checkVoterAge refuses a vote from an account younger than MinVoterAccountAge at `now`.
+func checkVoterAge(tx *gorm.DB, userID uint, now time.Time) error {
+	eligibleAt, ok, err := voterEligibleAt(tx, userID)
+	if err != nil {
+		return err
+	}
+	if ok && now.Before(eligibleAt) {
+		return &AccountTooNewError{EligibleAt: eligibleAt}
+	}
+	return nil
 }
 
 // CancelVote removes the user's vote while the round is open. Idempotent.
@@ -309,7 +364,9 @@ func (s *Service) Finalize(ctx context.Context, adminID, eventID uint) error {
 // top-scoring nominees as (co-)winners. Idempotent: lockEvent serializes callers, and a
 // finalized round is a no-op.
 func (s *Service) finalizeTx(ctx context.Context, adminID, eventID uint) error {
-	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	var notified []notification_module.Notification
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		notified = nil
 		var ev Event
 		if err := lockEvent(tx, eventID, &ev); err != nil {
 			return err
@@ -352,6 +409,11 @@ func (s *Service) finalizeTx(ctx context.Context, adminID, eventID uint) error {
 				return err
 			}
 		}
+		// Notify voters in the same transaction that flips is_finalized: lockEvent serializes callers
+		// and a finalized round returns early above, so each voter gets exactly one row.
+		if notified, err = notifyVoters(tx, &ev); err != nil {
+			return err
+		}
 		if err := tx.Model(&ev).Update("is_finalized", true).Error; err != nil {
 			return err
 		}
@@ -360,6 +422,40 @@ func (s *Service) finalizeTx(ctx context.Context, adminID, eventID uint) error {
 		}
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+	// Emit only after the commit, and skip the socket push for very large rounds (REST still lists them).
+	if s.emitter != nil && len(notified) > 0 && len(notified) <= notifyEmitMax {
+		s.emitter.EmitCreated(notified)
+	}
+	return nil
+}
+
+// notifyVoters stores one event_results notification per active voter and returns the rows.
+// The params hold the round's kind and period only: no titles, winners or vote choice.
+func notifyVoters(tx *gorm.DB, ev *Event) ([]notification_module.Notification, error) {
+	var voterIDs []uint
+	err := tx.Table("event_votes ev").
+		Joins("JOIN users u ON u.id = ev.user_id").
+		Where("ev.event_id = ? AND u.deleted_at IS NULL AND u.is_active", ev.ID).
+		Order("ev.user_id ASC").
+		Pluck("ev.user_id", &voterIDs).Error
+	if err != nil || len(voterIDs) == 0 {
+		return nil, err
+	}
+	params := notification_module.NotificationParams{EventType: string(ev.Type)}
+	if ev.MediaType != nil {
+		params.MediaType = *ev.MediaType
+	}
+	if ev.Period != nil {
+		params.Period = *ev.Period
+	}
+	ns := notification_module.EventResultNotifications(voterIDs, ev.ID, params)
+	if err := tx.Omit(clause.Associations).CreateInBatches(&ns, notifyInsertBatch).Error; err != nil {
+		return nil, err
+	}
+	return ns, nil
 }
 
 // buildAwards turns the winning tallies into award rows for the round's kind and period.
@@ -501,6 +597,7 @@ const communityScoreSQL = `
 		FROM media_view_days v JOIN users u ON u.id = v.user_id
 		WHERE v.media_type = ? AND v.day >= ? AND v.day < ?
 		  AND u.deleted_at IS NULL AND u.is_active
+		  AND v.day >= ((u.created_at + make_interval(days => CAST(? AS INTEGER))) AT TIME ZONE CAST(? AS TEXT))::date
 		GROUP BY v.media_id
 	) sub
 	GROUP BY media_id
@@ -539,7 +636,7 @@ func (s *Service) SuggestNominees(ctx context.Context, mediaType, period string)
 		reviewScoreWeight, mediaType, activityStart, startsAt,
 		libraryScoreWeight, mediaType, activityStart, startsAt,
 		likeScoreWeight, mediaType, activityStart, startsAt,
-		viewScoreWeight, mediaType, viewFrom, viewTo,
+		viewScoreWeight, mediaType, viewFrom, viewTo, MinVoterAccountAgeDays, config.AppTimeZone,
 		communityCandidatePool,
 	).Scan(&community).Error; err != nil {
 		return nil, err

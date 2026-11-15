@@ -19,6 +19,17 @@ const (
 	// minNomineesToPublish is the fewest titles a voting round needs before it can be published.
 	minNomineesToPublish = 2
 
+	// MinVoterAccountAgeDays is how old an account must be before it may vote, and before its
+	// views count toward a community score. It stops throwaway accounts from swaying a round.
+	MinVoterAccountAgeDays = 7
+	MinVoterAccountAge     = MinVoterAccountAgeDays * 24 * time.Hour
+
+	// notifyInsertBatch is how many result notifications one INSERT carries.
+	notifyInsertBatch = 500
+	// notifyEmitMax is the most voters a finalize pushes over the socket; larger rounds rely on the
+	// REST list (clients refetch on connect) so one finalize cannot flood the hub.
+	notifyEmitMax = 5000
+
 	// VoteRateMax and VoteRateWindow bound how often one signed-in user may cast or withdraw a vote.
 	// Votes are idempotent upserts, so the budget only stops scripted churn.
 	VoteRateMax    = 30

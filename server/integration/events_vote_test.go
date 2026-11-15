@@ -92,10 +92,19 @@ func openVotingRound(t *testing.T, e *env, adminTok string) (uint, []uint) {
 	return eventID, nomineeIDs
 }
 
+// backdateUser makes an account `age` old, so it passes the minimum voter age.
+func backdateUser(t *testing.T, e *env, userID uint, age time.Duration) {
+	t.Helper()
+	if err := e.db.Table("users").Where("id = ?", userID).Update("created_at", time.Now().UTC().Add(-age)).Error; err != nil {
+		t.Fatal(err)
+	}
+}
+
 // newVoter seeds a verified user and returns its access token.
 func newVoter(t *testing.T, e *env, email string) (uint, string) {
 	t.Helper()
 	uid := seedUser(t, e.db, email, true, "pw-"+email)
+	backdateUser(t, e, uid, 30*24*time.Hour)
 	return uid, e.loginPair(email, "pw-"+email).AccessToken
 }
 
@@ -112,10 +121,10 @@ func TestEventsVotingAndNomineeFlow(t *testing.T) {
 	e.seedAdmin("admin@x.test", "pw-admin")
 	adminTok := e.loginPair("admin@x.test", "pw-admin").AccessToken
 
-	seedUser(t, e.db, "voter1@x.test", true, "pw-voter1")
+	backdateUser(t, e, seedUser(t, e.db, "voter1@x.test", true, "pw-voter1"), 30*24*time.Hour)
 	voter1Tok := e.loginPair("voter1@x.test", "pw-voter1").AccessToken
 
-	seedUser(t, e.db, "voter2@x.test", true, "pw-voter2")
+	backdateUser(t, e, seedUser(t, e.db, "voter2@x.test", true, "pw-voter2"), 30*24*time.Hour)
 	voter2Tok := e.loginPair("voter2@x.test", "pw-voter2").AccessToken
 
 	// 0. When fewer than 5 real candidates exist, generate-monthly refuses with 422 NOT_ENOUGH_NOMINEES

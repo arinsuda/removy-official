@@ -65,6 +65,9 @@ const (
 	ErrorCodeMonthlyRoundsPending ErrorCode = "MONTHLY_ROUNDS_PENDING"
 	ErrorCodeEventNotDraft        ErrorCode = "EVENT_NOT_DRAFT"
 	ErrorCodeVotingWindowTooShort ErrorCode = "VOTING_WINDOW_TOO_SHORT"
+	ErrorCodeTooFewYearlyNominees ErrorCode = "TOO_FEW_YEARLY_NOMINEES"
+	ErrorCodeAccountTooNew        ErrorCode = "ACCOUNT_TOO_NEW"
+	ErrorCodeEventNotDeletable    ErrorCode = "EVENT_NOT_DELETABLE"
 )
 
 type APIError struct {

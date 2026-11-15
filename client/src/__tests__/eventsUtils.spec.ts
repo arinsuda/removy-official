@@ -11,6 +11,7 @@ import {
   eventTitle,
   nextMonthlyPeriod,
   publishErrorKey,
+  isDeleteBlocked,
   isInternalLink,
   isPopupHidden,
   isValidLink,
@@ -21,6 +22,7 @@ import {
   validateEventForm,
   voteErrorKey,
 } from "@/utils/events"
+import { expectKeysInBothLocales } from "./helpers/realI18n"
 
 describe("events utils", () => {
   describe("localizedText", () => {
@@ -373,5 +375,39 @@ describe("events utils", () => {
     it("accepts blank titles for yearly rounds too", () => {
       expect(validateEventForm({ ...votingForm, type: "vote_yearly", period: "2026" })).toEqual({})
     })
+  })
+})
+
+describe("delete guard and vote/admin error keys", () => {
+  it("blocks deleting a voting round that is finalized or has votes", () => {
+    expect(isDeleteBlocked({ type: "vote_monthly", is_finalized: true, has_votes: false })).toBe(true)
+    expect(isDeleteBlocked({ type: "vote_yearly", is_finalized: false, has_votes: true })).toBe(true)
+    expect(isDeleteBlocked({ type: "vote_monthly", is_finalized: false, has_votes: false })).toBe(false)
+  })
+
+  it("never blocks announcements", () => {
+    expect(isDeleteBlocked({ type: "announcement", is_finalized: true, has_votes: true })).toBe(false)
+  })
+
+  it("maps EVENT_NOT_DELETABLE to its own message", () => {
+    expect(eventErrorKey({ response: { status: 409, data: { code: "EVENT_NOT_DELETABLE" } } })).toBe(
+      "admin.events.errors.notDeletable",
+    )
+  })
+
+  it("maps ACCOUNT_TOO_NEW to the voting message", () => {
+    expect(voteErrorKey({ response: { status: 403, data: { code: "ACCOUNT_TOO_NEW" } } })).toBe(
+      "events.voting.errors.accountTooNew",
+    )
+  })
+
+  it("has the new event, voting and admin keys in both locales", () => {
+    expectKeysInBothLocales([
+      "admin.events.deleteBlocked",
+      "admin.events.errors.notDeletable",
+      "admin.events.errors.tooFewYearlyNominees",
+      "events.voting.accountTooNew",
+      "events.voting.errors.accountTooNew",
+    ])
   })
 })

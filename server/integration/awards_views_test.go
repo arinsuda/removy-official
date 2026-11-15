@@ -117,6 +117,12 @@ func TestCommunityScoreCountsOnlyActiveViewsInWindow(t *testing.T) {
 	deleted := seedUser(t, e.db, "deleted@x.test", true, "pw-deleted")
 	e.db.Exec(`UPDATE users SET is_active = false WHERE id = ?`, inactive)
 	e.db.Exec(`UPDATE users SET deleted_at = now() WHERE id = ?`, deleted)
+	// Accounts must be older than the voter minimum age for their views to count.
+	fresh := seedUser(t, e.db, "fresh@x.test", true, "pw-fresh")
+	e.db.Exec(`UPDATE users SET created_at = '2029-01-01' WHERE id IN (?, ?, ?)`, active, inactive, deleted)
+	e.db.Exec(`UPDATE users SET created_at = '2030-05-18 12:00:00+00' WHERE id = ?`, fresh)
+	seedView(t, e.db, fresh, 905, "2030-05-24") // first week of the account: excluded
+	seedView(t, e.db, fresh, 906, "2030-05-25") // first day after the minimum age: counts
 
 	seedView(t, e.db, active, 901, "2030-05-20") // counts
 	seedView(t, e.db, active, 901, "2030-06-01") // counts: second day
@@ -139,7 +145,10 @@ func TestCommunityScoreCountsOnlyActiveViewsInWindow(t *testing.T) {
 	if got, ok := found[901]; !ok || math.Abs(got-0.2) > 1e-9 {
 		t.Fatalf("expected community score 0.2 for media 901 (two active days), got %v (present=%v)", got, ok)
 	}
-	for _, id := range []int{902, 903, 904} {
+	if got, ok := found[906]; !ok || math.Abs(got-0.1) > 1e-9 {
+		t.Fatalf("expected community score 0.1 for media 906 (first eligible day), got %v (present=%v)", got, ok)
+	}
+	for _, id := range []int{902, 903, 904, 905} {
 		if _, ok := found[id]; ok {
 			t.Errorf("media %d must not score: its views are outside the window or from an inactive or deleted user", id)
 		}

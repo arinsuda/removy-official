@@ -17,6 +17,7 @@ export type NotificationType =
   | "welcome"
   | "follow_requested"
   | "follow_accepted"
+  | "event_results"
 
 export type NotificationCategory = "system" | "social" | "media" | "achievement"
 
@@ -36,6 +37,9 @@ export interface NotificationParams {
   target_count?: number
   exp?: number
   name?: string
+  /** Voting round params of event_results; no titles, winners or votes. */
+  event_type?: string
+  period?: string
 }
 
 export interface AppNotification {
@@ -90,6 +94,8 @@ export function getNotificationActionUrl(n: AppNotification): string | null {
     case "movie":
     case "tv":
       return `/${MEDIA_ROUTE[n.target_ref]}/${n.target_id}`
+    case "event":
+      return `/events/${n.target_id}`
     case "review": {
       // Reviews have no page of their own; open the title they belong to.
       const { media_id, media_type } = n.params ?? {}

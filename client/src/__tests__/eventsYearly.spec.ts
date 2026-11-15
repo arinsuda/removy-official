@@ -6,6 +6,7 @@ import {
   eventTitle,
   isValidYearlyPeriod,
   nextYearlyPeriod,
+  roundTitleFromParams,
   validateEventForm,
 } from "@/utils/events"
 import { expectKeysInBothLocales } from "./helpers/realI18n"
@@ -119,6 +120,29 @@ describe("yearly rounds", () => {
       expect(
         eventErrorKey({ response: { status: 409, data: { code: "MONTHLY_ROUNDS_PENDING" } } }),
       ).toBe("admin.events.errors.monthlyRoundsPending")
+    })
+  })
+
+  describe("roundTitleFromParams", () => {
+    it("titles a yearly event notification from its params", () => {
+      expect(roundTitleFromParams({ event_type: "vote_yearly", media_type: "movie", period: "2026" }, t, "en")).toBe(
+        "Popular Movie of the Year - 2026",
+      )
+    })
+
+    it("returns null for a malformed or incomplete payload", () => {
+      expect(roundTitleFromParams({ event_type: "vote_yearly", media_type: "movie", period: "26" }, t, "en")).toBeNull()
+      expect(roundTitleFromParams({ event_type: "announcement", media_type: "movie", period: "2026" }, t, "en")).toBeNull()
+      expect(roundTitleFromParams({ event_type: "vote_yearly", media_type: "book", period: "2026" }, t, "en")).toBeNull()
+      expect(roundTitleFromParams({ event_type: "vote_yearly", media_type: "movie" }, t, "en")).toBeNull()
+    })
+  })
+
+  describe("eventErrorKey for yearly generation", () => {
+    it("maps TOO_FEW_YEARLY_NOMINEES to its own message", () => {
+      expect(
+        eventErrorKey({ response: { status: 409, data: { code: "TOO_FEW_YEARLY_NOMINEES" } } }),
+      ).toBe("admin.events.errors.tooFewYearlyNominees")
     })
   })
 })
