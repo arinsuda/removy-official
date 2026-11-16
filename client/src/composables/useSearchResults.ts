@@ -1,13 +1,15 @@
 import { computed, ref, watch, type Ref } from "vue"
 import { useInfiniteQuery, useQuery } from "@tanstack/vue-query"
-import { actorApi } from "@/api/api"
+import { actorApi, mangaApi } from "@/api/api"
 import type { SearchFilters } from "@/api/endpoints/movie"
 import { MAX_PAGES, SEARCH_MAX_EMPTY_PAGES, movieBrowse, tvBrowse } from "@/components/browse/browseConfig"
 import { sortMedia } from "@/components/browse/browseSort"
 import type { HomeMedia } from "@/components/home/homeMedia"
 import { dedupeMedia, interleave } from "@/components/home/popcornHome"
 import type { SearchState } from "@/components/search/searchQuery"
+import { dedupeManga } from "@/composables/useMangaBrowse"
 import type { Genre, PaginatedResult, PersonSearchResult } from "@/types"
+import type { MangaItem } from "@/types/manga"
 
 export function useSearchResults(state: Ref<SearchState>, options: { allowPeople?: Ref<boolean> } = {}) {
   const allowPeople = options.allowPeople ?? ref(true)
@@ -71,6 +73,11 @@ export function useSearchResults(state: Ref<SearchState>, options: { allowPeople
 
   const movies = paged("movie", movieBrowse.fetchSearch, { active: computed(() => enabled.value && movieFits.value) })
   const series = paged("tv", tvBrowse.fetchSearch, { active: computed(() => enabled.value && tvFits.value) })
+  // Manga has no year or genre filter on this page, so its list is never filtered.
+  const manga = paged<MangaItem>("manga", async (query, page) => (await mangaApi.search(query, page)).data, {
+    filtered: false,
+    active: enabled,
+  })
   const people = paged<PersonSearchResult>("people", async (query, page) => (await actorApi.search(query, page)).data, {
     filtered: false,
     active: computed(() => enabled.value && allowPeople.value),
@@ -80,6 +87,7 @@ export function useSearchResults(state: Ref<SearchState>, options: { allowPeople
   const movieItems = computed(() => dedupeMedia(flat<HomeMedia>(movies.data.value?.pages)))
   const seriesItems = computed(() => dedupeMedia(flat<HomeMedia>(series.data.value?.pages)))
   const peopleItems = computed(() => flat<PersonSearchResult>(people.data.value?.pages))
+  const mangaItems = computed(() => dedupeManga(flat<MangaItem>(manga.data.value?.pages)))
 
   /** Titles of the active tab before year/genre filters; "all" alternates movies and series. */
   const pool = computed(() => {
@@ -122,6 +130,7 @@ export function useSearchResults(state: Ref<SearchState>, options: { allowPeople
   const counts = computed(() => ({
     movie: total(movies),
     tv: total(series),
+    manga: total(manga),
     people: allowPeople.value ? total(people) : 0,
     all: total(movies) + total(series),
   }))
@@ -133,7 +142,9 @@ export function useSearchResults(state: Ref<SearchState>, options: { allowPeople
         ? movies.isLoading.value
         : effectiveTab.value === "tv"
           ? series.isLoading.value
-          : movies.isLoading.value || series.isLoading.value,
+          : effectiveTab.value === "manga"
+            ? manga.isLoading.value
+            : movies.isLoading.value || series.isLoading.value,
   )
   // "all" only fails when both lists fail; one working list is still useful.
   const failed = computed(() =>
@@ -143,9 +154,21 @@ export function useSearchResults(state: Ref<SearchState>, options: { allowPeople
         ? movies.isError.value
         : effectiveTab.value === "tv"
           ? series.isError.value
-          : movies.isError.value && series.isError.value,
+          : effectiveTab.value === "manga"
+            ? manga.isError.value
+            : movies.isError.value && series.isError.value,
   )
-  const lists = computed(() => (effectiveTab.value === "people" ? [people] : effectiveTab.value === "movie" ? [movies] : effectiveTab.value === "tv" ? [series] : [movies, series]))
+  const lists = computed(() =>
+    effectiveTab.value === "people"
+      ? [people]
+      : effectiveTab.value === "movie"
+        ? [movies]
+        : effectiveTab.value === "tv"
+          ? [series]
+          : effectiveTab.value === "manga"
+            ? [manga]
+            : [movies, series],
+  )
   const hasNext = computed(() => lists.value.some((l) => l.hasNextPage.value))
   const fetchingNext = computed(() => lists.value.some((l) => l.isFetchingNextPage.value))
 
@@ -159,5 +182,5 @@ export function useSearchResults(state: Ref<SearchState>, options: { allowPeople
   /** Counts of filtered lists are TMDB's unfiltered totals when a genre is set, so the UI hides them. */
   const countsApproximate = computed(() => !!state.value.genre)
 
-  return { items, peopleItems, years, genres, counts, countsApproximate, busy, failed, hasNext, fetchingNext, fetchNext, retry }
+  return { items, peopleItems, mangaItems, years, genres, counts, countsApproximate, busy, failed, hasNext, fetchingNext, fetchNext, retry }
 }

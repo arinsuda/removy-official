@@ -26,6 +26,9 @@
       <ul v-if="state.tab === 'people'" class="sr__people">
         <li v-for="p in people" :key="p.id"><SearchPersonCard :person="p" :query="state.q" /></li>
       </ul>
+      <div v-else-if="state.tab === 'manga'" class="sr__grid">
+        <MangaCard v-for="item in manga" :key="item.id" :item="item" />
+      </div>
       <div v-else class="sr__grid">
         <HomePosterCard
           v-for="item in items"
@@ -52,6 +55,7 @@ import { computed, useTemplateRef } from "vue"
 import { useI18n } from "vue-i18n"
 import { SearchX } from "lucide-vue-next"
 import HomePosterCard from "@/components/home/HomePosterCard.vue"
+import MangaCard from "@/components/manga/MangaCard.vue"
 import type { HomeMedia } from "@/components/home/homeMedia"
 import AppButton from "@/components/ui/AppButton.vue"
 import AppEmptyState from "@/components/ui/AppEmptyState.vue"
@@ -60,6 +64,7 @@ import SkeletonBlock from "@/components/ui/skeleton/SkeletonBlock.vue"
 import SkeletonRegion from "@/components/ui/skeleton/SkeletonRegion.vue"
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll"
 import type { PersonSearchResult } from "@/types"
+import type { MangaItem } from "@/types/manga"
 import SearchPersonCard from "./SearchPersonCard.vue"
 import SearchSuggestions from "./SearchSuggestions.vue"
 import type { SearchState } from "./searchQuery"
@@ -68,6 +73,7 @@ const props = defineProps<{
   state: SearchState
   items: HomeMedia[]
   people: PersonSearchResult[]
+  manga: MangaItem[]
   busy: boolean
   failed: boolean
   hasNext: boolean
@@ -84,8 +90,12 @@ useInfiniteScroll(sentinel, () => emit("load-more"), {
   rootMargin: "400px",
 })
 
-const isEmpty = computed(() => (props.state.tab === "people" ? !props.people.length : !props.items.length) && !props.hasNext)
-const filtered = computed(() => props.state.tab !== "people" && !!(props.state.year || props.state.genre))
+/** The list the active tab shows. Manga has no year or genre filter, so it is never "filtered". */
+const isEmpty = computed(() => {
+  const none = props.state.tab === "people" ? !props.people.length : props.state.tab === "manga" ? !props.manga.length : !props.items.length
+  return none && !props.hasNext
+})
+const filtered = computed(() => props.state.tab !== "people" && props.state.tab !== "manga" && !!(props.state.year || props.state.genre))
 
 /** Type and year under the poster; the All tab mixes both types, so it names the type. */
 function caption(item: HomeMedia): string | undefined {

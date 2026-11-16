@@ -4,7 +4,7 @@ import { QueryClient, VueQueryPlugin } from "@tanstack/vue-query"
 import { createPinia, setActivePinia } from "pinia"
 import { createMemoryHistory, createRouter } from "vue-router"
 import SearchResultView from "@/views/SearchResultView.vue"
-import { actorApi, movieApi } from "@/api/api"
+import { actorApi, mangaApi, movieApi } from "@/api/api"
 import { SEARCH_MAX_EMPTY_PAGES } from "@/components/browse/browseConfig"
 import { useAuthStore } from "@/stores/auth"
 import { useRealI18n } from "./helpers/realI18n"
@@ -20,11 +20,13 @@ vi.mock("@/api/api", () => ({
     getPopularDetail: vi.fn(),
   },
   actorApi: { search: vi.fn() },
+  mangaApi: { search: vi.fn() },
 }))
 
 const i18n = useRealI18n()
 const page = (results: unknown[], total = results.length) => ({ data: { page: 1, total_pages: 1, total_results: total, results } })
 const movie = (id: number, title: string, date = "2021-05-01") => ({ id, title, poster_path: "/p.jpg", release_date: date, vote_average: 7, genre_ids: [28], overview: "" })
+const manga = (id: number, title: string) => ({ id, media_type: "manga", titles: { romaji: title, english: "", native: "", thai: "" }, display_title: title, cover_url: "", banner_url: "", format: "manga", country: "JP", kind: "manga", status: "RELEASING", start_year: 2020, chapters: null, volumes: null, genres: [], ratings: {} })
 const show = (id: number, name: string) => ({ id, name, poster_path: "/s.jpg", first_air_date: "2019-01-01", vote_average: 8, genre_ids: [18], overview: "" })
 
 async function render(url: string, loggedIn = true) {
@@ -33,7 +35,7 @@ async function render(url: string, loggedIn = true) {
   useAuthStore().user = (loggedIn ? { id: 1 } : null) as never
   const router = createRouter({
     history: createMemoryHistory(),
-    routes: [{ path: "/search", name: "search-results", component: SearchResultView }, { path: "/actors/:id", name: "actor-detail", component: { template: "<div />" } }, { path: "/:p(.*)*", component: { template: "<div />" } }],
+    routes: [{ path: "/search", name: "search-results", component: SearchResultView }, { path: "/actors/:id", name: "actor-detail", component: { template: "<div />" } }, { path: "/manga/:id", name: "manga-detail", component: { template: "<div />" } }, { path: "/:p(.*)*", component: { template: "<div />" } }],
   })
   await router.push(url)
   const w = mount(SearchResultView, {
@@ -51,6 +53,7 @@ describe("SearchResultView", () => {
     vi.mocked(movieApi.getSeriesGenres).mockResolvedValue({ data: { genres: [{ id: 18, name: "Drama" }] } } as never)
     vi.mocked(movieApi.search).mockResolvedValue(page([movie(1, "Dune"), movie(2, "Dune 2", "2024-03-01")]) as never)
     vi.mocked(movieApi.searchSeries).mockResolvedValue(page([show(3, "Dune: Prophecy")]) as never)
+    vi.mocked(mangaApi.search).mockResolvedValue(page([]) as never)
     vi.mocked(actorApi.search).mockResolvedValue(page([{ id: 9, name: "Dune Person", profile_path: null, known_for_department: "Acting", popularity: 1 }]) as never)
     vi.mocked(movieApi.getPopular).mockResolvedValue(page([movie(7, "Popular")]) as never)
     vi.mocked(movieApi.getPopularSeries).mockResolvedValue(page([]) as never)
@@ -68,13 +71,13 @@ describe("SearchResultView", () => {
     expect(cards).toHaveLength(3)
     expect(cards.some((c) => c.includes("Series"))).toBe(true)
     const tabs = w.findAll('[role="tab"]').map((t) => t.text())
-    expect(tabs).toEqual(["All 3", "Movies 2", "Series 1", "People 1"])
+    expect(tabs).toEqual(["All 3", "Movies 2", "Series 1", "Manga 0", "People 1"])
     expect(w.text()).toContain("3 results")
   })
 
   it("switches tab through the URL and keeps the hash", async () => {
     const { w, router } = await render("/search?q=dune#token")
-    await w.findAll('[role="tab"]')[3]!.trigger("click")
+    await w.findAll('[role="tab"]')[4]!.trigger("click")
     await flushPromises()
     expect(router.currentRoute.value.query).toMatchObject({ q: "dune", tab: "people" })
     expect(router.currentRoute.value.hash).toBe("#token")
@@ -128,10 +131,18 @@ describe("SearchResultView", () => {
     expect(w.find('[role="alert"] button').exists()).toBe(true)
   })
 
+  it("shows manga results on the manga tab from the manga search", async () => {
+    vi.mocked(mangaApi.search).mockResolvedValue(page([manga(5, "Berserk Tale")]) as never)
+    const { w } = await render("/search?q=berserk&tab=manga")
+    expect(mangaApi.search).toHaveBeenCalledWith("berserk", 1)
+    expect(w.text()).toContain("Berserk Tale")
+    expect(w.findAll('a[href="/manga/5"]')).toHaveLength(1)
+  })
+
   it("hides the people tab for guests and never calls actorApi.search", async () => {
     const { w } = await render("/search?q=dune", false)
     const tabs = w.findAll('[role="tab"]').map((t) => t.text())
-    expect(tabs).toEqual(["All 3", "Movies 2", "Series 1"])
+    expect(tabs).toEqual(["All 3", "Movies 2", "Series 1", "Manga 0"])
     expect(actorApi.search).not.toHaveBeenCalled()
   })
 

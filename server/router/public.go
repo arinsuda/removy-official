@@ -1,14 +1,17 @@
 package router
 
 import (
+	"strconv"
 	"time"
 
+	"github.com/arinsuda/movie-hub/config"
 	achievementsmodule "github.com/arinsuda/movie-hub/internal/achievements_module"
 	"github.com/arinsuda/movie-hub/internal/bmol_module"
 	"github.com/arinsuda/movie-hub/internal/event_module"
 	"github.com/arinsuda/movie-hub/internal/follow_module"
 	"github.com/arinsuda/movie-hub/internal/library_module"
 	"github.com/arinsuda/movie-hub/internal/like_module"
+	"github.com/arinsuda/movie-hub/internal/manga_module"
 	"github.com/arinsuda/movie-hub/internal/media_stats_module"
 	"github.com/arinsuda/movie-hub/internal/movie_module"
 	"github.com/arinsuda/movie-hub/internal/privacy_policy"
@@ -45,6 +48,17 @@ func PublicSearchLimiter(trustedProxyHops int) fiber.Handler {
 	})
 }
 
+// MangaLimiter limits every /api/manga request, signed-in users included. Key: user id when signed in,
+// otherwise the client IP. Must run after OptionalAuth so the claims are set.
+func MangaLimiter(trustedProxyHops int) fiber.Handler {
+	return ratelimit.New(config.MangaRateMax, config.MangaRateWindow, func(c fiber.Ctx) string {
+		if claims := middleware.GetClaims(c); claims != nil {
+			return "manga:user:" + strconv.FormatUint(uint64(claims.UserID), 10)
+		}
+		return "manga:ip:" + shared.RateLimitIP(c, trustedProxyHops)
+	})
+}
+
 // PublicReadLimiter limits guest reads per IP (IPv6 collapsed to /64 by shared.RateLimitIP).
 func PublicReadLimiter(trustedProxyHops int) fiber.Handler {
 	return ratelimit.New(PublicReadRateMax, PublicReadRateWindow, func(c fiber.Ctx) string {
@@ -67,6 +81,7 @@ type PublicHandlers struct {
 	BMOL         *bmol_module.Handler
 	Follows      *follow_module.Handler
 	Events       *event_module.Handler
+	Manga        *manga_module.Handler
 	DB           *gorm.DB
 	Policy       privacy_policy.UserAccessPolicy
 }
@@ -77,7 +92,7 @@ type PublicHandlers struct {
 // USE on /api, so routes registered after it never run before authentication.
 func RegisterPublicRoutes(
 	api fiber.Router,
-	optionalAuth, limiter, searchLimiter fiber.Handler,
+	optionalAuth, limiter, searchLimiter, mangaLimiter fiber.Handler,
 	h PublicHandlers,
 ) {
 	movie_module.RegisterPublicRoutes(api, h.Movies, searchLimiter, optionalAuth, limiter)
@@ -91,4 +106,5 @@ func RegisterPublicRoutes(
 	bmol_module.RegisterPublicRoutes(api, h.BMOL, optionalAuth, limiter)
 	follow_module.RegisterPublicRoutes(api, h.Follows, optionalAuth, limiter)
 	event_module.RegisterPublicRoutes(api, h.Events, optionalAuth, limiter)
+	manga_module.RegisterPublicRoutes(api, h.Manga, searchLimiter, optionalAuth, limiter, mangaLimiter)
 }

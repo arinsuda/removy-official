@@ -71,6 +71,10 @@ const (
 	ErrorCodeTooFewYearlyNominees = apierr.ErrorCodeTooFewYearlyNominees
 	ErrorCodeAccountTooNew        = apierr.ErrorCodeAccountTooNew
 	ErrorCodeEventNotDeletable    = apierr.ErrorCodeEventNotDeletable
+
+	ErrorCodeInvalidSearchParams = apierr.ErrorCodeInvalidSearchParams
+	ErrorCodeUpstreamUnavailable = apierr.ErrorCodeUpstreamUnavailable
+	ErrorCodeAgeRestricted       = apierr.ErrorCodeAgeRestricted
 )
 
 func WriteAPIError(c fiber.Ctx, status int, code ErrorCode, message string) error {

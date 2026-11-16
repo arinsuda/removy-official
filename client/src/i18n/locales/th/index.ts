@@ -26,6 +26,7 @@ import upcoming from "./upcoming.json";
 import events from "./events.json";
 import awards from "./awards.json";
 import anime from "./anime.json";
+import manga from "./manga.json";
 
 export default {
   common,
@@ -56,4 +57,5 @@ export default {
   events,
   awards,
   anime,
+  manga,
 };

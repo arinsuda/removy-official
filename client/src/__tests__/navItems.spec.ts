@@ -19,3 +19,20 @@ describe("NAV_ITEMS anime entry", () => {
     expect(anime?.isActive(route("/movies"))).toBe(false)
   })
 })
+
+describe("NAV_ITEMS manga entry", () => {
+  const manga = NAV_ITEMS.find((item) => item.key === "manga")
+
+  it("links to /manga after anime with the navigation label", () => {
+    expect(manga).toBeDefined()
+    expect(manga?.to).toBe("/manga")
+    expect(manga?.labelKey).toBe("navigation.manga")
+    expect(NAV_ITEMS.findIndex((item) => item.key === "manga")).toBe(NAV_ITEMS.findIndex((item) => item.key === "anime") + 1)
+  })
+
+  it("is active on the manga pages and not on the anime page", () => {
+    expect(manga?.isActive(route("/manga"))).toBe(true)
+    expect(manga?.isActive(route("/manga/7"))).toBe(true)
+    expect(manga?.isActive(route("/anime"))).toBe(false)
+  })
+})

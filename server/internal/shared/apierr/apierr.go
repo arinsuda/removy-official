@@ -68,6 +68,12 @@ const (
 	ErrorCodeTooFewYearlyNominees ErrorCode = "TOO_FEW_YEARLY_NOMINEES"
 	ErrorCodeAccountTooNew        ErrorCode = "ACCOUNT_TOO_NEW"
 	ErrorCodeEventNotDeletable    ErrorCode = "EVENT_NOT_DELETABLE"
+
+	// Manga browse (AniList) error codes.
+	ErrorCodeInvalidSearchParams ErrorCode = "INVALID_SEARCH"
+	ErrorCodeUpstreamUnavailable ErrorCode = "UPSTREAM_UNAVAILABLE"
+	// ErrorCodeAgeRestricted: an adult title was requested by a viewer who may not see it.
+	ErrorCodeAgeRestricted ErrorCode = "AGE_RESTRICTED"
 )
 
 type APIError struct {
