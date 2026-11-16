@@ -1,4 +1,5 @@
 import api from "../index"
+import type { MediaType } from "@/types/common"
 import type {
   AddItemRequest,
   LibraryItemResponse,
@@ -31,7 +32,7 @@ export const libraryApi = {
    */
   getOwnMediaStatus: (
     mediaId: number,
-    mediaType: "movie" | "tv",
+    mediaType: MediaType,
   ) =>
     api.get<MediaStatusResponse>(`/library/media/${mediaType}/${mediaId}`),
 

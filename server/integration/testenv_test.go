@@ -240,6 +240,11 @@ type noStats struct{}
 
 func (noStats) GetLevel(uint) int { return 1 }
 
+// noExp drops experience grants so review writes can run without the stats module.
+type noExp struct{}
+
+func (noExp) AddExperience(uint, int) error { return nil }
+
 func newEnv(t *testing.T) *env {
 	t.Helper()
 	db := newTestDB(t)
@@ -266,7 +271,7 @@ func newEnv(t *testing.T) *env {
 	policy := privacy_policy.NewUserAccessPolicy(db)
 	achieve := achievementsmodule.New(db, policy)
 	movieH := movie_module.New(review_module.NewRatingStatsReader(db), nil, event_module.NewAwardReader(db))
-	reviewH := review_module.New(db, nil, nil, nil, nil, nil, policy)
+	reviewH := review_module.New(db, nil, noExp{}, achieve.Service, nil, nil, policy)
 	statsH := media_stats_module.New(db)
 	userSvc, userH := user_module.New(db, nil, noStats{}, e.auth,
 		user_module.NewBrevoPasswordResetMailer(e.cfg.Brevo), policy, e.cfg.Brevo)

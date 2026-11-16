@@ -67,6 +67,7 @@ import { useI18n } from "vue-i18n"
 import { ArrowDown, ArrowUp, Film, GripVertical, MoreHorizontal, PenLine, Trash2 } from "lucide-vue-next"
 import MediaRating from "@/components/movie/MediaRating.vue"
 import { getTmdbImageUrl } from "@/utils/image"
+import { mediaPath } from "@/utils/mediaRoute"
 import type { BMOLItemResponse } from "@/types"
 import { tierOf } from "./bmolRanks"
 import { useBmolReorderState } from "./useBmolReorder"
@@ -88,7 +89,7 @@ const menuOpen = ref(false)
 const title = computed(() => props.item.media.title || props.item.media.name || "")
 const tier = computed(() => tierOf(props.item.rank))
 const posterSrc = computed(() => getTmdbImageUrl(props.item.media.poster_url, props.variant === "hero" ? "w500" : "w342"))
-const detailPath = computed(() => `/${props.item.media_type === "tv" ? "tv" : "movies"}/${props.item.media.id}`)
+const detailPath = computed(() => mediaPath(props.item.media_type, props.item.media.id))
 // Optimistic rows have a negative id until the server answers.
 const pending = computed(() => props.item.id < 0)
 const grabbed = computed(() => reorder?.grabbedId === props.item.id)

@@ -1,8 +1,10 @@
 package analytics_module
 
 import (
+	"context"
 	"math"
 
+	"github.com/arinsuda/movie-hub/internal/shared"
 	"gorm.io/gorm"
 )
 
@@ -22,8 +24,12 @@ func NewService(db *gorm.DB) *Service {
 	return &Service{repo: newRepository(db)}
 }
 
-func (s *Service) GetMediaAnalytics(mediaID int, mediaType string) (*MediaAnalyticsResponse, error) {
+// GetMediaAnalytics returns the counts of one title. An adult manga the viewer may not see is refused like any other read.
+func (s *Service) GetMediaAnalytics(ctx context.Context, viewerID uint, mediaID int, mediaType string) (*MediaAnalyticsResponse, error) {
 	if err := validateMedia(mediaID, mediaType); err != nil {
+		return nil, err
+	}
+	if err := shared.CheckMediaAccess(ctx, viewerID, mediaID, shared.MediaType(mediaType)); err != nil {
 		return nil, err
 	}
 
@@ -39,7 +45,7 @@ func (s *Service) GetMediaAnalytics(mediaID int, mediaType string) (*MediaAnalyt
 
 	score := trendingScore(libStats.WatchlistCount, libStats.FavoriteCount, libStats.WatchedCount, 0)
 
-	isTrending, err := s.isInTrending(mediaID, mediaType)
+	isTrending, err := s.isInTrending(ctx, viewerID, mediaID, mediaType)
 	if err != nil {
 
 		isTrending = false
@@ -63,12 +69,13 @@ func (s *Service) GetMediaAnalytics(mediaID int, mediaType string) (*MediaAnalyt
 	}, nil
 }
 
-func (s *Service) GetTrending(mediaType string) ([]TrendingItem, error) {
-	if mediaType != "movie" && mediaType != "tv" {
+// GetTrending ranks one media type for the viewer. Adult manga the viewer may not see is left out before the limit.
+func (s *Service) GetTrending(ctx context.Context, viewerID uint, mediaType string) ([]TrendingItem, error) {
+	if !shared.IsValidMediaType(shared.MediaType(mediaType)) {
 		return nil, ErrInvalidMediaType
 	}
 
-	rows, err := s.repo.GetTrending(mediaType, trendingLimit)
+	rows, err := s.trendingRows(ctx, viewerID, mediaType)
 	if err != nil {
 		return nil, err
 	}
@@ -94,8 +101,17 @@ func trendingScore(watchlist, favorite, watched, recent int) float64 {
 		float64(recent)*weightRecentActivity
 }
 
-func (s *Service) isInTrending(mediaID int, mediaType string) (bool, error) {
-	rows, err := s.repo.GetTrending(mediaType, trendingLimit)
+// trendingRows reads the top of the ranking, hiding adult manga from viewers who may not see it.
+func (s *Service) trendingRows(ctx context.Context, viewerID uint, mediaType string) ([]trendingRow, error) {
+	vis, err := shared.NewMediaVisibility(ctx, viewerID)
+	if err != nil {
+		return nil, err
+	}
+	return s.repo.GetTrending(mediaType, trendingLimit, !vis.ShowsAdult())
+}
+
+func (s *Service) isInTrending(ctx context.Context, viewerID uint, mediaID int, mediaType string) (bool, error) {
+	rows, err := s.trendingRows(ctx, viewerID, mediaType)
 	if err != nil {
 		return false, err
 	}
@@ -111,7 +127,7 @@ func validateMedia(mediaID int, mediaType string) error {
 	if mediaID <= 0 {
 		return ErrInvalidMediaID
 	}
-	if mediaType != "movie" && mediaType != "tv" {
+	if !shared.IsValidMediaType(shared.MediaType(mediaType)) {
 		return ErrInvalidMediaType
 	}
 	return nil

@@ -1,4 +1,6 @@
 import { popcornTier, roundScore, type PopcornTier } from "@/components/movie/popcornTier"
+import type { MediaType } from "@/types/common"
+import { mediaPath } from "@/utils/mediaRoute"
 import type {
   ShareMediaContext,
   ShareReviewContext,
@@ -96,8 +98,14 @@ export function shareGenres(media: ShareMediaContext, max = 3): string[] {
 
 /** "example.com/movies/1" without protocol, for the card footer. */
 export function shortShareUrl(media: ShareMediaContext): string {
-  const path = media.mediaType === "movie" ? "movies" : "tv"
-  return `${window.location.host}/${path}/${media.id}`
+  return `${window.location.host}${mediaPath(media.mediaType, media.id)}`
+}
+
+/** i18n key of the type label printed on a share card. */
+export const SHARE_TYPE_LABEL_KEY: Record<MediaType, string> = {
+  movie: "share.movie",
+  tv: "share.tvSeries",
+  manga: "share.manga",
 }
 
 /** Title font size steps so long titles never overflow the card. */

@@ -82,10 +82,9 @@ func (h *Handler) GetMediaReviews(c fiber.Ctx) error {
 		return badRequest(c, "invalid media type")
 	}
 
-	// Public route: guests have no claims and read as viewer 0.
-	var viewerID uint
-	if claims := mw.GetClaims(c); claims != nil {
-		viewerID = claims.UserID
+	viewerID := publicViewerID(c)
+	if err := shared.CheckMediaAccess(c.Context(), viewerID, mediaID, shared.MediaType(mt)); err != nil {
+		return handleError(c, err)
 	}
 	page, _ := strconv.Atoi(c.Query("page"))
 	pageSize, _ := strconv.Atoi(c.Query("page_size"))
@@ -181,6 +180,9 @@ func (h *Handler) GetMediaRating(c fiber.Ctx) error {
 		return badRequest(c, "invalid media type")
 	}
 
+	if err := shared.CheckMediaAccess(c.Context(), publicViewerID(c), mediaID, shared.MediaType(mt)); err != nil {
+		return handleError(c, err)
+	}
 	rating, err := h.svc.GetMediaRating(mediaID, mt)
 	if err != nil {
 		return handleError(c, err)
@@ -413,16 +415,27 @@ func parseReviewFilter(c fiber.Ctx) (ReviewFilter, error) {
 	return filter, nil
 }
 
+// publicViewerID reads the viewer of a public route. Guests have no claims and read as viewer 0.
+func publicViewerID(c fiber.Ctx) uint {
+	if claims := mw.GetClaims(c); claims != nil {
+		return claims.UserID
+	}
+	return 0
+}
+
 // routeToMediaType แปลง URL segment → media_type value ใน DB
 //
 //	"movies" → "movie"
 //	"series" → "tv"
+//	"manga"  → "manga"
 func routeToMediaType(route string) string {
 	switch route {
 	case "movies", "movie":
 		return "movie"
 	case "series", "tv":
 		return "tv"
+	case "manga":
+		return "manga"
 	default:
 		return ""
 	}
@@ -455,6 +468,9 @@ func parseCommentID(c fiber.Ctx) (uint, error) {
 const errMsgUserNotFound = "user not found"
 
 func handleError(c fiber.Ctx, err error) error {
+	if handled, werr := shared.WriteMediaAccessError(c, err); handled {
+		return werr
+	}
 	switch {
 	case shared.IsPgUniqueViolationOn(err, "uq_active_user_media_review"):
 		return shared.WriteAPIError(c, fiber.StatusConflict, shared.ErrorCodeDuplicateReview, "you have already reviewed this media")
@@ -479,7 +495,7 @@ func handleError(c fiber.Ctx, err error) error {
 	case errors.Is(err, ErrInvalidRating):
 		return shared.WriteAPIError(c, fiber.StatusBadRequest, shared.ErrorCodeInvalidRating, "rating must be between 0.5 and 5.0 with step 0.5")
 	case errors.Is(err, ErrInvalidMediaType):
-		return badRequest(c, "media_type must be 'movie' or 'tv'")
+		return badRequest(c, "media_type must be 'movie', 'tv' or 'manga'")
 	case errors.Is(err, ErrInvalidMediaID):
 		return badRequest(c, "invalid media_id")
 	default:

@@ -1,6 +1,7 @@
 package admin_module
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -8,7 +9,7 @@ import (
 
 	"github.com/arinsuda/movie-hub/internal/account_erasure"
 	"github.com/arinsuda/movie-hub/internal/identity_policy"
-	tmdbmodule "github.com/arinsuda/movie-hub/internal/tmdb_module"
+	"github.com/arinsuda/movie-hub/internal/shared"
 	"github.com/arinsuda/movie-hub/internal/user_module"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
@@ -365,9 +366,19 @@ func (r *gormRepository) ListReviews(filter ReviewFilter) ([]AdminReviewRow, int
 		return nil, 0, err
 	}
 
+	keys := make([]shared.MediaKey, len(rows))
+	for i, r := range rows {
+		keys[i] = shared.MediaKey{ID: r.MediaID, Type: shared.MediaType(r.MediaType)}
+	}
+	summaries, err := shared.MediaSummaries(context.Background(), keys)
+	if err != nil {
+		return nil, 0, err
+	}
+
 	result := make([]AdminReviewRow, len(rows))
 	for i, r := range rows {
-		title, poster := fetchMediaTitleAndPoster(r.MediaID, r.MediaType)
+		summary := summaries[keys[i]]
+		title, poster := adminMediaTitle(summary), shared.MediaPosterURL(summary.PosterURL)
 		result[i] = AdminReviewRow{
 			ID:         r.ID,
 			UserID:     r.UserID,
@@ -387,27 +398,12 @@ func (r *gormRepository) ListReviews(filter ReviewFilter) ([]AdminReviewRow, int
 	return result, total, nil
 }
 
-func fetchMediaTitleAndPoster(mediaID int, mediaType string) (title, posterURL string) {
-	if mediaType == "movie" {
-		m, err := tmdbmodule.GetMovieByID(mediaID)
-		if err == nil && m != nil {
-			t := m.EnglishTitle
-			if t == "" {
-				t = m.Title
-			}
-			return t, tmdbmodule.ImageURL(m.PosterPath)
-		}
-	} else if mediaType == "tv" {
-		s, err := tmdbmodule.GetSeriesByID(mediaID)
-		if err == nil && s != nil {
-			t := s.EnglishTitle
-			if t == "" {
-				t = s.Name
-			}
-			return t, tmdbmodule.ImageURL(s.PosterPath)
-		}
+// adminMediaTitle prefers the English title (TMDB) and falls back to the display title (manga has no English copy in manga_meta).
+func adminMediaTitle(s shared.MediaSummary) string {
+	if s.EnglishTitle != "" {
+		return s.EnglishTitle
 	}
-	return "", ""
+	return s.Title
 }
 
 func (r *gormRepository) ListAuditLogs(filter AuditLogFilter) ([]AdminAuditLogRow, int64, error) {

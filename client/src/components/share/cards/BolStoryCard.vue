@@ -33,7 +33,7 @@ import { computed } from "vue"
 import { useI18n } from "vue-i18n"
 import type { BMOLItemResponse, MediaType } from "@/types"
 import type { ShareTheme } from "@/types/share"
-import { bolPosterKey, bolTemplateDef } from "../shareCards"
+import { bolPosterKey, bolTemplateDef, SHARE_TYPE_LABEL_KEY } from "../shareCards"
 import ShareCardFooter from "./ShareCardFooter.vue"
 import "../shareCard.css"
 
@@ -51,7 +51,7 @@ const { t } = useI18n()
 
 const hero = computed(() => props.items[0])
 const rest = computed(() => props.items.slice(1, bolTemplateDef("story").capacity))
-const typeLabel = computed(() => t(props.mediaType === "tv" ? "share.tvSeries" : "share.movie"))
+const typeLabel = computed(() => t(SHARE_TYPE_LABEL_KEY[props.mediaType]))
 const posterOf = (item: BMOLItemResponse) => props.posters[bolPosterKey(item)] ?? null
 </script>
 

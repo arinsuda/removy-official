@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/arinsuda/movie-hub/internal/movie_module"
+	"github.com/arinsuda/movie-hub/internal/shared"
 	mw "github.com/arinsuda/movie-hub/middleware"
 	"github.com/gofiber/fiber/v3"
 )
@@ -27,6 +28,9 @@ func (h *Handler) GetStats(c fiber.Ctx) error {
 	if claims := mw.GetClaims(c); claims != nil {
 		requesterID = claims.UserID
 	}
+	if err := shared.CheckMediaAccess(c.Context(), requesterID, mediaID, shared.MediaType(mediaType)); err != nil {
+		return handleError(c, err)
+	}
 
 	stats, err := h.svc.GetStats(mediaID, mediaType, requesterID)
 	if err != nil {
@@ -41,6 +45,9 @@ func (h *Handler) RecordView(c fiber.Ctx) error {
 		return badRequest(c, err.Error())
 	}
 	claims := mw.GetClaims(c)
+	if err := shared.CheckMediaAccess(c.Context(), claims.UserID, mediaID, shared.MediaType(mediaType)); err != nil {
+		return handleError(c, err)
+	}
 	if err := h.svc.RecordView(claims.UserID, mediaID, mediaType); err != nil {
 		return handleError(c, err)
 	}
@@ -53,6 +60,9 @@ func (h *Handler) LikeMedia(c fiber.Ctx) error {
 		return badRequest(c, err.Error())
 	}
 	claims := mw.GetClaims(c)
+	if err := shared.CheckMediaAccess(c.Context(), claims.UserID, mediaID, shared.MediaType(mediaType)); err != nil {
+		return handleError(c, err)
+	}
 	if err := h.svc.LikeMedia(claims.UserID, mediaID, mediaType); err != nil {
 		return handleError(c, err)
 	}
@@ -84,14 +94,17 @@ func parseMediaParams(c fiber.Ctx) (int, movie_module.MediaType, error) {
 		mediaType = movie_module.MediaSeries
 	}
 
-	if mediaType != movie_module.MediaMovie && mediaType != movie_module.MediaSeries {
-		return 0, "", errors.New("invalid media_type, must be 'movie' or 'tv'")
+	if !shared.IsValidMediaType(shared.MediaType(mediaType)) {
+		return 0, "", errors.New("invalid media_type, must be 'movie', 'tv' or 'manga'")
 	}
 
 	return mediaID, mediaType, nil
 }
 
 func handleError(c fiber.Ctx, err error) error {
+	if handled, werr := shared.WriteMediaAccessError(c, err); handled {
+		return werr
+	}
 	switch {
 	case errors.Is(err, ErrAlreadyLiked):
 		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "already liked"})

@@ -14,7 +14,7 @@
           <div class="wt__body">
             <RouterLink :to="detailRoute(e.media)" class="wt__title">{{ e.media.title }}</RouterLink>
             <p class="wt__meta">
-              <span class="wt__type">{{ e.media.type === "tv" ? t("profile.tabContent.common.typeTv") : t("profile.tabContent.common.typeMovie") }}</span>
+              <span class="wt__type">{{ t(WATCHED_TYPE_LABEL[e.media.type]) }}</span>
               <time :datetime="e.at">{{ formatDate(e.at) }}</time>
             </p>
             <p class="wt__chips">
@@ -41,9 +41,16 @@ import { useI18n } from "vue-i18n"
 import { RouterLink } from "vue-router"
 import { detailRoute, posterSrc } from "@/components/home/homeMedia"
 import { popcornTier } from "@/components/movie/popcornTier"
+import type { MediaType } from "@/types/common"
 import type { MonthGroup, WatchedEntry } from "./watched"
 
 defineProps<{ groups: MonthGroup[]; isOwner: boolean }>()
+
+const WATCHED_TYPE_LABEL: Record<MediaType, string> = {
+  movie: "profile.tabContent.common.typeMovie",
+  tv: "profile.tabContent.common.typeTv",
+  manga: "profile.tabContent.common.typeManga",
+}
 defineSlots<{ actions?: (p: { entry: WatchedEntry }) => unknown }>()
 
 const { t, locale } = useI18n()

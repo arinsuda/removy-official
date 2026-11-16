@@ -14,10 +14,29 @@ type UserProvider interface {
 	FindFollowerIDs(userID uint) ([]uint, error)
 }
 
+// mangaType is the media type whose titles are age-gated (AniList ids).
+const mangaType = "manga"
+
+// TitleKey names one title a notification is about.
+type TitleKey struct {
+	ID   int
+	Type string
+}
+
+// TitleCheck says, per title, whether a notification about it may reach userID (userID 0: safe for everyone).
+// The router wires it to shared.ReceivableMedia: shared imports this package, so this package cannot import shared.
+type TitleCheck func(ctx context.Context, userID uint, titles []TitleKey) (map[TitleKey]bool, error)
+
+// MangaRestriction says whether adult and unknown manga must be left out of userID's notification counts and
+// pages. The router wires it to shared.NotificationMangaRestricted; until it is set, manga is always restricted (fail closed).
+type MangaRestriction func(ctx context.Context, userID uint) (bool, error)
+
 type Service struct {
 	repo         *repository
 	userProvider UserProvider
 	hub          *Hub
+	titles       TitleCheck
+	restricted   MangaRestriction
 }
 
 func NewService(db *gorm.DB, userProvider UserProvider, hub *Hub) *Service {
@@ -28,16 +47,60 @@ func NewService(db *gorm.DB, userProvider UserProvider, hub *Hub) *Service {
 	}
 }
 
+// SetTitleCheck wires the age gate for adult manga. Until it is set, every manga title is refused (fail closed).
+func (s *Service) SetTitleCheck(check TitleCheck) {
+	s.titles = check
+}
+
+// SetMangaRestriction wires the viewer rule that the SQL counts and pages apply to manga notifications.
+func (s *Service) SetMangaRestriction(check MangaRestriction) {
+	s.restricted = check
+}
+
+// restrictManga reports whether adult and unknown manga is filtered out of userID's counts and pages in SQL.
+func (s *Service) restrictManga(ctx context.Context, userID uint) (bool, error) {
+	if s.restricted == nil {
+		return true, nil
+	}
+	return s.restricted(ctx, userID)
+}
+
+// receivable reports, per title, whether a notification about it may be sent or shown to userID.
+func (s *Service) receivable(ctx context.Context, userID uint, titles []TitleKey) (map[TitleKey]bool, error) {
+	if s.titles == nil {
+		out := make(map[TitleKey]bool, len(titles))
+		for _, t := range titles {
+			out[t] = t.Type != mangaType
+		}
+		return out, nil
+	}
+	return s.titles(ctx, userID, titles)
+}
+
+// mayReceive is the one-title form of receivable. An error reads as refused.
+func (s *Service) mayReceive(ctx context.Context, userID uint, t TitleKey) (bool, error) {
+	ok, err := s.receivable(ctx, userID, []TitleKey{t})
+	return ok[t], err
+}
+
 func (s *Service) PushWelcome(ctx context.Context, userID uint) error {
 	return s.createAndEmit(ctx, []Notification{{UserID: userID, Type: NotifWelcome}})
 }
 
 func (s *Service) ListNotifications(ctx context.Context, userID uint, q ListNotificationsQuery) (*NotificationListResponse, error) {
-	rows, total, err := s.repo.FindByUser(ctx, userID, q)
+	restrict, err := s.restrictManga(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
-	unread, err := s.repo.CountUnread(ctx, userID)
+	rows, total, err := s.repo.FindByUser(ctx, userID, q, restrict)
+	if err != nil {
+		return nil, err
+	}
+	rows, err = s.visibleRows(ctx, userID, rows)
+	if err != nil {
+		return nil, err
+	}
+	unread, err := s.repo.CountUnread(ctx, userID, restrict)
 	if err != nil {
 		return nil, err
 	}
@@ -62,12 +125,46 @@ func (s *Service) ListNotifications(ctx context.Context, userID uint, q ListNoti
 	}, nil
 }
 
+// visibleRows drops notifications about titles the viewer may not see, in one batched check. No owner
+// exemption applies: the notification is about someone else's action on the title, not the viewer's own item.
+func (s *Service) visibleRows(ctx context.Context, userID uint, rows []Notification) ([]Notification, error) {
+	titles := make([]TitleKey, 0, len(rows))
+	for _, n := range rows {
+		if n.Params != nil {
+			titles = append(titles, paramsTitle(n.Params))
+		}
+	}
+	ok, err := s.receivable(ctx, userID, titles)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]Notification, 0, len(rows))
+	for _, n := range rows {
+		if n.Params == nil || ok[paramsTitle(n.Params)] {
+			out = append(out, n)
+		}
+	}
+	return out, nil
+}
+
+func paramsTitle(p *NotificationParams) TitleKey {
+	return TitleKey{ID: int(p.MediaID), Type: p.MediaType}
+}
+
 func (s *Service) GetUnreadCount(ctx context.Context, userID uint) (int64, error) {
-	return s.repo.CountUnread(ctx, userID)
+	restrict, err := s.restrictManga(ctx, userID)
+	if err != nil {
+		return 0, err
+	}
+	return s.repo.CountUnread(ctx, userID, restrict)
 }
 
 func (s *Service) GetUnreadCountByCategory(ctx context.Context, userID uint) ([]UnreadByCategoryResponse, error) {
-	return s.repo.CountUnreadByCategory(ctx, userID)
+	restrict, err := s.restrictManga(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return s.repo.CountUnreadByCategory(ctx, userID, restrict)
 }
 
 func (s *Service) MarkRead(ctx context.Context, userID uint, req MarkReadRequest) error {
@@ -75,8 +172,11 @@ func (s *Service) MarkRead(ctx context.Context, userID uint, req MarkReadRequest
 		return err
 	}
 	s.hub.EmitRead(userID, req.IDs)
-	if count, err := s.repo.CountUnread(ctx, userID); err == nil {
-		s.hub.EmitUnreadCount(userID, count)
+	// The unread badge is a best-effort push: a failed count leaves the client's last value in place.
+	if restrict, err := s.restrictManga(ctx, userID); err == nil {
+		if count, err := s.repo.CountUnread(ctx, userID, restrict); err == nil {
+			s.hub.EmitUnreadCount(userID, count)
+		}
 	}
 	return nil
 }
@@ -161,6 +261,15 @@ func (s *Service) PushFollowingActivity(
 	targetRef *string,
 	params *NotificationParams,
 ) error {
+	// Followers share one notification per activity, so only a title safe for everyone fans out. An adult or
+	// unknown manga is skipped for all followers (guests are never eligible), instead of checking each follower.
+	if params != nil {
+		ok, err := s.mayReceive(ctx, 0, paramsTitle(params))
+		if err != nil || !ok {
+			return err
+		}
+	}
+
 	// Map notification type to the corresponding feed activity type to check privacy settings.
 	var activityType privacy_policy.ActivityType
 	switch notifType {
@@ -312,6 +421,11 @@ func ptr[T any](v T) *T { return &v }
 func (s *Service) pushReviewOwner(ctx context.Context, t NotificationType, reviewOwnerID, actorID, reviewID uint, media MediaRef) error {
 	if reviewOwnerID == actorID {
 		return nil
+	}
+	// The owner is the only recipient, so an adult title is sent only when the owner may see it.
+	ok, err := s.mayReceive(ctx, reviewOwnerID, TitleKey{ID: int(media.ID), Type: media.Type})
+	if err != nil || !ok {
+		return err
 	}
 	n := Notification{
 		UserID: reviewOwnerID, ActorID: &actorID, Type: t,

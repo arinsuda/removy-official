@@ -2,7 +2,7 @@ import { inject, onBeforeUnmount, onMounted, provide, ref, shallowReactive, type
 import { movieApi } from "@/api/api"
 import type { Video } from "@/types"
 import type { MediaRatings } from "@/types/movie"
-import type { HomeMedia } from "@/components/home/homeMedia"
+import { isTmdbType, type HomeMedia } from "@/components/home/homeMedia"
 import { resolveTrailerCandidates, useTrailerPreview } from "@/composables/useTrailerPreview"
 import { HOVER_FINE_QUERY } from "@/constants/input"
 
@@ -80,11 +80,11 @@ export function provideHomePopup(): HomePopup {
   }
 
   async function loadTrailer(item: HomeMedia) {
-    if (videoCache.has(item.key)) return
+    if (!isTmdbType(item.type) || videoCache.has(item.key)) return
     videoCache.set(item.key, [])
     const state = getState(item)
     try {
-      const res = item.type === "tv" ? await movieApi.getTVVideos(item.id) : await movieApi.getVideos(item.id)
+      const res = item.type === "tv" ? await movieApi.getTVVideos(item.id) : await movieApi.getVideos(item.id) // tmdb-only: loadTrailer returns early for manga
       const videos = res.data?.results ?? []
       videoCache.set(item.key, videos)
       const candidates = resolveTrailerCandidates(videos)
@@ -96,6 +96,7 @@ export function provideHomePopup(): HomePopup {
   }
 
   async function fetchRatings(item: HomeMedia): Promise<MediaRatings | undefined> {
+    if (!isTmdbType(item.type)) return undefined
     return item.type === "tv"
       ? (await movieApi.getSeriesById(item.id)).data?.series?.ratings
       : (await movieApi.getById(item.id)).data?.movie?.ratings

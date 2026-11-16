@@ -168,14 +168,18 @@ func (r *repository) reorder(listID, userID uint, itemIDs []uint) error {
 	})
 }
 
-func (r *repository) itemsPage(listID uint, offset, limit int) ([]UserListItem, int64, error) {
+// itemsPage returns one page of a list and its total. hideAdult leaves adult manga (and unknown manga) out of both.
+func (r *repository) itemsPage(listID uint, hideAdult bool, offset, limit int) ([]UserListItem, int64, error) {
+	q := r.db.Model(&UserListItem{}).Where("list_id = ?", listID)
+	if hideAdult {
+		q = q.Where(shared.MangaSafeSQL("media_type", "media_id"))
+	}
 	var total int64
-	if err := r.db.Model(&UserListItem{}).Where("list_id = ?", listID).Count(&total).Error; err != nil {
+	if err := q.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 	var items []UserListItem
-	err := r.db.Where("list_id = ?", listID).Order("position ASC, id ASC").
-		Offset(offset).Limit(limit).Find(&items).Error
+	err := q.Order("position ASC, id ASC").Offset(offset).Limit(limit).Find(&items).Error
 	return items, total, err
 }
 
@@ -187,7 +191,8 @@ type summaryData struct {
 	contains map[uint]uint // list id -> item id
 }
 
-func (r *repository) summaryData(lists []UserList, mediaType string, mediaID int) (*summaryData, error) {
+// hideAdult leaves adult manga out of the item counts.
+func (r *repository) summaryData(lists []UserList, mediaType string, mediaID int, hideAdult bool) (*summaryData, error) {
 	d := &summaryData{counts: map[uint]int{}, covers: map[uint]UserListItem{}, collages: map[uint][]UserListItem{}, contains: map[uint]uint{}}
 	if len(lists) == 0 {
 		return d, nil
@@ -205,8 +210,11 @@ func (r *repository) summaryData(lists []UserList, mediaType string, mediaID int
 		ListID uint
 		N      int
 	}
-	if err := r.db.Model(&UserListItem{}).Select("list_id, COUNT(*) AS n").
-		Where("list_id IN ?", ids).Group("list_id").Scan(&counts).Error; err != nil {
+	countQ := r.db.Model(&UserListItem{}).Select("list_id, COUNT(*) AS n").Where("list_id IN ?", ids)
+	if hideAdult {
+		countQ = countQ.Where(shared.MangaSafeSQL("media_type", "media_id"))
+	}
+	if err := countQ.Group("list_id").Scan(&counts).Error; err != nil {
 		return nil, err
 	}
 	for _, c := range counts {

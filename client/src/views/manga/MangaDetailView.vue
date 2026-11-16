@@ -14,6 +14,13 @@
 
     <template v-else-if="manga && !adultGate">
       <MangaDetailHero :manga="manga" />
+      <MangaActionBar
+        :manga="manga"
+        :user-id="auth.user?.id ?? null"
+        :has-own-review="Boolean(myReview)"
+        :activity="activity"
+        @rate="onRate"
+      />
       <MangaFacts :manga="manga" />
       <MangaTagList v-if="manga.genres.length" :label="t('manga.detail.genres')" :tags="manga.genres" />
       <MangaTagList v-if="manga.tags.length" :label="t('manga.detail.tags')" :tags="tagNames" />
@@ -25,6 +32,18 @@
       </section>
 
       <MangaReadLinks :links="manga.read_links" />
+      <section id="reviews" class="manga-detail__section" :aria-labelledby="reviewsId">
+        <h2 :id="reviewsId" class="manga-detail__heading">{{ t("manga.detail.reviews") }}</h2>
+        <MovieReviews
+          ref="reviews"
+          :movie-id="manga.id"
+          media-type="manga"
+          :media-poster-path="manga.cover_url"
+          :media-title="manga.display_title"
+          @loaded="(list) => (reviewList = list)"
+          @review-submitted="activity.refreshStats"
+        />
+      </section>
       <MangaSimilarRail :items="similar.data.value ?? []" />
       <MangaAttribution />
     </template>
@@ -35,9 +54,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue"
+import { computed, ref, useId, useTemplateRef } from "vue"
 import { useI18n } from "vue-i18n"
 import { useRoute, useRouter } from "vue-router"
+import MovieReviews from "@/components/movie/MovieReviews.vue"
+import MangaActionBar from "@/components/manga/MangaActionBar.vue"
 import MangaAdultConfirmModal from "@/components/manga/MangaAdultConfirmModal.vue"
 import MangaAgeRestricted from "@/components/manga/MangaAgeRestricted.vue"
 import MangaAttribution from "@/components/manga/MangaAttribution.vue"
@@ -53,6 +74,9 @@ import SkeletonBlock from "@/components/ui/skeleton/SkeletonBlock.vue"
 import SkeletonRegion from "@/components/ui/skeleton/SkeletonRegion.vue"
 import { useMangaAdult } from "@/composables/useMangaAdult"
 import { useMangaDetail } from "@/composables/useMangaDetail"
+import { useMediaActivity } from "@/composables/useMediaActivity"
+import type { ReviewResponse } from "@/types/review"
+import { useAuthStore } from "@/stores/auth"
 
 const { t } = useI18n()
 const route = useRoute()
@@ -67,6 +91,23 @@ const adultGate = computed(() => !!manga.value?.is_adult && !acknowledged.value)
 const description = computed(() => plainDescription(manga.value?.description ?? ""))
 const tagNames = computed(() => (manga.value?.tags ?? []).map((tag) => tag.name))
 const descriptionId = "manga-description-heading"
+const reviewsId = useId()
+
+const auth = useAuthStore()
+const activity = useMediaActivity("manga", computed(() => manga.value?.id ?? 0))
+
+// Reviews: the rate button scrolls to the section and focuses its composer.
+const reviewList = ref<ReviewResponse[]>([])
+const reviewsRef = useTemplateRef<InstanceType<typeof MovieReviews>>("reviews")
+const myReview = computed(() => reviewList.value.find((r) => r.user.id === auth.user?.id) ?? null)
+
+function onRate() {
+  document.getElementById("reviews")?.scrollIntoView({
+    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+    block: "start",
+  })
+  reviewsRef.value?.focusComposer()
+}
 
 /** Closing the 18+ dialog without confirming leaves the adult title. */
 function onAdultDialog(open: boolean) {

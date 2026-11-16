@@ -29,7 +29,7 @@
 import { computed } from "vue"
 import { useI18n } from "vue-i18n"
 import type { ShareMediaContext, ShareStatsContext, ShareTheme } from "@/types/share"
-import { shareScore, shareTier, titleSizeClass } from "../shareCards"
+import { SHARE_TYPE_LABEL_KEY, shareScore, shareTier, titleSizeClass } from "../shareCards"
 import ShareStars from "./ShareStars.vue"
 import ShareTierBadge from "./ShareTierBadge.vue"
 import "../shareCard.css"
@@ -42,7 +42,7 @@ const props = defineProps<{
 }>()
 const { t } = useI18n()
 
-const typeLabel = computed(() => t(props.media.mediaType === "movie" ? "share.movie" : "share.tvSeries"))
+const typeLabel = computed(() => t(SHARE_TYPE_LABEL_KEY[props.media.mediaType]))
 const tier = computed(() => shareTier(props.media))
 // The owner's own rating wins; otherwise the community score.
 const display = computed(() => {

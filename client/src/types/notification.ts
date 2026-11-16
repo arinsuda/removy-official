@@ -1,3 +1,6 @@
+import type { MediaType } from "@/types/common"
+import { mediaPath } from "@/utils/mediaRoute"
+
 export type NotificationType =
   | "followed_you"
   | "following_reviewed"
@@ -83,24 +86,27 @@ export function notificationTitleKey(type: NotificationType): string {
   return `notifications.titles.${type}`
 }
 
-const MEDIA_ROUTE: Record<string, string> = { movie: "movies", tv: "tv" }
+const MEDIA_TYPES: readonly MediaType[] = ["movie", "tv", "manga"]
+
+function asMediaType(value: string | null | undefined): MediaType | null {
+  return MEDIA_TYPES.find((t) => t === value) ?? null
+}
 
 /** In-app route for a notification, or null when the target has no page. */
 export function getNotificationActionUrl(n: AppNotification): string | null {
   if (!n.target_ref || n.target_id == null) return null
+  const media = asMediaType(n.target_ref)
+  if (media) return mediaPath(media, n.target_id)
   switch (n.target_ref) {
     case "user":
       return `/users/${n.target_id}`
-    case "movie":
-    case "tv":
-      return `/${MEDIA_ROUTE[n.target_ref]}/${n.target_id}`
     case "event":
       return `/events/${n.target_id}`
     case "review": {
       // Reviews have no page of their own; open the title they belong to.
       const { media_id, media_type } = n.params ?? {}
-      const base = media_type ? MEDIA_ROUTE[media_type] : undefined
-      return base && media_id ? `/${base}/${media_id}` : null
+      const reviewed = asMediaType(media_type)
+      return reviewed && media_id ? mediaPath(reviewed, media_id) : null
     }
     default:
       return null

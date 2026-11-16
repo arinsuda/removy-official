@@ -22,6 +22,7 @@ const m = vi.hoisted(() => ({
   searchSeries: vi.fn(),
 }))
 vi.mock("@/api/endpoints/list", () => ({ listApi: m }))
+vi.mock("@/api/endpoints/manga", () => ({ mangaApi: { search: vi.fn().mockResolvedValue({ data: { results: [] } }) } }))
 vi.mock("@/api/api", () => ({
   libraryApi: { addItem: vi.fn() },
   movieApi: { search: m.search, searchSeries: m.searchSeries },

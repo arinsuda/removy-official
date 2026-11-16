@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strconv"
 
+	"github.com/arinsuda/movie-hub/internal/shared"
+	mw "github.com/arinsuda/movie-hub/middleware"
 	"github.com/gofiber/fiber/v3"
 )
 
@@ -23,10 +25,11 @@ func (h *Handler) GetMediaAnalytics(c fiber.Ctx) error {
 
 	mt := routeToMediaType(c.Params("mediaType"))
 	if mt == "" {
-		return badRequest(c, "invalid media type: use 'movies' or 'series'")
+		return badRequest(c, "invalid media type: use 'movies', 'series' or 'manga'")
 	}
 
-	result, err := h.svc.GetMediaAnalytics(mediaID, mt)
+	viewer := mw.GetClaims(c)
+	result, err := h.svc.GetMediaAnalytics(c.Context(), viewer.UserID, mediaID, mt)
 	if err != nil {
 		return handleError(c, err)
 	}
@@ -36,10 +39,11 @@ func (h *Handler) GetMediaAnalytics(c fiber.Ctx) error {
 func (h *Handler) GetTrending(c fiber.Ctx) error {
 	mt := routeToMediaType(c.Params("mediaType"))
 	if mt == "" {
-		return badRequest(c, "invalid media type: use 'movies' or 'series'")
+		return badRequest(c, "invalid media type: use 'movies', 'series' or 'manga'")
 	}
 
-	items, err := h.svc.GetTrending(mt)
+	viewer := mw.GetClaims(c)
+	items, err := h.svc.GetTrending(c.Context(), viewer.UserID, mt)
 	if err != nil {
 		return handleError(c, err)
 	}
@@ -52,15 +56,20 @@ func routeToMediaType(route string) string {
 		return "movie"
 	case "series", "tv":
 		return "tv"
+	case "manga":
+		return "manga"
 	default:
 		return ""
 	}
 }
 
 func handleError(c fiber.Ctx, err error) error {
+	if handled, werr := shared.WriteMediaAccessError(c, err); handled {
+		return werr
+	}
 	switch {
 	case errors.Is(err, ErrInvalidMediaType):
-		return badRequest(c, "media_type must be 'movie' or 'tv'")
+		return badRequest(c, "media_type must be 'movie', 'tv' or 'manga'")
 	case errors.Is(err, ErrInvalidMediaID):
 		return badRequest(c, "invalid media_id")
 	default:

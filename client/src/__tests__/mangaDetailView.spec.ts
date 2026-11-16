@@ -13,6 +13,20 @@ import { useRealI18n } from "./helpers/realI18n"
 vi.mock("@/api/endpoints/manga", () => ({
   mangaApi: { list: vi.fn(), search: vi.fn(), genres: vi.fn(), detail: vi.fn(), similar: vi.fn() },
 }))
+// The action bar and reviews mount with the detail page; their endpoints are stubbed here.
+vi.mock("@/api/endpoints/media", () => ({
+  mediaApi: { getMediaStats: vi.fn(async () => ({ data: { stats: null } })), likeMedia: vi.fn(), unlikeMedia: vi.fn() },
+}))
+vi.mock("@/api/endpoints/library", () => ({
+  libraryApi: { getOwnMediaStatus: vi.fn(async () => ({ data: { in_lists: [] } })), addItem: vi.fn(), removeItem: vi.fn() },
+}))
+vi.mock("@/api/endpoints/social", () => ({
+  reviewApi: {
+    getMediaRating: vi.fn(async () => ({ data: { rating: { distribution: [] } } })),
+    getMediaReviews: vi.fn(async () => ({ data: { reviews: [], pagination: { page: 1, page_size: 10, total: 0, has_more: false } } })),
+    getMyReview: vi.fn(async () => ({ data: { review: null } })),
+  },
+}))
 
 const i18n = useRealI18n()
 const api = vi.mocked(mangaApi)
@@ -66,6 +80,7 @@ async function render(path = "/manga/7", dateOfBirth: string | null = null) {
     history: createMemoryHistory(),
     routes: [
       { path: "/manga", name: "manga", component: { template: "<div />" } },
+      { path: "/login", name: "login", component: { template: "<div />" } },
       { path: "/manga/:id(\\d+)", name: "manga-detail", component: MangaDetailView },
     ],
   })

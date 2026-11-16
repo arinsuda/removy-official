@@ -78,7 +78,7 @@ const initial = {
 }
 const form = reactive({ ...initial })
 
-const placeholderType = computed(() => (props.review.media.media_type === "tv" ? "tv" : "movie"))
+const placeholderType = computed(() => props.review.media.media_type)
 const metaLine = computed(() => {
   const type = t(`reviews.edit.type.${placeholderType.value}`)
   const year = props.review.media.release_date?.slice(0, 4)

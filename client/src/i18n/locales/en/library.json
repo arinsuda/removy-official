@@ -105,7 +105,8 @@
     "typeMovie": "Movie",
     "typeSeries": "Series",
     "toastAdded": "\"{title}\" added to your watchlist.",
-    "toastFailed": "Could not add \"{title}\"."
+    "toastFailed": "Could not add \"{title}\".",
+    "typeManga": "Manga"
   },
   "bmol": {
     "title": "Best of Life",
@@ -114,7 +115,8 @@
     "tabs": {
       "label": "Media type",
       "movie": "Movies",
-      "tv": "TV series"
+      "tv": "TV series",
+      "manga": "Manga"
     },
     "actions": {
       "add": "Add titles",

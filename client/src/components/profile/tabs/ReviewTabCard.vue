@@ -71,7 +71,7 @@ const bodyId = useId()
 const open = ref(false)
 
 const title = computed(() => props.review.media.title || `#${props.review.media.id}`)
-const route = computed(() => detailRoute({ id: props.review.media.id, type: props.review.media.media_type === "tv" ? "tv" : "movie" }))
+const route = computed(() => detailRoute({ id: props.review.media.id, type: props.review.media.media_type }))
 const tier = computed(() => popcornTier(props.review.rating, 1))
 const long = computed(() => props.review.body.length > CLAMP_CHARS || props.review.body.split("\n").length > 4)
 const visibilityIcon = computed(() => (props.review.visibility === "private" ? Lock : props.review.visibility === "followers" ? Users : Globe))

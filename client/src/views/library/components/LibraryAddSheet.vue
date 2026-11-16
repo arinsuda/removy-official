@@ -16,7 +16,7 @@
           <span v-else class="las__poster las__poster--empty" aria-hidden="true"><Film :size="16" /></span>
           <span class="las__info">
             <span class="las__name">{{ r.title }}</span>
-            <span class="las__sub">{{ t(r.type === "tv" ? "library.add.typeSeries" : "library.add.typeMovie") }}<template v-if="r.year"> · {{ r.year }}</template></span>
+            <span class="las__sub">{{ t(TYPE_LABEL_KEY[r.type]) }}<template v-if="r.year"> · {{ r.year }}</template></span>
           </span>
           <span v-if="isSaved(r)" class="las__saved"><Check :size="14" aria-hidden="true" />{{ t(justAdded.has(r.key) ? "library.add.added" : "library.add.inList") }}</span>
           <AppButton v-else variant="outline" icon-only data-action="add" :loading="busyKey === r.key" :disabled="busyKey !== null" :aria-label="t('library.add.action', { title: r.title })" @click="add(r)">
@@ -33,6 +33,7 @@ import { computed, onBeforeUnmount, ref, useId, watch } from "vue"
 import { useI18n } from "vue-i18n"
 import { Check, Film, Plus, Search } from "lucide-vue-next"
 import { libraryApi, movieApi } from "@/api/api"
+import { mangaApi } from "@/api/endpoints/manga"
 import { listApi } from "@/api/endpoints/list"
 import { listErrorKey } from "@/components/lists/listErrors"
 import AppButton from "@/components/ui/AppButton.vue"
@@ -73,6 +74,11 @@ const justAdded = ref(new Set<string>())
 let seq = 0
 let timer: ReturnType<typeof setTimeout> | undefined
 
+const TYPE_LABEL_KEY: Record<MediaType, string> = {
+  movie: "library.add.typeMovie",
+  tv: "library.add.typeSeries",
+  manga: "library.add.typeManga",
+}
 const posterOf = (r: Result) => getTmdbImageUrl(r.poster, ADD_POSTER_SIZE)
 const isSaved = (r: Result) => props.savedKeys.has(r.key) || justAdded.value.has(r.key)
 
@@ -81,12 +87,18 @@ async function search(text: string) {
   searching.value = true
   failed.value = false
   try {
-    const half = Math.ceil(ADD_SEARCH_LIMIT / 2)
-    const [movies, series] = await Promise.all([movieApi.search(text), movieApi.searchSeries(text)])
+    const share = Math.ceil(ADD_SEARCH_LIMIT / 3)
+    // Manga is best effort: an AniList failure must not hide the movie and series results.
+    const [movies, series, manga] = await Promise.all([
+      movieApi.search(text),
+      movieApi.searchSeries(text),
+      mangaApi.search(text).catch(() => null),
+    ])
     if (mine !== seq) return
     results.value = [
-      ...movies.data.results.slice(0, half).map((m): Result => ({ key: `movie-${m.id}`, id: m.id, type: "movie", title: m.title, poster: m.poster_path ?? "", year: m.release_date?.slice(0, 4) ?? "" })),
-      ...series.data.results.slice(0, half).map((s): Result => ({ key: `tv-${s.id}`, id: s.id, type: "tv", title: s.name, poster: s.poster_path ?? "", year: s.first_air_date?.slice(0, 4) ?? "" })),
+      ...movies.data.results.slice(0, share).map((m): Result => ({ key: `movie-${m.id}`, id: m.id, type: "movie", title: m.title, poster: m.poster_path ?? "", year: m.release_date?.slice(0, 4) ?? "" })),
+      ...series.data.results.slice(0, share).map((s): Result => ({ key: `tv-${s.id}`, id: s.id, type: "tv", title: s.name, poster: s.poster_path ?? "", year: s.first_air_date?.slice(0, 4) ?? "" })),
+      ...(manga?.data.results ?? []).slice(0, share).map((m): Result => ({ key: `manga-${m.id}`, id: m.id, type: "manga", title: m.display_title, poster: m.cover_url, year: m.start_year ? String(m.start_year) : "" })),
     ]
   } catch {
     if (mine === seq) failed.value = true

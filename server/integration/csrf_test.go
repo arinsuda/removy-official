@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/arinsuda/movie-hub/internal/mailer"
+	"github.com/arinsuda/movie-hub/internal/shared"
 	"github.com/arinsuda/movie-hub/router"
 	"github.com/gofiber/fiber/v3"
 )
@@ -50,6 +51,8 @@ func TestRouterRegisterInstallsCSRFGuard(t *testing.T) {
 	cfg.MinIO.UseSSL = false
 	cfg.MinIO.BucketName = "csrf-test"
 	router.Register(ctx, app, e.db, &cfg, mailer.New(cfg.Brevo))
+	// Register installs the production manga lookup and age gate globally; drop them with this database.
+	t.Cleanup(func() { shared.SetMangaSupport(nil, nil, nil) })
 	e.app = app
 
 	for _, path := range []string{"/api/reviews", "/api/auth/logout", "/api/library"} {

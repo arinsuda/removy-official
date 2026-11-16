@@ -29,10 +29,23 @@ func (r *repository) CreateBatch(ctx context.Context, ns []Notification) error {
 	return r.db.WithContext(ctx).Create(&ns).Error
 }
 
-func (r *repository) FindByUser(ctx context.Context, userID uint, q ListNotificationsQuery) ([]Notification, int64, error) {
+// mangaSafeSQL keeps every notification except one about manga whose manga_meta row is adult or missing.
+// It is shared.MangaSafeSQL over the params column; shared imports this package, so the predicate is repeated here.
+const mangaSafeSQL = `(COALESCE(params->>'media_type', '') <> 'manga' OR (params->>'media_id')::int IN (SELECT media_id FROM manga_meta WHERE is_adult = false))`
+
+// withMangaFilter applies mangaSafeSQL when the viewer may not see adult manga.
+func withMangaFilter(db *gorm.DB, restrictManga bool) *gorm.DB {
+	if restrictManga {
+		return db.Where(mangaSafeSQL)
+	}
+	return db
+}
+
+func (r *repository) FindByUser(ctx context.Context, userID uint, q ListNotificationsQuery, restrictManga bool) ([]Notification, int64, error) {
 	page, pageSize := normalizePagination(q.Page, q.PageSize)
 
 	db := r.db.WithContext(ctx).Model(&Notification{}).Where("user_id = ?", userID)
+	db = withMangaFilter(db, restrictManga)
 
 	if q.Unread != nil && *q.Unread {
 		db = db.Where("is_read = false")
@@ -58,20 +71,20 @@ func (r *repository) FindByUser(ctx context.Context, userID uint, q ListNotifica
 }
 
 // NEW: unread count แยกรายหมวด สำหรับ badge บนแท็บ
-func (r *repository) CountUnreadByCategory(ctx context.Context, userID uint) ([]UnreadByCategoryResponse, error) {
+func (r *repository) CountUnreadByCategory(ctx context.Context, userID uint, restrictManga bool) ([]UnreadByCategoryResponse, error) {
 	var rows []UnreadByCategoryResponse
-	err := r.db.WithContext(ctx).Model(&Notification{}).
-		Select("category, COUNT(*) as count").
+	db := withMangaFilter(r.db.WithContext(ctx).Model(&Notification{}), restrictManga)
+	err := db.Select("category, COUNT(*) as count").
 		Where("user_id = ? AND is_read = false", userID).
 		Group("category").
 		Scan(&rows).Error
 	return rows, err
 }
 
-func (r *repository) CountUnread(ctx context.Context, userID uint) (int64, error) {
+func (r *repository) CountUnread(ctx context.Context, userID uint, restrictManga bool) (int64, error) {
 	var count int64
-	err := r.db.WithContext(ctx).Model(&Notification{}).
-		Where("user_id = ? AND is_read = false", userID).
+	db := withMangaFilter(r.db.WithContext(ctx).Model(&Notification{}), restrictManga)
+	err := db.Where("user_id = ? AND is_read = false", userID).
 		Count(&count).Error
 	return count, err
 }

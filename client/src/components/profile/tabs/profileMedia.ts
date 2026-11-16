@@ -25,9 +25,9 @@ export function summaryToHomeMedia(m: SummaryLike): HomeMedia {
     ? { ...base, name: m.title, original_name: m.title, first_air_date: m.release_date ?? "" }
     : { ...base, title: m.title, original_title: m.title, release_date: m.release_date ?? "" }
   return {
-    key: `${tv ? "tv" : "movie"}-${m.id}`,
+    key: `${m.media_type}-${m.id}`,
     id: m.id,
-    type: tv ? "tv" : "movie",
+    type: m.media_type,
     title: m.title,
     poster_path: base.poster_path,
     backdrop_path: "",
@@ -60,5 +60,6 @@ export const ENTRY_SORTS: Record<(typeof ENTRY_SORT_KEYS)[number], (a: ProfileEn
 export const ENTRY_FILTERS: Record<string, (e: ProfileEntry) => boolean> = {
   movie: (e) => e.media.type === "movie",
   tv: (e) => e.media.type === "tv",
+  manga: (e) => e.media.type === "manga",
 }
 

@@ -33,9 +33,10 @@ import AppButton from "@/components/ui/AppButton.vue"
 import VisibilitySelector from "@/components/common/VisibilitySelector.vue"
 import StarRatingInput from "@/components/movie/StarRatingInput.vue"
 import { useReviewForm } from "@/composables/useReviewForm"
+import type { MediaType } from "@/types/common"
 import type { ReviewResponse } from "@/types/review"
 
-const props = defineProps<{ mediaId: number; mediaType: "movie" | "tv" }>()
+const props = defineProps<{ mediaId: number; mediaType: MediaType }>()
 const emit = defineEmits<{ submitted: [review: ReviewResponse] }>()
 
 const { t } = useI18n()

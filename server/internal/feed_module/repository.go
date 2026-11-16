@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/arinsuda/movie-hub/internal/privacy_policy"
+	"github.com/arinsuda/movie-hub/internal/shared"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -214,13 +215,22 @@ func applyFeedCategory(db *gorm.DB, category string) *gorm.DB {
 	return db
 }
 
-func (r *repository) FindFeed(ctx context.Context, userID uint, pq PaginationQuery) ([]feedRow, int64, error) {
+// applyAdultFilter drops adult manga (and unknown manga) from a feed for a viewer who may not see it.
+// The viewer's own rows always stay, the same owner rule as the post-filter in the service.
+func applyAdultFilter(db *gorm.DB, viewerID uint) *gorm.DB {
+	return db.Where("(ae.actor_id = ? OR "+shared.MangaSafeSQL("ae.media_type", "ae.media_id")+")", viewerID)
+}
+
+func (r *repository) FindFeed(ctx context.Context, userID uint, pq PaginationQuery, hideAdult bool) ([]feedRow, int64, error) {
 	buildQuery := func() *gorm.DB {
 		db := r.db.WithContext(ctx).Table("activity_events ae").
 			Joins("JOIN users u ON u.id = ae.actor_id AND u.is_active = true").
 			Joins("LEFT JOIN user_follows uf ON uf.followee_id = ae.actor_id AND uf.follower_id = ?", userID).
 			Joins("LEFT JOIN activity_privacy_settings aps ON aps.user_id = ae.actor_id AND aps.activity_type = ae.type").
 			Where("ae.deleted_at IS NULL")
+		if hideAdult {
+			db = applyAdultFilter(db, userID)
+		}
 		return applyFeedCategory(applyFeedScope(db, pq.Scope, userID), pq.Category)
 	}
 
@@ -240,9 +250,9 @@ func (r *repository) FindFeed(ctx context.Context, userID uint, pq PaginationQue
 	return rows, total, err
 }
 
-func (r *repository) FindUserActivities(ctx context.Context, targetUserID, requesterID uint, pq PaginationQuery) ([]feedRow, int64, error) {
+func (r *repository) FindUserActivities(ctx context.Context, targetUserID, requesterID uint, pq PaginationQuery, hideAdult bool) ([]feedRow, int64, error) {
 	buildQuery := func() *gorm.DB {
-		return r.db.WithContext(ctx).Table("activity_events ae").
+		db := r.db.WithContext(ctx).Table("activity_events ae").
 			Joins("JOIN users u ON u.id = ae.actor_id AND u.is_active = true").
 			Joins("LEFT JOIN user_follows uf ON uf.followee_id = ae.actor_id AND uf.follower_id = ?", requesterID).
 			Joins("LEFT JOIN activity_privacy_settings aps ON aps.user_id = ae.actor_id AND aps.activity_type = ae.type").
@@ -261,6 +271,10 @@ func (r *repository) FindUserActivities(ctx context.Context, targetUserID, reque
 					)
 				))
 			`, requesterID)
+		if hideAdult {
+			db = applyAdultFilter(db, requesterID)
+		}
+		return db
 	}
 
 	var total int64
@@ -308,7 +322,7 @@ func (r *repository) UpsertSetting(ctx context.Context, userID uint, t ActivityT
 // CountNewFeedItems counts items newer than the activity afterActivityID, ordered by
 // (created_at, id): CreateOrRestore re-stamps created_at but keeps the id, so id alone is not a
 // safe cursor. The viewer's own rows are never counted, so acting yourself raises no "new" pill.
-func (r *repository) CountNewFeedItems(ctx context.Context, userID uint, afterActivityID uint, category, scope string) (int64, error) {
+func (r *repository) CountNewFeedItems(ctx context.Context, userID uint, afterActivityID uint, category, scope string, hideAdult bool) (int64, error) {
 	var count int64
 	db := r.db.WithContext(ctx).Table("activity_events ae").
 		Joins("JOIN users u ON u.id = ae.actor_id AND u.is_active = true").
@@ -318,6 +332,9 @@ func (r *repository) CountNewFeedItems(ctx context.Context, userID uint, afterAc
 		Where("ae.actor_id <> ?", userID).
 		Where("(ae.created_at, ae.id) > (SELECT cursor.created_at, cursor.id FROM activity_events cursor WHERE cursor.id = ?)", afterActivityID)
 
+	if hideAdult {
+		db = applyAdultFilter(db, userID)
+	}
 	err := applyFeedCategory(applyFeedScope(db, scope, userID), category).Count(&count).Error
 	return count, err
 }

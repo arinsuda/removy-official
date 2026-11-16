@@ -125,6 +125,8 @@ describe("event_results notifications", () => {
 describe("getNotificationActionUrl", () => {
   it("routes tv and review targets to the title page", () => {
     expect(getNotificationActionUrl(make({ target_ref: "tv", target_id: 5 }))).toBe("/tv/5")
+    expect(getNotificationActionUrl(make({ target_ref: "manga", target_id: 7 }))).toBe("/manga/7")
+    expect(getNotificationActionUrl(make({ target_ref: "review", target_id: 9, params: { media_id: 7, media_type: "manga" } }))).toBe("/manga/7")
     expect(getNotificationActionUrl(make({ target_ref: "review", target_id: 9, params: { media_id: 603, media_type: "tv" } }))).toBe("/tv/603")
     expect(getNotificationActionUrl(make({ target_ref: "review", target_id: 9, params: null }))).toBeNull()
   })

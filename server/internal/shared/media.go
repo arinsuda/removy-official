@@ -10,7 +10,19 @@ type MediaType string
 const (
 	MediaTypeMovie MediaType = "movie"
 	MediaTypeTV    MediaType = "tv"
+	// MediaTypeManga titles are AniList ids, not TMDB ids: the same number names a different title per type.
+	MediaTypeManga MediaType = "manga"
 )
+
+// IsValidMediaType reports whether t is a media type that reviews, library, likes, BMOL, lists and stats accept.
+// Watch logs and events stay movie and TV only and check their own list.
+func IsValidMediaType(t MediaType) bool {
+	switch t {
+	case MediaTypeMovie, MediaTypeTV, MediaTypeManga:
+		return true
+	}
+	return false
+}
 
 type MediaIdentity struct {
 	ID   int

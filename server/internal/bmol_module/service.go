@@ -8,8 +8,6 @@ import (
 	"github.com/arinsuda/movie-hub/internal/movie_module"
 	"github.com/arinsuda/movie-hub/internal/privacy_policy"
 	shared "github.com/arinsuda/movie-hub/internal/shared"
-	tmdbmodule "github.com/arinsuda/movie-hub/internal/tmdb_module"
-	"golang.org/x/sync/errgroup"
 	"gorm.io/gorm"
 )
 
@@ -18,7 +16,7 @@ const tmdbConcurrency = 6
 var (
 	ErrDuplicate        = errors.New("media item is already ranked in your BOL")
 	ErrForbidden        = errors.New("you do not have permission to modify this item")
-	ErrInvalidMediaType = errors.New("invalid media type, must be movie or tv")
+	ErrInvalidMediaType = errors.New("invalid media type, must be movie, tv or manga")
 	ErrNotFound         = errors.New("item not found")
 )
 
@@ -38,6 +36,10 @@ func NewService(db *gorm.DB, policy privacy_policy.UserAccessPolicy) *Service {
 
 func (s *Service) AddItem(ctx context.Context, userID uint, req CreateBMOLRequest) (*BMOLItemResponse, error) {
 	if err := validateCreate(req); err != nil {
+		return nil, err
+	}
+
+	if err := shared.CheckMediaAccess(ctx, userID, req.MediaID, shared.MediaType(req.MediaType)); err != nil {
 		return nil, err
 	}
 
@@ -136,19 +138,29 @@ func (s *Service) GetUserBMOL(ctx context.Context, viewerID, userID uint, mediaT
 	if err != nil {
 		return nil, err
 	}
+	vis, err := shared.NewMediaVisibility(ctx, viewerID)
+	if err != nil {
+		return nil, err
+	}
+	items, err = shared.KeepVisible(ctx, vis, items, func(i BMOLItem) shared.VisibleRef {
+		return shared.VisibleRef{Media: shared.MediaKey{ID: i.MediaID, Type: shared.MediaType(i.MediaType)}, OwnerID: i.UserID}
+	})
+	if err != nil {
+		return nil, err
+	}
 
+	keys := make([]shared.MediaKey, len(items))
+	for i, item := range items {
+		keys[i] = shared.MediaKey{ID: item.MediaID, Type: shared.MediaType(item.MediaType)}
+	}
+	summaryByKey, err := shared.MediaSummaries(ctx, keys)
+	if err != nil {
+		return nil, err
+	}
 	responses := make([]BMOLItemResponse, len(items))
 	media := make([]*shared.MediaSummary, len(items))
-	var g errgroup.Group
-	g.SetLimit(tmdbConcurrency)
 	for i := range items {
-		g.Go(func() error {
-			responses[i] = *s.toResponse(&items[i])
-			return nil
-		})
-	}
-	_ = g.Wait()
-	for i := range responses {
+		responses[i] = *toResponseWith(&items[i], summaryByKey[keys[i]])
 		media[i] = &responses[i].Media
 	}
 	if err := shared.AttachRatings(ctx, s.db, media); err != nil {
@@ -158,29 +170,11 @@ func (s *Service) GetUserBMOL(ctx context.Context, viewerID, userID uint, mediaT
 }
 
 func (s *Service) toResponse(item *BMOLItem) *BMOLItemResponse {
-	media := shared.MediaSummary{
-		ID:        item.MediaID,
-		MediaType: shared.MediaType(item.MediaType),
-	}
-	switch item.MediaType {
-	case movie_module.MediaMovie:
-		if details, err := tmdbmodule.GetMovieByID(item.MediaID); err == nil && details != nil {
-			media.Title = details.Title
-			media.ReleaseDate = details.ReleaseDate
-			media.PosterURL = details.PosterPath
-			media.Genres = details.Genres
-			media.VoteAverage = float32(details.VoteAverage)
-		}
-	case movie_module.MediaSeries:
-		if details, err := tmdbmodule.GetSeriesByID(item.MediaID); err == nil && details != nil {
-			media.Title = details.Name
-			media.ReleaseDate = details.FirstAirDate
-			media.PosterURL = details.PosterPath
-			media.Genres = details.Genres
-			media.VoteAverage = float32(details.VoteAverage)
-		}
-	}
+	return toResponseWith(item, shared.FetchMediaSummary(item.MediaID, shared.MediaType(item.MediaType)))
+}
 
+// toResponseWith builds the DTO from a summary the caller already read (lists batch them).
+func toResponseWith(item *BMOLItem, media shared.MediaSummary) *BMOLItemResponse {
 	return &BMOLItemResponse{
 		ID:        item.ID,
 		Media:     media,

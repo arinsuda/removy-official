@@ -32,7 +32,7 @@ func validVisibility(v privacy_policy.ListVisibility) error {
 }
 
 func validMedia(req AddItemRequest) error {
-	if req.MediaType != shared.MediaTypeMovie && req.MediaType != shared.MediaTypeTV {
+	if !shared.IsValidMediaType(req.MediaType) {
 		return ErrInvalidMediaType
 	}
 	if req.MediaID <= 0 {

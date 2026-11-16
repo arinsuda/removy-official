@@ -45,7 +45,7 @@ func (h *Handler) ListOwn(c fiber.Ctx) error {
 			return handleError(c, err)
 		}
 	}
-	lists, err := h.svc.ListOwn(uid, mediaType, mediaID)
+	lists, err := h.svc.ListOwn(c.Context(), uid, mediaType, mediaID)
 	if err != nil {
 		return handleError(c, err)
 	}
@@ -203,6 +203,9 @@ func paramID(c fiber.Ctx, name string) (uint, error) {
 }
 
 func handleError(c fiber.Ctx, err error) error {
+	if handled, werr := shared.WriteMediaAccessError(c, err); handled {
+		return werr
+	}
 	write := func(status int, code shared.ErrorCode) error {
 		return shared.WriteAPIError(c, status, code, err.Error())
 	}

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/arinsuda/movie-hub/internal/movie_module"
+	"github.com/arinsuda/movie-hub/internal/shared"
 )
 
 const (
@@ -28,7 +28,7 @@ func normalizeNote(note string) (string, error) {
 }
 
 func validateCreate(req CreateBMOLRequest) error {
-	if req.MediaType != movie_module.MediaMovie && req.MediaType != movie_module.MediaSeries {
+	if !shared.IsValidMediaType(shared.MediaType(req.MediaType)) {
 		return ErrInvalidMediaType
 	}
 	if req.MediaID <= 0 || !validRank(req.Rank) {

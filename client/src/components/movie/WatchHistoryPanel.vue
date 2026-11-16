@@ -48,12 +48,13 @@ import { useI18n } from 'vue-i18n'
 import { X, Trash2, Globe, Users, Lock } from 'lucide-vue-next'
 import { watchLogApi } from '@/api/endpoints/watchLog'
 import type { WatchLogResponse, Visibility } from '@/types'
+import type { MediaType } from '@/types/common'
 import { useToast } from '@/composables/useToast'
 import { logApiError } from '@/utils/logApiError'
 
 const props = defineProps<{
   mediaId: number
-  mediaType: "movie" | "tv"
+  mediaType: MediaType
 }>()
 
 const emit = defineEmits<{

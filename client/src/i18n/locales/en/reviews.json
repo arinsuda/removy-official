@@ -41,7 +41,8 @@
     "bodyLabel": "Your review",
     "placeholder": {
       "movie": "What did you think of this movie?",
-      "tv": "What did you think of this series?"
+      "tv": "What did you think of this series?",
+      "manga": "What did you think of this manga?"
     },
     "visibilityLabel": "Visibility",
     "ratingValue": "{value} out of {max}"
@@ -67,7 +68,8 @@
     "writtenOn": "Written {date}",
     "type": {
       "movie": "Movie",
-      "tv": "Series"
+      "tv": "Series",
+      "manga": "Manga"
     },
     "typeYear": "{type} · {year}",
     "shortcut": "{keys} to save",
@@ -75,5 +77,7 @@
       "mac": "⌘ + Enter",
       "other": "Ctrl + Enter"
     }
-  }
+  },
+  "typeManga": "Manga",
+  "mediaManga": "Manga"
 }

@@ -34,7 +34,8 @@
   "untitled": "ไม่มีชื่อ",
   "mediaType": {
     "movie": "ภาพยนตร์",
-    "tv": "ซีรีส์"
+    "tv": "ซีรีส์",
+    "manga": "มังงะ"
   },
   "readMore": "อ่านต่อ",
   "readLess": "ย่อ",

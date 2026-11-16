@@ -47,14 +47,29 @@
       <template v-else>
         <WatchedTimeline v-if="view === 'list'" :groups="groups" :is-owner="isOwner">
           <template #actions="{ entry }">
-            <WatchedActions :title="entry.media.title" @history="historyTarget = entry.media" @log="logTarget = entry.media" @remove="askRemove(entry)" />
+            <WatchedActions
+              :title="entry.media.title"
+              :can-log="entry.media.type !== MANGA_TYPE"
+              @history="historyTarget = entry.media"
+              @log="logTarget = entry.media"
+              @remove="askRemove(entry)"
+            />
           </template>
         </WatchedTimeline>
         <MediaGrid v-else :items="list.visible.value.map((e) => e.media)" rail="watched" :label="t('profile.tabs.watched')">
+          <template #badge="{ item }">
+            <MangaStatusBadge v-if="item.type === MANGA_TYPE" status="watched" />
+          </template>
           <template #footer="{ item }">
             <span class="uw__date">{{ formatDate(entryOf(item).at) }}</span>
             <span v-if="isOwner" class="uw__acts">
-              <WatchedActions :title="item.title" @history="historyTarget = item" @log="logTarget = item" @remove="askRemove(entryOf(item))" />
+              <WatchedActions
+                :title="item.title"
+                :can-log="item.type !== MANGA_TYPE"
+                @history="historyTarget = item"
+                @log="logTarget = item"
+                @remove="askRemove(entryOf(item))"
+              />
             </span>
           </template>
         </MediaGrid>
@@ -88,6 +103,7 @@ import SkeletonList from "@/components/ui/skeleton/SkeletonList.vue"
 import { useAuthStore } from "@/stores/auth"
 import type { ListType } from "@/types"
 import GuestCapNote from "./tabs/GuestCapNote.vue"
+import MangaStatusBadge from "./tabs/MangaStatusBadge.vue"
 import MediaGrid from "./tabs/MediaGrid.vue"
 import TabEmptyState from "./tabs/TabEmptyState.vue"
 import TabToolbar from "./tabs/TabToolbar.vue"
@@ -99,6 +115,7 @@ import { useTabList } from "./tabs/useTabList"
 import { useViewMode } from "./tabs/useViewMode"
 
 const props = defineProps<{ userId: number; listType: ListType }>()
+const MANGA_TYPE = "manga"
 
 const { t, locale } = useI18n()
 const auth = useAuthStore()
@@ -153,7 +170,8 @@ function clearAll() {
 }
 
 async function refreshCount(media: HomeMedia | null) {
-  if (!media) return
+  // Manga has no watch logs, so there is no count to fetch.
+  if (!media || media.type === MANGA_TYPE) return
   try {
     const res = await watchLogApi.getMyWatchLogs(media.type, media.id)
     const count = res.data?.summary?.watch_count ?? res.data?.logs?.length

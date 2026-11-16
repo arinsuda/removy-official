@@ -28,7 +28,7 @@
         </div>
         <div class="media-info">
           <div class="type-badge">
-            {{ media.mediaType === 'movie' ? 'MOVIE' : 'TV SERIES' }}
+            {{ TYPE_TAG[media.mediaType] }}
           </div>
           <h2
             class="media-title"
@@ -110,6 +110,10 @@
   import { computed } from "vue"
   import { useI18n } from "vue-i18n"
   import type { ShareMediaContext, ShareReviewContext } from "@/types/share"
+  import type { MediaType } from "@/types/common"
+
+  // hardcode-ok: share-image template, the rendered PNG text is fixed English
+  const TYPE_TAG: Record<MediaType, string> = { movie: "MOVIE", tv: "TV SERIES", manga: "MANGA" }
   import { useShareImage } from "@/composables/useShareImage"
 
   const { t } = useI18n()

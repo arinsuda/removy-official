@@ -193,7 +193,8 @@
       "added": "Added {date}",
       "typeMovie": "Movie",
       "typeTv": "TV",
-      "loading": "Loading"
+      "loading": "Loading",
+      "typeManga": "Manga"
     },
     "watchlist": {
       "count": "{n} to watch",

@@ -34,7 +34,8 @@
   "untitled": "Untitled",
   "mediaType": {
     "movie": "Movie",
-    "tv": "TV series"
+    "tv": "TV series",
+    "manga": "Manga"
   },
   "readMore": "Read more",
   "readLess": "Show less",

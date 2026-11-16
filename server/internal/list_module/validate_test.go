@@ -43,6 +43,14 @@ func TestValidVisibilityAndMedia(t *testing.T) {
 	if !errors.Is(validMedia(AddItemRequest{MediaID: 0, MediaType: shared.MediaTypeTV}), ErrInvalidInput) {
 		t.Fatal("zero media id accepted")
 	}
+	if err := validMedia(AddItemRequest{MediaID: 1, MediaType: shared.MediaTypeManga}); err != nil {
+		t.Fatalf("manga rejected: %v", err)
+	}
+	for _, bad := range []shared.MediaType{"anime", "Manga", "movies"} {
+		if !errors.Is(validMedia(AddItemRequest{MediaID: 1, MediaType: bad}), ErrInvalidMediaType) {
+			t.Fatalf("%q accepted", bad)
+		}
+	}
 }
 
 func TestSamePermutation(t *testing.T) {

@@ -60,6 +60,7 @@ import { useI18n } from "vue-i18n"
 import { useQuery } from "@tanstack/vue-query"
 import { Check, Film, Search } from "lucide-vue-next"
 import { libraryApi, movieApi } from "@/api/api"
+import { mangaApi } from "@/api/endpoints/manga"
 import { fetchAllUserReviews } from "@/utils/fetchAllUserReviews"
 import AppButton from "@/components/ui/AppButton.vue"
 import AppModal from "@/components/ui/AppModal.vue"
@@ -67,6 +68,8 @@ import AppTabs from "@/components/ui/AppTabs.vue"
 import SkeletonList from "@/components/ui/skeleton/SkeletonList.vue"
 import { getTmdbImageUrl } from "@/utils/image"
 import type { BMOLItemResponse, MediaType } from "@/types"
+import type { MangaItem } from "@/types/manga"
+import { mangaToBmolCandidate } from "@/components/manga/mangaBmol"
 import { nextFreeRank } from "./bmolRanks"
 import type { BmolCandidate } from "./useBmol"
 
@@ -75,6 +78,7 @@ interface Candidate extends BmolCandidate {
 }
 
 const FAVORITE_MIN_RATING = 4.5
+const SEARCH_LIMIT = 8
 const SEARCH_DEBOUNCE_MS = 300
 
 const props = defineProps<{
@@ -85,6 +89,8 @@ const props = defineProps<{
   items: BMOLItemResponse[]
   /** Rank to preselect, e.g. 1 from the onboarding call to action. */
   defaultRank?: number
+  /** Titles already chosen when the sheet opens, e.g. the manga being viewed. Shown and selected, so no search is needed. */
+  preselected?: BmolCandidate[]
 }>()
 const emit = defineEmits<{
   "update:modelValue": [value: boolean]
@@ -95,7 +101,12 @@ const { t } = useI18n()
 const searchId = useId()
 const rankId = useId()
 const open = computed({ get: () => props.modelValue, set: (v) => emit("update:modelValue", v) })
-const typeLabel = computed(() => t(props.mediaType === "tv" ? "library.bmol.tabs.tv" : "library.bmol.tabs.movie"))
+const TAB_LABEL_KEY: Record<MediaType, string> = {
+  movie: "library.bmol.tabs.movie",
+  tv: "library.bmol.tabs.tv",
+  manga: "library.bmol.tabs.manga",
+}
+const typeLabel = computed(() => t(TAB_LABEL_KEY[props.mediaType]))
 
 const source = ref<"search" | "favorites">("search")
 const tabs = computed(() => [
@@ -114,7 +125,8 @@ const selected = ref(new Map<string, Candidate>())
 const targetRank = ref(1)
 const busy = ref(false)
 
-const candidateKey = (c: Candidate) => `${c.media_type}:${c.id}`
+const candidateKey = (c: BmolCandidate) => `${c.media_type}:${c.id}`
+const preselectedRows = computed<Candidate[]>(() => (props.preselected ?? []).map((c) => ({ ...c, year: "" })))
 const posterOf = (c: Candidate) => getTmdbImageUrl(c.poster_url, "w92")
 const ranked = computed(() => new Set(props.items.map((i) => `${i.media_type}:${i.media.id}`)))
 const rankValid = computed(() => Number.isInteger(targetRank.value) && targetRank.value >= 1 && targetRank.value <= 999)
@@ -125,16 +137,23 @@ function fromMovie(m: { id: number; title: string; poster_path: string; vote_ave
 function fromTv(m: { id: number; name: string; poster_path: string; vote_average: number; first_air_date?: string }): Candidate {
   return { id: m.id, media_type: "tv", title: m.name, poster_url: m.poster_path ?? "", vote_average: m.vote_average ?? 0, year: m.first_air_date?.slice(0, 4) ?? "" }
 }
+function fromManga(m: MangaItem): Candidate {
+  return { ...mangaToBmolCandidate(m), year: m.start_year ? String(m.start_year) : "" }
+}
+
+/** One search call per media type; manga searches AniList instead of TMDB. */
+async function searchByType(type: MediaType, text: string): Promise<Candidate[]> {
+  if (type === "manga") return (await mangaApi.search(text)).data.results.slice(0, SEARCH_LIMIT).map(fromManga)
+  if (type === "tv") return (await movieApi.searchSeries(text)).data.results.slice(0, SEARCH_LIMIT).map(fromTv)
+  return (await movieApi.search(text)).data.results.slice(0, SEARCH_LIMIT).map(fromMovie)
+}
 
 async function runSearch(text: string) {
   const seq = ++searchSeq
   searching.value = true
   searchFailed.value = false
   try {
-    const list =
-      props.mediaType === "tv"
-        ? (await movieApi.searchSeries(text)).data.results.slice(0, 8).map(fromTv)
-        : (await movieApi.search(text)).data.results.slice(0, 8).map(fromMovie)
+    const list = await searchByType(props.mediaType, text)
     if (seq === searchSeq) searchResults.value = list
   } catch {
     if (seq === searchSeq) searchFailed.value = true
@@ -148,7 +167,7 @@ watch(query, (value) => {
   const text = value.trim()
   if (!text) {
     searchSeq++
-    searchResults.value = []
+    searchResults.value = preselectedRows.value
     searching.value = false
     return
   }
@@ -197,8 +216,8 @@ watch(
     if (!visible) return
     source.value = "search"
     query.value = ""
-    searchResults.value = []
-    selected.value = new Map()
+    searchResults.value = preselectedRows.value
+    selected.value = new Map(preselectedRows.value.map((c): [string, Candidate] => [candidateKey(c), c]))
     targetRank.value = props.defaultRank ?? nextFreeRank(props.items)
   },
   { immediate: true },
@@ -210,9 +229,11 @@ watch(() => props.mediaType, () => {
 })
 
 async function submit() {
-  if (!selected.value.size || !rankValid.value) return
+  // Ranks load after the sheet opens, so a preselected title may already be ranked by now.
+  const chosen = [...selected.value.values()].filter((c) => !ranked.value.has(candidateKey(c)))
+  if (!chosen.length || !rankValid.value) return
   busy.value = true
-  emit("add", [...selected.value.values()], targetRank.value)
+  emit("add", chosen, targetRank.value)
   // The board closes the sheet; reset here so a reopened sheet is clean.
   busy.value = false
   open.value = false
