@@ -105,7 +105,8 @@
     "typeMovie": "ภาพยนตร์",
     "typeSeries": "ซีรีส์",
     "toastAdded": "เพิ่ม \"{title}\" ลงรายการอยากดูแล้ว",
-    "toastFailed": "เพิ่ม \"{title}\" ไม่ได้"
+    "toastFailed": "เพิ่ม \"{title}\" ไม่ได้",
+    "typeManga": "มังงะ"
   },
   "bmol": {
     "title": "ที่สุดของชีวิต",
@@ -114,7 +115,8 @@
     "tabs": {
       "label": "ประเภทสื่อ",
       "movie": "ภาพยนตร์",
-      "tv": "ซีรีส์"
+      "tv": "ซีรีส์",
+      "manga": "มังงะ"
     },
     "actions": {
       "add": "เพิ่มเรื่อง",

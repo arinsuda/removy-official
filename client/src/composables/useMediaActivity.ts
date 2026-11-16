@@ -8,11 +8,12 @@ import { watchLogApi } from "@/api/endpoints/watchLog"
 import { useAuthGate, type AuthGateReason } from "@/composables/useAuthGate"
 import { useToast } from "@/composables/useToast"
 import { useAuthStore } from "@/stores/auth"
+import type { MediaType } from "@/types/common"
 import type { MediaStats } from "@/types/movie"
 import type { RatingBucket } from "@/types/review"
 import type { WatchSummaryResponse } from "@/types/watchLog"
 
-type MediaKind = "movie" | "tv"
+type MediaKind = MediaType
 type ListKind = "watchlist" | "watched"
 type PendingAction = "like" | "watchlist" | "watched"
 
@@ -81,7 +82,8 @@ export function useMediaActivity(type: MediaKind, idRef: Ref<number>) {
   }
 
   async function loadWatchSummary(id: number) {
-    if (!auth.isLoggedIn) return
+    // Watch logs exist for movies and series only.
+    if (!auth.isLoggedIn || type === "manga") return
     try {
       const res = await watchLogApi.getMyWatchLogs(type, id)
       if (id !== idRef.value) return
@@ -166,6 +168,22 @@ export function useMediaActivity(type: MediaKind, idRef: Ref<number>) {
       if (itemId === null) await loadLists(id)
     })
 
+  /** Toggles the "watched" list entry (manga "Read"); a watch log is a separate flow. */
+  const toggleWatched = () =>
+    guarded("watched", "list", async id => {
+      const current = itemIds.value.watched
+      if (current !== null) {
+        await libraryApi.removeItem(current)
+        if (id !== idRef.value) return
+        itemIds.value = { ...itemIds.value, watched: null }
+        return
+      }
+      const itemId = await addToList(id, "watched")
+      if (id !== idRef.value) return
+      itemIds.value = { ...itemIds.value, watched: itemId }
+      if (itemId === null) await loadLists(id)
+    })
+
   /** Called after the WatchLogModal saved a log: mark watched too, then refresh the summary. */
   const markLogged = () =>
     guarded("watched", "watchLog", async id => {
@@ -198,6 +216,7 @@ export function useMediaActivity(type: MediaKind, idRef: Ref<number>) {
     requireLogin: requireAuth,
     toggleLike,
     toggleWatchlist,
+    toggleWatched,
     markLogged,
     reload: load,
     refreshStats: () => {

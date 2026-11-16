@@ -21,7 +21,7 @@ var (
 	ErrNotMarkedHelpful      = errors.New("not marked helpful")
 	ErrInvalidWatchedAt      = errors.New("invalid watched_at")
 	ErrInvalidRating         = errors.New("rating must be between 0.5 and 5 in increments of 0.5")
-	ErrInvalidMediaType      = errors.New("media_type must be 'movie' or 'tv'")
+	ErrInvalidMediaType      = errors.New("media_type must be 'movie', 'tv' or 'manga'")
 	ErrInvalidMediaID        = errors.New("invalid media_id")
 	ErrInvalidVisibility     = errors.New("invalid visibility")
 	ErrConflictingVisibility = errors.New("conflicting visibility and is_public values")
@@ -33,6 +33,8 @@ var (
 type ReviewFilter struct {
 	Visibility     string
 	OnlyPublicFlag bool
+	// HideAdultManga drops adult manga (and unknown manga) from the scope: set for viewers who may not see it.
+	HideAdultManga bool
 	DateFrom       *time.Time
 	DateTo         *time.Time
 	Sort           string
@@ -84,6 +86,9 @@ func (r *repository) userReviewScope(userID uint, filter ReviewFilter) *gorm.DB 
 	}
 	if filter.DateTo != nil {
 		q = q.Where("created_at <= ?", *filter.DateTo)
+	}
+	if filter.HideAdultManga {
+		q = q.Where(shared.MangaSafeSQL("media_type", "media_id"))
 	}
 	return q
 }

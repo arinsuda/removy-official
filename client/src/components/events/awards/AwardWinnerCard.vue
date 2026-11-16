@@ -30,15 +30,13 @@ import { ImageOff } from "lucide-vue-next"
 import type { EventAward } from "@/types/event"
 import { AWARD_POSTER_SIZE } from "@/utils/events"
 import { getTmdbImageUrl } from "@/utils/image"
+import { mediaRoute } from "@/utils/mediaRoute"
 
 const props = defineProps<{ award: EventAward; coWinner: boolean }>()
 const { t } = useI18n()
 
 const posterUrl = computed(() => getTmdbImageUrl(props.award.poster_path, AWARD_POSTER_SIZE))
-const detailRoute = computed(() => ({
-  name: props.award.media_type === "movie" ? "movie-detail" : "tv-detail",
-  params: { id: props.award.media_id },
-}))
+const detailRoute = computed(() => mediaRoute(props.award.media_type, props.award.media_id))
 </script>
 
 <style scoped>

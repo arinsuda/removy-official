@@ -193,7 +193,8 @@
       "added": "เพิ่มเมื่อ {date}",
       "typeMovie": "ภาพยนตร์",
       "typeTv": "ซีรีส์",
-      "loading": "กำลังโหลด"
+      "loading": "กำลังโหลด",
+      "typeManga": "มังงะ"
     },
     "watchlist": {
       "count": "รอดู {n} เรื่อง",

@@ -131,6 +131,9 @@ func autoMigrate(db *gorm.DB) error {
 		&feed_module.ActivityPrivacySetting{},
 
 		&bmol_module.BMOLItem{},
+
+		// manga_meta: stored AniList title data, written by every manga write that resolves the title (no user FK)
+		&shared.MangaMeta{},
 		&list_module.UserList{},
 		&list_module.UserListItem{},
 		&admin_module.AdminAuditLog{},
@@ -528,6 +531,13 @@ func runSQLMigrations(db *gorm.DB, cfg *config.Config) error {
 	// Realign monthly rounds written before the period rule (period = month the window opens) was enforced.
 	if err := runSchemaMigrationTx(db, "20261115_event_period_start_month", cfg.DB.MigrationLockTimeoutMs, cfg.DB.MigrationStatementTimeoutMs, func(tx *gorm.DB) error {
 		return migrate.BackfillEventPeriodsToStartMonth(tx, config.AppTimeZone)
+	}); err != nil {
+		return err
+	}
+
+	// Lists accept manga: the check widens to the three media types (see migrate.MediaTypeManga).
+	if err := runSchemaMigrationTx(db, "20261118_media_type_manga", cfg.DB.MigrationLockTimeoutMs, cfg.DB.MigrationStatementTimeoutMs, func(tx *gorm.DB) error {
+		return tx.Exec(migrate.MediaTypeManga).Error
 	}); err != nil {
 		return err
 	}

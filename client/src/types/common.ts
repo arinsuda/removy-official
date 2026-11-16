@@ -1,4 +1,4 @@
-export type MediaType = "movie" | "tv"
+export type MediaType = "movie" | "tv" | "manga"
 export type ListType = "watchlist" | "likes" | "watched" | "email_change"
 export type Visibility = "public" | "followers" | "private"
 

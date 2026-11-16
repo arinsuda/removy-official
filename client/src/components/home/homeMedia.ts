@@ -1,9 +1,15 @@
-import type { RouteLocationRaw } from "vue-router"
 import type { Movie, TVSeries } from "@/types"
 import type { MediaAward } from "@/types/event"
 import type { MediaRatings } from "@/types/movie"
+import { mediaRoute } from "@/utils/mediaRoute"
+import { mediaImage } from "@/utils/image"
+import type { MediaType } from "@/types/common"
 
-export type HomeMediaType = "movie" | "tv"
+/** Library, likes and feed entries can be manga too; only movie and tv ids exist on TMDB. */
+export type HomeMediaType = MediaType
+
+/** False for manga, whose ids are AniList ids: never send them to TMDB lookups. */
+export const isTmdbType = (type: MediaType): boolean => type !== "manga"
 
 /** Movies and TV series flattened to the fields the home page renders. */
 export interface HomeMedia {
@@ -57,12 +63,15 @@ export function fromSeries(s: TVSeries): HomeMedia {
   }
 }
 
-export function detailRoute(m: Pick<HomeMedia, "id" | "type">): RouteLocationRaw {
-  return { name: m.type === "tv" ? "tv-detail" : "movie-detail", params: { id: m.id } }
+export function detailRoute(m: { id: number; type: MediaType }) {
+  return mediaRoute(m.type, m.id)
 }
 
-const TMDB = "https://image.tmdb.org/t/p"
-
-export const posterSrc = (path: string) => `${TMDB}/w342${path}`
-export const posterSrcset = (path: string) => `${TMDB}/w185${path} 185w, ${TMDB}/w342${path} 342w`
-export const backdropSrc = (path: string) => `${TMDB}/w1280${path}`
+/** Absolute URLs (manga) yield the same string for both widths, so the srcset degrades to one candidate. */
+export const posterSrc = (path: string) => mediaImage(path, "w342") ?? ""
+export const posterSrcset = (path: string) => {
+  const small = mediaImage(path, "w185") ?? ""
+  const large = mediaImage(path, "w342") ?? ""
+  return small === large ? large : `${small} 185w, ${large} 342w`
+}
+export const backdropSrc = (path: string) => mediaImage(path, "w1280") ?? ""

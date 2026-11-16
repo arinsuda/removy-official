@@ -6,6 +6,7 @@ import (
 
 	"github.com/arinsuda/movie-hub/internal/movie_module"
 	"github.com/arinsuda/movie-hub/internal/privacy_policy"
+	"github.com/arinsuda/movie-hub/internal/shared"
 	mw "github.com/arinsuda/movie-hub/middleware"
 	"github.com/gofiber/fiber/v3"
 )
@@ -131,7 +132,7 @@ func (h *Handler) GetMediaStatus(c fiber.Ctx) error {
 	}
 
 	mediaType := movie_module.MediaType(c.Params("mediaType"))
-	if mediaType != movie_module.MediaMovie && mediaType != movie_module.MediaSeries {
+	if !shared.IsValidMediaType(shared.MediaType(mediaType)) {
 		return badRequest(c, "invalid media_type")
 	}
 
@@ -160,6 +161,9 @@ func parseItemID(c fiber.Ctx) (uint, error) {
 }
 
 func handleError(c fiber.Ctx, err error) error {
+	if handled, werr := shared.WriteMediaAccessError(c, err); handled {
+		return werr
+	}
 	switch {
 	case errors.Is(err, ErrItemNotFound):
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "item not found"})
@@ -171,6 +175,8 @@ func handleError(c fiber.Ctx, err error) error {
 		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "item already in list"})
 	case errors.Is(err, ErrInvalidWatchedAt):
 		return badRequest(c, "invalid watched_at format, use YYYY-MM-DD")
+	case errors.Is(err, ErrInvalidMediaType):
+		return badRequest(c, "media_type must be 'movie', 'tv' or 'manga'")
 	default:
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal server error"})
 	}

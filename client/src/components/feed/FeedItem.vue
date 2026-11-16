@@ -58,7 +58,7 @@
         />
         <span v-else class="feed-item__poster feed-item__poster--empty" aria-hidden="true"><Film :size="18" /></span>
         <span class="feed-item__media-text">
-          <span class="feed-item__media-type">{{ t(`feed.mediaType.${item.media.media_type === "tv" ? "tv" : "movie"}`) }}</span>
+          <span class="feed-item__media-type">{{ t(`feed.mediaType.${item.media.media_type}`) }}</span>
           <span class="feed-item__media-title">{{ mediaTitle }}</span>
           <MediaRating :ratings="item.media.ratings" :vote-average="item.media.vote_average" />
         </span>
@@ -130,7 +130,7 @@ const mediaTitle = computed(() => props.item.media?.title || t("feed.untitled"))
 const actorTo = computed(() => ({ name: "user-profile", params: { userId: props.item.actor.id } }))
 const targetTo = computed(() => ({ name: "user-profile", params: { userId: props.item.target_user?.id ?? 0 } }))
 const mediaTo = computed(() =>
-  detailRoute({ id: props.item.media?.id ?? 0, type: props.item.media?.media_type === "tv" ? "tv" : "movie" }),
+  detailRoute({ id: props.item.media?.id ?? 0, type: props.item.media?.media_type ?? "movie" }),
 )
 
 const relativeTime = computed(() => formatRelativeTime(props.item.created_at, locale.value))

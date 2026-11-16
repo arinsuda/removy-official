@@ -115,7 +115,9 @@
     "date": "วันที่",
     "body": "ข้อความรีวิว",
     "close": "ปิด",
-    "ratingOutOf": "{rating} / 5.0"
+    "ratingOutOf": "{rating} / 5.0",
+    "mediaManga": "มังงะ",
+    "typeManga": "มังงะ"
   },
   "auditLogs": {
     "title": "บันทึกการทำงานของผู้ดูแลระบบ",

@@ -12,6 +12,8 @@ type ListType string
 const (
 	MediaMovie  MediaType = "movie"
 	MediaSeries MediaType = "tv"
+	// MediaManga is an AniList title id; library, likes, BMOL and lists share this type.
+	MediaManga MediaType = "manga"
 )
 
 const (

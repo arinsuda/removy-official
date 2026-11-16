@@ -11,7 +11,6 @@ import (
 	notification_module "github.com/arinsuda/movie-hub/internal/notification_module"
 	"github.com/arinsuda/movie-hub/internal/privacy_policy"
 	shared "github.com/arinsuda/movie-hub/internal/shared"
-	tmdbmodule "github.com/arinsuda/movie-hub/internal/tmdb_module"
 	stats "github.com/arinsuda/movie-hub/internal/user_stats_module"
 	"gorm.io/gorm"
 )
@@ -47,6 +46,9 @@ func NewService(
 
 func (s *Service) AddItem(ctx context.Context, userID uint, req AddItemRequest) (*OwnLibraryItemResponse, error) {
 	if err := validateAddItemRequest(req); err != nil {
+		return nil, err
+	}
+	if err := shared.CheckMediaAccess(ctx, userID, req.MediaID, shared.MediaType(req.MediaType)); err != nil {
 		return nil, err
 	}
 
@@ -166,12 +168,26 @@ func (s *Service) GetLibrary(ctx context.Context, userID, requesterID uint, list
 	if hasMore {
 		items = items[:GuestLibraryLimit]
 	}
+	vis, err := shared.NewMediaVisibility(ctx, requesterID)
+	if err != nil {
+		return nil, false, err
+	}
+	items, err = shared.KeepVisible(ctx, vis, items, func(i LibraryItem) shared.VisibleRef {
+		return shared.VisibleRef{Media: shared.MediaKey{ID: i.MediaID, Type: shared.MediaType(i.MediaType)}, OwnerID: i.UserID}
+	})
+	if err != nil {
+		return nil, false, err
+	}
+	summaryByKey, err := shared.MediaSummaries(ctx, libraryMediaKeys(items))
+	if err != nil {
+		return nil, false, err
+	}
 
 	if userID == requesterID {
 		responses := make([]OwnLibraryItemResponse, len(items))
 		media := make([]*shared.MediaSummary, len(items))
 		for i, item := range items {
-			responses[i] = *toOwnResponse(&item)
+			responses[i] = *toOwnResponseWith(&item, summaryByKey[libraryKey(item)])
 			media[i] = &responses[i].Media
 		}
 		if err := shared.AttachRatings(ctx, s.db, media); err != nil {
@@ -182,7 +198,7 @@ func (s *Service) GetLibrary(ctx context.Context, userID, requesterID uint, list
 		responses := make([]PublicLibraryItemResponse, len(items))
 		media := make([]*shared.MediaSummary, len(items))
 		for i, item := range items {
-			responses[i] = *toPublicResponse(&item)
+			responses[i] = *toPublicResponseWith(&item, summaryByKey[libraryKey(item)])
 			media[i] = &responses[i].Media
 		}
 		if err := shared.AttachRatings(ctx, s.db, media); err != nil {
@@ -296,21 +312,11 @@ func (s *Service) createAchievementFeedActivities(ctx context.Context, userID ui
 }
 
 func (s *Service) fetchTitle(mediaID int, mediaType movie_module.MediaType) (string, error) {
-	switch mediaType {
-	case movie_module.MediaMovie:
-		if d, err := tmdbmodule.GetMovieByID(mediaID); err == nil {
-			return d.Title, nil
-		}
-	case movie_module.MediaSeries:
-		if d, err := tmdbmodule.GetSeriesByID(mediaID); err == nil {
-			return d.Name, nil
-		}
-	}
-	return "", nil
+	return shared.FetchMediaSummary(mediaID, shared.MediaType(mediaType)).Title, nil
 }
 
 func validateAddItemRequest(req AddItemRequest) error {
-	if req.MediaType != movie_module.MediaMovie && req.MediaType != movie_module.MediaSeries {
+	if !shared.IsValidMediaType(shared.MediaType(req.MediaType)) {
 		return ErrInvalidMediaType
 	}
 	if req.ListType != movie_module.ListWatchlist &&
@@ -324,37 +330,33 @@ func validateAddItemRequest(req AddItemRequest) error {
 }
 
 func fetchMediaSummaryHelper(mediaID int, mediaType movie_module.MediaType) shared.MediaSummary {
-	media := shared.MediaSummary{
-		ID:        mediaID,
-		MediaType: shared.MediaType(mediaType),
+	return shared.FetchMediaSummary(mediaID, shared.MediaType(mediaType))
+}
+
+// libraryKey is the title one library item shows.
+func libraryKey(item LibraryItem) shared.MediaKey {
+	return shared.MediaKey{ID: item.MediaID, Type: shared.MediaType(item.MediaType)}
+}
+
+// libraryMediaKeys lists the titles of the items, for one batched summary read.
+func libraryMediaKeys(items []LibraryItem) []shared.MediaKey {
+	keys := make([]shared.MediaKey, len(items))
+	for i, item := range items {
+		keys[i] = libraryKey(item)
 	}
-	switch mediaType {
-	case movie_module.MediaMovie:
-		if details, err := tmdbmodule.GetMovieByID(mediaID); err == nil && details != nil {
-			media.Title = details.Title
-			media.ReleaseDate = details.ReleaseDate
-			media.PosterURL = details.PosterPath
-			media.Genres = details.Genres
-			media.VoteAverage = float32(details.VoteAverage)
-		}
-	case movie_module.MediaSeries:
-		if details, err := tmdbmodule.GetSeriesByID(mediaID); err == nil && details != nil {
-			media.Title = details.Name
-			media.ReleaseDate = details.FirstAirDate
-			media.PosterURL = details.PosterPath
-			media.Genres = details.Genres
-			media.VoteAverage = float32(details.VoteAverage)
-		}
-	}
-	return media
+	return keys
 }
 
 func toOwnResponse(item *LibraryItem) *OwnLibraryItemResponse {
+	return toOwnResponseWith(item, fetchMediaSummaryHelper(item.MediaID, item.MediaType))
+}
+
+// toOwnResponseWith builds the DTO from a summary the caller already read (lists batch them).
+func toOwnResponseWith(item *LibraryItem, media shared.MediaSummary) *OwnLibraryItemResponse {
 	tags := []string{}
 	if item.Tags != "" {
 		_ = json.Unmarshal([]byte(item.Tags), &tags)
 	}
-	media := fetchMediaSummaryHelper(item.MediaID, item.MediaType)
 
 	return &OwnLibraryItemResponse{
 		ID:        item.ID,
@@ -368,8 +370,10 @@ func toOwnResponse(item *LibraryItem) *OwnLibraryItemResponse {
 }
 
 func toPublicResponse(item *LibraryItem) *PublicLibraryItemResponse {
-	media := fetchMediaSummaryHelper(item.MediaID, item.MediaType)
+	return toPublicResponseWith(item, fetchMediaSummaryHelper(item.MediaID, item.MediaType))
+}
 
+func toPublicResponseWith(item *LibraryItem, media shared.MediaSummary) *PublicLibraryItemResponse {
 	return &PublicLibraryItemResponse{
 		ID:        item.ID,
 		Media:     media,

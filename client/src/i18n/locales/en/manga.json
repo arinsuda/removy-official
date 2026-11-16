@@ -62,7 +62,20 @@
     "readTitle": "Where to read",
     "readEmpty": "No reading links yet.",
     "readOpens": "Read on {site} (opens in a new tab)",
-    "similar": "Similar titles"
+    "similar": "Similar titles",
+    "reviews": "Reviews",
+    "actions": {
+      "label": "Title actions",
+      "rate": "Rate",
+      "editRating": "Edit rating",
+      "wantToRead": "Want to read",
+      "read": "Read",
+      "like": "Like",
+      "unlike": "Remove like",
+      "addToList": "Add to list",
+      "addToBmol": "Add to Best of Life",
+      "failed": "Something went wrong. Please try again."
+    }
   },
   "adult": {
     "badge": "18+",

@@ -161,6 +161,8 @@ import { useAuthStore } from "@/stores/auth";
 import { mediaApi } from "@/api/endpoints/media";
 import MediaRating from "./MediaRating.vue";
 import type { MediaRatings } from "@/types/movie";
+import type { MediaType } from "@/types/common";
+import { mediaRouteName } from "@/utils/mediaRoute";
 
 const props = defineProps<{
   movie: Movie | TVSeries;
@@ -176,7 +178,7 @@ const props = defineProps<{
   showSkeleton: boolean;
   showFallback: boolean;
   attachPlayer: (elementId: string) => void;
-  mediaType?: "movie" | "tv";
+  mediaType?: MediaType;
 }>();
 
 const { t, n } = useI18n();
@@ -190,7 +192,7 @@ const mt = computed(() => props.mediaType ?? "movie");
 
 // ─── Route name ───────────────────────────────────────────────────────────
 const detailRouteName = computed(() =>
-  mt.value === "tv" ? "tv-detail" : "movie-detail",
+  mediaRouteName(mt.value),
 );
 
 // ─── Derived display fields (รองรับทั้ง Movie และ TVSeries) ───────────────

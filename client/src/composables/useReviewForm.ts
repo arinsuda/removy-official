@@ -5,9 +5,7 @@ import { useToast } from "@/composables/useToast"
 import { i18n } from "@/i18n"
 import { computed, ref, toValue, type MaybeRefOrGetter } from "vue"
 import type { ReviewResponse } from "@/types/review"
-import type { Visibility } from "@/types"
-
-type MediaType = "movie" | "tv"
+import type { MediaType, Visibility } from "@/types"
 
 /**
  * Create-review form state. The media id and type are read when submitting, so

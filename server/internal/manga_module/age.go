@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/arinsuda/movie-hub/config"
+	"github.com/arinsuda/movie-hub/internal/shared"
 	"gorm.io/gorm"
 )
 
@@ -21,10 +22,8 @@ const (
 	detailScope = scopeAdult
 )
 
-// AdultGate decides whether a viewer may see adult titles. Guests (userID 0) are never eligible.
-type AdultGate interface {
-	Eligible(ctx context.Context, userID uint) (bool, error)
-}
+// AdultGate decides whether a viewer may see adult titles. It is the shared gate, so writes and reads in other modules use the same rule.
+type AdultGate = shared.AdultGate
 
 // dobGate reads users.date_of_birth for the signed-in viewer.
 type dobGate struct {

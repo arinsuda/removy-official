@@ -36,7 +36,7 @@
           </div>
         </td>
         <td>
-          <RouterLink :to="mediaPath(r)" class="media-link" target="_blank">
+          <RouterLink :to="reviewPath(r)" class="media-link" target="_blank">
             <img v-if="r.poster_url" :src="r.poster_url" class="media-thumb" alt="" loading="lazy" decoding="async" />
             <span v-else class="media-thumb media-thumb--empty" aria-hidden="true"><Film :size="16" /></span>
             <span class="media-text">
@@ -84,7 +84,7 @@
           <div>
             <p class="detail__title">{{ mediaTitle(selectedReview) }}</p>
             <p class="detail__sub">{{ typeLabel(selectedReview.media_type) }}</p>
-            <AppButton :to="mediaPath(selectedReview)" variant="outline" size="sm" target="_blank">
+            <AppButton :to="reviewPath(selectedReview)" variant="outline" size="sm" target="_blank">
               {{ t("admin.reviews.openMedia") }}
               <ExternalLink :size="14" aria-hidden="true" />
             </AppButton>
@@ -162,7 +162,8 @@ import AppButton from "@/components/ui/AppButton.vue"
 import AppModal from "@/components/ui/AppModal.vue"
 import { useToast } from "@/composables/useToast"
 import { useAdminStore } from "@/stores/admin"
-import type { AdminReviewRow } from "@/types"
+import type { AdminReviewRow, MediaType } from "@/types"
+import { mediaPath } from "@/utils/mediaRoute"
 import { adminErrorKey } from "@/utils/adminError"
 
 const { t, locale } = useI18n()
@@ -209,8 +210,13 @@ const menuItems = computed<RowMenuItem[]>(() => [
 ])
 const isFiltered = computed(() => !!search.value.trim() || mediaTypeFilter.value !== "all" || visibilityFilter.value !== "all")
 
-const typeLabel = (type: string) => t(type === "movie" ? "admin.reviews.mediaMovie" : "admin.reviews.mediaTv")
-const mediaPath = (r: AdminReviewRow) => (r.media_type === "movie" ? `/movies/${r.media_id}` : `/tv/${r.media_id}`)
+const ADMIN_MEDIA_LABEL_KEY: Record<MediaType, string> = {
+  movie: "admin.reviews.mediaMovie",
+  tv: "admin.reviews.mediaTv",
+  manga: "admin.reviews.mediaManga",
+}
+const typeLabel = (type: MediaType) => t(ADMIN_MEDIA_LABEL_KEY[type])
+const reviewPath = (r: AdminReviewRow) => mediaPath(r.media_type, r.media_id)
 const mediaTitle = (r: AdminReviewRow) => r.media_title || `${typeLabel(r.media_type)} #${r.media_id}`
 
 async function fetchData(page = 1) {

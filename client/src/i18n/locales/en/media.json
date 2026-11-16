@@ -2,7 +2,8 @@
   "types": {
     "movie": "Movies",
     "tv": "TV Series",
-    "all": "All"
+    "all": "All",
+    "manga": "Manga"
   },
   "filters": {
     "genre": "Genre",

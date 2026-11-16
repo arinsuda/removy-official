@@ -45,11 +45,12 @@ import AppModal from '@/components/ui/AppModal.vue'
 import VisibilitySelector from '@/components/common/VisibilitySelector.vue'
 import { watchLogApi } from '@/api/endpoints/watchLog'
 import type { Visibility } from '@/types'
+import type { MediaType } from '@/types/common'
 import { useToast } from '@/composables/useToast'
 
 const props = defineProps<{
   mediaId: number
-  mediaType: "movie" | "tv"
+  mediaType: MediaType
 }>()
 
 const emit = defineEmits<{

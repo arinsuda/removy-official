@@ -24,7 +24,7 @@
 import { computed } from "vue"
 import { useI18n } from "vue-i18n"
 import type { ShareMediaContext, ShareTheme } from "@/types/share"
-import { shareGenres, shareScore, shareTier, titleSizeClass } from "../shareCards"
+import { SHARE_TYPE_LABEL_KEY, shareGenres, shareScore, shareTier, titleSizeClass } from "../shareCards"
 import ShareCardFooter from "./ShareCardFooter.vue"
 import ShareTierBadge from "./ShareTierBadge.vue"
 import "../shareCard.css"
@@ -32,7 +32,7 @@ import "../shareCard.css"
 const props = defineProps<{ media: ShareMediaContext; posterUrl: string | null; theme: ShareTheme; shortUrl: string }>()
 const { t } = useI18n()
 
-const typeLabel = computed(() => t(props.media.mediaType === "movie" ? "share.movie" : "share.tvSeries"))
+const typeLabel = computed(() => t(SHARE_TYPE_LABEL_KEY[props.media.mediaType]))
 const score = computed(() => shareScore(props.media))
 const tier = computed(() => shareTier(props.media))
 const meta = computed(() => [props.media.releaseYear, ...shareGenres(props.media, 2)].filter(Boolean).join(" · "))

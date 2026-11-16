@@ -1,4 +1,4 @@
-import type { PaginatedResponse } from "./common"
+import type { MediaType, PaginatedResponse } from "./common"
 
 export type GrowthStatus = "growth" | "decline" | "no_change" | "no_previous_baseline"
 
@@ -46,7 +46,7 @@ export interface AdminReviewRow {
   user_id: number
   username: string
   media_id: number
-  media_type: string
+  media_type: MediaType
   media_title?: string
   poster_url?: string
   rating: number

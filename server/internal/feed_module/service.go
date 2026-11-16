@@ -8,7 +8,6 @@ import (
 	"github.com/arinsuda/movie-hub/internal/privacy_policy"
 	"github.com/arinsuda/movie-hub/internal/shared"
 	"github.com/arinsuda/movie-hub/internal/shared/storage"
-	tmdbmodule "github.com/arinsuda/movie-hub/internal/tmdb_module"
 	"gorm.io/gorm"
 )
 
@@ -86,7 +85,11 @@ func (s *service) GetFeed(ctx context.Context, userID uint, pq PaginationQuery) 
 		return nil, err
 	}
 	pq.Scope = scope
-	rows, total, err := s.repo.FindFeed(ctx, userID, pq)
+	vis, err := shared.NewMediaVisibility(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	rows, total, err := s.repo.FindFeed(ctx, userID, pq, !vis.ShowsAdult())
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +98,11 @@ func (s *service) GetFeed(ctx context.Context, userID uint, pq PaginationQuery) 
 
 func (s *service) GetUserActivities(ctx context.Context, targetUserID, requesterID uint, pq PaginationQuery) (*FeedListResponse, error) {
 	pq.Normalize()
-	rows, total, err := s.repo.FindUserActivities(ctx, targetUserID, requesterID, pq)
+	vis, err := shared.NewMediaVisibility(ctx, requesterID)
+	if err != nil {
+		return nil, err
+	}
+	rows, total, err := s.repo.FindUserActivities(ctx, targetUserID, requesterID, pq, !vis.ShowsAdult())
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +211,11 @@ func (s *service) CountNewFeedItems(ctx context.Context, userID uint, afterActiv
 	if err != nil {
 		return 0, err
 	}
-	return s.repo.CountNewFeedItems(ctx, userID, afterActivityID, category, scope)
+	vis, err := shared.NewMediaVisibility(ctx, userID)
+	if err != nil {
+		return 0, err
+	}
+	return s.repo.CountNewFeedItems(ctx, userID, afterActivityID, category, scope, !vis.ShowsAdult())
 }
 
 func (s *service) broadcastRefresh(ctx context.Context, actorID uint) {
@@ -314,27 +325,8 @@ func toFeedItemResponse(row feedRow, minio *storage.MinIOClient) FeedItemRespons
 	}
 
 	if row.MediaID != nil && row.MediaType != nil {
-		media := shared.MediaSummary{
-			ID:        *row.MediaID,
-			MediaType: shared.MediaType(*row.MediaType),
-		}
-		switch shared.MediaType(*row.MediaType) {
-		case shared.MediaTypeMovie:
-			if details, err := tmdbmodule.GetMovieByID(*row.MediaID); err == nil && details != nil {
-				media.Title = details.Title
-				media.PosterURL = tmdbmodule.ImageURL(details.PosterPath)
-				media.Genres = details.Genres
-				media.VoteAverage = float32(details.VoteAverage)
-			}
-		case shared.MediaTypeTV:
-			if details, err := tmdbmodule.GetSeriesByID(*row.MediaID); err == nil && details != nil {
-				media.Title = details.Name
-				media.PosterURL = tmdbmodule.ImageURL(details.PosterPath)
-				media.Genres = details.Genres
-				media.VoteAverage = float32(details.VoteAverage)
-			}
-		}
-		item.Media = &media
+		// Only the key here; attachFeedMedia fills the summary in one batch for the whole page.
+		item.Media = &shared.MediaSummary{ID: *row.MediaID, MediaType: shared.MediaType(*row.MediaType)}
 	}
 
 	return item
@@ -356,6 +348,31 @@ func (s *service) IsActivityEnabled(ctx context.Context, userID uint, activityTy
 	return s.repo.IsEnabled(ctx, userID, activityType)
 }
 
+// attachFeedMedia replaces each item's media key with its summary. Every title on the page is read in one
+// batch (manga from manga_meta, no per-item AniList calls).
+func attachFeedMedia(ctx context.Context, list *FeedListResponse) error {
+	var keys []shared.MediaKey
+	for _, it := range list.Items {
+		if it.Media != nil {
+			keys = append(keys, shared.MediaKey{ID: it.Media.ID, Type: it.Media.MediaType})
+		}
+	}
+	summaries, err := shared.MediaSummaries(ctx, keys)
+	if err != nil {
+		return err
+	}
+	for i := range list.Items {
+		key := list.Items[i].Media
+		if key == nil {
+			continue
+		}
+		sum := summaries[shared.MediaKey{ID: key.ID, Type: key.MediaType}]
+		sum.PosterURL = shared.MediaPosterURL(sum.PosterURL)
+		list.Items[i].Media = &sum
+	}
+	return nil
+}
+
 // withRatings attaches popcorn ratings to every feed item that carries media (one query per media type).
 func (s *service) withRatings(ctx context.Context, list *FeedListResponse) (*FeedListResponse, error) {
 	var media []*shared.MediaSummary
@@ -370,9 +387,25 @@ func (s *service) withRatings(ctx context.Context, list *FeedListResponse) (*Fee
 	return list, nil
 }
 
-// finishList attaches ratings and the viewer's like state (one query each, no per-item lookups).
+// finishList drops adult titles the viewer may not see, then attaches ratings and the viewer's like state (one query each, no per-item lookups).
 func (s *service) finishList(ctx context.Context, viewerID uint, list *FeedListResponse) (*FeedListResponse, error) {
-	list, err := s.withRatings(ctx, list)
+	if err := attachFeedMedia(ctx, list); err != nil {
+		return nil, err
+	}
+	vis, err := shared.NewMediaVisibility(ctx, viewerID)
+	if err != nil {
+		return nil, err
+	}
+	list.Items, err = shared.KeepVisible(ctx, vis, list.Items, func(it FeedItemResponse) shared.VisibleRef {
+		if it.Media == nil {
+			return shared.VisibleRef{}
+		}
+		return shared.VisibleRef{Media: shared.MediaKey{ID: it.Media.ID, Type: it.Media.MediaType}, OwnerID: it.Actor.ID}
+	})
+	if err != nil {
+		return nil, err
+	}
+	list, err = s.withRatings(ctx, list)
 	if err != nil {
 		return nil, err
 	}

@@ -89,6 +89,10 @@ func (s *Service) CreateReview(ctx context.Context, userID uint, req CreateRevie
 		IsPublic:   vis == "public",
 	}
 
+	if err := shared.CheckMediaAccess(ctx, userID, req.MediaID, shared.MediaType(req.MediaType)); err != nil {
+		return nil, err
+	}
+
 	if err := s.repo.CreateReview(review); err != nil {
 		return nil, err
 	}
@@ -150,7 +154,7 @@ func (s *Service) CreateReview(ctx context.Context, userID uint, req CreateRevie
 	if err != nil {
 		return nil, err
 	}
-	return toReviewResponse(inserted, true, false, false, s.minio), nil
+	return toReviewResponse(inserted, true, false, false, s.minio, singleReviewMedia(inserted)), nil
 }
 
 func (s *Service) GetUserReviews(ctx context.Context, userID, requesterID uint, filter ReviewFilter) ([]ReviewResponse, Pagination, UserReviewsSummary, error) {
@@ -178,7 +182,19 @@ func (s *Service) GetUserReviews(ctx context.Context, userID, requesterID uint, 
 		filter.OnlyPublicFlag = true
 	}
 
+	vis, err := shared.NewMediaVisibility(ctx, requesterID)
+	if err != nil {
+		return nil, pg, UserReviewsSummary{}, err
+	}
+	// Adult manga is left out of the page and the counts in SQL, so pagination and totals agree with the list.
+	filter.HideAdultManga = vis.Restricted(userID)
 	reviews, total, err := s.repo.FindReviewsByUser(userID, filter, (filter.Page-1)*filter.PageSize, filter.PageSize)
+	if err != nil {
+		return nil, pg, UserReviewsSummary{}, err
+	}
+	reviews, err = shared.KeepVisible(ctx, vis, reviews, func(r Review) shared.VisibleRef {
+		return shared.VisibleRef{Media: shared.MediaKey{ID: r.MediaID, Type: shared.MediaType(r.MediaType)}, OwnerID: r.UserID}
+	})
 	if err != nil {
 		return nil, pg, UserReviewsSummary{}, err
 	}
@@ -200,9 +216,13 @@ func (s *Service) GetUserReviews(ctx context.Context, userID, requesterID uint, 
 		helpfulMap, _ = s.repo.FindHelpfulIDs(ids, requesterID)
 	}
 
+	summaries, err := shared.MediaSummaries(ctx, reviewMediaKeys(reviews))
+	if err != nil {
+		return nil, pg, UserReviewsSummary{}, err
+	}
 	responses := make([]ReviewResponse, len(reviews))
 	for i, r := range reviews {
-		responses[i] = *toReviewResponse(&r, requesterID != 0, likedMap[r.ID], helpfulMap[r.ID], s.minio)
+		responses[i] = *toReviewResponse(&r, requesterID != 0, likedMap[r.ID], helpfulMap[r.ID], s.minio, summaries[reviewMediaKey(r)])
 	}
 	return responses, pg, buildUserReviewsSummary(summaryRow), nil
 }
@@ -249,9 +269,13 @@ func (s *Service) GetMediaReviews(ctx context.Context, mediaID int, mediaType st
 		helpfulMap, _ = s.repo.FindHelpfulIDs(ids, requesterID)
 	}
 
+	summaries, err := shared.MediaSummaries(ctx, reviewMediaKeys(reviews))
+	if err != nil {
+		return nil, pg, err
+	}
 	responses := make([]ReviewResponse, len(reviews))
 	for i, r := range reviews {
-		responses[i] = *toReviewResponse(&r, requesterID != 0, likedMap[r.ID], helpfulMap[r.ID], s.minio)
+		responses[i] = *toReviewResponse(&r, requesterID != 0, likedMap[r.ID], helpfulMap[r.ID], s.minio, summaries[reviewMediaKey(r)])
 	}
 	return responses, pg, nil
 }
@@ -264,7 +288,7 @@ func (s *Service) GetMyMediaReview(userID uint, mediaID int, mediaType string) (
 	}
 	liked, _ := s.repo.IsLiked(review.ID, userID)
 	helpful, _ := s.repo.IsHelpful(review.ID, userID)
-	return toReviewResponse(review, true, liked, helpful, s.minio), nil
+	return toReviewResponse(review, true, liked, helpful, s.minio, singleReviewMedia(review)), nil
 }
 
 func (s *Service) UpdateReview(ctx context.Context, reviewID, requesterID uint, req UpdateReviewRequest) (*ReviewResponse, error) {
@@ -287,7 +311,7 @@ func (s *Service) UpdateReview(ctx context.Context, reviewID, requesterID uint, 
 	if len(updates) == 0 {
 		liked, _ := s.repo.IsLiked(reviewID, requesterID)
 		helpful, _ := s.repo.IsHelpful(reviewID, requesterID)
-		return toReviewResponse(review, true, liked, helpful, s.minio), nil
+		return toReviewResponse(review, true, liked, helpful, s.minio, singleReviewMedia(review)), nil
 	}
 
 	if err := s.repo.UpdateReview(reviewID, updates); err != nil {
@@ -310,7 +334,7 @@ func (s *Service) UpdateReview(ctx context.Context, reviewID, requesterID uint, 
 
 	liked, _ := s.repo.IsLiked(reviewID, requesterID)
 	helpful, _ := s.repo.IsHelpful(reviewID, requesterID)
-	return toReviewResponse(updated, true, liked, helpful, s.minio), nil
+	return toReviewResponse(updated, true, liked, helpful, s.minio, singleReviewMedia(updated)), nil
 }
 
 func (s *Service) DeleteReview(ctx context.Context, reviewID, requesterID uint) error {
@@ -374,7 +398,7 @@ func buildRatingResponse(mediaID int, mediaType string, rows []RatingBucket) *Ra
 }
 
 func (s *Service) GetMediaRating(mediaID int, mediaType string) (*RatingResponse, error) {
-	if mediaType != "movie" && mediaType != "tv" {
+	if !shared.IsValidMediaType(shared.MediaType(mediaType)) {
 		return nil, ErrInvalidMediaType
 	}
 	if mediaID <= 0 {
@@ -399,6 +423,9 @@ func (s *Service) LikeReview(ctx context.Context, reviewID, requesterID uint) er
 	}
 	if review.Visibility == "private" && review.UserID != requesterID {
 		return ErrForbidden
+	}
+	if err := shared.CheckMediaAccess(ctx, requesterID, review.MediaID, shared.MediaType(review.MediaType)); err != nil {
+		return err
 	}
 
 	if err := s.repo.CreateLike(reviewID, requesterID); err != nil {
@@ -468,6 +495,9 @@ func (s *Service) MarkHelpful(ctx context.Context, reviewID, requesterID uint) e
 	if review.UserID == requesterID {
 		return ErrForbidden
 	}
+	if err := shared.CheckMediaAccess(ctx, requesterID, review.MediaID, shared.MediaType(review.MediaType)); err != nil {
+		return err
+	}
 
 	if err := s.repo.CreateHelpful(reviewID, requesterID); err != nil {
 		return err
@@ -507,6 +537,10 @@ func (s *Service) CreateComment(ctx context.Context, reviewID, requesterID uint,
 		return nil, ErrForbidden
 	}
 
+	if err := shared.CheckMediaAccess(ctx, requesterID, review.MediaID, shared.MediaType(review.MediaType)); err != nil {
+		return nil, err
+	}
+
 	comment := &ReviewComment{ReviewID: reviewID, UserID: requesterID, Body: req.Body}
 	if err := s.repo.CreateComment(comment); err != nil {
 		return nil, err
@@ -538,6 +572,10 @@ func (s *Service) GetComments(ctx context.Context, reviewID, requesterID uint) (
 	}
 	if review.Visibility == "private" && review.UserID != requesterID {
 		return nil, ErrForbidden
+	}
+	// Comments belong to the title they discuss, so an adult manga title hides them like the title itself.
+	if err := shared.CheckMediaAccess(ctx, requesterID, review.MediaID, shared.MediaType(review.MediaType)); err != nil {
+		return nil, err
 	}
 
 	comments, err := s.repo.FindCommentsByReview(reviewID)
@@ -602,7 +640,7 @@ func validateReviewRequest(req CreateReviewRequest) error {
 	if !shared.IsValidRating(req.Rating) {
 		return ErrInvalidRating
 	}
-	if req.MediaType != "movie" && req.MediaType != "tv" {
+	if !shared.IsValidMediaType(shared.MediaType(req.MediaType)) {
 		return ErrInvalidMediaType
 	}
 	if req.MediaID <= 0 {
@@ -643,12 +681,12 @@ func buildUpdateMap(req UpdateReviewRequest) (map[string]any, error) {
 	return updates, nil
 }
 
-func toReviewResponse(r *Review, includeViewerFlags, isLiked, isHelpful bool, minio *storage.MinIOClient) *ReviewResponse {
+// toReviewResponse builds the API shape of one review. media is the summary of the reviewed title; list reads
+// pass one MediaSummaries batch, single-review reads pass singleReviewMedia.
+func toReviewResponse(r *Review, includeViewerFlags, isLiked, isHelpful bool, minio *storage.MinIOClient, media shared.MediaSummary) *ReviewResponse {
 	if r == nil {
 		return nil
 	}
-
-	title, posterURL := fetchMediaSummary(r.MediaID, r.MediaType)
 
 	var likedPtr, helpfulPtr *bool
 	if includeViewerFlags {
@@ -662,8 +700,8 @@ func toReviewResponse(r *Review, includeViewerFlags, isLiked, isHelpful bool, mi
 		Media: tmdbmodule.Media{
 			ID:        r.MediaID,
 			MediaType: r.MediaType,
-			Title:     title,
-			PosterURL: posterURL,
+			Title:     media.Title,
+			PosterURL: shared.MediaPosterURL(media.PosterURL),
 		},
 		Rating:         r.Rating,
 		Body:           r.Body,
@@ -700,20 +738,32 @@ func toUserSummaryResponse(u *users.User, minio *storage.MinIOClient) users.User
 	return res
 }
 
-func fetchMediaSummary(mediaID int, mediaType string) (title, posterURL string) {
-	if mediaType == "movie" {
-		movie, err := tmdbmodule.GetMovieByID(mediaID)
-		if err != nil {
-			return "", ""
-		}
-		return movie.Title, tmdbmodule.ImageURL(movie.PosterPath)
-	}
+// reviewMediaKey names the title a review is about.
+func reviewMediaKey(r Review) shared.MediaKey {
+	return shared.MediaKey{ID: r.MediaID, Type: shared.MediaType(r.MediaType)}
+}
 
-	series, err := tmdbmodule.GetSeriesByID(mediaID)
-	if err != nil {
-		return "", ""
+// reviewMediaKeys lists the titles of a page of reviews, for one MediaSummaries call.
+func reviewMediaKeys(reviews []Review) []shared.MediaKey {
+	keys := make([]shared.MediaKey, len(reviews))
+	for i, r := range reviews {
+		keys[i] = reviewMediaKey(r)
 	}
-	return series.Name, tmdbmodule.ImageURL(series.PosterPath)
+	return keys
+}
+
+// singleReviewMedia summarises the title of one review that is read on its own. A nil review has no title.
+func singleReviewMedia(r *Review) shared.MediaSummary {
+	if r == nil {
+		return shared.MediaSummary{}
+	}
+	return shared.FetchMediaSummary(r.MediaID, shared.MediaType(r.MediaType))
+}
+
+// fetchMediaSummary returns the title and absolute poster of a reviewed title; empty when the provider fails.
+func fetchMediaSummary(mediaID int, mediaType string) (title, posterURL string) {
+	m := shared.FetchMediaSummary(mediaID, shared.MediaType(mediaType))
+	return m.Title, shared.MediaPosterURL(m.PosterURL)
 }
 
 func toCommentResponse(c *ReviewComment) *CommentResponse {

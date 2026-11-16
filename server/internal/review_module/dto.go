@@ -10,7 +10,7 @@ import (
 
 type CreateReviewRequest struct {
 	MediaID    int     `json:"media_id"`
-	MediaType  string  `json:"media_type"` // "movie" | "tv"
+	MediaType  string  `json:"media_type"` // "movie" | "tv" | "manga"
 	Rating     float32 `json:"rating"`     // 0.5 - 5.0 (increments of 0.5)
 	Body       string  `json:"body"`
 	Visibility string  `json:"visibility"`

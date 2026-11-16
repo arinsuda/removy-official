@@ -22,7 +22,6 @@ const (
 	// serialises without colliding with other advisory lock users.
 	listLockNS = 0x4c495354 // "LIST"
 
-	tmdbConcurrency = 6
 )
 
 const (

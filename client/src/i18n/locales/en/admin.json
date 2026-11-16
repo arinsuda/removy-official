@@ -115,7 +115,9 @@
     "date": "Date",
     "body": "Review text",
     "close": "Close",
-    "ratingOutOf": "{rating} / 5.0"
+    "ratingOutOf": "{rating} / 5.0",
+    "mediaManga": "Manga",
+    "typeManga": "Manga"
   },
   "auditLogs": {
     "title": "Admin Audit Logs",

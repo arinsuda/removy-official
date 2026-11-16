@@ -15,6 +15,11 @@ func TestValidateCreate(t *testing.T) {
 	if err := validateCreate(ok); err != nil {
 		t.Fatalf("valid request rejected: %v", err)
 	}
+	manga := ok
+	manga.MediaType = movie_module.MediaManga
+	if err := validateCreate(manga); err != nil {
+		t.Fatalf("manga rejected: %v", err)
+	}
 	cases := map[string]struct {
 		mut  func(*CreateBMOLRequest)
 		want error
@@ -24,6 +29,7 @@ func TestValidateCreate(t *testing.T) {
 		"rank too big":  {func(r *CreateBMOLRequest) { r.Rank = 1000 }, ErrInvalidInput},
 		"media zero":    {func(r *CreateBMOLRequest) { r.MediaID = 0 }, ErrInvalidInput},
 		"bad type":      {func(r *CreateBMOLRequest) { r.MediaType = "book" }, ErrInvalidMediaType},
+		"tv spelled":    {func(r *CreateBMOLRequest) { r.MediaType = "series" }, ErrInvalidMediaType},
 	}
 	for name, c := range cases {
 		r := ok

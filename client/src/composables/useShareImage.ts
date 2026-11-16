@@ -3,6 +3,8 @@ import { toPng } from "html-to-image"
 import { useToast } from "@/composables/useToast"
 import { useI18n } from "vue-i18n"
 import type { MediaType } from "@/types/common"
+import { SHARE_TYPE_LABEL_KEY } from "@/components/share/shareCards"
+import { mediaPath } from "@/utils/mediaRoute"
 
 /** Throwaway html-to-image passes on WebKit before the real one, so embedded images are painted. */
 const WEBKIT_WARMUP_PASSES = 2
@@ -287,7 +289,7 @@ export function useShareImage() {
     year: string | null,
     mediaType: MediaType,
   ): string {
-    const typeLabel = mediaType === "movie" ? "Movie" : "TV Series"
+    const typeLabel = t(SHARE_TYPE_LABEL_KEY[mediaType])
     const yearStr = year ? ` (${year})` : ""
     return `🎬 ${title}${yearStr}\n${typeLabel}\n\nShared from POPCORN ✨`
   }
@@ -304,8 +306,7 @@ export function useShareImage() {
   /** Build a share link for the media detail page */
   function buildShareLink(mediaType: MediaType, mediaId: number): string {
     const base = window.location.origin
-    const path = mediaType === "movie" ? "movies" : "tv"
-    return `${base}/${path}/${mediaId}`
+    return `${base}${mediaPath(mediaType, mediaId)}`
   }
 
   /** Mark that a fallback was used for an image */

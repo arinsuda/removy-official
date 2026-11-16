@@ -6,6 +6,7 @@ import (
 
 	"github.com/arinsuda/movie-hub/internal/movie_module"
 	"github.com/arinsuda/movie-hub/internal/privacy_policy"
+	"github.com/arinsuda/movie-hub/internal/shared"
 	mw "github.com/arinsuda/movie-hub/middleware"
 	"github.com/gofiber/fiber/v3"
 )
@@ -79,8 +80,8 @@ func parseMediaParams(c fiber.Ctx) (int, movie_module.MediaType, error) {
 		return 0, "", errors.New("invalid media_id")
 	}
 	mediaType := movie_module.MediaType(c.Params("mediaType"))
-	if mediaType != movie_module.MediaMovie && mediaType != movie_module.MediaSeries {
-		return 0, "", errors.New("invalid media_type, must be 'movie' or 'tv'")
+	if !shared.IsValidMediaType(shared.MediaType(mediaType)) {
+		return 0, "", errors.New("invalid media_type, must be 'movie', 'tv' or 'manga'")
 	}
 	return mediaID, mediaType, nil
 }
@@ -88,6 +89,9 @@ func parseMediaParams(c fiber.Ctx) (int, movie_module.MediaType, error) {
 const errMsgUserNotFound = "user not found"
 
 func handleError(c fiber.Ctx, err error) error {
+	if handled, werr := shared.WriteMediaAccessError(c, err); handled {
+		return werr
+	}
 	switch {
 	case errors.Is(err, privacy_policy.ErrNotFound):
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": errMsgUserNotFound})

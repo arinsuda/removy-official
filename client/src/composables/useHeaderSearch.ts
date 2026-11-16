@@ -2,6 +2,7 @@ import { computed, onBeforeUnmount, ref, watch } from "vue"
 import { useRouter } from "vue-router"
 import { movieApi } from "@/api/endpoints/movie"
 import { getTmdbImageUrl } from "@/utils/image"
+import { mediaPath } from "@/utils/mediaRoute"
 import type { Movie, TVSeries } from "@/types"
 import type { SearchStatus, SearchSuggestion } from "@/components/search/types"
 
@@ -109,7 +110,7 @@ export function useHeaderSearch() {
   }
 
   function goToItem(item: SearchSuggestion) {
-    router.push(item.type === "movie" ? `/movies/${item.id}` : `/tv/${item.id}`)
+    router.push(mediaPath(item.type, item.id))
     close()
   }
 

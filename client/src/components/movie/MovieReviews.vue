@@ -68,13 +68,14 @@ import ShareImageModal from "@/components/share/ShareImageModal.vue"
 import OwnReviewCard from "@/components/detail/reviews/OwnReviewCard.vue"
 import ReviewCard from "@/components/detail/reviews/ReviewCard.vue"
 import ReviewComposer from "@/components/detail/reviews/ReviewComposer.vue"
+import type { MediaType } from "@/types/common"
 import type { ReviewResponse } from "@/types/review"
 import type { ShareMediaContext, ShareReviewContext } from "@/types/share"
 
 const props = withDefaults(
   defineProps<{
     movieId: number
-    mediaType?: "movie" | "tv"
+    mediaType?: MediaType
     mediaPosterPath?: string | null
     mediaTitle?: string
   }>(),

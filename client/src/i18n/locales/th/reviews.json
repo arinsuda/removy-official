@@ -41,7 +41,8 @@
     "bodyLabel": "รีวิวของคุณ",
     "placeholder": {
       "movie": "คุณคิดอย่างไรกับหนังเรื่องนี้",
-      "tv": "คุณคิดอย่างไรกับซีรีส์เรื่องนี้"
+      "tv": "คุณคิดอย่างไรกับซีรีส์เรื่องนี้",
+      "manga": "คุณคิดยังไงกับมังงะเรื่องนี้?"
     },
     "visibilityLabel": "การมองเห็น",
     "ratingValue": "{value} จาก {max}"
@@ -67,7 +68,8 @@
     "writtenOn": "เขียนเมื่อ {date}",
     "type": {
       "movie": "ภาพยนตร์",
-      "tv": "ซีรีส์"
+      "tv": "ซีรีส์",
+      "manga": "มังงะ"
     },
     "typeYear": "{type} · {year}",
     "shortcut": "กด {keys} เพื่อบันทึก",
@@ -75,5 +77,7 @@
       "mac": "⌘ + Enter",
       "other": "Ctrl + Enter"
     }
-  }
+  },
+  "typeManga": "มังงะ",
+  "mediaManga": "มังงะ"
 }

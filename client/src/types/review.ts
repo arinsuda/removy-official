@@ -53,7 +53,7 @@ export interface LikeItem {
   media: {
     id: number;
     title: string;
-    media_type: "movie" | "tv";
+    media_type: MediaType;
     poster_url: string;
     vote_average: number;
     ratings?: MediaRatings;

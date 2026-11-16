@@ -14,7 +14,7 @@ var (
 	ErrForbidden        = errors.New("forbidden")
 	ErrDuplicate        = errors.New("item already in list")
 	ErrInvalidWatchedAt = errors.New("invalid watched_at")
-	ErrInvalidMediaType = errors.New("media_type must be 'movie' or 'tv'")
+	ErrInvalidMediaType = errors.New("media_type must be 'movie', 'tv' or 'manga'")
 	ErrInvalidListType  = errors.New("list_type must be 'watchlist', 'favorite', or 'watched'")
 	ErrInvalidMediaID   = errors.New("invalid media_id")
 )

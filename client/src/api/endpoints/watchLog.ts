@@ -1,4 +1,5 @@
 import api from "../index";
+import type { MediaType } from "@/types/common";
 import type {
   WatchLogResponse,
   CreateWatchLogRequest,
@@ -9,13 +10,13 @@ import type {
 
 export const watchLogApi = {
   createWatchLog: (
-    mediaType: "movie" | "tv",
+    mediaType: MediaType,
     mediaId: number,
     data: CreateWatchLogRequest
   ) =>
     api.post<{ log: WatchLogResponse }>(`/media/${mediaType}/${mediaId}/watch-logs`, data),
 
-  getMyWatchLogs: (mediaType: "movie" | "tv", mediaId: number) =>
+  getMyWatchLogs: (mediaType: MediaType, mediaId: number) =>
     api.get<{ logs: WatchLogResponse[]; summary: WatchSummaryResponse }>(
       `/media/${mediaType}/${mediaId}/watch-logs/me`
     ),

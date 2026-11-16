@@ -4,11 +4,12 @@ import (
 	"errors"
 	"time"
 
+	"github.com/arinsuda/movie-hub/internal/shared"
 	"gorm.io/gorm"
 )
 
 var (
-	ErrInvalidMediaType = errors.New("media_type must be 'movie' or 'tv'")
+	ErrInvalidMediaType = errors.New("media_type must be 'movie', 'tv' or 'manga'")
 	ErrInvalidMediaID   = errors.New("invalid media_id")
 )
 
@@ -79,7 +80,8 @@ func (r *repository) GetReviewStats(mediaID int, mediaType string) (*reviewStats
 	return &result, err
 }
 
-func (r *repository) GetTrending(mediaType string, limit int) ([]trendingRow, error) {
+// GetTrending returns the top rows of one media type. hideAdult drops adult manga (and unknown manga) before the limit.
+func (r *repository) GetTrending(mediaType string, limit int, hideAdult bool) ([]trendingRow, error) {
 	sevenDaysAgo := time.Now().AddDate(0, 0, -7)
 
 	recentSQL := r.db.Table("library_items").
@@ -87,8 +89,12 @@ func (r *repository) GetTrending(mediaType string, limit int) ([]trendingRow, er
 		Where("media_type = ? AND deleted_at IS NULL AND created_at >= ?", mediaType, sevenDaysAgo).
 		Group("media_id")
 
+	q := r.db.Table("library_items AS li")
+	if hideAdult {
+		q = q.Where(shared.MangaSafeSQL("li.media_type", "li.media_id"))
+	}
 	var rows []trendingRow
-	err := r.db.Table("library_items AS li").
+	err := q.
 		Select(`
 			li.media_id,
 			SUM(CASE WHEN li.list_type = 'watchlist' THEN 1 ELSE 0 END) AS watchlist_count,

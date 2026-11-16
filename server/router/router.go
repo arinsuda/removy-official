@@ -28,6 +28,7 @@ import (
 	notification_module "github.com/arinsuda/movie-hub/internal/notification_module"
 	"github.com/arinsuda/movie-hub/internal/privacy_policy"
 	"github.com/arinsuda/movie-hub/internal/review_module"
+	"github.com/arinsuda/movie-hub/internal/shared"
 	"github.com/arinsuda/movie-hub/internal/shared/storage"
 	"github.com/arinsuda/movie-hub/internal/user_module"
 	"github.com/arinsuda/movie-hub/internal/user_stats_module"
@@ -61,6 +62,8 @@ func Register(ctx context.Context, app *fiber.App, db *gorm.DB, cfg *config.Conf
 	notifHub := notification_module.NewHub(verifier, cfg.CORS.AllowedOrigins)
 	identity_policy.SetSessionsRevokedHook(notifHub.DisconnectUser)
 	notifSvc := notification_module.NewService(db, userNotifAdapter, notifHub)
+	notifSvc.SetTitleCheck(shared.NotificationTitleCheck)
+	notifSvc.SetMangaRestriction(shared.NotificationMangaRestricted)
 
 	policy := privacy_policy.NewUserAccessPolicy(db)
 
@@ -94,6 +97,7 @@ func Register(ctx context.Context, app *fiber.App, db *gorm.DB, cfg *config.Conf
 	followHandler := follow_module.New(db, achieveModule.Service, notifSvc, feedModule.Service, policy)
 	eventHandler := event_module.New(db, mc, notifHub)
 	mangaHandler := manga_module.New(anilist_module.NewClient(anilist_module.Options{}), manga_module.NewDOBGate(db))
+	mangaHandler.InstallMediaSupport(db)
 	RegisterPublicRoutes(api, mw.OptionalAuth, PublicReadLimiter(cfg.TrustedProxyHops), PublicSearchLimiter(cfg.TrustedProxyHops), MangaLimiter(cfg.TrustedProxyHops), PublicHandlers{
 		Movies:       movieHandler,
 		Reviews:      reviewHandler,

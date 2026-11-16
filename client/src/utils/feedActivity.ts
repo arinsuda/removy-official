@@ -40,7 +40,12 @@ export function getActivityMeta(type: ActivityType): ActivityMeta {
   return { ...meta, labelKey: ACTIVITY_META[type] ? `feed.types.${type}.label` : "feed.types.unknown.label" }
 }
 
-// Maps the backend media_type to the client route prefix.
-export function mediaRoutePrefix(mediaType: string): "movies" | "tv" {
-  return mediaType === "tv" || mediaType === "series" ? "tv" : "movies"
+// Maps the backend media_type to the client route prefix. "series" is a legacy alias for tv.
+const ROUTE_PREFIX_BY_MEDIA_TYPE: Record<string, "movies" | "tv" | "manga"> = {
+  tv: "tv",
+  series: "tv",
+  manga: "manga",
+}
+export function mediaRoutePrefix(mediaType: string): "movies" | "tv" | "manga" {
+  return ROUTE_PREFIX_BY_MEDIA_TYPE[mediaType] ?? "movies"
 }

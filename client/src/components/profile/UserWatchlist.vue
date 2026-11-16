@@ -2,7 +2,13 @@
   <div>
     <PosterTab tab="watchlist" :icon="Bookmark" :entries="entries" :loading="loading" :error="loadError" :is-owner="isOwner" @retry="load">
       <template #actions="{ entry }">
-        <TabIconButton data-action="mark-watched" :label="t('profile.tabContent.watchlist.markWatchedFor', { title: entry.media.title })" @click="logTarget = entry.media">
+        <!-- Manga is marked read from its own page, not through a watch log. -->
+        <TabIconButton
+          v-if="entry.media.type !== 'manga'"
+          data-action="mark-watched"
+          :label="t('profile.tabContent.watchlist.markWatchedFor', { title: entry.media.title })"
+          @click="logTarget = entry.media"
+        >
           <Check :size="16" aria-hidden="true" />
         </TabIconButton>
         <TabIconButton data-action="remove" danger :label="t('profile.tabContent.common.remove', { title: entry.media.title })" @click="askRemove(entry)">

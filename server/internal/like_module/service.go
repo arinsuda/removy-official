@@ -10,7 +10,6 @@ import (
 	"github.com/arinsuda/movie-hub/internal/notification_module"
 	"github.com/arinsuda/movie-hub/internal/privacy_policy"
 	"github.com/arinsuda/movie-hub/internal/shared"
-	tmdbmodule "github.com/arinsuda/movie-hub/internal/tmdb_module"
 	"gorm.io/gorm"
 )
 
@@ -43,11 +42,14 @@ func NewService(
 }
 
 func (s *Service) Like(ctx context.Context, userID uint, mediaID int, mediaType movie_module.MediaType) error {
-	if mediaType != movie_module.MediaMovie && mediaType != movie_module.MediaSeries {
+	if !shared.IsValidMediaType(shared.MediaType(mediaType)) {
 		return errors.New("invalid media type")
 	}
 	if mediaID <= 0 {
 		return errors.New("invalid media id")
+	}
+	if err := shared.CheckMediaAccess(ctx, userID, mediaID, shared.MediaType(mediaType)); err != nil {
+		return err
 	}
 
 	if err := s.repo.Create(userID, mediaID, mediaType); err != nil {
@@ -62,21 +64,11 @@ func (s *Service) Like(ctx context.Context, userID uint, mediaID int, mediaType 
 	s.createAchievementFeedActivities(ctx, userID, unlocked)
 
 	if s.notifSvc != nil {
-		var title string
-		switch mediaType {
-		case movie_module.MediaMovie:
-			if details, err := tmdbmodule.GetMovieByID(mediaID); err == nil && details != nil {
-				title = details.Title
-			}
-		case movie_module.MediaSeries:
-			if details, err := tmdbmodule.GetSeriesByID(mediaID); err == nil && details != nil {
-				title = details.Name
-			}
-		}
+		media := shared.FetchMediaSummary(mediaID, shared.MediaType(mediaType))
 		_ = s.notifSvc.PushFollowingLikedMedia(
 			ctx,
 			userID,
-			notification_module.MediaRef{ID: uint(mediaID), Type: string(mediaType), Title: title},
+			notification_module.MediaRef{ID: uint(mediaID), Type: string(mediaType), Title: media.Title},
 		)
 	}
 
@@ -132,38 +124,32 @@ func (s *Service) GetLikes(ctx context.Context, ownerID, requesterID uint) ([]Li
 	if hasMore {
 		likes = likes[:GuestLikesLimit]
 	}
+	vis, err := shared.NewMediaVisibility(ctx, requesterID)
+	if err != nil {
+		return nil, false, err
+	}
+	likes, err = shared.KeepVisible(ctx, vis, likes, func(l MediaLike) shared.VisibleRef {
+		return shared.VisibleRef{Media: shared.MediaKey{ID: l.MediaID, Type: shared.MediaType(l.MediaType)}, OwnerID: l.UserID}
+	})
+	if err != nil {
+		return nil, false, err
+	}
 
+	keys := make([]shared.MediaKey, len(likes))
+	for i, like := range likes {
+		keys[i] = shared.MediaKey{ID: like.MediaID, Type: shared.MediaType(like.MediaType)}
+	}
+	summaryByKey, err := shared.MediaSummaries(ctx, keys)
+	if err != nil {
+		return nil, false, err
+	}
 	responses := make([]LikeResponse, len(likes))
 	summaries := make([]*shared.MediaSummary, len(likes))
 	for i, like := range likes {
-		media := shared.MediaSummary{
-			ID:        like.MediaID,
-			MediaType: shared.MediaType(like.MediaType),
-		}
-
-		switch like.MediaType {
-		case movie_module.MediaMovie:
-			if details, err := tmdbmodule.GetMovieByID(like.MediaID); err == nil && details != nil {
-				media.Title = details.Title
-				media.ReleaseDate = details.ReleaseDate
-				media.PosterURL = details.PosterPath
-				media.Genres = details.Genres
-				media.VoteAverage = float32(details.VoteAverage)
-			}
-		case movie_module.MediaSeries:
-			if details, err := tmdbmodule.GetSeriesByID(like.MediaID); err == nil && details != nil {
-				media.Title = details.Name
-				media.ReleaseDate = details.FirstAirDate
-				media.PosterURL = details.PosterPath
-				media.Genres = details.Genres
-				media.VoteAverage = float32(details.VoteAverage)
-			}
-		}
-
 		responses[i] = LikeResponse{
 			ID:        like.ID,
 			UserID:    like.UserID,
-			Media:     media,
+			Media:     summaryByKey[keys[i]],
 			CreatedAt: like.CreatedAt,
 		}
 		summaries[i] = &responses[i].Media

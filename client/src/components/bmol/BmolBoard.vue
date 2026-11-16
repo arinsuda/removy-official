@@ -143,6 +143,7 @@ const shelfGroups = computed(() => groups.value.filter((g) => g.rank > 3 || g.ra
 const tabs = computed(() => [
   { key: "movie" as const, label: `${t("library.bmol.tabs.movie")} (${items.value.filter((i) => i.media_type === "movie").length})` },
   { key: "tv" as const, label: `${t("library.bmol.tabs.tv")} (${items.value.filter((i) => i.media_type === "tv").length})` },
+  { key: "manga" as const, label: `${t("library.bmol.tabs.manga")} (${items.value.filter((i) => i.media_type === "manga").length})` },
 ])
 
 // Drag and keyboard reordering; a drop on a rank group is one PUT.

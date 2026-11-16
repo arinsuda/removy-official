@@ -7,7 +7,7 @@
     }"
   >
     <div class="event-nominee-card__media">
-      <RouterLink :to="mediaPath" class="event-nominee-card__poster-link">
+      <RouterLink :to="nomineePath" class="event-nominee-card__poster-link">
         <img
           v-if="nominee.poster_path"
           :src="getTmdbImageUrl(nominee.poster_path, NOMINEE_POSTER_SIZE) ?? undefined"
@@ -32,7 +32,7 @@
 
     <div class="event-nominee-card__info">
       <h3 class="event-nominee-card__title">
-        <RouterLink :to="mediaPath">
+        <RouterLink :to="nomineePath">
           {{ nominee.media_title }}
         </RouterLink>
       </h3>
@@ -90,6 +90,7 @@ import AppButton from "@/components/ui/AppButton.vue"
 import type { EventState, Nominee } from "@/types/event"
 import { NOMINEE_POSTER_SIZE } from "@/utils/events"
 import { getTmdbImageUrl } from "@/utils/image"
+import { mediaPath } from "@/utils/mediaRoute"
 
 /** Server percentages are 0-100; Intl's percent style expects a fraction. */
 const PERCENT_DIVISOR = 100
@@ -115,8 +116,8 @@ const { t, n, locale } = useI18n()
 
 const percentFormatter = computed(() => new Intl.NumberFormat(locale.value, { style: "percent" }))
 
-const mediaPath = computed(
-  () => `/${props.nominee.media_type === "tv" ? "tv" : "movies"}/${props.nominee.media_id}`,
+const nomineePath = computed(
+  () => mediaPath(props.nominee.media_type, props.nominee.media_id),
 )
 
 function formatVoteResult(count: number | null | undefined, percentage: number | null | undefined): string {

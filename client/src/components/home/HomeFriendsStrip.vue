@@ -64,7 +64,7 @@ const emit = defineEmits<{ retry: []; visible: [] }>()
 const { t, locale } = useI18n()
 
 const meta = (item: FeedItemResponse) => getActivityMeta(item.type)
-const mediaTo = (m: FeedMediaSummary) => detailRoute({ id: m.id, type: m.media_type === "tv" ? "tv" : "movie" })
+const mediaTo = (m: FeedMediaSummary) => detailRoute({ id: m.id, type: m.media_type })
 </script>
 
 <style scoped>

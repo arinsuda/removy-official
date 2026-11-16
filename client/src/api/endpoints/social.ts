@@ -1,4 +1,5 @@
 import api from "../index"
+import type { MediaType } from "@/types/common"
 import type {
   ReviewResponse,
   CreateReviewRequest,
@@ -55,12 +56,12 @@ export const reviewApi = {
     }),
 
   getMediaReviews: (
-    mediaType: "movie" | "tv" | "movies",
+    mediaType: MediaType | "movies",
     mediaId: number,
     params?: { page?: number; page_size?: number },
   ) => {
     // Convert movies -> movie, tv remains tv/series
-    const mt = mediaType === "movies" ? "movie" : mediaType === "tv" ? "tv" : mediaType;
+    const mt = mediaType === "movies" ? "movie" : mediaType;
     return api.get<{ reviews: ReviewResponse[]; pagination: { page: number; page_size: number; total: number; has_more: boolean } }>(
       `/reviews/media/${mt}/${mediaId}`,
       { params },
@@ -68,12 +69,12 @@ export const reviewApi = {
   },
 
   /** The signed-in user's own review of a title, or null. GET /reviews/media/:type/:id/me */
-  getMyReview: (mediaType: "movie" | "tv", mediaId: number) =>
+  getMyReview: (mediaType: MediaType, mediaId: number) =>
     api.get<{ review: ReviewResponse | null }>(`/reviews/media/${mediaType}/${mediaId}/me`),
 
   /** Public aggregate rating + 10-step distribution. GET /reviews/media/:type/:id/rating */
-  getMediaRating: (mediaType: "movie" | "tv" | "movies", mediaId: number) => {
-    const mt = mediaType === "movies" ? "movie" : mediaType === "tv" ? "tv" : mediaType
+  getMediaRating: (mediaType: MediaType | "movies", mediaId: number) => {
+    const mt = mediaType === "movies" ? "movie" : mediaType
     return api.get<{ rating: MediaRatingResponse }>(`/reviews/media/${mt}/${mediaId}/rating`)
   },
 

@@ -7,6 +7,7 @@ import (
 
 	"github.com/arinsuda/movie-hub/config"
 	anilist "github.com/arinsuda/movie-hub/internal/anilist_module"
+	"github.com/arinsuda/movie-hub/internal/shared"
 )
 
 // ErrAgeRestricted means the title is adult and the viewer is not eligible to see it.
@@ -100,6 +101,8 @@ func (s *MangaService) media(ctx context.Context, query string, vars map[string]
 	if data.Media == nil || data.Media.Type != aniListManga {
 		return nil, anilist.ErrNotFound
 	}
+	// Record the flags before the age gate: an ineligible viewer's refused read still refreshes a stale row.
+	shared.RecordMangaMeta(ctx, data.Media.ID, mediaInfo(*data.Media))
 	if data.Media.IsAdult && !eligible {
 		return nil, ErrAgeRestricted
 	}
