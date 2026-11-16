@@ -1,0 +1,39 @@
+{
+  "title": "Anime",
+  "type": { "label": "Content type", "tv": "Series", "movie": "Movies" },
+  "sort": {
+    "label": "Sort by",
+    "popular": "Popular",
+    "top_rated": "Top rated",
+    "airing": "Airing now",
+    "newest": "Newest"
+  },
+  "keyword": {
+    "label": "Theme",
+    "all": "All themes",
+    "isekai": "Isekai",
+    "mecha": "Mecha",
+    "shoujo": "Shoujo",
+    "shounen": "Shounen",
+    "seinen": "Seinen",
+    "josei": "Josei",
+    "slice_of_life": "Slice of life",
+    "sports": "Sports",
+    "idol": "Idol",
+    "school": "School"
+  },
+  "genre": { "label": "Genre", "all": "All genres" },
+  "country": { "label": "Country", "JP": "Japan", "CN": "China", "KR": "Korea", "all": "All countries" },
+  "release": {
+    "decadeLabel": "Decade",
+    "any": "Any time",
+    "decade": "{year}s",
+    "year": "Year",
+    "anyYear": "Any year",
+    "season": "Season",
+    "anySeason": "Any season",
+    "seasonHint": "Pick a year to choose a season"
+  },
+  "season": { "winter": "Winter", "spring": "Spring", "summer": "Summer", "fall": "Fall" },
+  "home": { "title": "Anime", "subtitle": "Popular anime series and films" }
+}

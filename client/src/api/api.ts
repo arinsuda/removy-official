@@ -1,5 +1,6 @@
 export { authApi } from "./endpoints/auth"
 export { movieApi, actorApi } from "./endpoints/movie"
+export { animeApi } from "./endpoints/anime"
 export { userApi } from "./endpoints/user"
 export { reviewApi, followApi } from "./endpoints/social"
 export { libraryApi } from "./endpoints/library"

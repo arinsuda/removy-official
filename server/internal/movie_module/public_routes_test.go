@@ -87,6 +87,8 @@ func TestMovieModulePublicAndProtectedRoutes(t *testing.T) {
 		"/api/actors/100",
 		"/api/actors/100/movies",
 		"/api/actors/100/tv",
+		"/api/anime/tv",
+		"/api/anime/movies",
 	}
 
 	for _, p := range publicPaths {
@@ -112,6 +114,8 @@ func TestMovieModulePublicAndProtectedRoutes(t *testing.T) {
 		"/api/actors/100",
 		"/api/actors/100/movies",
 		"/api/actors/100/tv",
+		"/api/anime/tv",
+		"/api/anime/movies",
 	}
 
 	for _, p := range newlyPublicPaths {
