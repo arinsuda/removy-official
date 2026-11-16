@@ -4,6 +4,9 @@ import { useToast } from "@/composables/useToast"
 import { useI18n } from "vue-i18n"
 import type { MediaType } from "@/types/common"
 
+/** Throwaway html-to-image passes on WebKit before the real one, so embedded images are painted. */
+const WEBKIT_WARMUP_PASSES = 2
+
 /** Build API base URL matching the same logic as @/api/index.ts */
 export function getApiBaseUrl(): string {
   const envUrl = import.meta.env.VITE_API_BASE_URL
@@ -76,6 +79,12 @@ export function useShareImage() {
     }
   }
 
+  /** Safari and all iOS browsers (they must use WebKit); excludes desktop Chromium and Android. */
+  function isWebKit(): boolean {
+    const ua = typeof navigator === "undefined" ? "" : navigator.userAgent
+    return /AppleWebKit/.test(ua) && !/(Chrome|Chromium|Edg|Android)\b/.test(ua)
+  }
+
   /** Wait for all images inside a node to finish loading */
   async function waitForImages(node: HTMLElement): Promise<void> {
     const images = node.querySelectorAll("img")
@@ -107,14 +116,22 @@ export function useShareImage() {
       await document.fonts.load('700 48px "Noto Sans Thai"', node.textContent ?? "").catch(() => [])
       await waitForImages(node)
 
-      const dataUrl = await toPng(node, {
+      const pngOptions = {
         pixelRatio: opts.pixelRatio ?? 1,
         width: opts.width,
         height: opts.height,
         cacheBust: false,
         // The preview scales the card with a CSS transform; export at full size.
         style: { transform: "none", margin: "0" },
-      })
+      }
+      // WebKit (Safari and every iOS browser) often paints the SVG foreignObject before
+      // its embedded images have decoded, so the first passes come out without the poster.
+      // Throwaway passes warm that image cache; only the last result is kept.
+      const warmups = isWebKit() ? WEBKIT_WARMUP_PASSES : 0
+      for (let pass = 0; pass < warmups; pass++) {
+        await toPng(node, pngOptions).catch(() => "")
+      }
+      const dataUrl = await toPng(node, pngOptions)
 
       const response = await fetch(dataUrl)
       return await response.blob()
