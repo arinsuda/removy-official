@@ -276,7 +276,7 @@ func newEnv(t *testing.T) *env {
 	bmolH := bmol_module.New(db, policy)
 	followH := follow_module.New(db, achieve.Service, nil, nil, policy)
 	eventH := event_module.New(db, nil, nil)
-	router.RegisterPublicRoutes(api, mw.OptionalAuth, router.PublicReadLimiter(e.cfg.TrustedProxyHops), router.PublicSearchLimiter(e.cfg.TrustedProxyHops), router.PublicHandlers{
+	router.RegisterPublicRoutes(api, mw.OptionalAuth, router.PublicReadLimiter(e.cfg.TrustedProxyHops), router.PublicSearchLimiter(e.cfg.TrustedProxyHops), router.MangaLimiter(e.cfg.TrustedProxyHops), router.PublicHandlers{
 		Movies:       movieH,
 		Reviews:      reviewH,
 		MediaStats:   statsH,

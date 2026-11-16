@@ -5,7 +5,7 @@ import { BROWSE_SORTS, type BrowseSort } from "@/components/browse/browseSort"
 export const SEARCH_YEAR_MIN = 1870
 export const SEARCH_YEAR_MAX = 2200
 
-export const SEARCH_TABS = ["all", "movie", "tv", "people"] as const
+export const SEARCH_TABS = ["all", "movie", "tv", "manga", "people"] as const
 export type SearchTab = (typeof SEARCH_TABS)[number]
 
 export interface SearchState {

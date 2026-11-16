@@ -9,6 +9,7 @@ import (
 	achievementsmodule "github.com/arinsuda/movie-hub/internal/achievements_module"
 	"github.com/arinsuda/movie-hub/internal/admin_module"
 	"github.com/arinsuda/movie-hub/internal/analytics_module"
+	"github.com/arinsuda/movie-hub/internal/anilist_module"
 	"github.com/arinsuda/movie-hub/internal/auth_module"
 	"github.com/arinsuda/movie-hub/internal/bmol_module"
 	"github.com/arinsuda/movie-hub/internal/event_module"
@@ -21,6 +22,7 @@ import (
 	"github.com/arinsuda/movie-hub/internal/link_module"
 	"github.com/arinsuda/movie-hub/internal/list_module"
 	"github.com/arinsuda/movie-hub/internal/mailer"
+	"github.com/arinsuda/movie-hub/internal/manga_module"
 	"github.com/arinsuda/movie-hub/internal/media_stats_module"
 	"github.com/arinsuda/movie-hub/internal/movie_module"
 	notification_module "github.com/arinsuda/movie-hub/internal/notification_module"
@@ -91,7 +93,8 @@ func Register(ctx context.Context, app *fiber.App, db *gorm.DB, cfg *config.Conf
 	bmolHandler := bmol_module.New(db, policy)
 	followHandler := follow_module.New(db, achieveModule.Service, notifSvc, feedModule.Service, policy)
 	eventHandler := event_module.New(db, mc, notifHub)
-	RegisterPublicRoutes(api, mw.OptionalAuth, PublicReadLimiter(cfg.TrustedProxyHops), PublicSearchLimiter(cfg.TrustedProxyHops), PublicHandlers{
+	mangaHandler := manga_module.New(anilist_module.NewClient(anilist_module.Options{}), manga_module.NewDOBGate(db))
+	RegisterPublicRoutes(api, mw.OptionalAuth, PublicReadLimiter(cfg.TrustedProxyHops), PublicSearchLimiter(cfg.TrustedProxyHops), MangaLimiter(cfg.TrustedProxyHops), PublicHandlers{
 		Movies:       movieHandler,
 		Reviews:      reviewHandler,
 		MediaStats:   statsHandler,
@@ -102,6 +105,7 @@ func Register(ctx context.Context, app *fiber.App, db *gorm.DB, cfg *config.Conf
 		BMOL:         bmolHandler,
 		Follows:      followHandler,
 		Events:       eventHandler,
+		Manga:        mangaHandler,
 		DB:           db,
 		Policy:       policy,
 	})

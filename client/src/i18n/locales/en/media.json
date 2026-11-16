@@ -164,6 +164,7 @@
       "all": "All",
       "movie": "Movies",
       "tv": "Series",
+      "manga": "Manga",
       "people": "People"
     },
     "filters": {

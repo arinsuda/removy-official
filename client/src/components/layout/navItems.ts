@@ -1,6 +1,6 @@
 import type { Component } from "vue"
 import type { RouteLocationNormalizedLoaded } from "vue-router"
-import { CalendarClock, Film, House, Info, Megaphone, Sparkles, Tv } from "lucide-vue-next"
+import { BookOpen, CalendarClock, Film, House, Info, Megaphone, Sparkles, Tv } from "lucide-vue-next"
 
 export interface NavItem {
   key: string
@@ -18,6 +18,7 @@ export const NAV_ITEMS: NavItem[] = [
   { key: "movies", to: "/movies", labelKey: "navigation.movies", icon: Film, isActive: (r) => r.path.startsWith("/movies") },
   { key: "tv", to: "/tv", labelKey: "navigation.tvSeries", icon: Tv, isActive: (r) => r.path.startsWith("/tv") },
   { key: "anime", to: "/anime", labelKey: "navigation.anime", icon: Sparkles, isActive: (r) => r.path.startsWith("/anime") },
+  { key: "manga", to: "/manga", labelKey: "navigation.manga", icon: BookOpen, isActive: (r) => r.path.startsWith("/manga") },
   { key: "upcoming", to: "/upcoming", labelKey: "navigation.upcoming", icon: CalendarClock, isActive: (r) => nameStarts(r, "upcoming") },
   { key: "events", to: "/events", labelKey: "navigation.events", icon: Megaphone, isActive: (r) => nameStarts(r, "event") },
   { key: "about", to: "/about-us", labelKey: "navigation.aboutUs", icon: Info, isActive: (r) => nameStarts(r, "aboutUs") },

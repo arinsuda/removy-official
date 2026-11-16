@@ -1,0 +1,80 @@
+{
+  "title": "Manga",
+  "country": {
+    "label": "Origin",
+    "JP": "Manga",
+    "KR": "Manhwa",
+    "CN": "Manhua",
+    "all": "All"
+  },
+  "format": {
+    "label": "Format",
+    "all": "All formats",
+    "manga": "Series",
+    "one_shot": "One-shot",
+    "novel": "Light novel"
+  },
+  "sort": {
+    "label": "Sort by",
+    "popular": "Popular",
+    "top_rated": "Top rated",
+    "trending": "Trending",
+    "newest": "Newest"
+  },
+  "status": {
+    "label": "Status",
+    "all": "All statuses",
+    "releasing": "Releasing",
+    "finished": "Finished",
+    "other": "Other"
+  },
+  "genre": {
+    "label": "Genre",
+    "all": "All genres"
+  },
+  "kind": {
+    "manga": "Manga",
+    "manhwa": "Manhwa",
+    "manhua": "Manhua",
+    "novel": "Light novel"
+  },
+  "score": "AniList score {score}/100",
+  "scoreShort": "{score}/100",
+  "attribution": "Data provided by AniList",
+  "capped": "Showing the first titles. Narrow the filters to see more.",
+  "facts": {
+    "kind": "Type",
+    "format": "Format",
+    "status": "Status",
+    "startYear": "Start year",
+    "chapters": "Chapters",
+    "volumes": "Volumes",
+    "score": "AniList score",
+    "unknown": "Unknown"
+  },
+  "detail": {
+    "back": "Back to manga",
+    "error": "Could not load this title",
+    "description": "Synopsis",
+    "noDescription": "No synopsis yet.",
+    "genres": "Genres",
+    "tags": "Tags",
+    "readTitle": "Where to read",
+    "readEmpty": "No reading links yet.",
+    "readOpens": "Read on {site} (opens in a new tab)",
+    "similar": "Similar titles"
+  },
+  "adult": {
+    "badge": "18+",
+    "toggle": "Show 18+ titles",
+    "confirmTitle": "Adult content",
+    "confirmBody": "You are 18 or older and want to see adult content?",
+    "confirm": "I am 18 or older",
+    "cancel": "Cancel"
+  },
+  "ageRestricted": {
+    "title": "This title is restricted",
+    "description": "Adult titles open only for signed-in accounts with a date of birth showing you are 18 or older. Set it in Settings.",
+    "settings": "Open Settings"
+  }
+}

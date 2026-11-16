@@ -139,6 +139,18 @@ const router = createRouter({
           meta: { public: true, titleKey: "navigation.anime" }
         },
         {
+          path: "manga",
+          name: "manga",
+          component: () => import("@/views/manga/MangaView.vue"),
+          meta: { public: true, titleKey: "navigation.manga" }
+        },
+        {
+          path: "manga/:id(\\d+)",
+          name: "manga-detail",
+          component: () => import("@/views/manga/MangaDetailView.vue"),
+          meta: { public: true, titleKey: "navigation.manga" }
+        },
+        {
           path: "upcoming",
           name: "upcoming",
           component: () => import("@/views/movie/UpcomingView.vue"),

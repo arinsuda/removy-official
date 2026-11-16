@@ -3,11 +3,11 @@
     <AppTabs :model-value="state.tab" :tabs="tabs" :label="t('media.search.tabs.label')" :controls="false" @update:model-value="emit('update', { tab: $event })">
       <template #tab="{ tab }">
         {{ tab.label }}
-        <span v-if="!(countsApproximate && tab.key !== 'people')" class="sfb__count">{{ counts[tab.key] }}</span>
+        <span v-if="!(countsApproximate && tab.key !== 'people' && tab.key !== 'manga')" class="sfb__count">{{ counts[tab.key] }}</span>
       </template>
     </AppTabs>
 
-    <div v-if="state.tab !== 'people'" class="sfb__row">
+    <div v-if="state.tab !== 'people' && state.tab !== 'manga'" class="sfb__row">
       <label class="sfb__field">
         <span class="sfb__label">{{ t("media.search.filters.year") }}</span>
         <select class="sfb__select" :value="state.year ?? ''" @change="onYear">
