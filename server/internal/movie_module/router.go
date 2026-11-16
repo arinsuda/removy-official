@@ -41,6 +41,9 @@ func RegisterPublicRoutes(router fiber.Router, h *Handler, searchGuard fiber.Han
 	mw.GetRoute(router, "/tv/:id<int>/similar", h.GetSimilarSeries, guards...)
 	mw.GetRoute(router, "/tv/:id<int>/watch-providers", h.GetSeriesWatchProviders, guards...)
 
+	mw.GetRoute(router, "/anime/tv", h.GetAnimeSeries, guards...)
+	mw.GetRoute(router, "/anime/movies", h.GetAnimeMovies, guards...)
+
 	mw.GetRoute(router, "/actors/:id<int>", h.GetActorDetails, guards...)
 	mw.GetRoute(router, "/actors/:id<int>/movies", h.GetMoviesByActor, guards...)
 	mw.GetRoute(router, "/actors/:id<int>/tv", h.GetSeriesByActor, guards...)

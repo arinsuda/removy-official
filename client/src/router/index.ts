@@ -133,6 +133,12 @@ const router = createRouter({
           meta: { public: true, titleKey: "navigation.tvSeries" }
         },
         {
+          path: "anime",
+          name: "anime",
+          component: () => import("@/views/anime/AnimeView.vue"),
+          meta: { public: true, titleKey: "navigation.anime" }
+        },
+        {
           path: "upcoming",
           name: "upcoming",
           component: () => import("@/views/movie/UpcomingView.vue"),

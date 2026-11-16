@@ -295,6 +295,26 @@ func (s *MovieService) DiscoverMovies(ctx context.Context, genres, tab string, p
 	return s.enrichMovies(ctx, res)
 }
 
+// DiscoverAnimeSeries lists anime TV with ratings and awards. Raw TMDB pages are cached in tmdb.
+func (s *MovieService) DiscoverAnimeSeries(ctx context.Context, f tmdb.AnimeFilter, page int) (*tmdb.PaginatedResult[TVSeriesDTO], error) {
+	res, err := tmdb.DiscoverAnimeSeries(f, page)
+	if err != nil {
+		return nil, err
+	}
+	s.prewarmSeries(res.Results)
+	return s.enrichSeries(ctx, res)
+}
+
+// DiscoverAnimeMovies lists anime movies with ratings and awards. Raw TMDB pages are cached in tmdb.
+func (s *MovieService) DiscoverAnimeMovies(ctx context.Context, f tmdb.AnimeFilter, page int) (*tmdb.PaginatedResult[MovieDTO], error) {
+	res, err := tmdb.DiscoverAnimeMovies(f, page)
+	if err != nil {
+		return nil, err
+	}
+	s.prewarmMovies(res.Results)
+	return s.enrichMovies(ctx, res)
+}
+
 // GetSeriesByID returns TV detail with popcorn, tmdb, imdb and rotten_tomatoes ratings.
 func (s *MovieService) GetSeriesByID(ctx context.Context, id int) (*TVSeriesDetailDTO, error) {
 	detail, err := tmdb.GetSeriesByID(id)

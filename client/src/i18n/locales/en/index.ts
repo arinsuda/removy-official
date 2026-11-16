@@ -25,6 +25,7 @@ import browse from "./browse.json";
 import upcoming from "./upcoming.json";
 import events from "./events.json";
 import awards from "./awards.json";
+import anime from "./anime.json";
 
 export default {
   common,
@@ -54,4 +55,5 @@ export default {
   upcoming,
   events,
   awards,
+  anime,
 };

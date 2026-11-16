@@ -67,12 +67,15 @@
       >
         <HomePosterCard v-for="item in data.topRatedItems.value" :key="item.key" :item="item" rail="topRated" />
       </HomeRail>
+
+      <HomeAnimeRail />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { useI18n } from "vue-i18n"
+import HomeAnimeRail from "@/components/home/HomeAnimeRail.vue"
 import HomeFriendsStrip from "@/components/home/HomeFriendsStrip.vue"
 import HomeGenreCta from "@/components/home/HomeGenreCta.vue"
 import HomeHero from "@/components/home/HomeHero.vue"
