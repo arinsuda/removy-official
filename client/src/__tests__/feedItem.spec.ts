@@ -36,3 +36,36 @@ describe("FeedItem avatars", () => {
     expect(wrapper.findAll("[data-avatar-fallback]")).toHaveLength(0)
   })
 })
+
+describe("FeedItem manga row", () => {
+  const mangaItem = (media: NonNullable<FeedItemResponse["media"]>): FeedItemResponse => ({
+    id: 2,
+    type: "watched_added",
+    actor: actor(null),
+    media,
+    message: "",
+    visibility: "default",
+    viewer_liked: false,
+    created_at: new Date().toISOString(),
+  })
+
+  it("shows the start year and kind under the type label", () => {
+    const wrapper = mountItem(
+      mangaItem({ id: 7, media_type: "manga", title: "Solo", poster_url: "https://s4.anilist.co/x.png", start_year: 2018, kind: "manhwa" }),
+    )
+    expect(wrapper.text()).toContain("2018 · มันฮวา")
+  })
+
+  it("uses a book icon instead of the film placeholder when there is no poster", () => {
+    const wrapper = mountItem(mangaItem({ id: 7, media_type: "manga", title: "Solo", poster_url: null, start_year: null, kind: "manga" }))
+    const placeholder = wrapper.get(".feed-item__poster--empty").html()
+    expect(placeholder).toContain("lucide-book-open")
+    expect(placeholder).not.toContain("lucide-film")
+  })
+
+  it("keeps the film placeholder and skips the year line for movies", () => {
+    const wrapper = mountItem(mangaItem({ id: 9, media_type: "movie", title: "Heat", poster_url: null }))
+    expect(wrapper.get(".feed-item__poster--empty").html()).toContain("lucide-film")
+    expect(wrapper.findAll(".feed-item__media-type")).toHaveLength(1)
+  })
+})

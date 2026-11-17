@@ -75,6 +75,7 @@ import AppModal from "@/components/ui/AppModal.vue"
 import AppSpinner from "@/components/ui/AppSpinner.vue"
 import AppTabs from "@/components/ui/AppTabs.vue"
 import SkeletonBlock from "@/components/ui/skeleton/SkeletonBlock.vue"
+import { useMangaAdult } from "@/composables/useMangaAdult"
 import { resolveApiAssetUrl, useShareImage } from "@/composables/useShareImage"
 import { getTmdbImageUrl } from "@/utils/image"
 import type { ShareMediaContext, ShareReviewContext, ShareStatsContext, ShareTemplateKey, ShareTheme } from "@/types/share"
@@ -103,6 +104,7 @@ const share = useShareImage()
 const isExporting = share.isExporting
 
 const open = computed({ get: () => props.modelValue, set: (v) => emit("update:modelValue", v) })
+const { canShowAdult } = useMangaAdult()
 const carousel = useTemplateRef<InstanceType<typeof ShareTemplateCarousel>>("carousel")
 
 // Privacy: another user's stats never appear, and review text needs a public review.
@@ -139,7 +141,9 @@ let loadSeq = 0
 async function loadImages() {
   const seq = ++loadSeq
   status.value = "loading"
-  const source = props.media.posterUrl || getTmdbImageUrl(props.media.posterPath, "w780")
+  // Adult covers are not fetched or drawn until the viewer may see adult titles; the fallback card stands in.
+  const adultHidden = props.media.isAdult === true && !canShowAdult.value
+  const source = adultHidden ? null : props.media.posterUrl || getTmdbImageUrl(props.media.posterPath, "w780")
 
   const avatar = props.shareType === "review" ? resolveApiAssetUrl(props.review?.authorAvatarUrl) : ""
 
@@ -241,7 +245,7 @@ function handleCopyLink() {
 }
 .share-sheet__busy {
   position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem;
-  border-radius: var(--radius-card); background: color-mix(in srgb, black 70%, transparent); color: var(--color-text-primary); font-size: var(--text-small);
+  border-radius: var(--radius-card); background: var(--color-scrim); color: var(--color-text-primary); font-size: var(--text-small);
 }
 .share-sheet__meta { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-top: 1rem; }
 .share-sheet__ratio { margin-left: auto; color: var(--color-text-muted); font-size: var(--text-caption); }

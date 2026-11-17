@@ -14,17 +14,47 @@ import (
 )
 
 const (
-	shareProxyHost     = "image.tmdb.org"
-	shareProxyPathBase = "/t/p/"
 	shareProxyMaxBytes = 8 << 20
+	shareProxyTimeout  = 10 * time.Second
 
 	shareProxyMaxInflight = 16 // concurrent upstream fetches
 	shareProxyRatePerMin  = 30 // requests per IP per minute
 	shareProxyMaxClients  = 10000
+
+	shareProxyRetryAfter = "60" // seconds, sent with 429
+	shareProxyCacheHdr   = "public, max-age=86400"
+
+	msgShareRateLimited    = "too many requests"
+	msgShareURLRequired    = "url parameter is required"
+	msgShareHostNotAllowed = "host not allowed"
+	msgShareSizeNotAllowed = "image size not allowed"
+	msgShareBusy           = "proxy busy"
+	msgShareFetchFailed    = "failed to fetch remote image"
+	msgShareReadFailed     = "failed to read image"
 )
 
-// Only these TMDB size segments are proxied; "original" and unknown sizes are refused.
-var shareProxySizes = map[string]bool{"w92": true, "w185": true, "w342": true, "w500": true, "w780": true}
+// shareProxyRule is one upstream image host the proxy serves. A URL must match a rule's exact host and path
+// prefix; the size is the path segment right after the prefix (<pathBase><size>/<file>).
+type shareProxyRule struct {
+	host     string
+	pathBase string
+	sizes    map[string]bool
+}
+
+// shareProxyRules is the allowlist of upstream image hosts: TMDB posters (movie, TV) and AniList covers (manga).
+// "original" and unknown sizes are refused.
+var shareProxyRules = []shareProxyRule{
+	{
+		host:     "image.tmdb.org",
+		pathBase: "/t/p/",
+		sizes:    map[string]bool{"w92": true, "w185": true, "w342": true, "w500": true, "w780": true},
+	},
+	{
+		host:     "s4.anilist.co",
+		pathBase: "/file/anilistcdn/media/manga/cover/",
+		sizes:    map[string]bool{"medium": true, "large": true, "extraLarge": true},
+	},
+}
 
 var shareProxyContentTypes = map[string]bool{"image/jpeg": true, "image/png": true, "image/webp": true, "image/avif": true}
 
@@ -83,35 +113,46 @@ func (l *ipLimiter) cleanup(now time.Time) {
 	}
 }
 
-// validShareImageURL accepts only https://image.tmdb.org/t/p/... with no
-// credentials or custom port. Everything else is refused, so the proxy cannot
-// be pointed at internal hosts (SSRF).
-func validShareImageURL(raw string) (*url.URL, bool) {
+// shareProxyRuleFor finds the rule whose host matches exactly (case-insensitive).
+func shareProxyRuleFor(host string) (shareProxyRule, bool) {
+	for _, rule := range shareProxyRules {
+		if strings.EqualFold(host, rule.host) {
+			return rule, true
+		}
+	}
+	return shareProxyRule{}, false
+}
+
+// validShareImageURL accepts only https URLs on an allowlisted host, under that host's path prefix, with no
+// credentials or custom port. Everything else is refused, so the proxy cannot be pointed at internal hosts (SSRF).
+// The size is checked separately by shareImageSizeAllowed.
+func validShareImageURL(raw string) (*url.URL, shareProxyRule, bool) {
 	u, err := url.Parse(raw)
 	if err != nil || u.Scheme != "https" || u.User != nil {
-		return nil, false
+		return nil, shareProxyRule{}, false
 	}
-	if !strings.EqualFold(u.Hostname(), shareProxyHost) || (u.Port() != "" && u.Port() != "443") {
-		return nil, false
+	if u.Port() != "" && u.Port() != "443" {
+		return nil, shareProxyRule{}, false
 	}
-	if !strings.HasPrefix(u.Path, shareProxyPathBase) || strings.Contains(u.Path, "..") {
-		return nil, false
+	rule, ok := shareProxyRuleFor(u.Hostname())
+	if !ok || !strings.HasPrefix(u.Path, rule.pathBase) || strings.Contains(u.Path, "..") {
+		return nil, shareProxyRule{}, false
 	}
-	return u, true
+	return u, rule, true
 }
 
-// shareImageSizeAllowed checks the size segment (/t/p/<size>/<file>).
-func shareImageSizeAllowed(u *url.URL) bool {
-	rest := strings.TrimPrefix(u.Path, shareProxyPathBase)
+// shareImageSizeAllowed checks the size segment (<pathBase><size>/<file>) against the rule's sizes.
+func shareImageSizeAllowed(u *url.URL, rule shareProxyRule) bool {
+	rest := strings.TrimPrefix(u.Path, rule.pathBase)
 	size, file, found := strings.Cut(rest, "/")
-	return found && file != "" && shareProxySizes[size]
+	return found && file != "" && rule.sizes[size]
 }
 
-// shareImageProxyHandler re-serves TMDB images with permissive CORS so the
+// shareImageProxyHandler re-serves upstream images with permissive CORS so the
 // share cards can be rasterised without tainting the canvas.
 func shareImageProxyHandler(proxyHops int) fiber.Handler {
 	return newShareImageProxyHandler(&http.Client{
-		Timeout: 10 * time.Second,
+		Timeout: shareProxyTimeout,
 		// A redirect could leave the allowlisted host; treat it as a failure.
 		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
 	}, shareProxyMaxInflight, shareProxyRatePerMin, proxyHops)
@@ -122,48 +163,48 @@ func newShareImageProxyHandler(client *http.Client, maxInflight, ratePerMin, pro
 	limiter := newIPLimiter(ratePerMin, shareProxyMaxClients)
 	return func(c fiber.Ctx) error {
 		if !limiter.allow(shared.RateLimitIP(c, proxyHops)) {
-			c.Set("Retry-After", "60")
-			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{"error": "too many requests"})
+			c.Set("Retry-After", shareProxyRetryAfter)
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{"error": msgShareRateLimited})
 		}
 		rawURL := c.Query("url")
 		if rawURL == "" {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "url parameter is required"})
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": msgShareURLRequired})
 		}
-		target, ok := validShareImageURL(rawURL)
+		target, rule, ok := validShareImageURL(rawURL)
 		if !ok {
-			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "host not allowed"})
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": msgShareHostNotAllowed})
 		}
 
-		if !shareImageSizeAllowed(target) {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "image size not allowed"})
+		if !shareImageSizeAllowed(target, rule) {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": msgShareSizeNotAllowed})
 		}
 
 		select {
 		case sem <- struct{}{}:
 			defer func() { <-sem }()
 		default:
-			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "proxy busy"})
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": msgShareBusy})
 		}
 
 		// Rebuild the URL from the fixed host and path only; the query is dropped.
-		resp, err := client.Get("https://" + shareProxyHost + target.EscapedPath())
+		resp, err := client.Get("https://" + rule.host + target.EscapedPath())
 		if err != nil {
-			return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": "failed to fetch remote image"})
+			return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": msgShareFetchFailed})
 		}
 		defer resp.Body.Close()
 		contentType := strings.ToLower(strings.TrimSpace(strings.SplitN(resp.Header.Get("Content-Type"), ";", 2)[0]))
 		if resp.StatusCode != http.StatusOK || !shareProxyContentTypes[contentType] {
-			return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": "failed to fetch remote image"})
+			return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": msgShareFetchFailed})
 		}
 
 		body, err := io.ReadAll(io.LimitReader(resp.Body, shareProxyMaxBytes+1))
 		if err != nil || len(body) > shareProxyMaxBytes {
-			return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": "failed to read image"})
+			return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": msgShareReadFailed})
 		}
 
 		c.Set("Content-Type", contentType)
 		c.Set("Access-Control-Allow-Origin", "*")
-		c.Set("Cache-Control", "public, max-age=86400")
+		c.Set("Cache-Control", shareProxyCacheHdr)
 		c.Set("X-Content-Type-Options", "nosniff")
 		c.Set("Content-Security-Policy", "default-src 'none'")
 		return c.Status(fiber.StatusOK).Send(body)

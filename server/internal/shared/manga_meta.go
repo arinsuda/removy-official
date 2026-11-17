@@ -23,6 +23,8 @@ const (
 	MangaMetaRefreshAfter = 24 * time.Hour
 	// MangaMetaNotFoundRecheckAfter is how long an AniList not-found marker is trusted before the id is looked up again.
 	MangaMetaNotFoundRecheckAfter = 6 * time.Hour
+	// MangaMetaMaxGenres caps the genre names stored per title; AniList can return more.
+	MangaMetaMaxGenres = 8
 	// tmdbSummaryConcurrency bounds the concurrent TMDB lookups of one MediaSummaries call (matches bmol_module).
 	tmdbSummaryConcurrency = 6
 )
@@ -35,6 +37,8 @@ type MangaMeta struct {
 	CoverURL  string    `gorm:"type:text;not null;default:''"`
 	Kind      string    `gorm:"type:varchar(10);not null;default:''"`
 	IsAdult   bool      `gorm:"not null;default:false"`
+	StartYear int       `gorm:"not null;default:0"`
+	Genres    []string  `gorm:"type:jsonb;serializer:json;not null;default:'[]'"`
 	UpdatedAt time.Time `gorm:"not null"`
 }
 
@@ -64,19 +68,28 @@ type VisibleRef struct {
 }
 
 func newMangaMeta(id int, info MediaInfo) MangaMeta {
+	genres := info.GenreNames
+	if len(genres) > MangaMetaMaxGenres {
+		genres = genres[:MangaMetaMaxGenres]
+	}
+	if genres == nil {
+		genres = []string{} // stored as a JSON array, never null
+	}
 	return MangaMeta{
 		MediaID:   id,
 		Title:     info.Title,
 		CoverURL:  info.PosterURL,
 		Kind:      info.Kind,
 		IsAdult:   info.IsAdult,
+		StartYear: info.StartYear,
+		Genres:    genres,
 		UpdatedAt: time.Now(),
 	}
 }
 
 // notFoundMangaMeta is the marker stored for an id AniList does not know. See MangaMeta.isNotFound.
 func notFoundMangaMeta(id int) MangaMeta {
-	return MangaMeta{MediaID: id, IsAdult: true, UpdatedAt: time.Now()}
+	return MangaMeta{MediaID: id, IsAdult: true, Genres: []string{}, UpdatedAt: time.Now()}
 }
 
 // storeMangaMeta upserts one row.
@@ -86,7 +99,7 @@ func storeMangaMeta(ctx context.Context, row MangaMeta) error {
 	}
 	return mangaDB.WithContext(ctx).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "media_id"}},
-		DoUpdates: clause.AssignmentColumns([]string{"title", "cover_url", "kind", "is_adult", "updated_at"}),
+		DoUpdates: clause.AssignmentColumns([]string{"title", "cover_url", "kind", "is_adult", "start_year", "genres", "updated_at"}),
 	}).Create(&row).Error
 }
 
@@ -261,6 +274,11 @@ func MediaSummaries(ctx context.Context, keys []MediaKey) (map[MediaKey]MediaSum
 			s.Title = row.Title
 			s.PosterURL = row.CoverURL
 			s.Kind = row.Kind
+			if !row.isNotFound() {
+				s.StartYear = row.StartYear
+				s.GenreNames = row.Genres
+				s.IsAdult = row.IsAdult
+			}
 		}
 		out[k] = s
 	}

@@ -93,6 +93,7 @@ const GENRES_EN: Record<number, string> = {
 }
 
 export function shareGenres(media: ShareMediaContext, max = 3): string[] {
+  if (media.genres.length === 0) return (media.genreNames ?? []).slice(0, max)
   return media.genres.slice(0, max).map((g) => GENRES_EN[g.id] || g.name)
 }
 

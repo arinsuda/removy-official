@@ -45,6 +45,10 @@
       <Trophy :size="16" aria-hidden="true" />
       <span>{{ t("manga.detail.actions.addToBmol") }}</span>
     </AppButton>
+    <AppButton variant="outline" size="sm" data-test="manga-action-share" @click="emit('share')">
+      <Share2 :size="16" aria-hidden="true" />
+      <span>{{ t("manga.detail.actions.share") }}</span>
+    </AppButton>
 
     <AddToListSheet v-if="showLists" v-model="showLists" :media-id="manga.id" media-type="manga" />
     <MangaBmolSheet v-if="showBmol && userId" v-model="showBmol" :user-id="userId" :manga="manga" />
@@ -54,7 +58,7 @@
 <script setup lang="ts">
 import { ref, watch } from "vue"
 import { useI18n } from "vue-i18n"
-import { Bookmark, CheckCircle2, Heart, ListPlus, Star, Trophy } from "lucide-vue-next"
+import { Bookmark, CheckCircle2, Heart, ListPlus, Share2, Star, Trophy } from "lucide-vue-next"
 import AddToListSheet from "@/components/lists/AddToListSheet.vue"
 import AppButton from "@/components/ui/AppButton.vue"
 import MangaBmolSheet from "@/components/manga/MangaBmolSheet.vue"
@@ -69,7 +73,7 @@ const props = defineProps<{
   activity: ReturnType<typeof useMediaActivity>
 }>()
 
-const emit = defineEmits<{ rate: [] }>()
+const emit = defineEmits<{ rate: []; share: [] }>()
 const { t } = useI18n()
 const showLists = ref(false)
 const showBmol = ref(false)

@@ -38,6 +38,8 @@ type MediaInfo struct {
 	VoteAverage  float32            // TMDB only
 	Kind         string             // manga only: manga, manhwa, manhua, novel
 	IsAdult      bool               // manga only
+	StartYear    int                // manga only: 0 when unknown
+	GenreNames   []string           // manga only: AniList genre names
 }
 
 // MangaLookup resolves one AniList title by its id. manga_module implements it.

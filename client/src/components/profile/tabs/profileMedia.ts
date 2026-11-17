@@ -3,7 +3,19 @@ import type { Movie, TVSeries } from "@/types"
 import type { MediaSummary } from "@/types/movie"
 
 /** What the library and likes endpoints return for a title. */
-export type SummaryLike = Pick<MediaSummary, "id" | "title" | "media_type" | "poster_url" | "vote_average" | "ratings" | "release_date">
+export type SummaryLike = Pick<MediaSummary, "id" | "title" | "media_type" | "poster_url" | "vote_average" | "ratings" | "release_date" | "start_year">
+
+const FULL_DATE = /^\d{4}-\d{2}-\d{2}$/
+
+/**
+ * Manga has a start year but often no day. Keep a full release date when there is one, otherwise
+ * fall back to the year (a bare year is not a full date, so no release badge or day formatting applies).
+ */
+function releaseDateOf(m: SummaryLike): string {
+  const date = m.release_date ?? ""
+  if (FULL_DATE.test(date) || !m.start_year) return date
+  return String(m.start_year)
+}
 
 /** A saved title (list entry or like) in the shape the tab kit renders. */
 export interface ProfileEntry {
@@ -21,9 +33,10 @@ export interface ProfileEntry {
 export function summaryToHomeMedia(m: SummaryLike): HomeMedia {
   const tv = m.media_type === "tv"
   const base = { id: m.id, poster_path: m.poster_url ?? "", backdrop_path: "", overview: "", vote_average: m.vote_average ?? 0, vote_count: 0, popularity: 0, genre_ids: [], adult: false, ratings: m.ratings }
+  const date = releaseDateOf(m)
   const source: Movie | TVSeries = tv
-    ? { ...base, name: m.title, original_name: m.title, first_air_date: m.release_date ?? "" }
-    : { ...base, title: m.title, original_title: m.title, release_date: m.release_date ?? "" }
+    ? { ...base, name: m.title, original_name: m.title, first_air_date: date }
+    : { ...base, title: m.title, original_title: m.title, release_date: date }
   return {
     key: `${m.media_type}-${m.id}`,
     id: m.id,
@@ -31,7 +44,7 @@ export function summaryToHomeMedia(m: SummaryLike): HomeMedia {
     title: m.title,
     poster_path: base.poster_path,
     backdrop_path: "",
-    date: m.release_date ?? "",
+    date,
     overview: "",
     vote_average: base.vote_average,
     ratings: m.ratings,

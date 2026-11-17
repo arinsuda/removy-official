@@ -2,14 +2,31 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { mount } from "@vue/test-utils"
 import { createPinia, setActivePinia } from "pinia"
 import { createI18n } from "vue-i18n"
+import { defineComponent, h } from "vue"
 import { useShareImage } from "@/composables/useShareImage"
 import ReviewShareTemplate from "@/components/share/ReviewShareTemplate.vue"
 import type { ShareMediaContext, ShareReviewContext } from "@/types/share"
+import { useRealI18n } from "./helpers/realI18n"
 
 // Mock html-to-image
 vi.mock("html-to-image", () => ({
   toPng: vi.fn().mockResolvedValue("data:image/png;base64,fakePNGData"),
 }))
+
+const realI18n = useRealI18n()
+
+/** useShareImage reads i18n through useI18n(), so it needs a component setup to resolve keys. */
+function useShareInSetup() {
+  let share!: ReturnType<typeof useShareImage>
+  const Probe = defineComponent({
+    setup() {
+      share = useShareImage()
+      return () => h("div")
+    },
+  })
+  mount(Probe, { global: { plugins: [realI18n] } })
+  return share
+}
 
 const i18n = createI18n({
   legacy: false,
@@ -49,6 +66,10 @@ describe("Share as Image Feature", () => {
   })
 
   describe("useShareImage Composable Logic", () => {
+    beforeEach(() => {
+      realI18n.global.locale.value = "en"
+    })
+
     it("truncates review text correctly for long text", () => {
       const { truncateReview } = useShareImage()
       const longText = "This is a very long review text that exceeds the max characters limit set for the share card template layout. It should be safely truncated with an ellipsis at the end without breaking words or surrogate pairs."
@@ -71,14 +92,26 @@ describe("Share as Image Feature", () => {
     })
 
     it("builds poster caption correctly", () => {
-      const { buildPosterCaption } = useShareImage()
+      const { buildPosterCaption } = useShareInSetup()
       const caption = buildPosterCaption("Inception", "2010", "movie")
       expect(caption).toContain("Inception (2010)")
       expect(caption).toContain("Shared from POPCORN")
     })
 
+    it("omits the year from the poster caption when there is none", () => {
+      const { buildPosterCaption } = useShareInSetup()
+      const caption = buildPosterCaption("Berserk", null, "manga")
+      expect(caption).toContain("🎬 Berserk\nManga\n")
+    })
+
+    it("builds the caption in Thai from the th bundle", () => {
+      realI18n.global.locale.value = "th"
+      const { buildPosterCaption } = useShareInSetup()
+      expect(buildPosterCaption("Inception", null, "movie")).toContain("แชร์จาก POPCORN")
+    })
+
     it("builds review caption correctly with author attribution", () => {
-      const { buildReviewCaption } = useShareImage()
+      const { buildReviewCaption } = useShareInSetup()
       const caption = buildReviewCaption("Dune: Part Two", "JohnDoe", 4.5)
       expect(caption).toContain("4.5/5 — Dune: Part Two")
       expect(caption).toContain("JohnDoe")

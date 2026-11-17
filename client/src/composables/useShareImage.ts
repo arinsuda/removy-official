@@ -4,6 +4,7 @@ import { useToast } from "@/composables/useToast"
 import { useI18n } from "vue-i18n"
 import type { MediaType } from "@/types/common"
 import { SHARE_TYPE_LABEL_KEY } from "@/components/share/shareCards"
+import { SHARE_PROXY_HOSTS, SHARE_PROXY_PATH } from "@/components/share/shareConfig"
 import { mediaPath } from "@/utils/mediaRoute"
 
 /** Throwaway html-to-image passes on WebKit before the real one, so embedded images are painted. */
@@ -29,21 +30,23 @@ export function resolveApiAssetUrl(raw: string | null | undefined): string {
   return `${origin}${value.startsWith("/") ? "" : "/"}${value}`
 }
 
-export function isTmdbImageUrl(url: string): boolean {
+/** True for https images on a host the share proxy serves (see SHARE_PROXY_HOSTS). */
+export function needsShareProxy(url: string): boolean {
   try {
-    return new URL(url).hostname === "image.tmdb.org"
+    const parsed = new URL(url)
+    return parsed.protocol === "https:" && SHARE_PROXY_HOSTS.includes(parsed.hostname)
   } catch {
     return false
   }
 }
 
 export function useShareImage() {
-  let t: (key: string) => string
+  let t: (key: string, named?: Record<string, string | number>) => string
   try {
     const i18n = useI18n()
-    t = i18n.t
+    t = (key, named) => (named ? i18n.t(key, named) : i18n.t(key))
   } catch {
-    t = (key: string) => key
+    t = (key) => key
   }
 
   const toast = useToast()
@@ -54,8 +57,8 @@ export function useShareImage() {
 
   /**
    * Fetch an image as a data URL so the export canvas is never tainted.
-   * TMDB images always go through the API proxy (never a direct CORS request to
-   * image.tmdb.org); same-origin and API-hosted images are fetched directly.
+   * TMDB and AniList images always go through the API proxy (never a direct CORS request);
+   * same-origin and API-hosted images are fetched directly.
    * Returns null on any failure.
    */
   async function fetchImageAsBlob(url: string): Promise<string | null> {
@@ -63,8 +66,8 @@ export function useShareImage() {
       if (!url) return null
       if (url.startsWith("blob:") || url.startsWith("data:")) return url
 
-      const fetchUrl = isTmdbImageUrl(url)
-        ? `${getApiBaseUrl()}/share/proxy-image?url=${encodeURIComponent(url)}`
+      const fetchUrl = needsShareProxy(url)
+        ? `${getApiBaseUrl()}${SHARE_PROXY_PATH}?url=${encodeURIComponent(url)}`
         : url
       const response = await fetch(fetchUrl).catch(() => null)
       if (!response || !response.ok) return null
@@ -289,9 +292,10 @@ export function useShareImage() {
     year: string | null,
     mediaType: MediaType,
   ): string {
-    const typeLabel = t(SHARE_TYPE_LABEL_KEY[mediaType])
-    const yearStr = year ? ` (${year})` : ""
-    return `🎬 ${title}${yearStr}\n${typeLabel}\n\nShared from POPCORN ✨`
+    const type = t(SHARE_TYPE_LABEL_KEY[mediaType])
+    return year
+      ? t("share.captionPosterYear", { title, year, type })
+      : t("share.captionPoster", { title, type })
   }
 
   /** Build a caption for review share */
@@ -300,7 +304,7 @@ export function useShareImage() {
     authorName: string,
     rating: number,
   ): string {
-    return `⭐ ${rating.toFixed(1)}/5 — ${title}\n📝 Reviewed on POPCORN • ${authorName}\n\nShared from POPCORN ✨`
+    return t("share.captionReview", { rating: rating.toFixed(1), title, author: authorName })
   }
 
   /** Build a share link for the media detail page */

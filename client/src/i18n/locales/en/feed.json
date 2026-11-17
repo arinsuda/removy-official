@@ -37,6 +37,7 @@
     "tv": "TV series",
     "manga": "Manga"
   },
+  "mangaMeta": "{year} · {kind}",
   "readMore": "Read more",
   "readLess": "Show less",
   "like": "Like this review",

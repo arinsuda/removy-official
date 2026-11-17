@@ -1,5 +1,6 @@
 import type { MediaType, ListType } from "./common"
 import type { MediaAward } from "./event"
+import type { MangaKind } from "./manga"
 
 export interface Genre {
   id: number
@@ -152,6 +153,14 @@ export interface MediaSummary {
   ratings?: MediaRatings
   /** Release or first-air date, YYYY-MM-DD; empty when TMDB has none. */
   release_date?: string
+  /** Manga only: first publication year. */
+  start_year?: number | null
+  /** Manga only: genre names (AniList has no genre ids). */
+  genre_names?: string[]
+  /** Manga only: adult title; its cover stays hidden until the viewer confirms 18+. */
+  is_adult?: boolean
+  /** Manga only: manga, manhwa, manhua or novel. */
+  kind?: MangaKind
   created_at: string
 }
 

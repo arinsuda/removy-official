@@ -13,7 +13,7 @@
     "watchlist": "Watchlist",
     "likes": "Likes",
     "achievements": "Achievements",
-    "bol": "Best movies"
+    "bol": "Best titles"
   },
   "actions": {
     "follow": "Follow",
@@ -23,9 +23,9 @@
   },
   "empty": {
     "reviews": "Has not written any reviews yet.",
-    "watched": "Has not marked any movies as watched yet.",
-    "watchlist": "Has not added any movies to their watchlist yet.",
-    "likes": "Has not liked any movies yet.",
+    "watched": "Has not marked any titles as watched yet.",
+    "watchlist": "Has not added any titles to their watchlist yet.",
+    "likes": "Has not liked any titles yet.",
     "achievements": "No achievements unlocked yet."
   },
   "confirmModal": {
@@ -173,7 +173,8 @@
       "filters": {
         "all": "All",
         "movie": "Movies",
-        "tv": "TV"
+        "tv": "TV",
+        "manga": "Manga"
       },
       "sorts": {
         "newest": "Newest first",

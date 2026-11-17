@@ -17,6 +17,8 @@ func TestValidShareImageURL(t *testing.T) {
 		"https://image.tmdb.org/t/p/w500/abc.jpg",
 		"https://IMAGE.TMDB.ORG/t/p/original/abc.jpg",
 		"https://image.tmdb.org:443/t/p/w500/abc.jpg",
+		"https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx1.jpg",
+		"https://S4.ANILIST.CO/file/anilistcdn/media/manga/cover/extraLarge/bx1.jpg",
 	}
 	bad := []string{
 		"",
@@ -31,15 +33,51 @@ func TestValidShareImageURL(t *testing.T) {
 		"http://169.254.169.254/latest/meta-data",
 		"http://localhost:8081/api/health",
 		"file:///etc/passwd",
+		"http://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx1.jpg",
+		"https://s4.anilist.co.evil.com/file/anilistcdn/media/manga/cover/medium/bx1.jpg",
+		"https://user@s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx1.jpg",
+		"https://s4.anilist.co:8443/file/anilistcdn/media/manga/cover/medium/bx1.jpg",
+		"https://s4.anilist.co/file/anilistcdn/media/default.jpg",
+		"https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx1.jpg",
+		"https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/../../../default.jpg",
+		"https://s4.anilist.co/t/p/w500/abc.jpg",
+		"https://image.tmdb.org/file/anilistcdn/media/manga/cover/medium/bx1.jpg",
 	}
 	for _, u := range ok {
-		if _, valid := validShareImageURL(u); !valid {
+		if _, _, valid := validShareImageURL(u); !valid {
 			t.Errorf("expected %q to be allowed", u)
 		}
 	}
 	for _, u := range bad {
-		if _, valid := validShareImageURL(u); valid {
+		if _, _, valid := validShareImageURL(u); valid {
 			t.Errorf("expected %q to be rejected", u)
+		}
+	}
+}
+
+func TestShareImageSizeAllowed(t *testing.T) {
+	cases := map[string]bool{
+		"https://image.tmdb.org/t/p/w500/abc.jpg":                                    true,
+		"https://image.tmdb.org/t/p/original/abc.jpg":                                false,
+		"https://image.tmdb.org/t/p/w1280/abc.jpg":                                   false,
+		"https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx1.jpg":     true,
+		"https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx1.jpg":      true,
+		"https://s4.anilist.co/file/anilistcdn/media/manga/cover/extraLarge/bx1.jpg": true,
+		"https://s4.anilist.co/file/anilistcdn/media/manga/cover/small/bx1.jpg":      false,
+		"https://s4.anilist.co/file/anilistcdn/media/manga/cover/original/bx1.jpg":   false,
+		"https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/":            false,
+		"https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium":             false,
+	}
+	for raw, want := range cases {
+		u, rule, ok := validShareImageURL(raw)
+		if !ok {
+			if want {
+				t.Errorf("%q: host/path rejected", raw)
+			}
+			continue
+		}
+		if got := shareImageSizeAllowed(u, rule); got != want {
+			t.Errorf("%q: size allowed = %v, want %v", raw, got, want)
 		}
 	}
 }
@@ -111,6 +149,22 @@ func TestShareProxyDropsQuery(t *testing.T) {
 	r := proxyGet(t, testProxyApp(rt, 4, 1000), "https://image.tmdb.org/t/p/w500/a.jpg?x=1&api_key=z#frag")
 	if r.StatusCode != 200 || got != "https://image.tmdb.org/t/p/w500/a.jpg" {
 		t.Errorf("status %d, upstream %q", r.StatusCode, got)
+	}
+}
+
+func TestShareProxyFetchesAniListCoverFromItsHost(t *testing.T) {
+	var gotURL string
+	rt := rtFunc(func(r *http.Request) (*http.Response, error) {
+		gotURL = r.URL.String()
+		return okImage("image/jpeg")(r)
+	})
+	cover := "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx1.jpg?x=1"
+	r := proxyGet(t, testProxyApp(rt, 4, 1000), cover)
+	if r.StatusCode != 200 || gotURL != "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/bx1.jpg" {
+		t.Errorf("status %d, upstream %q", r.StatusCode, gotURL)
+	}
+	if r := proxyGet(t, testProxyApp(okImage("image/jpeg"), 4, 1000), "https://s4.anilist.co/file/anilistcdn/media/manga/cover/original/bx1.jpg"); r.StatusCode != 400 {
+		t.Errorf("unknown size: got %d, want 400", r.StatusCode)
 	}
 }
 
