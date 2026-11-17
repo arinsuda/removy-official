@@ -111,7 +111,7 @@
   "bmol": {
     "title": "Best of Life",
     "descriptionOwner": "Your all-time favorites, ranked. Several titles can share a rank.",
-    "descriptionVisitor": "Their all-time favorite movies and series, ranked.",
+    "descriptionVisitor": "Their all-time favorite titles, ranked.",
     "tabs": {
       "label": "Media type",
       "movie": "Movies",
@@ -258,7 +258,7 @@
       "errorTitle": "Could not load this list",
       "errorBody": "Check your connection and try again.",
       "emptyOwnerTitle": "This list is empty",
-      "emptyOwnerBody": "Open a movie or series and choose Add to list to put titles here.",
+      "emptyOwnerBody": "Open a title and choose Add to list to put titles here.",
       "emptyVisitorTitle": "This list is empty",
       "reorderHint": "Switch the sort to Your order to rearrange titles.",
       "dragHandle": "Drag to reorder {title}",

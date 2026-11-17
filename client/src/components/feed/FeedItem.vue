@@ -56,9 +56,10 @@
           decoding="async"
           @error="posterFailed = true"
         />
-        <span v-else class="feed-item__poster feed-item__poster--empty" aria-hidden="true"><Film :size="18" /></span>
+        <span v-else class="feed-item__poster feed-item__poster--empty" aria-hidden="true"><component :is="emptyPosterIcon" :size="18" /></span>
         <span class="feed-item__media-text">
           <span class="feed-item__media-type">{{ t(`feed.mediaType.${item.media.media_type}`) }}</span>
+          <span v-if="mangaMeta" class="feed-item__media-type">{{ mangaMeta }}</span>
           <span class="feed-item__media-title">{{ mediaTitle }}</span>
           <MediaRating :ratings="item.media.ratings" :vote-average="item.media.vote_average" />
         </span>
@@ -92,7 +93,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, useTemplateRef, watch } from "vue"
 import { useI18n } from "vue-i18n"
-import { Film, Heart } from "lucide-vue-next"
+import { BookOpen, Film, Heart } from "lucide-vue-next"
 import { reviewApi } from "@/api/api"
 import MediaRating from "@/components/movie/MediaRating.vue"
 import AppAvatar from "@/components/ui/AppAvatar.vue"
@@ -127,6 +128,17 @@ const targetName = computed(() => {
   return target?.display_name || target?.username || ""
 })
 const mediaTitle = computed(() => props.item.media?.title || t("feed.untitled"))
+/** Manga has no poster in some feeds; a book icon says what it is better than a film reel. */
+const emptyPosterIcon = computed(() => (props.item.media?.media_type === "manga" ? BookOpen : Film))
+/** Manga year and kind, e.g. "2010 · Manhwa"; empty for other types or when both are unknown. */
+const mangaMeta = computed(() => {
+  const media = props.item.media
+  if (media?.media_type !== "manga") return ""
+  const year = media.start_year
+  const kind = media.kind ? t(`manga.kind.${media.kind}`) : ""
+  if (year && kind) return t("feed.mangaMeta", { year, kind })
+  return year ? String(year) : kind
+})
 const actorTo = computed(() => ({ name: "user-profile", params: { userId: props.item.actor.id } }))
 const targetTo = computed(() => ({ name: "user-profile", params: { userId: props.item.target_user?.id ?? 0 } }))
 const mediaTo = computed(() =>

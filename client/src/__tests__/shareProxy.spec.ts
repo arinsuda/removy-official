@@ -5,6 +5,7 @@ import { useShareImage } from "@/composables/useShareImage"
 vi.mock("html-to-image", () => ({ toPng: vi.fn() }))
 
 const TMDB = "https://image.tmdb.org/t/p/w500/poster.jpg"
+const ANILIST = "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx1.png"
 
 function imageResponse() {
   return new Response(new Blob([new Uint8Array([137, 80, 78, 71])], { type: "image/png" }), { status: 200 })
@@ -23,6 +24,27 @@ describe("useShareImage.fetchImageAsBlob", () => {
     const called = String(fetchMock.mock.calls[0][0])
     expect(called).toBe(`/api/share/proxy-image?url=${encodeURIComponent(TMDB)}`)
     expect(called.startsWith("https://image.tmdb.org")).toBe(false)
+  })
+
+  it("loads AniList covers through the proxy too", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(imageResponse())
+    vi.stubGlobal("fetch", fetchMock)
+    await useShareImage().fetchImageAsBlob(ANILIST)
+    expect(String(fetchMock.mock.calls[0][0])).toBe(`/api/share/proxy-image?url=${encodeURIComponent(ANILIST)}`)
+  })
+
+  it("fetches other hosts directly, including look-alike or plain-http hosts", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(imageResponse())
+    vi.stubGlobal("fetch", fetchMock)
+    const { fetchImageAsBlob } = useShareImage()
+    for (const url of ["https://evil-s4.anilist.co/x.png", "http://s4.anilist.co/x.png", "https://cdn.example.com/x.png"]) {
+      await fetchImageAsBlob(url)
+    }
+    expect(fetchMock.mock.calls.map((c) => String(c[0]))).toEqual([
+      "https://evil-s4.anilist.co/x.png",
+      "http://s4.anilist.co/x.png",
+      "https://cdn.example.com/x.png",
+    ])
   })
 
   it("never falls back to a direct TMDB request when the proxy fails", async () => {

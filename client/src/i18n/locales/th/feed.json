@@ -37,6 +37,7 @@
     "tv": "ซีรีส์",
     "manga": "มังงะ"
   },
+  "mangaMeta": "{year} · {kind}",
   "readMore": "อ่านต่อ",
   "readLess": "ย่อ",
   "like": "ถูกใจรีวิวนี้",

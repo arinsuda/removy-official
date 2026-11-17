@@ -1,5 +1,6 @@
 import type { MediaRatings } from "@/types/movie";
 import type { MediaType } from "@/types";
+import type { MangaKind } from "@/types/manga";
 
 export type ActivityType =
   | "review_created"
@@ -28,6 +29,9 @@ export interface FeedMediaSummary {
   genres?: string[];
   vote_average?: number;
   ratings?: MediaRatings;
+  /** Manga only. */
+  start_year?: number | null;
+  kind?: MangaKind;
 }
 
 export interface FeedItemResponse {

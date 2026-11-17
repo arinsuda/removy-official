@@ -23,6 +23,9 @@ func TestLookupMediaMapsTitleAndAdultFlag(t *testing.T) {
 	if sfw.Title == "" || sfw.PosterURL != "https://img.example/1.jpg" || sfw.EnglishTitle != "" {
 		t.Fatalf("sfw title/poster: %+v", sfw)
 	}
+	if sfw.StartYear != 2020 || len(sfw.GenreNames) != 1 || sfw.GenreNames[0] != "Action" {
+		t.Fatalf("sfw year/genres: %+v", sfw)
+	}
 
 	// The lookup asks AniList with eligibility granted, so an adult title still resolves; the
 	// viewer decision is shared.CheckMediaAccess, not this function.

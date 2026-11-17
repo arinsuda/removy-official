@@ -78,6 +78,10 @@ const props = withDefaults(
     mediaType?: MediaType
     mediaPosterPath?: string | null
     mediaTitle?: string
+    /** Details the review payload does not carry (it holds id, title and poster only). */
+    mediaIsAdult?: boolean
+    mediaStartYear?: number | null
+    mediaGenreNames?: string[]
   }>(),
   { mediaType: "movie" },
 )
@@ -137,10 +141,12 @@ const selectedShareMediaContext = computed<ShareMediaContext | null>(() => {
     title: props.mediaTitle || r.media?.title || "",
     posterPath: props.mediaPosterPath || null,
     posterUrl: r.media?.poster_url || null,
-    releaseYear: null,
+    releaseYear: props.mediaStartYear ? String(props.mediaStartYear) : null,
     genres: r.media?.genres || [],
+    genreNames: props.mediaGenreNames ?? [],
     voteAverage: r.media?.vote_average || 0,
     popcornRating: null,
+    isAdult: props.mediaIsAdult,
   }
 })
 

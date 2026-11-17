@@ -100,6 +100,7 @@ const filters = computed(() => [
   { key: "all", label: t("profile.tabContent.common.filters.all"), count: list.filterCounts.value.all },
   { key: "movie", label: t("profile.tabContent.common.filters.movie"), count: list.filterCounts.value.movie },
   { key: "tv", label: t("profile.tabContent.common.filters.tv"), count: list.filterCounts.value.tv },
+  { key: "manga", label: t("profile.tabContent.common.filters.manga"), count: list.filterCounts.value.manga },
 ])
 const sorts = computed(() => ENTRY_SORT_KEYS.map((key) => ({ key, label: t(`profile.tabContent.common.sorts.${key}`) })))
 

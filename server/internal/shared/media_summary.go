@@ -17,6 +17,9 @@ type MediaSummary struct {
 	Genres       []tmdbmodule.Genre `json:"genres"`
 	VoteAverage  float32            `json:"vote_average"`
 	Kind         string             `json:"kind,omitempty"`
+	StartYear    int                `json:"start_year,omitempty"`
+	GenreNames   []string           `json:"genre_names,omitempty"`
+	IsAdult      bool               `json:"is_adult,omitempty"`
 	Ratings      *SummaryRatings    `json:"ratings,omitempty"`
 }
 

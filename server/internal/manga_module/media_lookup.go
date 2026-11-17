@@ -29,8 +29,10 @@ func mediaInfo(m rawMedia) shared.MediaInfo {
 		PosterURL:    item.CoverURL,
 		Kind:         item.Kind,
 		IsAdult:      item.IsAdult,
+		GenreNames:   item.Genres,
 	}
 	if item.StartYear != nil {
+		info.StartYear = *item.StartYear
 		info.ReleaseDate = strconv.Itoa(*item.StartYear)
 	}
 	return info

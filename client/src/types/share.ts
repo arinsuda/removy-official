@@ -9,10 +9,14 @@ export interface ShareMediaContext {
   posterUrl: string | null
   releaseYear: string | null
   genres: Genre[]
+  /** Manga genres arrive as names only (AniList has no genre ids); shown when `genres` is empty. */
+  genreNames?: string[]
   voteAverage: number
   popcornRating: number | null
   /** Review count behind popcornRating; used for the tier. Optional for older callers. */
   popcornCount?: number | null
+  /** Adult manga: the poster is replaced by the fallback card unless the viewer may see adult titles. */
+  isAdult?: boolean
 }
 
 export interface ShareReviewContext {

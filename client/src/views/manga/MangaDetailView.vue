@@ -20,6 +20,7 @@
         :has-own-review="Boolean(myReview)"
         :activity="activity"
         @rate="onRate"
+        @share="shareOpen = true"
       />
       <MangaFacts :manga="manga" />
       <MangaTagList v-if="manga.genres.length" :label="t('manga.detail.genres')" :tags="manga.genres" />
@@ -40,12 +41,16 @@
           media-type="manga"
           :media-poster-path="manga.cover_url"
           :media-title="manga.display_title"
+          :media-is-adult="manga.is_adult"
+          :media-start-year="manga.start_year"
+          :media-genre-names="manga.genres"
           @loaded="(list) => (reviewList = list)"
           @review-submitted="activity.refreshStats"
         />
       </section>
       <MangaSimilarRail :items="similar.data.value ?? []" />
       <MangaAttribution />
+      <ShareImageModal v-if="shareMedia" v-model="shareOpen" share-type="poster" :media="shareMedia" />
     </template>
 
     <!-- Adult titles open only after the viewer confirms; leaving the modal without confirming goes back to the list. -->
@@ -67,6 +72,7 @@ import MangaFacts from "@/components/manga/MangaFacts.vue"
 import MangaReadLinks from "@/components/manga/MangaReadLinks.vue"
 import MangaSimilarRail from "@/components/manga/MangaSimilarRail.vue"
 import MangaTagList from "@/components/manga/MangaTagList.vue"
+import ShareImageModal from "@/components/share/ShareImageModal.vue"
 import { isAgeRestricted } from "@/components/manga/mangaAdult"
 import { plainDescription } from "@/components/manga/mangaFormat"
 import AppErrorState from "@/components/ui/AppErrorState.vue"
@@ -76,6 +82,7 @@ import { useMangaAdult } from "@/composables/useMangaAdult"
 import { useMangaDetail } from "@/composables/useMangaDetail"
 import { useMediaActivity } from "@/composables/useMediaActivity"
 import type { ReviewResponse } from "@/types/review"
+import type { ShareMediaContext } from "@/types/share"
 import { useAuthStore } from "@/stores/auth"
 
 const { t } = useI18n()
@@ -100,6 +107,27 @@ const activity = useMediaActivity("manga", computed(() => manga.value?.id ?? 0))
 const reviewList = ref<ReviewResponse[]>([])
 const reviewsRef = useTemplateRef<InstanceType<typeof MovieReviews>>("reviews")
 const myReview = computed(() => reviewList.value.find((r) => r.user.id === auth.user?.id) ?? null)
+
+// Share as image: the cover is the poster; adult covers stay hidden in the modal until the viewer may see them.
+const shareOpen = ref(false)
+const shareMedia = computed<ShareMediaContext | null>(() => {
+  const m = manga.value
+  if (!m) return null
+  return {
+    id: m.id,
+    mediaType: "manga",
+    title: m.display_title,
+    posterPath: null,
+    posterUrl: m.cover_url,
+    releaseYear: m.start_year ? String(m.start_year) : null,
+    genres: [],
+    genreNames: m.genres,
+    voteAverage: 0,
+    popcornRating: m.ratings.popcorn?.average ?? null,
+    popcornCount: m.ratings.popcorn?.count ?? null,
+    isAdult: m.is_adult,
+  }
+})
 
 function onRate() {
   document.getElementById("reviews")?.scrollIntoView({

@@ -353,3 +353,34 @@ func TestTrendingAndAnalyticsHideAdultManga(t *testing.T) {
 		t.Errorf("safe analytics for a minor: %v", err)
 	}
 }
+
+// TestMangaMetaUpsertWritesYearAndGenres checks that the first write and a later refresh both store the start
+// year and genre names, and that the genre list is capped.
+func TestMangaMetaUpsertWritesYearAndGenres(t *testing.T) {
+	e, gate := mangaEnv(t)
+	countingEnv(t, e, gate)
+	const id = 4201
+	ctx := context.Background()
+
+	shared.RecordMangaMeta(ctx, id, shared.MediaInfo{Title: "First", StartYear: 2019, GenreNames: []string{"Action"}})
+	var row shared.MangaMeta
+	if err := e.db.Where("media_id = ?", id).First(&row).Error; err != nil {
+		t.Fatalf("read first write: %v", err)
+	}
+	if row.StartYear != 2019 || len(row.Genres) != 1 || row.Genres[0] != "Action" {
+		t.Fatalf("first write year/genres: %d %v", row.StartYear, row.Genres)
+	}
+
+	many := make([]string, shared.MangaMetaMaxGenres+2)
+	for i := range many {
+		many[i] = fmt.Sprintf("Genre%d", i)
+	}
+	shared.RecordMangaMeta(ctx, id, shared.MediaInfo{Title: "Second", StartYear: 2021, GenreNames: many})
+	row = shared.MangaMeta{}
+	if err := e.db.Where("media_id = ?", id).First(&row).Error; err != nil {
+		t.Fatalf("read refresh: %v", err)
+	}
+	if row.Title != "Second" || row.StartYear != 2021 || len(row.Genres) != shared.MangaMetaMaxGenres {
+		t.Fatalf("refresh must update year and capped genres: title=%q year=%d genres=%d", row.Title, row.StartYear, len(row.Genres))
+	}
+}

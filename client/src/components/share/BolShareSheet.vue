@@ -69,6 +69,7 @@ import AppSpinner from "@/components/ui/AppSpinner.vue"
 import AppTabs from "@/components/ui/AppTabs.vue"
 import SkeletonBlock from "@/components/ui/skeleton/SkeletonBlock.vue"
 import { flattenGroups, type RankGroup } from "@/components/bmol/bmolRanks"
+import { useMangaAdult } from "@/composables/useMangaAdult"
 import { useShareImage } from "@/composables/useShareImage"
 import { getTmdbImageUrl } from "@/utils/image"
 import type { MediaType } from "@/types"
@@ -89,6 +90,7 @@ const emit = defineEmits<{ "update:modelValue": [value: boolean] }>()
 
 const { t } = useI18n()
 const share = useShareImage()
+const { canShowAdult } = useMangaAdult()
 const isExporting = share.isExporting
 const open = computed({ get: () => props.modelValue, set: (v) => emit("update:modelValue", v) })
 
@@ -130,7 +132,9 @@ async function loadPosters() {
   const items = bolTopItems(props.groups, bolTemplateDef("story").capacity)
   const loaded = await Promise.all(
     items.map(async (item) => {
-      const url = getTmdbImageUrl(item.media.poster_url, "w342")
+      // Adult covers are not requested until the viewer may see adult titles; the card shows its fallback.
+      const adultHidden = item.media.is_adult === true && !canShowAdult.value
+      const url = adultHidden ? null : getTmdbImageUrl(item.media.poster_url, "w342")
       return [bolPosterKey(item), url ? await share.fetchImageAsBlob(url) : null] as const
     }),
   )
