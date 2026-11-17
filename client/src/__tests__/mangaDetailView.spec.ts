@@ -6,6 +6,7 @@ import { createPinia, setActivePinia } from "pinia"
 import { AxiosError, AxiosHeaders } from "axios"
 import MangaDetailView from "@/views/manga/MangaDetailView.vue"
 import { mangaApi } from "@/api/endpoints/manga"
+import { readingProgressApi } from "@/api/endpoints/readingProgress"
 import { MANGA_ADULT_ACK_KEY_PREFIX } from "@/components/manga/mangaConfig"
 import { useAuthStore } from "@/stores/auth"
 import { useRealI18n } from "./helpers/realI18n"
@@ -28,8 +29,18 @@ vi.mock("@/api/endpoints/social", () => ({
   },
 }))
 
+// The progress section mounts for signed-in viewers; its endpoint is stubbed here.
+vi.mock("@/api/endpoints/readingProgress", () => ({
+  readingProgressApi: {
+    get: vi.fn(async () => ({ data: { progress: null } })),
+    put: vi.fn(),
+    remove: vi.fn(),
+  },
+}))
+
 const i18n = useRealI18n()
 const api = vi.mocked(mangaApi)
+const progressApi = vi.mocked(readingProgressApi)
 const wrappers: VueWrapper[] = []
 
 const summary = (id: number, title: string) => ({
@@ -162,6 +173,17 @@ describe("MangaDetailView", () => {
     await vi.waitFor(() => expect(w.find(".manga-detail__description").exists()).toBe(true))
     expect(localStorage.getItem(`${MANGA_ADULT_ACK_KEY_PREFIX}1`)).toBe("1")
     expect(api.similar).toHaveBeenCalledWith(7, true)
+  })
+
+  it("shows reading progress only to a signed-in viewer", async () => {
+    const guest = await render()
+    await vi.waitFor(() => expect(guest.find("h1").text()).toBe("Berserk Tale"))
+    expect(guest.find('[data-test="manga-progress"]').exists()).toBe(false)
+    expect(progressApi.get).not.toHaveBeenCalled()
+
+    const owner = await render("/manga/7", "1990-01-01")
+    await vi.waitFor(() => expect(owner.find('[data-test="manga-progress"]').exists()).toBe(true))
+    expect(progressApi.get).toHaveBeenCalledWith(7)
   })
 
   it("shows an error state with retry when the detail fails", async () => {

@@ -34,6 +34,7 @@ import (
 	"github.com/arinsuda/movie-hub/internal/media_stats_module"
 	"github.com/arinsuda/movie-hub/internal/movie_module"
 	"github.com/arinsuda/movie-hub/internal/privacy_policy"
+	"github.com/arinsuda/movie-hub/internal/reading_progress_module"
 	"github.com/arinsuda/movie-hub/internal/review_module"
 	"github.com/arinsuda/movie-hub/internal/user_module"
 	"github.com/arinsuda/movie-hub/internal/watch_log_module"
@@ -308,6 +309,7 @@ func newEnv(t *testing.T) *env {
 	e.users.SetSessionReissuer(e.auth)
 	e.users.SetFrontendBaseURL(e.cfg.FrontendBaseURL)
 	bmol_module.RegisterRoutes(protected, bmolH)
+	reading_progress_module.RegisterRoutes(protected, reading_progress_module.New(db))
 	list_module.RegisterRoutes(protected, db, policy)
 	achieve.RegisterRoutes(protected)
 	library_module.RegisterRoutes(protected, libH)

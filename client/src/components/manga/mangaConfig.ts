@@ -32,3 +32,13 @@ export const MANGA_AGE_TIME_OFFSET_MS = 7 * 60 * 60 * 1000
 export const MANGA_ADULT_ACK_KEY_PREFIX = "popcorn-manga-adult-ack:"
 /** Error code the detail endpoint returns for an adult title the viewer may not open. */
 export const MANGA_AGE_RESTRICTED_CODE = "AGE_RESTRICTED"
+
+/** Reading progress (owner-only). The limits mirror the server's reading progress constants. */
+export const MANGA_PROGRESS_MAX_CHAPTER = 9999
+export const MANGA_PROGRESS_MAX_VOLUME = 999
+/** Quiet time after the last stepper click before the position is saved. */
+export const MANGA_PROGRESS_SAVE_DEBOUNCE_MS = 500
+export const MANGA_PROGRESS_STALE_MS = 60_000
+export const MANGA_PROGRESS_QUERY_KEY = "reading-progress"
+/** API path of the progress resource; the manga id is appended. */
+export const MANGA_PROGRESS_PATH = "/reading-progress/manga"

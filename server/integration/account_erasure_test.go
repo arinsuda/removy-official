@@ -71,6 +71,7 @@ func TestAccountErasureRemovesEverything(t *testing.T) {
 	e.exec(`UPDATE users SET avatar_url = ? WHERE id = ?`, fmt.Sprintf("avatars/%d/a.png", victim), victim)
 
 	seedUserRefs(t, e.db, victim, other, "victim") // library, media like, list, notification, audit (as admin_id)
+	e.exec(`INSERT INTO reading_progress (user_id, media_id, media_type, chapter, volume, created_at, updated_at) VALUES (?, ?, 'manga', 5, 0, now(), now())`, victim, mangaSFW)
 	e.seedGoogleIdentity(victim, sub, email)
 	e.seedLinkRows(victim, "planzi-victim")
 	e.seedRefreshToken(victim, "victim-rt")
@@ -121,6 +122,9 @@ func TestAccountErasureRemovesEverything(t *testing.T) {
 	}
 	if left := e.userRefCount(victim); len(left) != 0 {
 		t.Fatalf("rows still reference the erased user: %v", left)
+	}
+	if n := e.count(`SELECT count(*) FROM reading_progress WHERE user_id = ?`, victim); n != 0 {
+		t.Errorf("reading progress keeps %d rows of the erased user", n)
 	}
 	for _, tbl := range []string{"review_likes", "review_helpfuls", "review_comments", "activity_events"} {
 		if n := e.count(fmt.Sprintf(`SELECT count(*) FROM %s WHERE review_id = ?`, tbl), vr); n != 0 {
