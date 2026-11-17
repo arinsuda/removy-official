@@ -75,6 +75,8 @@ const (
 	ErrorCodeInvalidSearchParams = apierr.ErrorCodeInvalidSearchParams
 	ErrorCodeUpstreamUnavailable = apierr.ErrorCodeUpstreamUnavailable
 	ErrorCodeAgeRestricted       = apierr.ErrorCodeAgeRestricted
+
+	ErrorCodeProgressOutOfRange = apierr.ErrorCodeProgressOutOfRange
 )
 
 func WriteAPIError(c fiber.Ctx, status int, code ErrorCode, message string) error {

@@ -22,6 +22,8 @@
         @rate="onRate"
         @share="shareOpen = true"
       />
+      <!-- Owner-only: the position belongs to the signed-in viewer, so guests never see the section. -->
+      <MangaReadingProgress v-if="auth.user" :key="manga.id" :manga="manga" :activity="activity" />
       <MangaFacts :manga="manga" />
       <MangaTagList v-if="manga.genres.length" :label="t('manga.detail.genres')" :tags="manga.genres" />
       <MangaTagList v-if="manga.tags.length" :label="t('manga.detail.tags')" :tags="tagNames" />
@@ -69,6 +71,7 @@ import MangaAgeRestricted from "@/components/manga/MangaAgeRestricted.vue"
 import MangaAttribution from "@/components/manga/MangaAttribution.vue"
 import MangaDetailHero from "@/components/manga/MangaDetailHero.vue"
 import MangaFacts from "@/components/manga/MangaFacts.vue"
+import MangaReadingProgress from "@/components/manga/MangaReadingProgress.vue"
 import MangaReadLinks from "@/components/manga/MangaReadLinks.vue"
 import MangaSimilarRail from "@/components/manga/MangaSimilarRail.vue"
 import MangaTagList from "@/components/manga/MangaTagList.vue"

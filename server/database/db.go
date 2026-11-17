@@ -24,6 +24,7 @@ import (
 	"github.com/arinsuda/movie-hub/internal/list_module"
 	"github.com/arinsuda/movie-hub/internal/media_stats_module"
 	noti "github.com/arinsuda/movie-hub/internal/notification_module"
+	"github.com/arinsuda/movie-hub/internal/reading_progress_module"
 	"github.com/arinsuda/movie-hub/internal/review_module"
 	"github.com/arinsuda/movie-hub/internal/shared"
 	"github.com/arinsuda/movie-hub/internal/user_module"
@@ -131,6 +132,9 @@ func autoMigrate(db *gorm.DB) error {
 		&feed_module.ActivityPrivacySetting{},
 
 		&bmol_module.BMOLItem{},
+
+		// reading_progress: one manga chapter/volume per user and title (CHECKs in 20261119_reading_progress_checks)
+		&reading_progress_module.ReadingProgress{},
 
 		// manga_meta: stored AniList title data, written by every manga write that resolves the title (no user FK)
 		&shared.MangaMeta{},
@@ -538,6 +542,13 @@ func runSQLMigrations(db *gorm.DB, cfg *config.Config) error {
 	// Lists accept manga: the check widens to the three media types (see migrate.MediaTypeManga).
 	if err := runSchemaMigrationTx(db, "20261118_media_type_manga", cfg.DB.MigrationLockTimeoutMs, cfg.DB.MigrationStatementTimeoutMs, func(tx *gorm.DB) error {
 		return tx.Exec(migrate.MediaTypeManga).Error
+	}); err != nil {
+		return err
+	}
+
+	// reading_progress: manga only, and chapter/volume inside the config caps (the table is created by AutoMigrate).
+	if err := runSchemaMigrationTx(db, "20261119_reading_progress_checks", cfg.DB.MigrationLockTimeoutMs, cfg.DB.MigrationStatementTimeoutMs, func(tx *gorm.DB) error {
+		return tx.Exec(migrate.ReadingProgressChecks(config.ReadingProgressMaxChapter, config.ReadingProgressMaxVolume)).Error
 	}); err != nil {
 		return err
 	}

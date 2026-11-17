@@ -27,6 +27,7 @@ import (
 	"github.com/arinsuda/movie-hub/internal/movie_module"
 	notification_module "github.com/arinsuda/movie-hub/internal/notification_module"
 	"github.com/arinsuda/movie-hub/internal/privacy_policy"
+	"github.com/arinsuda/movie-hub/internal/reading_progress_module"
 	"github.com/arinsuda/movie-hub/internal/review_module"
 	"github.com/arinsuda/movie-hub/internal/shared"
 	"github.com/arinsuda/movie-hub/internal/shared/storage"
@@ -94,6 +95,7 @@ func Register(ctx context.Context, app *fiber.App, db *gorm.DB, cfg *config.Conf
 	libSvc, libHandler := library_module.New(db, statsSvc, achieveModule.Service, notifSvc, feedModule.Service, policy)
 	likeHandler := like_module.New(db, achieveModule.Service, notifSvc, feedModule.Service, policy)
 	bmolHandler := bmol_module.New(db, policy)
+	readingProgressHandler := reading_progress_module.New(db)
 	followHandler := follow_module.New(db, achieveModule.Service, notifSvc, feedModule.Service, policy)
 	eventHandler := event_module.New(db, mc, notifHub)
 	mangaHandler := manga_module.New(anilist_module.NewClient(anilist_module.Options{}), manga_module.NewDOBGate(db))
@@ -132,6 +134,7 @@ func Register(ctx context.Context, app *fiber.App, db *gorm.DB, cfg *config.Conf
 	watch_log_module.RegisterRoutes(protected, db, feedModule.Service, libSvc, policy)
 	like_module.RegisterRoutes(protected, likeHandler)
 	bmol_module.RegisterRoutes(protected, bmolHandler)
+	reading_progress_module.RegisterRoutes(protected, readingProgressHandler)
 	list_module.RegisterRoutes(protected, db, policy)
 	event_module.RegisterRoutes(protected, eventHandler)
 

@@ -90,5 +90,30 @@
     "title": "This title is restricted",
     "description": "Adult titles open only for signed-in accounts with a date of birth showing you are 18 or older. Set it in Settings.",
     "settings": "Open Settings"
+  },
+  "progress": {
+    "title": "Reading progress",
+    "chapter": "Chapter",
+    "volume": "Volume",
+    "chaptersRead": "{count} chapter read | {count} chapters read",
+    "notStarted": "Not started yet",
+    "increase": "Increase {field}",
+    "decrease": "Decrease {field}",
+    "edit": "Edit",
+    "editTitle": "Edit reading progress",
+    "editInvalid": "Enter a whole number from 0 to {max}.",
+    "editEmpty": "Set a chapter or a volume above 0.",
+    "clear": "Clear",
+    "cleared": "Reading progress cleared",
+    "finishedHint": "You have reached the last chapter.",
+    "markRead": "Mark as read?",
+    "errors": {
+      "loadFailed": "Could not load your reading progress. Please try again.",
+      "generic": "Could not save your reading progress. Please try again.",
+      "outOfRange": "That chapter or volume is above the allowed maximum.",
+      "invalid": "Enter a valid chapter or volume.",
+      "ageRestricted": "This title is restricted for your account.",
+      "upstream": "The manga service is unavailable right now. Please try again later."
+    }
   }
 }

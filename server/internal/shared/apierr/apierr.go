@@ -74,6 +74,9 @@ const (
 	ErrorCodeUpstreamUnavailable ErrorCode = "UPSTREAM_UNAVAILABLE"
 	// ErrorCodeAgeRestricted: an adult title was requested by a viewer who may not see it.
 	ErrorCodeAgeRestricted ErrorCode = "AGE_RESTRICTED"
+
+	// ErrorCodeProgressOutOfRange: a reading progress chapter or volume is negative or above its cap.
+	ErrorCodeProgressOutOfRange ErrorCode = "PROGRESS_OUT_OF_RANGE"
 )
 
 type APIError struct {
