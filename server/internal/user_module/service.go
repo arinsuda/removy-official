@@ -545,10 +545,14 @@ func (s *Service) ForgotPassword(email string) error {
 
 	resetURL := s.resetLink(rawToken, user.ID)
 
-	if err := s.passwordResetMailer.SendResetLink(user.Email, resetURL); err != nil {
-		_ = s.repo.DeletePasswordResetToken(user.ID)
-		return errors.New("failed to send reset email")
-	}
+	// Sent in the background so response time does not reveal whether the account exists.
+	userID, to := user.ID, user.Email
+	go func() {
+		if err := s.passwordResetMailer.SendResetLink(to, resetURL); err != nil {
+			log.Printf("ERROR: send password reset email for user %d: %v", userID, err)
+			_ = s.repo.DeletePasswordResetToken(userID)
+		}
+	}()
 
 	return nil
 }

@@ -65,24 +65,12 @@ export const useAuthStore = defineStore("auth", () => {
     () => isLoggedIn.value && !user.value?.favorite_genres && !user.value?.onboarded_at,
   )
 
+  /** Sign-up never starts a session: the server answers 202 (also for an already-used email) and mails a link. */
   async function register(data: RegisterRequest) {
     isLoading.value = true
 
     try {
-      const res = await authApi.register(data)
-      if (res.data.access_token) {
-        localStorage.setItem("access_token", res.data.access_token)
-      }
-      if (res.data.refresh_token) {
-        localStorage.setItem("refresh_token", res.data.refresh_token)
-      }
-
-      _generation++
-      setUser(res.data.user)
-      isInitialized.value = true
-      initError.value = null
-
-      return res.data.user
+      await authApi.register(data)
     } finally {
       isLoading.value = false
     }

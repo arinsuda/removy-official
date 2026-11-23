@@ -27,20 +27,23 @@ func NewHandler(svc *Service, cfg *config.Config) *Handler {
 	return &Handler{svc: svc, cfg: cfg}
 }
 
+// registerAcceptedMessage is returned for every accepted sign-up, new or duplicate email.
+const registerAcceptedMessage = "if the address can be registered, a verification link has been sent"
+
 func (h *Handler) Register(c fiber.Ctx) error {
 	var req RegisterRequest
 	if err := c.Bind().JSON(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
 	}
 
-	user, err := h.svc.Register(req)
-	if err != nil {
+	_, err := h.svc.Register(req)
+	// A taken email gets the same answer as a fresh sign-up (no enumeration);
+	// the account owner is notified by mail instead.
+	if err != nil && !errors.Is(err, ErrEmailTaken) {
 		return h.handleServiceError(c, err)
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(AuthResponse{
-		User: toUserResponse(user),
-	})
+	return c.Status(fiber.StatusAccepted).JSON(MessageResponse{Message: registerAcceptedMessage})
 }
 
 func (h *Handler) Login(c fiber.Ctx) error {

@@ -110,7 +110,14 @@ func (s *Service) Register(req RegisterRequest) (*user_module.User, error) {
 	}
 
 	req.Email = NormalizeEmail(req.Email)
-	if _, err := s.repo.FindByEmail(req.Email); err == nil {
+	if existing, err := s.repo.FindByEmail(req.Email); err == nil {
+		// The caller answers exactly like a success so the form cannot probe for
+		// registered emails; the real owner learns about the attempt by mail.
+		go func(owner user_module.User) {
+			if err := s.mailer.SendRegistrationAttemptEmail(owner.Email, owner.Username, s.cfg.AppBaseURL); err != nil {
+				log.Printf("ERROR: send registration notice for user %d: %v", owner.ID, err)
+			}
+		}(*existing)
 		return nil, ErrEmailTaken
 	}
 	if _, err := s.repo.FindByUsername(req.Username); err == nil {

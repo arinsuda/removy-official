@@ -44,6 +44,7 @@ func RegisterRoutes(router fiber.Router, db *gorm.DB, cfg *config.Config, m *mai
 	auth.Post("/register", ratelimit.New(5, time.Hour, ipKey), h.Register)
 	// Identifier+IP keeps a stranger from locking a victim out; the looser
 	// per-identifier cap only counts failures, so it bounds distributed guessing.
+	// BodyKey hashes the trimmed, lowercased identifier, so case/space variants share a bucket.
 	identifierKey := ratelimit.BodyKey(identifierOf)
 	identifierIPKey := func(c fiber.Ctx) string {
 		k := identifierKey(c)
@@ -57,7 +58,7 @@ func RegisterRoutes(router fiber.Router, db *gorm.DB, cfg *config.Config, m *mai
 		ratelimit.New(5, time.Minute, identifierIPKey),
 		ratelimit.NewFailedOnly(30, 15*time.Minute, identifierKey),
 		h.Login)
-	auth.Post("/refresh", h.Refresh)
+	auth.Post("/refresh", ratelimit.New(60, time.Minute, ipKey), h.Refresh)
 	auth.Get("/session", ratelimit.New(sessionProbeRateMax, sessionProbeRateWindow, ipKey), h.GetSession)
 	auth.Post("/logout", h.Logout)
 	auth.Get("/verify-email", h.VerifyEmailLink)
@@ -71,7 +72,8 @@ func RegisterRoutes(router fiber.Router, db *gorm.DB, cfg *config.Config, m *mai
 		ratelimit.New(3, time.Hour, ipKey),
 		ratelimit.New(5, time.Hour, emailKey),
 		h.ForgotPassword)
-	auth.Post("/reset-password", h.ResetPassword)
+	// Forgot stays at 3/h/IP (stricter than the shared 10/h standard; stronger rule wins).
+	auth.Post("/reset-password", ratelimit.New(10, time.Hour, ipKey), h.ResetPassword)
 
 	// Google OAuth 2.0 routes
 	auth.Get("/google/config", h.GoogleConfig)
