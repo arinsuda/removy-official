@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/arinsuda/movie-hub/config"
@@ -62,7 +63,32 @@ type Service struct {
 	googleProvider GoogleOAuthProvider
 	loginFallback  LoginFallback
 	// findByEmail overrides the repository lookup (test seam).
-	findByEmail func(email string) (*user_module.User, error)
+	findByEmail    func(email string) (*user_module.User, error)
+	findByUsername func(username string) (*user_module.User, error)
+
+	noticeMu   sync.Mutex
+	noticeSent map[uint]time.Time // last duplicate-registration notice per owner
+}
+
+// noticeInterval caps duplicate-registration notice mails per recipient.
+const noticeInterval = time.Hour
+
+// burnPassword is the equal-timing dummy bcrypt (a var so tests can count calls).
+var burnPassword = authpolicy.BurnPassword
+
+// shouldNotify reports whether ownerID may get another notice mail now, and records it.
+func (s *Service) shouldNotify(ownerID uint) bool {
+	s.noticeMu.Lock()
+	defer s.noticeMu.Unlock()
+	now := time.Now()
+	if last, ok := s.noticeSent[ownerID]; ok && now.Sub(last) < noticeInterval {
+		return false
+	}
+	if s.noticeSent == nil || len(s.noticeSent) > 10000 {
+		s.noticeSent = make(map[uint]time.Time)
+	}
+	s.noticeSent[ownerID] = now
+	return true
 }
 
 // LoginFallback lets the account-linking module provision a local user whose
@@ -119,6 +145,13 @@ func (s *Service) lookupEmail(email string) (*user_module.User, error) {
 	return s.repo.FindByEmail(email)
 }
 
+func (s *Service) lookupUsername(username string) (*user_module.User, error) {
+	if s.findByUsername != nil {
+		return s.findByUsername(username)
+	}
+	return s.repo.FindByUsername(username)
+}
+
 func (s *Service) Register(req RegisterRequest) (*user_module.User, error) {
 	if req.Password != req.ConfirmPassword {
 		return nil, ErrPasswordMismatch
@@ -136,20 +169,24 @@ func (s *Service) Register(req RegisterRequest) (*user_module.User, error) {
 	if err := authpolicy.ValidatePassword(req.Password, req.Email, req.Username); err != nil {
 		return nil, err
 	}
+	// Username first: a taken username answers 409 whatever the email is, so the pair
+	// (known-taken username + target email) cannot be used to probe for the email.
+	if _, err := s.lookupUsername(req.Username); err == nil {
+		return nil, ErrUsernameTaken
+	}
 	if existing, err := s.lookupEmail(req.Email); err == nil {
 		// The caller answers exactly like a success so the form cannot probe for
 		// registered emails; the real owner learns about the attempt by mail.
-		go func(owner user_module.User) {
-			if err := s.mailer.SendRegistrationAttemptEmail(owner.Email, owner.Username, s.cfg.AppBaseURL); err != nil {
-				log.Printf("ERROR: send registration notice for user %d: %v", owner.ID, err)
-			}
-		}(*existing)
+		if s.shouldNotify(existing.ID) {
+			go func(owner user_module.User) {
+				if err := s.mailer.SendRegistrationAttemptEmail(owner.Email, owner.Username, s.cfg.AppBaseURL); err != nil {
+					log.Printf("ERROR: send registration notice for user %d: %v", owner.ID, err)
+				}
+			}(*existing)
+		}
 		// Same bcrypt cost as the success path so response time does not reveal the email.
 		_, _ = hashSecret(req.Password)
 		return nil, ErrEmailTaken
-	}
-	if _, err := s.repo.FindByUsername(req.Username); err == nil {
-		return nil, ErrUsernameTaken
 	}
 
 	hashed, err := hashSecret(req.Password)
@@ -186,19 +223,19 @@ func (s *Service) Register(req RegisterRequest) (*user_module.User, error) {
 
 func (s *Service) Login(req LoginRequest, userAgent, ip string) (*TokenPair, *user_module.User, error) {
 	req.Identifier = strings.TrimSpace(req.Identifier)
-	user, err := s.repo.FindByEmail(req.Identifier)
+	user, err := s.lookupEmail(req.Identifier)
 	if err != nil {
-		user, err = s.repo.FindByUsername(req.Identifier)
+		user, err = s.lookupUsername(req.Identifier)
 		if err != nil {
 			// No local user: try the linked remote platform (provisions + links on success).
 			// Any remote failure is treated as invalid credentials.
 			if s.loginFallback == nil || !strings.Contains(req.Identifier, "@") {
-				authpolicy.BurnPassword(req.Password) // equal timing for unknown user and wrong password
+				burnPassword(req.Password) // equal timing for unknown user and wrong password
 				return nil, nil, ErrUserNotFound
 			}
 			fbUser, fbErr := s.loginFallback.LoginViaRemote(req.Identifier, req.Password)
 			if fbErr != nil || fbUser == nil || !fbUser.IsActive {
-				authpolicy.BurnPassword(req.Password)
+				burnPassword(req.Password)
 				return nil, nil, ErrUserNotFound
 			}
 			user = fbUser
@@ -207,16 +244,21 @@ func (s *Service) Login(req LoginRequest, userAgent, ip string) (*TokenPair, *us
 	}
 
 	if !user.IsActive {
-		authpolicy.BurnPassword(req.Password)
+		burnPassword(req.Password)
 		return nil, nil, ErrUserNotFound
 	}
 
 	if user.Password == nil || *user.Password == "" {
-		authpolicy.BurnPassword(req.Password)
+		burnPassword(req.Password)
 		return nil, nil, ErrWrongPassword
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(*user.Password), []byte(req.Password)); err != nil {
+		// A legacy low-cost hash compares faster than the cost-12 dummy used for unknown
+		// users; burn the difference so both failures take about as long.
+		if authpolicy.NeedsRehash(*user.Password) {
+			burnPassword(req.Password)
+		}
 		return nil, nil, ErrWrongPassword
 	}
 

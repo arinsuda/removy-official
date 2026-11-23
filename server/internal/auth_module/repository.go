@@ -32,7 +32,7 @@ func (r *repository) CreateUser(user *user_module.User) error {
 }
 
 func (r *repository) FindByUsername(username string) (*user_module.User, error) {
-	return r.findUser("username = ?", username)
+	return r.findUser("lower(username) = lower(?)", strings.TrimSpace(username))
 }
 
 // FindByEmail matches case-insensitively. Mixed-case duplicates can exist until the
