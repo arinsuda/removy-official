@@ -72,3 +72,18 @@ func TestRedactProfileForViewerOmitsOwnerFieldsForAllNonOwners(t *testing.T) {
 		})
 	}
 }
+
+func TestForgotPasswordUnknownEmailStillHashes(t *testing.T) {
+	calls := 0
+	orig := hashResetToken
+	hashResetToken = func(string) ([]byte, error) { calls++; return []byte("x"), nil }
+	defer func() { hashResetToken = orig }()
+
+	svc := &Service{findByEmail: func(string) (*User, error) { return nil, ErrUserNotFound }}
+	if err := svc.ForgotPassword("nobody@example.test"); err != nil {
+		t.Fatalf("unknown email must not error: %v", err)
+	}
+	if calls != 1 {
+		t.Fatalf("hasher calls = %d, want 1 (equal work for unknown email)", calls)
+	}
+}

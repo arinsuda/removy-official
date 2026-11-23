@@ -26,6 +26,7 @@ import (
 
 type Service struct {
 	repo                *repository
+	findByEmail         func(email string) (*User, error) // test seam, overrides repo lookup
 	minio               *storage.MinIOClient
 	statsSvc            StatsProvider
 	mailer              Mailer
@@ -512,12 +513,25 @@ func (s *Service) ChangePassword(targetUserID, requesterID uint, sessionVersion 
 	return nil
 }
 
+// hashResetToken is the bcrypt hasher for reset tokens (a var so tests can observe calls).
+var hashResetToken = func(token string) ([]byte, error) {
+	return bcrypt.GenerateFromPassword([]byte(token), bcrypt.DefaultCost)
+}
+
 func (s *Service) ForgotPassword(email string) error {
 	email = strings.TrimSpace(strings.ToLower(email))
 
-	user, err := s.repo.FindByEmail(email)
+	lookup := s.repo.FindByEmail
+	if s.findByEmail != nil {
+		lookup = s.findByEmail
+	}
+	user, err := lookup(email)
 	if err != nil {
 		if errors.Is(err, ErrUserNotFound) {
+			// Same work as an existing account (token + bcrypt) so timing does not reveal it.
+			if dummy, genErr := generateSecureToken(); genErr == nil {
+				_, _ = hashResetToken(dummy)
+			}
 			return nil
 		}
 		return err
@@ -528,7 +542,7 @@ func (s *Service) ForgotPassword(email string) error {
 		return err
 	}
 
-	hashedToken, err := bcrypt.GenerateFromPassword([]byte(rawToken), bcrypt.DefaultCost)
+	hashedToken, err := hashResetToken(rawToken)
 	if err != nil {
 		return err
 	}

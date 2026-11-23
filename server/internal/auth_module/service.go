@@ -60,6 +60,8 @@ type Service struct {
 	oauthStore     OAuthTransactionStore
 	googleProvider GoogleOAuthProvider
 	loginFallback  LoginFallback
+	// findByEmail overrides the repository lookup (test seam).
+	findByEmail func(email string) (*user_module.User, error)
 }
 
 // LoginFallback lets the account-linking module provision a local user whose
@@ -104,13 +106,25 @@ func NewService(db *gorm.DB, cfg *config.Config, m *mailer.Mailer, mc *storage.M
 	}
 }
 
+// hashSecret is the single bcrypt hasher for sign-up (a var so tests can observe calls).
+var hashSecret = func(secret string) ([]byte, error) {
+	return bcrypt.GenerateFromPassword([]byte(secret), bcrypt.DefaultCost)
+}
+
+func (s *Service) lookupEmail(email string) (*user_module.User, error) {
+	if s.findByEmail != nil {
+		return s.findByEmail(email)
+	}
+	return s.repo.FindByEmail(email)
+}
+
 func (s *Service) Register(req RegisterRequest) (*user_module.User, error) {
 	if req.Password != req.ConfirmPassword {
 		return nil, ErrPasswordMismatch
 	}
 
 	req.Email = NormalizeEmail(req.Email)
-	if existing, err := s.repo.FindByEmail(req.Email); err == nil {
+	if existing, err := s.lookupEmail(req.Email); err == nil {
 		// The caller answers exactly like a success so the form cannot probe for
 		// registered emails; the real owner learns about the attempt by mail.
 		go func(owner user_module.User) {
@@ -118,13 +132,15 @@ func (s *Service) Register(req RegisterRequest) (*user_module.User, error) {
 				log.Printf("ERROR: send registration notice for user %d: %v", owner.ID, err)
 			}
 		}(*existing)
+		// Same bcrypt cost as the success path so response time does not reveal the email.
+		_, _ = hashSecret(req.Password)
 		return nil, ErrEmailTaken
 	}
 	if _, err := s.repo.FindByUsername(req.Username); err == nil {
 		return nil, ErrUsernameTaken
 	}
 
-	hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	hashed, err := hashSecret(req.Password)
 	if err != nil {
 		return nil, fmt.Errorf("register: hash password: %w", err)
 	}
