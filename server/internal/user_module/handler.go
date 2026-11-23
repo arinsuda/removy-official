@@ -11,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/arinsuda/movie-hub/internal/shared/apierr"
+	"github.com/arinsuda/movie-hub/internal/shared/authpolicy"
 	"github.com/arinsuda/movie-hub/internal/shared/storage"
 	mw "github.com/arinsuda/movie-hub/middleware"
 	"github.com/gofiber/fiber/v3"
@@ -252,6 +253,10 @@ func (h *Handler) ChangePassword(c fiber.Ctx) error {
 
 func handlePasswordError(c fiber.Ctx, err error) error {
 	switch {
+	case errors.As(err, new(*authpolicy.PolicyError)):
+		var pe *authpolicy.PolicyError
+		errors.As(err, &pe)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": pe.Message, "code": pe.Code})
 	case errors.Is(err, ErrUserNotFound):
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "user not found"})
 	case errors.Is(err, ErrForbidden):

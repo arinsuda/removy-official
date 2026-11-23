@@ -12,6 +12,7 @@ import (
 	"github.com/arinsuda/movie-hub/config"
 	"github.com/arinsuda/movie-hub/internal/identity_policy"
 	"github.com/arinsuda/movie-hub/internal/shared/apierr"
+	"github.com/arinsuda/movie-hub/internal/shared/authpolicy"
 	"github.com/arinsuda/movie-hub/internal/user_module"
 	"github.com/gofiber/fiber/v3"
 )
@@ -505,6 +506,10 @@ func (h *Handler) clearTokenCookies(c fiber.Ctx) {
 
 func (h *Handler) handlePasswordResetError(c fiber.Ctx, err error) error {
 	switch {
+	case errors.As(err, new(*authpolicy.PolicyError)):
+		var pe *authpolicy.PolicyError
+		errors.As(err, &pe)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": pe.Message, "code": pe.Code})
 	case errors.Is(err, user_module.ErrPasswordResetTokenNotFound):
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "invalid or expired reset link"})
 	case errors.Is(err, user_module.ErrPasswordResetTokenExpired):
@@ -518,6 +523,10 @@ func (h *Handler) handlePasswordResetError(c fiber.Ctx, err error) error {
 
 func (h *Handler) handleServiceError(c fiber.Ctx, err error) error {
 	switch {
+	case errors.As(err, new(*authpolicy.PolicyError)):
+		var pe *authpolicy.PolicyError
+		errors.As(err, &pe)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": pe.Message, "code": pe.Code})
 	case errors.Is(err, ErrPasswordMismatch):
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	case errors.Is(err, ErrEmailTaken), errors.Is(err, ErrUsernameTaken):

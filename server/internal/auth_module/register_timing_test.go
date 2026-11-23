@@ -20,7 +20,7 @@ func TestRegisterDuplicateEmailStillHashes(t *testing.T) {
 		mailer:      mailer.New(config.BrevoConfig{}),
 		findByEmail: func(string) (*user_module.User, error) { return &user_module.User{Email: "a@b.test"}, nil },
 	}
-	_, err := svc.Register(RegisterRequest{Username: "u", Email: "a@b.test", Password: "pw", ConfirmPassword: "pw"})
+	_, err := svc.Register(RegisterRequest{Username: "dupuser", Email: "a@b.test", Password: "Vq7mTx2LpZ9k", ConfirmPassword: "Vq7mTx2LpZ9k"})
 	if !errors.Is(err, ErrEmailTaken) {
 		t.Fatalf("err = %v, want ErrEmailTaken", err)
 	}

@@ -18,6 +18,7 @@ import (
 	"github.com/arinsuda/movie-hub/config"
 	"github.com/arinsuda/movie-hub/internal/identity_policy"
 	"github.com/arinsuda/movie-hub/internal/privacy_policy"
+	"github.com/arinsuda/movie-hub/internal/shared/authpolicy"
 	"github.com/arinsuda/movie-hub/internal/shared/fragment"
 	"github.com/arinsuda/movie-hub/internal/shared/storage"
 	"golang.org/x/crypto/bcrypt"
@@ -468,8 +469,11 @@ func (s *Service) ChangePassword(targetUserID, requesterID uint, sessionVersion 
 	if err := validateNewPassword(req.NewPassword, req.ConfirmPassword); err != nil {
 		return err
 	}
+	if err := s.checkPasswordPolicy(targetUserID, req.NewPassword); err != nil {
+		return err
+	}
 
-	hashed, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	hashed, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), authpolicy.BcryptCost)
 	if err != nil {
 		return err
 	}
@@ -515,7 +519,7 @@ func (s *Service) ChangePassword(targetUserID, requesterID uint, sessionVersion 
 
 // hashResetToken is the bcrypt hasher for reset tokens (a var so tests can observe calls).
 var hashResetToken = func(token string) ([]byte, error) {
-	return bcrypt.GenerateFromPassword([]byte(token), bcrypt.DefaultCost)
+	return bcrypt.GenerateFromPassword([]byte(token), authpolicy.BcryptCost)
 }
 
 func (s *Service) ForgotPassword(email string) error {
@@ -595,7 +599,12 @@ func (s *Service) ResetPassword(userID uint, rawToken string, req ResetPasswordR
 		return ErrPasswordResetTokenInvalid
 	}
 
-	hashed, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	// After the token checks, so an unauthenticated caller cannot probe accounts via policy errors.
+	if err := s.checkPasswordPolicy(userID, req.NewPassword); err != nil {
+		return err
+	}
+
+	hashed, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), authpolicy.BcryptCost)
 	if err != nil {
 		return err
 	}
@@ -628,6 +637,15 @@ func (s *Service) ResetPassword(userID uint, rawToken string, req ResetPasswordR
 	}
 	out.Publish(userID)
 	return nil
+}
+
+// checkPasswordPolicy applies the shared password policy for the account's own email and username.
+func (s *Service) checkPasswordPolicy(userID uint, password string) error {
+	var u struct{ Email, Username string }
+	if err := s.repo.db.Raw(`SELECT email, username FROM users WHERE id = ? AND deleted_at IS NULL`, userID).Scan(&u).Error; err != nil {
+		return err
+	}
+	return authpolicy.ValidatePassword(password, u.Email, u.Username)
 }
 
 func validateNewPassword(newPassword, confirmPassword string) error {

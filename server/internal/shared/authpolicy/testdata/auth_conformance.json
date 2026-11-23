@@ -1,0 +1,326 @@
+{
+ "version": 1,
+ "email": [
+  {
+   "input": "User@Example.com ",
+   "valid": true,
+   "normalized": "user@example.com"
+  },
+  {
+   "input": "a@b.co",
+   "valid": true,
+   "normalized": "a@b.co"
+  },
+  {
+   "input": "user+tag@example.com",
+   "valid": true,
+   "normalized": "user+tag@example.com"
+  },
+  {
+   "input": "first.last@sub.example.co.th",
+   "valid": true,
+   "normalized": "first.last@sub.example.co.th"
+  },
+  {
+   "input": "",
+   "valid": false,
+   "normalized": ""
+  },
+  {
+   "input": "   ",
+   "valid": false,
+   "normalized": ""
+  },
+  {
+   "input": "a@b",
+   "valid": false,
+   "normalized": ""
+  },
+  {
+   "input": "a@@b.com",
+   "valid": false,
+   "normalized": ""
+  },
+  {
+   "input": "a@b..com",
+   "valid": false,
+   "normalized": ""
+  },
+  {
+   "input": "@b.com",
+   "valid": false,
+   "normalized": ""
+  },
+  {
+   "input": "a@",
+   "valid": false,
+   "normalized": ""
+  },
+  {
+   "input": "a b@c.com",
+   "valid": false,
+   "normalized": ""
+  },
+  {
+   "input": "Name <a@b.com>",
+   "valid": false,
+   "normalized": ""
+  },
+  {
+   "input": "\"a@b\"@c.com",
+   "valid": false,
+   "normalized": ""
+  },
+  {
+   "input": ".a@b.com",
+   "valid": false,
+   "normalized": ""
+  },
+  {
+   "input": "a@b.com.",
+   "valid": false,
+   "normalized": ""
+  },
+  {
+   "input": "a@.b.com",
+   "valid": false,
+   "normalized": ""
+  },
+  {
+   "input": "plain",
+   "valid": false,
+   "normalized": ""
+  },
+  {
+   "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@b.co",
+   "valid": false,
+   "normalized": ""
+  },
+  {
+   "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd.com",
+   "valid": true,
+   "normalized": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd.com"
+  }
+ ],
+ "password": [
+  {
+   "password": "correct horse battery",
+   "email": "",
+   "username": "",
+   "code": ""
+  },
+  {
+   "password": "Tr0ub4dor&3x",
+   "email": "",
+   "username": "",
+   "code": ""
+  },
+  {
+   "password": "x7Kp2mQz",
+   "email": "",
+   "username": "",
+   "code": ""
+  },
+  {
+   "password": "short1",
+   "email": "",
+   "username": "",
+   "code": "WEAK_PASSWORD"
+  },
+  {
+   "password": "abcdefg",
+   "email": "",
+   "username": "",
+   "code": "WEAK_PASSWORD"
+  },
+  {
+   "password": "",
+   "email": "",
+   "username": "",
+   "code": "WEAK_PASSWORD"
+  },
+  {
+   "password": "abcd1234",
+   "email": "",
+   "username": "",
+   "code": "WEAK_PASSWORD"
+  },
+  {
+   "password": "aaaaaaaa",
+   "email": "",
+   "username": "",
+   "code": "WEAK_PASSWORD"
+  },
+  {
+   "password": "PASSWORD",
+   "email": "",
+   "username": "",
+   "code": "WEAK_PASSWORD"
+  },
+  {
+   "password": "Password123",
+   "email": "",
+   "username": "",
+   "code": "WEAK_PASSWORD"
+  },
+  {
+   "password": "รักเธอ123",
+   "email": "",
+   "username": "",
+   "code": "WEAK_PASSWORD"
+  },
+  {
+   "password": "กกกกกกกก",
+   "email": "",
+   "username": "",
+   "code": "WEAK_PASSWORD"
+  },
+  {
+   "password": "กขคงจฉชซ",
+   "email": "",
+   "username": "",
+   "code": ""
+  },
+  {
+   "password": "กกกกกกกกกกกกกกกกกกกกกกกกก",
+   "email": "",
+   "username": "",
+   "code": "PASSWORD_TOO_LONG"
+  },
+  {
+   "password": "กขคงจฉชซญ",
+   "email": "",
+   "username": "",
+   "code": ""
+  },
+  {
+   "password": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+   "email": "",
+   "username": "",
+   "code": ""
+  },
+  {
+   "password": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1x",
+   "email": "",
+   "username": "",
+   "code": "PASSWORD_TOO_LONG"
+  },
+  {
+   "password": "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq",
+   "email": "",
+   "username": "",
+   "code": "PASSWORD_TOO_LONG"
+  },
+  {
+   "password": "johnsmith-9Zq!",
+   "email": "johnsmith@example.com",
+   "username": "",
+   "code": "WEAK_PASSWORD"
+  },
+  {
+   "password": "johnsmith-9Zq!",
+   "email": "",
+   "username": "",
+   "code": ""
+  },
+  {
+   "password": "JOHNSMITH-9Zq!",
+   "email": "johnsmith@example.com",
+   "username": "",
+   "code": "WEAK_PASSWORD"
+  },
+  {
+   "password": "xk_alice_77!",
+   "email": "",
+   "username": "alice",
+   "code": "WEAK_PASSWORD"
+  },
+  {
+   "password": "xk_alice_77!",
+   "email": "",
+   "username": "",
+   "code": ""
+  },
+  {
+   "password": "zzabzzqq9X",
+   "email": "ab@example.com",
+   "username": "ab",
+   "code": ""
+  },
+  {
+   "password": "12345678",
+   "email": "",
+   "username": "",
+   "code": "WEAK_PASSWORD"
+  },
+  {
+   "password": "qwertyuiop",
+   "email": "",
+   "username": "",
+   "code": "WEAK_PASSWORD"
+  },
+  {
+   "password": "zxcvbnm123",
+   "email": "",
+   "username": "",
+   "code": "WEAK_PASSWORD"
+  }
+ ],
+ "username": [
+  {
+   "input": "Alice_01",
+   "valid": true,
+   "normalized": "alice_01"
+  },
+  {
+   "input": "  bob  ",
+   "valid": true,
+   "normalized": "bob"
+  },
+  {
+   "input": "abc",
+   "valid": true,
+   "normalized": "abc"
+  },
+  {
+   "input": "ab",
+   "valid": false,
+   "normalized": ""
+  },
+  {
+   "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "valid": true,
+   "normalized": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  {
+   "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "valid": false,
+   "normalized": ""
+  },
+  {
+   "input": "a-b",
+   "valid": false,
+   "normalized": ""
+  },
+  {
+   "input": "ali ce",
+   "valid": false,
+   "normalized": ""
+  },
+  {
+   "input": "",
+   "valid": false,
+   "normalized": ""
+  },
+  {
+   "input": "ผู้ใช้",
+   "valid": false,
+   "normalized": ""
+  },
+  {
+   "input": "u_ser_99",
+   "valid": true,
+   "normalized": "u_ser_99"
+  }
+ ]
+}

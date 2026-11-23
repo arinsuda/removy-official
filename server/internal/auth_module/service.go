@@ -19,6 +19,7 @@ import (
 	"github.com/arinsuda/movie-hub/internal/identity_policy"
 	"github.com/arinsuda/movie-hub/internal/mailer"
 	"github.com/arinsuda/movie-hub/internal/notification_module"
+	"github.com/arinsuda/movie-hub/internal/shared/authpolicy"
 	"github.com/arinsuda/movie-hub/internal/shared/fragment"
 	"github.com/arinsuda/movie-hub/internal/shared/storage"
 	"github.com/arinsuda/movie-hub/internal/user_module"
@@ -108,7 +109,7 @@ func NewService(db *gorm.DB, cfg *config.Config, m *mailer.Mailer, mc *storage.M
 
 // hashSecret is the single bcrypt hasher for sign-up (a var so tests can observe calls).
 var hashSecret = func(secret string) ([]byte, error) {
-	return bcrypt.GenerateFromPassword([]byte(secret), bcrypt.DefaultCost)
+	return bcrypt.GenerateFromPassword([]byte(secret), authpolicy.BcryptCost)
 }
 
 func (s *Service) lookupEmail(email string) (*user_module.User, error) {
@@ -123,7 +124,18 @@ func (s *Service) Register(req RegisterRequest) (*user_module.User, error) {
 		return nil, ErrPasswordMismatch
 	}
 
-	req.Email = NormalizeEmail(req.Email)
+	email, err := authpolicy.ValidateEmail(req.Email)
+	if err != nil {
+		return nil, err
+	}
+	req.Email = email
+	if req.Username, err = authpolicy.ValidateUsername(req.Username); err != nil {
+		return nil, err
+	}
+	// Input-only checks run before any lookup, so a taken email answers like a fresh one.
+	if err := authpolicy.ValidatePassword(req.Password, req.Email, req.Username); err != nil {
+		return nil, err
+	}
 	if existing, err := s.lookupEmail(req.Email); err == nil {
 		// The caller answers exactly like a success so the form cannot probe for
 		// registered emails; the real owner learns about the attempt by mail.
@@ -181,10 +193,12 @@ func (s *Service) Login(req LoginRequest, userAgent, ip string) (*TokenPair, *us
 			// No local user: try the linked remote platform (provisions + links on success).
 			// Any remote failure is treated as invalid credentials.
 			if s.loginFallback == nil || !strings.Contains(req.Identifier, "@") {
+				authpolicy.BurnPassword(req.Password) // equal timing for unknown user and wrong password
 				return nil, nil, ErrUserNotFound
 			}
 			fbUser, fbErr := s.loginFallback.LoginViaRemote(req.Identifier, req.Password)
 			if fbErr != nil || fbUser == nil || !fbUser.IsActive {
+				authpolicy.BurnPassword(req.Password)
 				return nil, nil, ErrUserNotFound
 			}
 			user = fbUser
@@ -193,15 +207,25 @@ func (s *Service) Login(req LoginRequest, userAgent, ip string) (*TokenPair, *us
 	}
 
 	if !user.IsActive {
+		authpolicy.BurnPassword(req.Password)
 		return nil, nil, ErrUserNotFound
 	}
 
 	if user.Password == nil || *user.Password == "" {
+		authpolicy.BurnPassword(req.Password)
 		return nil, nil, ErrWrongPassword
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(*user.Password), []byte(req.Password)); err != nil {
 		return nil, nil, ErrWrongPassword
+	}
+
+	// Upgrade old low-cost hashes now that the plaintext is known. The old-hash guard keeps a
+	// concurrent password change intact; a failure never blocks the login.
+	if authpolicy.NeedsRehash(*user.Password) {
+		if h, err := authpolicy.HashPassword(req.Password); err == nil {
+			s.db.Model(&user_module.User{}).Where("id = ? AND password = ?", user.ID, *user.Password).Update("password", h)
+		}
 	}
 
 	if user.VerifiedEmailAt == nil {
