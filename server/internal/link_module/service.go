@@ -408,7 +408,7 @@ func (s *Service) provision(ru *RemoteUser) (*user_module.User, error) {
 	err := s.db.Transaction(func(tx *gorm.DB) error {
 		username := GenerateUsername(ru.Email, func(name string) bool {
 			var n int64
-			tx.Model(&user_module.User{}).Where("username = ?", name).Count(&n)
+			tx.Model(&user_module.User{}).Where("lower(username) = lower(?)", name).Count(&n)
 			return n > 0
 		})
 		u := &user_module.User{

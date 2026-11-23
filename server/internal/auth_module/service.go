@@ -507,7 +507,7 @@ func (s *Service) HandleGoogleCallback(ctx context.Context, code, stateStr, cook
 					finalUsername := baseUsername
 					for i := 0; i < 5; i++ {
 						var count int64
-						txDB.Model(&user_module.User{}).Where("username = ?", finalUsername).Count(&count)
+						txDB.Model(&user_module.User{}).Where("lower(username) = lower(?)", finalUsername).Count(&count)
 						if count == 0 {
 							break
 						}
