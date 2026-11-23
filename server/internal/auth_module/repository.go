@@ -32,7 +32,16 @@ func (r *repository) CreateUser(user *user_module.User) error {
 }
 
 func (r *repository) FindByUsername(username string) (*user_module.User, error) {
-	return r.findUser("lower(username) = lower(?)", strings.TrimSpace(username))
+	var user user_module.User
+	// Legacy rows may differ only by case: the oldest one wins, deterministically.
+	err := r.db.Preload("Role").
+		Where("lower(username) = lower(?)", strings.TrimSpace(username)).
+		Order("id ASC").
+		First(&user).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrUserNotFound
+	}
+	return &user, err
 }
 
 // FindByEmail matches case-insensitively. Mixed-case duplicates can exist until the
