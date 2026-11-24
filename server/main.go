@@ -59,6 +59,7 @@ func main() {
 	})
 
 	app.Use(monitoring.Middleware())
+	app.Use(mw.SecurityHeaders())
 	app.Use(cors.New(corsConfig(cfg.CORS.AllowedOrigins)))
 
 	workerCtx, stopWorkers := context.WithCancel(context.Background())

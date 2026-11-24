@@ -12,6 +12,7 @@ import (
 	"github.com/arinsuda/movie-hub/config"
 	"github.com/arinsuda/movie-hub/internal/identity_policy"
 	"github.com/arinsuda/movie-hub/internal/shared/apierr"
+	"github.com/arinsuda/movie-hub/internal/shared/authpolicy"
 	"github.com/arinsuda/movie-hub/internal/user_module"
 	"github.com/gofiber/fiber/v3"
 )
@@ -27,20 +28,23 @@ func NewHandler(svc *Service, cfg *config.Config) *Handler {
 	return &Handler{svc: svc, cfg: cfg}
 }
 
+// registerAcceptedMessage is returned for every accepted sign-up, new or duplicate email.
+const registerAcceptedMessage = "if the address can be registered, a verification link has been sent"
+
 func (h *Handler) Register(c fiber.Ctx) error {
 	var req RegisterRequest
 	if err := c.Bind().JSON(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
 	}
 
-	user, err := h.svc.Register(req)
-	if err != nil {
+	_, err := h.svc.Register(req)
+	// A taken email gets the same answer as a fresh sign-up (no enumeration);
+	// the account owner is notified by mail instead.
+	if err != nil && !errors.Is(err, ErrEmailTaken) {
 		return h.handleServiceError(c, err)
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(AuthResponse{
-		User: toUserResponse(user),
-	})
+	return c.Status(fiber.StatusAccepted).JSON(MessageResponse{Message: registerAcceptedMessage})
 }
 
 func (h *Handler) Login(c fiber.Ctx) error {
@@ -502,6 +506,10 @@ func (h *Handler) clearTokenCookies(c fiber.Ctx) {
 
 func (h *Handler) handlePasswordResetError(c fiber.Ctx, err error) error {
 	switch {
+	case errors.As(err, new(*authpolicy.PolicyError)):
+		var pe *authpolicy.PolicyError
+		errors.As(err, &pe)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": pe.Message, "code": pe.Code})
 	case errors.Is(err, user_module.ErrPasswordResetTokenNotFound):
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "invalid or expired reset link"})
 	case errors.Is(err, user_module.ErrPasswordResetTokenExpired):
@@ -515,12 +523,16 @@ func (h *Handler) handlePasswordResetError(c fiber.Ctx, err error) error {
 
 func (h *Handler) handleServiceError(c fiber.Ctx, err error) error {
 	switch {
+	case errors.As(err, new(*authpolicy.PolicyError)):
+		var pe *authpolicy.PolicyError
+		errors.As(err, &pe)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": pe.Message, "code": pe.Code})
 	case errors.Is(err, ErrPasswordMismatch):
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	case errors.Is(err, ErrEmailTaken), errors.Is(err, ErrUsernameTaken):
 		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": err.Error()})
 	case errors.Is(err, ErrUserNotFound), errors.Is(err, ErrWrongPassword), errors.Is(err, ErrVerifyWrongPassword):
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid credentials"})
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid credentials", "code": "INVALID_CREDENTIALS"})
 	case errors.Is(err, ErrEmailUnverified):
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "please verify your email first"})
 	case errors.Is(err, ErrInvalidToken):

@@ -26,7 +26,7 @@ export const authApi = {
   login: (data: LoginRequest) => api.post<AuthResponse>("/auth/login", data),
 
   register: (data: RegisterRequest) =>
-    api.post<AuthResponse>("/auth/register", data),
+    api.post<{ message: string }>("/auth/register", data),
 
   refreshToken: (token?: string) => api.post<AuthResponse>("/auth/refresh", { refresh_token: token }, { timeout: REFRESH_POST_TIMEOUT_MS }),
 

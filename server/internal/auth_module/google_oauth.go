@@ -203,7 +203,7 @@ func (p *RealGoogleOAuthProvider) VerifyIDToken(ctx context.Context, rawIDToken 
 
 func IsAuthoritativeGoogleEmail(claims *GoogleIdentityClaims) bool {
 	normalized := strings.ToLower(strings.TrimSpace(claims.Email))
-	if strings.HasSuffix(normalized, "@gmail.com") {
+	if strings.HasSuffix(normalized, "@gmail.com") || strings.HasSuffix(normalized, "@googlemail.com") {
 		return true
 	}
 	return claims.EmailVerified && claims.HostedDomain != ""

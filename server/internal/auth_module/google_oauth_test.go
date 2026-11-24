@@ -82,6 +82,10 @@ func TestAuthoritativeEmailClassification(t *testing.T) {
 		t.Errorf("Expected @gmail.com to be authoritative")
 	}
 
+	if !IsAuthoritativeGoogleEmail(&GoogleIdentityClaims{Email: "u@googlemail.com", EmailVerified: true}) {
+		t.Errorf("Expected @googlemail.com to be authoritative")
+	}
+
 	workspaceUser := &GoogleIdentityClaims{
 		Email:         "alex@company.com",
 		EmailVerified: true,

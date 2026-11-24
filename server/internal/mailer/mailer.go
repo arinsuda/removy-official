@@ -98,6 +98,24 @@ func (m *Mailer) SendErasureRequestedEmail(toEmail, username, dueDate, supportEm
 	return m.send(toEmail, username, subject, body)
 }
 
+// SendRegistrationAttemptEmail tells the owner of an address that someone tried to sign up with it.
+func (m *Mailer) SendRegistrationAttemptEmail(toEmail, username, appURL string) error {
+	if m.devLog {
+		PrintDev(m.devOut, toEmail, "register_attempt", "app: "+appURL)
+		return nil
+	}
+	subject := "มีการพยายามสมัครสมาชิกด้วยอีเมลของคุณ — POPCORN"
+	body := fmt.Sprintf(`<!DOCTYPE html><html><body style="margin:0;padding:32px 16px;background:#050505;font-family:'Helvetica Neue',Arial,sans-serif;">
+<div style="max-width:440px;margin:0 auto;background:#0f0f0f;border:1px solid #1c1c1c;border-radius:4px;padding:40px;">
+<div style="font-size:18px;font-weight:700;letter-spacing:4px;color:#fff;text-align:center;">POPCORN</div>
+<p style="color:#fff;font-size:16px;margin:24px 0 8px;">สวัสดี %[1]s</p>
+<p style="color:#8f8f8f;font-size:14px;line-height:1.7;">มีคนพยายามสมัครสมาชิก POPCORN ด้วยอีเมลนี้ ซึ่งมีบัญชีอยู่แล้ว หากเป็นคุณ สามารถ <a href="%[2]s/login" style="color:#e5504f;">เข้าสู่ระบบ</a> หรือใช้ลืมรหัสผ่านได้</p>
+<p style="color:#8f8f8f;font-size:14px;line-height:1.7;">Someone tried to sign up for POPCORN with this address, which already has an account. If it was you, log in or use "forgot password".</p>
+<p style="color:#666;font-size:12px;">หากไม่ใช่คุณ ไม่ต้องทำอะไร บัญชีของคุณปลอดภัย / If it was not you, no action is needed.</p>
+</div></body></html>`, html.EscapeString(username), html.EscapeString(appURL))
+	return m.send(toEmail, username, subject, body)
+}
+
 func (m *Mailer) send(toEmail, username, subject, htmlBody string) error {
 	if !m.enabled {
 		log.Printf("WARN mailer disabled, skipping email (subject: %s)", subject)

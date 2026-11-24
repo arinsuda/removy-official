@@ -17,6 +17,7 @@ import (
 	"github.com/arinsuda/movie-hub/internal/auth_module"
 	"github.com/arinsuda/movie-hub/internal/identity_policy"
 	"github.com/arinsuda/movie-hub/internal/mailer"
+	"github.com/arinsuda/movie-hub/internal/shared/ratelimit"
 	"github.com/arinsuda/movie-hub/internal/user_module"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -61,6 +62,8 @@ type Service struct {
 	auth   *auth_module.Service
 	mailer *mailer.Mailer
 	remote *remoteClient
+	// verifyFails caps failed internal verify-password attempts per normalized email.
+	verifyFails failTracker
 	// afterLinkLookup is a test seam: runs between the link lookup and the user load in resolveRemoteUser.
 	afterLinkLookup func()
 }
@@ -180,11 +183,17 @@ func (s *Service) Introspect(token string) (*RemoteUser, error) {
 // VerifyPassword checks email+password of an active, verified local user. An
 // unverified account's password was set by whoever registered the address first.
 func (s *Service) VerifyPassword(email, password string) (*RemoteUser, bool) {
+	key := ratelimit.HashKey(email)
+	if !s.verifyFails.allow(key) {
+		return nil, false
+	}
 	u, err := s.findUserByEmail(s.db, email)
 	if err != nil || !u.IsActive || u.VerifiedEmailAt == nil || u.Password == nil || *u.Password == "" {
+		s.verifyFails.fail(key)
 		return nil, false
 	}
 	if bcrypt.CompareHashAndPassword([]byte(*u.Password), []byte(password)) != nil {
+		s.verifyFails.fail(key)
 		return nil, false
 	}
 	return s.toRemoteUser(u), true
@@ -399,7 +408,7 @@ func (s *Service) provision(ru *RemoteUser) (*user_module.User, error) {
 	err := s.db.Transaction(func(tx *gorm.DB) error {
 		username := GenerateUsername(ru.Email, func(name string) bool {
 			var n int64
-			tx.Model(&user_module.User{}).Where("username = ?", name).Count(&n)
+			tx.Model(&user_module.User{}).Where("lower(username) = lower(?)", name).Count(&n)
 			return n > 0
 		})
 		u := &user_module.User{
